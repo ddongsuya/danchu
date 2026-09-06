@@ -15,10 +15,10 @@ export function LegalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="page form-page">
-      <header className="header">
-        <div className="container header__inner">
-          <Logo sub={title} />
+    <div className="done">
+      <header className="done__head">
+        <div className="fm__head-in">
+          <Logo />
           <LangToggle />
         </div>
       </header>
@@ -30,7 +30,7 @@ export function LegalLayout({
           </p>
           {children}
           <div className="legal__back">
-            <Link href="/" className="btn btn--outline btn--sm">
+            <Link href="/" className="btn btn--outline">
               ← 홈으로
             </Link>
           </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendRfqMails } from "@/lib/mail";
-import { validateStep1, type Values } from "@/lib/rfq-schema";
+import { validateRequired, type Values } from "@/lib/rfq-schema";
 import { nowSeoul } from "@/lib/dates";
 
 export const runtime = "nodejs";
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
   }
 
-  const err = validateStep1(values);
+  const err = validateRequired(values);
   if (err) return NextResponse.json({ error: err }, { status: 400 });
   if (files.length > MAX_FILES) return NextResponse.json({ error: `첨부는 최대 ${MAX_FILES}개까지 가능합니다.` }, { status: 400 });
   if (files.some((f) => f.size > MAX_FILE)) return NextResponse.json({ error: "파일당 20MB 이하만 첨부할 수 있습니다." }, { status: 400 });

@@ -16,16 +16,16 @@ export default async function CompletePage({ searchParams }: { searchParams: Pro
   const d3 = formatKo(addBusinessDays(now, 7));
 
   return (
-    <div className="page form-page">
-      <header className="header">
-        <div className="container header__inner">
+    <div className="done">
+      <header className="done__head">
+        <div className="fm__head-in">
           <Logo />
           <LangToggle />
         </div>
       </header>
-      <main className="done-main">
-        <div className="done-wrap">
-          <section className="done-card">
+      <main className="done__main">
+        <div className="done__wrap">
+          <section className="done__card">
             <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
               <circle cx="22" cy="22" r="20" fill="var(--brand)" />
               <path d="M14 22.5l5.5 5.5L30 17" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -65,10 +65,10 @@ export default async function CompletePage({ searchParams }: { searchParams: Pro
             </ol>
           </section>
 
-          <p className="done-contact">
+          <p className="done__contact">
             문의 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
           </p>
-          <div className="done-home">
+          <div className="done__home">
             <Link href="/">홈으로</Link>
           </div>
         </div>
