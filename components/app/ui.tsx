@@ -157,3 +157,42 @@ export function Bar({ pct }: { pct: number }) {
     </div>
   );
 }
+
+/** CRO 탭바 — 받은 요청 · 제출한 견적 · 기관 */
+export function CroTabBar({ active }: { active: "inbox" | "quotes" | "org" }) {
+  const icons = {
+    inbox: (
+      <>
+        <path d="M4 4h16v12H4z" />
+        <path d="M4 16l3-6h10l3 6" />
+      </>
+    ),
+    quotes: (
+      <>
+        <path d="M5 4h14v16H5z" />
+        <path d="M9 9h6M9 13h6M9 17h3" />
+      </>
+    ),
+    org: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+  };
+  const item = (key: keyof typeof icons, href: string, label: string) => (
+    <Link href={href} className="tab" data-on={active === key ? "1" : "0"}>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {icons[key]}
+      </svg>
+      <span>{label}</span>
+    </Link>
+  );
+  return (
+    <nav className="tabs tabs--3" aria-label="CRO 메뉴">
+      {item("inbox", "/app/cro", "받은 요청")}
+      {item("quotes", "/app/cro/quotes", "제출한 견적")}
+      {item("org", "/app/cro/org", "기관")}
+    </nav>
+  );
+}
