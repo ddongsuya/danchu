@@ -121,6 +121,7 @@ export function HowTimeline() {
               style={{
                 transform: "translate(-50%,-50%) scale(calc(1 - 0.92 * var(--s5)))",
                 opacity: "calc(1 - var(--s5))",
+                zIndex: 1,
               }}
             >
               <div
@@ -142,7 +143,7 @@ export function HowTimeline() {
                   key={cro}
                   className="tl-mid tl-row"
                   style={{
-                    transform: `translate(calc(-50% + (${dx}) * (1 - var(--s3)) + (${mx}) * var(--s3) * (1 - var(--s4))),calc(-50% + (${dy}) * (1 - var(--s3)) + (${my}) * var(--s3) * (1 - var(--s4)) + (${fy}) * var(--s4))) rotate(calc(var(--s3) * (1 - var(--s4)) * ${rot}))`,
+                    transform: `translate(calc(-50% + (${dx}) * (1 - var(--s3)) + (${mx}) * var(--mf) * var(--s3) * (1 - var(--s4))),calc(-50% + (${dy}) * (1 - var(--s3)) + (${my}) * var(--mf) * var(--s3) * (1 - var(--s4)) + (${fy}) * var(--s4))) rotate(calc(var(--s3) * (1 - var(--s4)) * ${rot}))`,
                     opacity: "var(--s3)",
                   }}
                 >

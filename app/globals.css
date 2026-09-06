@@ -454,3 +454,53 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 @media (max-width: 900px) { .tl-stage { --sx: 42cqw; --sy: 30cqh; --k: .72; } }
 @media (max-width: 560px) { .tl-stage { --sx: 46cqw; --sy: 31cqh; --k: .58; } }
 @media (max-width: 640px) { .tl-cap__in { gap: 10px; padding: 8px 14px 8px 8px; } .tl-cap__t { font-size: 15px; } }
+
+/* ── 모바일 ───────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* 좌우 여백을 줄여 한 줄에 더 담기 */
+  .lhead, .sec, .band__in, .trusts, .faq, .footer__in, .tl-head { padding-left: 20px; padding-right: 20px; }
+  .sec--band, .sec--dark, .sec--partners, .footer { padding-left: 0; padding-right: 0; }
+  .sec--band, .sec--dark, .sec--partners { padding-top: 72px; padding-bottom: 72px; }
+  .sec { padding-top: 80px; padding-bottom: 72px; }
+  .sec--fields { padding-top: 80px; padding-bottom: 80px; }
+  .sec--cta { padding: 88px 20px; }
+  .faq { padding-top: 80px; padding-bottom: 80px; }
+  .footer { padding-top: 40px; padding-bottom: 40px; }
+
+  /* 히어로 — 마크를 줄이고 첫 화면에 CTA가 들어오도록 */
+  .hero { min-height: 0; }
+  .hero__grid { padding: 56px 20px 72px !important; gap: 40px; }
+  .hero__mark svg { width: min(62%, 200px); }
+  .hero__sub { margin-bottom: 28px; }
+  .hero__cta { gap: 14px; }
+
+  /* 카드·타일 여백 축소 */
+  .probs { gap: 40px 24px; }
+  .tile { padding: 18px 20px; }
+  .tiles { margin-top: 28px; }
+  .trusts { gap: 40px; }
+
+  /* 터치 영역 44px 확보 */
+  .lang { padding: 14px 6px; margin: -14px -6px; }
+  .arrowlink { padding: 10px 0; }
+  .footer__in { flex-direction: column; gap: 28px; }
+  .footer__links { gap: 20px; }
+  .footer__col a { padding: 8px 0; }
+  .footer__links a { padding: 10px 0; }
+  .faq summary { padding: 20px 0; }
+  .fm__back { padding: 12px 8px; margin: -12px -8px; }
+
+  /* 표는 가로 스크롤 가능함을 알린다 */
+  .legal__table-wrap { -webkit-overflow-scrolling: touch; }
+  .legal__table-wrap::after { content: "← 좌우로 밀어서 보기"; display: block; font-size: 12px; color: var(--muted); padding: 6px 2px 0; }
+}
+
+/* 타임라인 — 모바일에서는 중간 흩어짐을 줄여 겹침 방지 */
+.tl-stage { --mf: 1; }
+@media (max-width: 900px) { .tl-stage { --mf: .45; } }
+@media (max-width: 560px) { .tl-stage { --mf: .28; } }
+
+/* iOS 사파리 하단 바를 고려한 고정 CTA 여백 */
+@supports (padding: max(0px)) {
+  .fm__foot { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+}

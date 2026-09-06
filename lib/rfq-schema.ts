@@ -290,7 +290,7 @@ export const WIZ: WizStep[] = [
 export const STEP2: Group[] = [
   {
     title: "시험물질·투여 조건",
-    desc: "한 번 입력하면 선택한 모든 시험에 적용됩니다.",
+    desc: "한번 입력하면 선택한 모든 시험에 적용됩니다.",
     fields: [
       { id: "route", type: "select", label: "시험 투여경로", options: ROUTES },
       { id: "clinRoute", type: "select", label: "임상 예정 투여경로", options: ROUTES, help: "시험 투여경로와 다를 경우" },
