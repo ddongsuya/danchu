@@ -200,7 +200,10 @@ export function RfqForm() {
             <div className="fm__stack fm__stack--tight">
               {STEP2.map((g) => (
                 <section key={g.title} className="dcard">
-                  <h2>{g.title}</h2>
+                  <div>
+                    <h2>{g.title}</h2>
+                    {g.desc && <p className="dcard__desc">{g.desc}</p>}
+                  </div>
                   <div className="dcard__fields">
                     {g.fields.map((f) => (
                       <RfqField

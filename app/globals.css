@@ -351,3 +351,4 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 
 /* 모바일: 헤더 내비 숨김 */
 @media (max-width: 760px) { .nav { display: none; } }
+.dcard__desc { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
