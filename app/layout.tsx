@@ -31,7 +31,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* 스크립트가 없으면 등장 애니메이션 없이 바로 보이게 */}
+        <noscript>
+          <style>{".rv{opacity:1;transform:none}.intro{display:none}"}</style>
+        </noscript>
+        {children}
+      </body>
     </html>
   );
 }

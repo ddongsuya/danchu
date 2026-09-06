@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Logo, LogoMark } from "@/components/Logo";
 import { LangToggle } from "@/components/LangToggle";
 import { Chevron } from "@/components/Chevron";
+import { Motion, IntroSplash } from "@/components/Motion";
+import { HowTimeline } from "@/components/HowTimeline";
+
+type RV = React.CSSProperties;
 
 /** 시험 분야 타일 — 이름 + 한 줄 설명 */
 const FIELDS: [string, string][] = [
@@ -29,16 +33,12 @@ const FAQ = [
   { q: "견적을 받은 뒤 계약은 어떻게 하나요?", a: "비교표에서 선택한 CRO와 직접 계약합니다. 단추는 계약 조건에 관여하지 않으며, 필요하면 소개와 일정 조율만 지원합니다." },
 ];
 
+const PROB_RX = ["-48px", "48px", "-48px"];
+
 const PROBLEMS = [
   { t: "CRO마다 따로 연락", p: "같은 내용을 메일과 전화로 반복 설명하고, 회신 시점도 제각각입니다." },
   { t: "양식이 달라 비교 불가", p: "항목 구성과 단가 기준이 CRO마다 달라서 총액만으로는 판단할 수 없습니다." },
   { t: "어떤 시험이 필요한지 모름", p: "허가 단계와 제출처에 따라 필요한 시험 패키지가 다른데, 처음이면 기준을 잡기 어렵습니다." },
-];
-
-const STEPS = [
-  { n: 1, badge: "약 5분", t: "표준 양식 입력", p: "시험물질, 목적, 필요한 시험 항목을 한번만 입력합니다. 세부 조건은 선택 입력입니다." },
-  { n: 2, badge: "즉시", t: "참여 CRO에 배포", p: "CDA가 필요하면 체결 후 전달합니다. 참여 CRO는 같은 요청서를 받아 같은 양식으로 회신합니다." },
-  { n: 3, badge: "7영업일", t: "비교표 수령", p: "항목별 금액, 기간, GLP 적용 여부를 같은 형식으로 정리한 비교표를 받습니다." },
 ];
 
 const TRUST = [
@@ -50,6 +50,8 @@ const TRUST = [
 export default function Landing() {
   return (
     <div className="page">
+      <IntroSplash />
+      <Motion />
       <header>
         <div className="lhead">
           <Logo href="#top" size={30} nameSize={19} />
@@ -69,20 +71,20 @@ export default function Landing() {
       {/* 히어로 */}
       <section id="top" className="hero">
         <div className="hero__grid">
-          <div className="hero__mark" aria-hidden="true">
+          <div className="hero__mark rv" data-rv style={{ "--rx": "-40px", "--rd": ".35s" } as RV}>
             <LogoMark plain />
           </div>
           <div className="hero__copy">
-            <p className="eyebrow">비임상 시험 견적 플랫폼</p>
+            <p className="eyebrow rv" data-rv style={{ "--ry": "16px" } as RV}>비임상 시험 견적 플랫폼</p>
             <h1 className="hero__title">
-              <span className="l1">비임상 시험</span>
-              <span className="l2">한번 요청으로</span>
-              <span className="l3">한눈에 비교하세요</span>
+              <span className="l1 rv" data-rv style={{ "--ry": "28px", "--rd": ".1s" } as RV}>비임상 시험</span>
+              <span className="l2 rv" data-rv style={{ "--ry": "28px", "--rd": ".22s" } as RV}>한번 요청으로</span>
+              <span className="l3 rv" data-rv style={{ "--ry": "28px", "--rd": ".34s" } as RV}>한눈에 비교하세요</span>
             </h1>
-            <p className="hero__sub">
+            <p className="hero__sub rv" data-rv style={{ "--ry": "20px", "--rd": ".5s" } as RV}>
               여러 기관에 따로 연락하지 마세요. 한번 입력하면 단추가 배포하고 비교 견적서로 드려요.
             </p>
-            <div className="hero__cta">
+            <div className="hero__cta rv" data-rv style={{ "--ry": "20px", "--rd": ".62s" } as RV}>
               <Link href="/rfq" className="btn btn--pill btn--lg">무료로 견적 요청</Link>
               <span className="hero__note">의뢰자 무료 · 비밀유지계약(CDA) 지원</span>
             </div>
@@ -93,12 +95,12 @@ export default function Landing() {
       <main style={{ flex: 1 }}>
         {/* 문제 */}
         <section id="about" className="sec">
-          <h2 className="h2" style={{ marginBottom: 56, maxWidth: 640, textWrap: "balance" }}>
+          <h2 className="h2 rv" data-rv style={{ marginBottom: 56, maxWidth: 640, textWrap: "balance", "--rx": "-40px" } as RV}>
             혹시 따로 연락하고 계신가요?
           </h2>
           <div className="probs">
             {PROBLEMS.map((c, i) => (
-              <div key={c.t} className="prob">
+              <div key={c.t} className="prob rv" data-rv style={{ "--rx": PROB_RX[i], "--rd": `${i * 0.12}s` } as RV}>
                 <span className="prob__no">{String(i + 1).padStart(2, "0")}</span>
                 <h3 className="h3">{c.t}</h3>
                 <p>{c.p}</p>
@@ -107,33 +109,13 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* 진행 방식 */}
-        <section id="how" className="sec--band">
-          <div className="band__in">
-            <div className="sec__head" style={{ marginBottom: 48 }}>
-              <h2 className="h2">진행 방식</h2>
-              <p style={{ margin: 0, color: "var(--muted)" }}>한번 입력하면 나머지는 단추가 진행합니다.</p>
-            </div>
-            <div className="hows">
-              {STEPS.map((s) => (
-                <div key={s.n} className="how">
-                  <div className="how__top">
-                    <span className="num">{s.n}</span>
-                    <span className="badge">{s.badge}</span>
-                  </div>
-                  <h3 className="h3">{s.t}</h3>
-                  <p>{s.p}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <HowTimeline />
 
         {/* 신뢰 */}
         <section className="sec--dark">
           <div className="trusts">
-            {TRUST.map((t) => (
-              <div key={t.l} className="trust">
+            {TRUST.map((t, i) => (
+              <div key={t.l} className="trust rv" data-rv style={{ "--ry": "32px", "--rd": `${i * 0.12}s` } as RV}>
                 <p className="trust__lab">{t.l}</p>
                 <h3>{t.t}</h3>
                 <p>{t.p}</p>
@@ -146,7 +128,7 @@ export default function Landing() {
         <section className="sec sec--fields">
           <div className="sec__head">
             <div>
-              <h2 className="h2" style={{ marginBottom: 12 }}>시험 분야</h2>
+              <h2 className="h2 rv" data-rv style={{ marginBottom: 12, "--rx": "-40px" } as RV}>시험 분야</h2>
               <p style={{ margin: 0, color: "var(--muted)", textWrap: "pretty", maxWidth: 560 }}>
                 아래 분야의 비임상 시험 견적을 요청할 수 있습니다. 항목이 확실하지 않아도 요청서에 상황을 적어 주시면 됩니다.
               </p>
@@ -160,7 +142,7 @@ export default function Landing() {
           </div>
           <ol className="tiles">
             {FIELDS.map(([name, desc], i) => (
-              <li key={name} className="tile">
+              <li key={name} className="tile rv" data-rv style={{ "--ry": "24px", "--rd": `${((i % 4) * 0.08).toFixed(2)}s` } as RV}>
                 <span className="tile__no">{String(i + 1).padStart(2, "0")}</span>
                 <span className="tile__name">{name}</span>
                 <span className="tile__desc">{desc}</span>
@@ -184,7 +166,7 @@ export default function Landing() {
 
         {/* FAQ */}
         <section className="faq">
-          <h2 className="h2" style={{ marginBottom: 32 }}>자주 묻는 질문</h2>
+          <h2 className="h2 rv" data-rv style={{ marginBottom: 32, "--rx": "-40px" } as RV}>자주 묻는 질문</h2>
           <div className="faq__list">
             {FAQ.map((q) => (
               <details key={q.q}>
@@ -200,7 +182,7 @@ export default function Landing() {
 
         {/* 하단 CTA */}
         <section id="contact" className="sec--cta">
-          <div className="cta__in">
+          <div className="cta__in rv" data-rv style={{ "--ry": "32px" } as RV}>
             <LogoMark size={56} />
             <h2 className="cta__title">한번 입력하고, 비교표로 받아보세요</h2>
             <p className="cta__sub">의뢰자 무료 · 비밀유지계약(CDA) 지원</p>
