@@ -28,7 +28,7 @@ export function RfqField({ field, id, values, onChange, files = [], onFiles }: P
         <label className="check">
           <input type="checkbox" name={id} checked={v === true} onChange={(e) => onChange(id, e.target.checked)} />
           <span>
-            {field.label}
+            <LabelWithLink label={field.label} link={field.link} />
             {field.required && <span className="field__req">*</span>}
           </span>
         </label>
@@ -126,6 +126,22 @@ export function RfqField({ field, id, values, onChange, files = [], onFiles }: P
 
       {field.help && <p className="field__help">{field.help}</p>}
     </div>
+  );
+}
+
+/** 라벨 안의 특정 문구만 새 탭 링크로 바꿔 렌더 (동의 항목의 약관·처리방침) */
+function LabelWithLink({ label, link }: { label: string; link?: Field["link"] }) {
+  if (!link) return <>{label}</>;
+  const i = label.indexOf(link.text);
+  if (i === -1) return <>{label}</>;
+  return (
+    <>
+      {label.slice(0, i)}
+      <a href={link.href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+        {link.text}
+      </a>
+      {label.slice(i + link.text.length)}
+    </>
   );
 }
 

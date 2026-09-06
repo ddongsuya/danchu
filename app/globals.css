@@ -322,3 +322,29 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 
 /* 모바일: 헤더 내비 숨김(64px 고정 높이 유지) */
 @media (max-width: 720px) { .nav { display: none; } }
+
+/* ---------- 약관·개인정보처리방침 ---------- */
+.legal-main { flex: 1; padding: 56px 24px 88px; }
+.legal { max-width: 800px; margin: 0 auto; }
+.legal__title { margin: 0 0 8px; font-size: clamp(26px, 3vw, 32px); font-weight: 700; letter-spacing: -0.02em; }
+.legal__meta { margin: 0 0 40px; font-size: 14px; color: var(--muted); }
+.legal h2 {
+  margin: 40px 0 12px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em;
+  padding-top: 24px; border-top: 1px solid var(--card-line);
+}
+.legal h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 32px; }
+.legal h3 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }
+.legal p { margin: 0 0 12px; color: var(--body); text-wrap: pretty; }
+.legal ul, .legal ol { margin: 0 0 12px; padding-left: 20px; color: var(--body); }
+.legal li { margin-bottom: 6px; }
+.legal li::marker { color: var(--muted); }
+.legal__table-wrap { overflow-x: auto; margin: 0 0 16px; }
+.legal table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 14px; }
+.legal th, .legal td { padding: 10px 12px; border-bottom: 1px solid var(--table-line); text-align: left; vertical-align: top; }
+.legal th { background: var(--surface); font-weight: 600; color: var(--body); white-space: nowrap; }
+.legal td { color: var(--body); }
+.legal__note {
+  margin: 32px 0 0; padding: 16px 18px; background: var(--brand-tint);
+  border: 1px solid var(--brand-line); border-radius: 12px; font-size: 14px; color: var(--body);
+}
+.legal__back { margin-top: 40px; display: flex; }

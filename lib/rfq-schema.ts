@@ -29,6 +29,8 @@ export interface Field {
   placeholder?: string;
   help?: string;
   options?: string[];
+  /** 라벨 안의 특정 문구를 링크로 (동의 항목에서 약관·처리방침 연결) */
+  link?: { text: string; href: string };
 }
 
 export interface Group {
@@ -173,13 +175,21 @@ export const STEP1: Group[] = [
   {
     title: "동의",
     fields: [
-      { id: "agreePrivacy", type: "checkbox", label: "개인정보 수집·이용에 동의합니다.", required: true, full: true },
+      {
+        id: "agreePrivacy",
+        type: "checkbox",
+        label: "개인정보 수집·이용에 동의합니다.",
+        required: true,
+        full: true,
+        link: { text: "개인정보 수집·이용", href: "/privacy" },
+      },
       {
         id: "agreeTerms",
         type: "checkbox",
         label: "이용약관에 동의하며, 요청서가 참여 CRO에 배포되는 것을 확인했습니다.",
         required: true,
         full: true,
+        link: { text: "이용약관", href: "/terms" },
       },
       {
         id: "agreeShare",

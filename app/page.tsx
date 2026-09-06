@@ -182,9 +182,12 @@ export default function Landing() {
         <section id="partners" className="section">
           <div className="container">
             <h2 className="h2 h2--sm" style={{ marginBottom: 32 }}>협력기관</h2>
+            <p style={{ margin: "0 0 24px", color: "var(--muted)" }}>
+              클러스터·협회 등 기관 제휴를 준비하고 있습니다.
+            </p>
             <div className="partners">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="partner">협력기관 로고</div>
+                <div key={i} className="partner">준비 중</div>
               ))}
             </div>
           </div>
@@ -235,13 +238,12 @@ export default function Landing() {
         <div className="footer__inner">
           <div className="footer__col">
             <span className="footer__brand">단추 Danchu</span>
-            <span>주식회사 단추 · 대표 OOO · 사업자등록번호 000-00-00000</span>
-            <span>서울특별시 OO구 OO로 00</span>
+            <span>사업자 정보 준비 중</span>
             <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
           </div>
           <div className="footer__links">
-            <a href="#">개인정보처리방침</a>
-            <a href="#">이용약관</a>
+            <Link href="/privacy">개인정보처리방침</Link>
+            <Link href="/terms">이용약관</Link>
           </div>
         </div>
       </footer>
