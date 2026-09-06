@@ -59,7 +59,7 @@ const STEPS = [
 const TRUST = [
   { l: "무료", t: "의뢰자 비용 없음", p: "견적 요청과 비교표 수령까지 의뢰자에게 비용을 청구하지 않습니다." },
   { l: "기밀", t: "CDA 체결 후 전달", p: "기밀 등급을 지정하면 비밀유지계약을 체결한 CRO에만 요청서를 전달합니다." },
-  { l: "중립", t: "특정 CRO 추천하지 않음", p: "비교표는 사실 기준으로만 정리합니다. 선택은 의뢰자가 합니다." },
+  { l: "공정", t: "특정 CRO 추천하지 않음", p: "비교표는 사실 기준으로만 정리합니다. 선택은 의뢰자가 합니다." },
 ];
 
 export default function Landing() {
@@ -88,12 +88,12 @@ export default function Landing() {
             <div className="hero__copy">
               <p className="eyebrow">비임상 시험 견적 플랫폼</p>
               <h1 className="hero__title">
-                비임상 시험 견적,
+                비임상 시험 한번 요청으로
                 <br />
-                한 번 요청하고 한눈에 비교
+                한눈에 비교하세요.
               </h1>
               <p className="hero__sub">
-                여러 CRO에 따로 연락하지 마세요. 표준 양식으로 한 번 입력하면 단추가 배포하고, 같은 형식의 견적 비교표로 돌려드립니다.
+                여러 기관에 따로 연락하지 마세요. 한번 입력하면 단추가 배포하고 비교 견적서로 드려요.
               </p>
               <div className="hero__cta">
                 <Link href="/rfq" className="btn btn--primary btn--lg">무료로 견적 요청</Link>
@@ -130,7 +130,7 @@ export default function Landing() {
         {/* 문제 */}
         <section className="section section--surface">
           <div className="container">
-            <h2 className="h2" style={{ marginBottom: 40 }}>지금 방식은 이렇게 불편합니다</h2>
+            <h2 className="h2" style={{ marginBottom: 40 }}>혹시 따로 연락하고 계신가요?</h2>
             <div className="grid3">
               {PROBLEMS.map((c) => (
                 <div key={c.t} className="card">
@@ -181,7 +181,7 @@ export default function Landing() {
         {/* 협력기관 */}
         <section id="partners" className="section">
           <div className="container">
-            <h2 className="h2 h2--sm" style={{ marginBottom: 32 }}>협력기관</h2>
+            <h2 className="h2 h2--sm" style={{ marginBottom: 12 }}>협력기관</h2>
             <p style={{ margin: "0 0 24px", color: "var(--muted)" }}>
               클러스터·협회 등 기관 제휴를 준비하고 있습니다.
             </p>
