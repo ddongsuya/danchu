@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RfqLink } from "@/components/RfqLink";
 
 /** RFQ 카드 (스테이지 중앙 → 4개로 복제되어 퍼져 나감) */
 function RfqCard() {
@@ -197,9 +198,9 @@ export function HowTimeline() {
                 className="tl-cap"
                 style={{ opacity: "var(--s5)", transform: "translateY(calc((1 - var(--s5)) * 10px))" }}
               >
-                <Link href="/rfq" className="btn btn--pill tl-cta">
+                <RfqLink className="btn btn--pill tl-cta">
                   한번 입력하고, 비교표로 받기
-                </Link>
+                </RfqLink>
               </div>
             </div>
           </div>

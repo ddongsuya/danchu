@@ -387,7 +387,10 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
   position: fixed; inset: 0; z-index: 100; background: var(--surface);
   display: flex; align-items: center; justify-content: center;
   animation: introOut .6s cubic-bezier(.6, 0, .4, 1) 2.1s both;
+  pointer-events: none; /* 사라지는 중에도 아래 버튼을 가리지 않는다 */
 }
+/* 숨김 속성이 .intro의 display:flex에 지지 않도록 — 없으면 투명한 채로 화면 전체 탭을 삼킨다 */
+.intro[hidden] { display: none; }
 .intro__in {
   display: flex; flex-direction: column; align-items: center; gap: 28px;
   animation: introZoom .6s cubic-bezier(.6, 0, .4, 1) 2.1s both;

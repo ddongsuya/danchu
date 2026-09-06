@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RfqLink } from "@/components/RfqLink";
 import { Logo, LogoMark } from "@/components/Logo";
 import { LangToggle } from "@/components/LangToggle";
 import { Chevron } from "@/components/Chevron";
@@ -63,7 +64,7 @@ export default function Landing() {
           </nav>
           <div className="lhead__right">
             <LangToggle />
-            <Link href="/rfq" className="btn btn--pill btn--sm">견적 요청하기</Link>
+            <RfqLink className="btn btn--pill btn--sm">견적 요청하기</RfqLink>
           </div>
         </div>
       </header>
@@ -85,7 +86,7 @@ export default function Landing() {
               여러 기관에 따로 연락하지 마세요. 한번 입력하면 단추가 배포하고 비교 견적서로 드려요.
             </p>
             <div className="hero__cta rv" data-rv style={{ "--ry": "20px", "--rd": ".62s" } as RV}>
-              <Link href="/rfq" className="btn btn--pill btn--lg">무료로 견적 요청</Link>
+              <RfqLink className="btn btn--pill btn--lg">무료로 견적 요청</RfqLink>
               <span className="hero__note">의뢰자 무료 · 비밀유지계약(CDA) 지원</span>
             </div>
           </div>
@@ -133,12 +134,12 @@ export default function Landing() {
                 아래 분야의 비임상 시험 견적을 요청할 수 있습니다. 항목이 확실하지 않아도 요청서에 상황을 적어 주시면 됩니다.
               </p>
             </div>
-            <Link href="/rfq" className="arrowlink">
+            <RfqLink className="arrowlink">
               견적 요청 시작
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
-            </Link>
+            </RfqLink>
           </div>
           <ol className="tiles">
             {FIELDS.map(([name, desc], i) => (
@@ -186,7 +187,7 @@ export default function Landing() {
             <LogoMark size={56} />
             <h2 className="cta__title">한번 입력하고, 비교표로 받아보세요</h2>
             <p className="cta__sub">의뢰자 무료 · 비밀유지계약(CDA) 지원</p>
-            <Link href="/rfq" className="btn btn--pill btn--lg">무료로 견적 요청</Link>
+            <RfqLink className="btn btn--pill btn--lg">무료로 견적 요청</RfqLink>
           </div>
         </section>
       </main>
