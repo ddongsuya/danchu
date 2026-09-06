@@ -51,7 +51,7 @@ const PROBLEMS = [
 ];
 
 const STEPS = [
-  { n: 1, badge: "약 5분", t: "표준 양식 입력", p: "시험물질, 목적, 필요한 시험 항목을 표준 양식에 한 번만 입력합니다. 세부 조건은 선택 입력입니다." },
+  { n: 1, badge: "약 5분", t: "표준 양식 입력", p: "시험물질, 목적, 필요한 시험 항목을 표준 양식에 한번만 입력합니다. 세부 조건은 선택 입력입니다." },
   { n: 2, badge: "즉시", t: "참여 CRO에 배포", p: "CDA가 필요한 경우 체결 후 전달합니다. 참여 CRO는 동일한 요청서를 받아 같은 양식으로 회신합니다." },
   { n: 3, badge: "7영업일", t: "비교표 수령", p: "항목별 금액, 기간, GLP 적용 여부를 같은 형식으로 정리한 비교표를 받습니다." },
 ];
@@ -149,7 +149,7 @@ export default function Landing() {
         <section id="how" className="section section--how">
           <div className="container">
             <h2 className="h2" style={{ marginBottom: 12 }}>진행 방식</h2>
-            <p className="section__lead">한 번 입력하면 나머지는 단추가 진행합니다.</p>
+            <p className="section__lead">한번 입력하면 나머지는 단추가 진행합니다.</p>
             <div className="grid3">
               {STEPS.map((s) => (
                 <div key={s.n} className="card card--step">
@@ -227,7 +227,7 @@ export default function Landing() {
         {/* 하단 CTA */}
         <section id="contact" className="section section--cta">
           <div className="cta__inner">
-            <h2 className="cta__title">한 번 입력하고, 비교표로 받아보세요</h2>
+            <h2 className="cta__title">한번 입력하고, 비교표로 받아보세요</h2>
             <p className="cta__sub">의뢰자 무료 · 비밀유지계약(CDA) 지원</p>
             <Link href="/rfq" className="btn btn--primary btn--cta">무료로 견적 요청</Link>
           </div>
