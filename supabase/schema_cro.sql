@@ -11,7 +11,7 @@ create table if not exists public.rfq_invites (
   rfq_no       text not null,
   cro_name     text not null,
   cro_email    text not null,
-  token        text unique not null default encode(gen_random_bytes(18), 'base64url'),
+  token        text unique not null default encode(gen_random_bytes(18), 'hex'),  -- URL-safe 36자
   reply_by     date not null,                        -- 회신 기한 (의뢰자 희망일 또는 접수+7영업일)
   expires_at   timestamptz not null,                 -- reply_by + 7일. 이후 링크 만료
   status       text not null default 'sent',         -- sent | draft | submitted | declined | expired

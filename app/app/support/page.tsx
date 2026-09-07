@@ -6,12 +6,39 @@ import { Caret, CheckDisc } from "@/components/app/ui";
 import { ME, REQUESTS } from "@/lib/app-data";
 
 const TYPES = ["견적 문의", "일정", "CDA·기밀", "계약", "기타"];
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** 문의 — /api/support 로 운영자에게 실제 발송한다. 답변 이메일은 수정 가능(계정 연동 전). */
 export default function Support() {
   const [rfq, setRfq] = useState("");
   const [type, setType] = useState("견적 문의");
   const [text, setText] = useState("");
+  const [email, setEmail] = useState(ME.email);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+
+  const canSend = !!text.trim() && EMAIL.test(email) && !busy;
+
+  const send = async () => {
+    if (!canSend) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type, rfqNo: rfq, text }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(d.error || "문의를 보내지 못했습니다.");
+      setSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "문의를 보내지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="scr scr--wh">
@@ -31,7 +58,7 @@ export default function Support() {
           <CheckDisc size={56} />
           <h1 style={{ marginTop: 8, fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>문의를 보냈습니다</h1>
           <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 300 }}>
-            영업일 1일 내 {ME.email}로 답변합니다.
+            영업일 1일 내 {email}로 답변합니다.
           </p>
           <button
             type="button"
@@ -109,15 +136,32 @@ export default function Support() {
               />
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "12px 16px", border: "1px dashed var(--dash)", borderRadius: 12, fontSize: 14, color: "var(--muted)" }}>
-              <span>답변 받을 이메일</span>
-              <span style={{ color: "var(--ink)", fontWeight: 600 }}>{ME.email}</span>
+            <div className="fld">
+              <label className="fld__lab" htmlFor="email">
+                답변 받을 이메일<span className="req">*</span>
+              </label>
+              <input
+                id="email"
+                className="inp"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+              />
             </div>
+
+            {error && (
+              <p role="alert" style={{ padding: "12px 16px", borderRadius: 10, background: "var(--err-bg)", color: "var(--err)", fontSize: 14 }}>
+                {error}
+              </p>
+            )}
           </div>
 
           <div className="cta cta--wh">
-            <button type="button" className="b1" disabled={!text.trim()} onClick={() => setSent(true)}>
-              보내기
+            <button type="button" className="b1" disabled={!canSend} onClick={send}>
+              {busy ? "보내는 중…" : "보내기"}
             </button>
           </div>
         </>

@@ -18,6 +18,7 @@ import {
 import { RfqField } from "./RfqField";
 import { Chevron } from "./Chevron";
 import { LogoMark } from "./Logo";
+import { uploadToSigned, type UploadTicket } from "@/lib/upload";
 
 type Phase = "contact" | "wizard" | "detail";
 
@@ -90,13 +91,30 @@ export function RfqForm() {
     setBusy(true);
     setError("");
     try {
-      const fd = new FormData();
-      fd.append("payload", JSON.stringify({ ...values, submittedStep: isDetail ? 2 : 1 }));
-      for (const f of files) fd.append("files", f, f.name);
-      const res = await fetch("/api/rfq", { method: "POST", body: fd });
-      const data = (await res.json().catch(() => ({}))) as { rfqNo?: string; error?: string };
+      // 1) 접수 (JSON) — 파일은 메타만 보내고 서명 URL을 받는다
+      const res = await fetch("/api/rfq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payload: { ...values, submittedStep: isDetail ? 2 : 1 },
+          files: files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { rfqNo?: string; error?: string; uploads?: UploadTicket[] };
       if (!res.ok || !data.rfqNo) throw new Error(data.error || "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-      router.push(`/rfq/complete?no=${encodeURIComponent(data.rfqNo)}`);
+
+      // 2) 첨부는 브라우저가 Storage로 직접 업로드 (서버 본문 한도 회피)
+      let failed = 0;
+      const tickets = data.uploads ?? [];
+      await Promise.all(
+        files.map(async (f, i) => {
+          const t = tickets[i];
+          if (!t || t.name !== f.name || !(await uploadToSigned(t, f))) failed++;
+        }),
+      );
+      const q = new URLSearchParams({ no: data.rfqNo });
+      if (files.length && failed) q.set("upfail", String(failed));
+      router.push(`/rfq/complete?${q}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       setBusy(false);
@@ -154,6 +172,20 @@ export function RfqForm() {
                   ? "비워 두면 CRO가 표준 설계로 견적합니다. 앞에서 고른 시험 항목의 세부 조건은 아래에 있습니다."
                   : cur!.sub || ""}
             </p>
+          </div>
+
+          {/* 허니팟 — 사람은 보지 못하고 자동화 도구만 채우는 칸. 값이 있으면 서버가 조용히 버린다 */}
+          <div aria-hidden="true" style={{ position: "absolute", left: -9999, width: 1, height: 1, overflow: "hidden" }}>
+            <label htmlFor="website">Website</label>
+            <input
+              id="website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={typeof values.website === "string" ? values.website : ""}
+              onChange={(e) => set("website", e.target.value)}
+            />
           </div>
 
           {/* 담당자 정보 — 순차 노출 */}

@@ -7,9 +7,10 @@ import { addBusinessDays, formatKo, nowSeoul } from "@/lib/dates";
 export const metadata: Metadata = { title: "접수 완료 — 단추" };
 export const dynamic = "force-dynamic";
 
-export default async function CompletePage({ searchParams }: { searchParams: Promise<{ no?: string }> }) {
-  const { no } = await searchParams;
+export default async function CompletePage({ searchParams }: { searchParams: Promise<{ no?: string; upfail?: string }> }) {
+  const { no, upfail } = await searchParams;
   const rfqNo = no && /^DC-\d{4}-\d{4,}$/.test(no) ? no : "DC-----";
+  const failed = upfail && /^\d{1,2}$/.test(upfail) ? Number(upfail) : 0;
   const now = nowSeoul();
   const d1 = formatKo(addBusinessDays(now, 1));
   const d2 = formatKo(addBusinessDays(now, 5));
@@ -36,6 +37,12 @@ export default async function CompletePage({ searchParams }: { searchParams: Pro
               <span>RFQ 번호</span>
               <span>{rfqNo}</span>
             </div>
+            {failed > 0 && (
+              <p className="error" role="alert" style={{ marginTop: 16, textAlign: "left" }}>
+                첨부 파일 {failed}개가 업로드되지 않았습니다. 접수는 완료되었으니, 파일은 RFQ 번호를 적어{" "}
+                <a href={`mailto:hello@danchu.kr?subject=${encodeURIComponent(`[${rfqNo}] 첨부 파일`)}`}>hello@danchu.kr</a>로 보내주세요.
+              </p>
+            )}
           </section>
 
           <section className="next-card">

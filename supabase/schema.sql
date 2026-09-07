@@ -76,3 +76,6 @@ alter table public.rfq_counters enable row level security;
 insert into storage.buckets (id, name, public)
 values ('rfq-files', 'rfq-files', false)
 on conflict (id) do nothing;
+
+-- 채번 함수는 서버(service role)만 호출한다. anon 키로 카운터를 올리지 못하게 막는다.
+revoke execute on function public.next_rfq_no(int) from public, anon, authenticated;

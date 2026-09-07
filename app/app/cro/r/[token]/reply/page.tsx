@@ -6,10 +6,17 @@ import { useRouter } from "next/navigation";
 import { Caret, CheckMark } from "@/components/app/ui";
 import type { ReplyItem, RfqView } from "@/lib/cro-data";
 import { won } from "@/lib/app-data";
+import { uploadToSigned } from "@/lib/upload";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
+const MAX_PDF = 20 * 1024 * 1024;
 
-type Loaded = { rfq: RfqView; draft: { items: ReplyItem[]; note: string; pdfName: string; status: string } | null };
+type Loaded = {
+  rfq: RfqView;
+  draft: { items: ReplyItem[]; note: string; pdfName: string; status: string } | null;
+  expired?: boolean;
+  locked?: boolean;
+};
 
 export default function Reply({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -19,7 +26,7 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
   const [note, setNote] = useState("");
   const [pdf, setPdf] = useState<File | null>(null);
   const [pdfName, setPdfName] = useState("");
-  const [saved, setSaved] = useState<"idle" | "saving" | "saved">("idle");
+  const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -39,24 +46,38 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했습니다."));
   }, [token]);
 
+  const readOnly = !!(data?.expired || data?.locked);
+
   /** 입력이 멈추고 800ms 뒤 초안 저장 */
   const queueSave = (nextItems: ReplyItem[], nextNote: string) => {
+    if (readOnly) return;
     setSaved("saving");
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(async () => {
-      await fetch(`/api/quote/${token}`, {
+      const ok = await fetch(`/api/quote/${token}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: nextItems, note: nextNote }),
-      }).catch(() => null);
-      setSaved("saved");
+      })
+        .then((r) => r.ok)
+        .catch(() => false);
+      setSaved(ok ? "saved" : "failed");
     }, 800);
   };
 
   const update = (seq: number, patch: Partial<ReplyItem>) => {
+    if (readOnly) return;
     const next = items.map((it) => (it.seq === seq ? { ...it, ...patch } : it));
     setItems(next);
     queueSave(next, note);
+  };
+
+  const pickPdf = (f: File | null) => {
+    setError("");
+    if (!f) return setPdf(null);
+    if (f.size > MAX_PDF) return setError("PDF는 20MB 이하만 첨부할 수 있습니다.");
+    if (f.type && f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return setError("PDF 파일만 첨부할 수 있습니다.");
+    setPdf(f);
   };
 
   if (error && !data) {
@@ -76,16 +97,33 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const maxW = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
   const allNo = items.length > 0 && items.every((it) => it.avail === "불가");
-  const canSubmit = filled === items.length && !allNo && (!!pdf || !!pdfName);
+  const canSubmit = !readOnly && filled === items.length && !allNo && (!!pdf || !!pdfName);
 
   const submit = async () => {
     setBusy(true);
     setError("");
     try {
-      const fd = new FormData();
-      fd.append("payload", JSON.stringify({ items, note }));
-      if (pdf) fd.append("pdf", pdf, pdf.name);
-      const res = await fetch(`/api/quote/${token}`, { method: "POST", body: fd });
+      // 1) PDF가 새로 선택됐으면 서명 URL을 받아 브라우저가 Storage로 직접 올린다
+      let pdfRef: { path: string; name: string; size: number } | undefined;
+      if (pdf) {
+        const u = await fetch(`/api/quote/${token}/upload-url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: pdf.name, size: pdf.size, type: pdf.type }),
+        });
+        const ud = (await u.json().catch(() => ({}))) as { path?: string; signedUrl?: string; error?: string };
+        if (!u.ok || !ud.path) throw new Error(ud.error || "PDF 업로드 준비에 실패했습니다.");
+        if (ud.signedUrl && !(await uploadToSigned({ name: pdf.name, path: ud.path, signedUrl: ud.signedUrl }, pdf))) {
+          throw new Error("PDF 업로드에 실패했습니다. 네트워크를 확인하고 다시 시도해 주세요.");
+        }
+        pdfRef = { path: ud.path, name: pdf.name, size: pdf.size };
+      }
+      // 2) 제출 (JSON)
+      const res = await fetch(`/api/quote/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, note, pdf: pdfRef }),
+      });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(d.error || "제출에 실패했습니다.");
       router.push(`/app/cro/r/${token}/reply/done?t=${total}&w=${maxW}`);
@@ -94,6 +132,8 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
       setBusy(false);
     }
   };
+
+  const savedLabel = saved === "saving" ? "저장 중…" : saved === "saved" ? "저장됨" : saved === "failed" ? "저장 실패" : "";
 
   return (
     <div className="scr scr--wh">
@@ -104,11 +144,21 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
             요청서
           </Link>
           <span className="hd__ttl tnum">견적 회신 · {rfq.no}</span>
-          <span style={{ minWidth: 56, textAlign: "right", fontSize: 12, fontWeight: 600, color: saved === "saved" ? "var(--ok)" : "var(--muted)" }}>
-            {saved === "saving" ? "저장 중…" : saved === "saved" ? "저장됨" : ""}
+          <span style={{ minWidth: 56, textAlign: "right", fontSize: 12, fontWeight: 600, color: saved === "saved" ? "var(--ok)" : saved === "failed" ? "var(--err)" : "var(--muted)" }}>
+            {readOnly ? "" : savedLabel}
           </span>
         </div>
       </div>
+
+      {readOnly && (
+        <div className="pad" style={{ paddingTop: 16 }}>
+          <div role="status" style={{ padding: "12px 16px", borderRadius: 12, background: "var(--err-bg)", color: "var(--err)", fontSize: 14, lineHeight: 1.5 }}>
+            {data.expired
+              ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요."
+              : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          </div>
+        </div>
+      )}
 
       <div className="pad" style={{ paddingTop: 20, display: "flex", flexDirection: "column", gap: 6 }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>항목별 견적 · {filled} / {items.length} 항목 완료</p>
@@ -134,7 +184,7 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
 
               <div className="seg seg--full" role="radiogroup" aria-label="수행 가능 여부">
                 {AVAILS.map((a) => (
-                  <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} onClick={() => update(r.seq, { avail: a })}>
+                  <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} disabled={readOnly} onClick={() => update(r.seq, { avail: a })}>
                     {a}
                   </button>
                 ))}
@@ -146,7 +196,7 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
                     type="text"
                     inputMode="numeric"
                     placeholder="금액"
-                    disabled={no}
+                    disabled={no || readOnly}
                     value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""}
                     onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })}
                     aria-label={`${r.name} 금액`}
@@ -158,7 +208,7 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
                     type="text"
                     inputMode="numeric"
                     placeholder="기간"
-                    disabled={no}
+                    disabled={no || readOnly}
                     value={it.weeks}
                     onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })}
                     aria-label={`${r.name} 기간`}
@@ -166,9 +216,6 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
                   <span>주</span>
                 </div>
               </div>
-              <button type="button" className="btxt" style={{ alignSelf: "flex-start", padding: 0, fontSize: 13 }}>
-                + 설계·포함 항목·별도 옵션 (선택)
-              </button>
             </div>
           );
         })}
@@ -183,6 +230,7 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
             rows={3}
             style={{ fontSize: 16, padding: "12px 14px", borderRadius: 10 }}
             value={note}
+            disabled={readOnly}
             onChange={(e) => {
               setNote(e.target.value);
               queueSave(items, e.target.value);
@@ -193,16 +241,17 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
       </div>
 
       <div className="pad" style={{ padding: "12px 20px 24px" }}>
-        <input ref={fileRef} type="file" accept="application/pdf" hidden onChange={(e) => setPdf(e.target.files?.[0] ?? null)} />
+        <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => pickPdf(e.target.files?.[0] ?? null)} />
         <button
           type="button"
+          disabled={readOnly}
           onClick={() => fileRef.current?.click()}
           style={{ width: "100%", border: `1px dashed ${pdf || pdfName ? "var(--brand)" : "var(--dash)"}`, background: pdf || pdfName ? "var(--tint)" : "none", borderRadius: 12, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 14, color: "var(--muted)", textAlign: "left" }}
         >
           <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {pdf ? pdf.name : pdfName || <>정식 견적서 PDF (정본)<span className="req">*</span></>}
           </span>
-          <span style={{ color: "var(--brand)", fontWeight: 600, flex: "none" }}>{pdf || pdfName ? "교체" : "첨부"}</span>
+          <span style={{ color: "var(--brand)", fontWeight: 600, flex: "none" }}>{readOnly ? "" : pdf || pdfName ? "교체" : "첨부"}</span>
         </button>
         {error && (
           <p role="alert" style={{ marginTop: 10, padding: "12px 16px", borderRadius: 10, background: "var(--err-bg)", color: "var(--err)", fontSize: 14 }}>
@@ -217,7 +266,17 @@ export default function Reply({ params }: { params: Promise<{ token: string }> }
           <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap", flex: "none" }}>{total ? won(total) : "—"}</span>
         </div>
         <button type="button" className="b1" disabled={!canSubmit || busy} onClick={submit}>
-          {busy ? "제출 중…" : filled < items.length ? `항목 ${items.length - filled}개 남음` : allNo ? "전 항목 불가 — 회신하지 않음으로 처리" : !pdf && !pdfName ? "PDF를 첨부하세요" : "견적 제출"}
+          {readOnly
+            ? "수정할 수 없습니다"
+            : busy
+              ? "제출 중…"
+              : filled < items.length
+                ? `항목 ${items.length - filled}개 남음`
+                : allNo
+                  ? "전 항목 불가 — 회신하지 않음으로 처리"
+                  : !pdf && !pdfName
+                    ? "PDF를 첨부하세요"
+                    : "견적 제출"}
         </button>
       </div>
     </div>

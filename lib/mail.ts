@@ -16,6 +16,10 @@ function fmt(v: unknown): string {
   return String(v);
 }
 
+const wrap = (body: string) =>
+  `<div style="font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1815;line-height:1.6;max-width:640px">${body}
+   <p style="margin-top:32px;font-size:13px;color:#9A948B">단추 Danchu · hello@danchu.kr</p></div>`;
+
 /** 입력값 전체를 라벨 순으로 표 형태 HTML로 */
 export function renderValuesTable(values: Values): string {
   const labels = labelMap();
@@ -47,10 +51,10 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
   const name = String(values.name || "");
   const company = String(values.company || "");
   const cats = Array.isArray(values.categories) ? values.categories.join(", ") : "";
-
-  const wrap = (body: string) =>
-    `<div style="font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1815;line-height:1.6;max-width:640px">${body}
-     <p style="margin-top:32px;font-size:13px;color:#9A948B">단추 Danchu · hello@danchu.kr</p></div>`;
+  const cda = typeof values.confid === "string" && values.confid.startsWith("CDA");
+  const shareNote = cda
+    ? "입력 내용은 비밀유지계약(CDA)을 체결한 참여 CRO에만 전달됩니다."
+    : "입력 내용은 견적 목적으로 참여 CRO에만 전달됩니다.";
 
   const requesterHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">견적 요청이 접수되었습니다</h2>
@@ -61,12 +65,12 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     </div>
     <h3 style="font-size:16px;margin:0 0 8px">다음 단계</h3>
     <ol style="padding-left:20px;margin:0 0 20px">
-      <li>참여 CRO에 배포 — ${d1} · CDA 필요 시 체결 후 전달</li>
+      <li>참여 CRO에 배포 — ${d1}${cda ? " · CDA 체결 후 전달" : ""}</li>
       <li>CRO 견적 회신 — ${d2}까지 · 같은 양식으로 회신</li>
       <li>비교표 발송 — ${d3} 예정 · 이메일로 발송</li>
     </ol>
     <p style="font-size:14px;color:#6F6A63">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
-    <p style="font-size:14px;color:#6F6A63">의뢰자 무료 · 입력 내용은 CDA 체결 후 참여 CRO에만 전달됩니다.</p>`);
+    <p style="font-size:14px;color:#6F6A63">의뢰자 무료 · ${shareNote}</p>`);
 
   const adminHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">[단추] 새 RFQ 접수 ${esc(rfqNo)}</h2>
@@ -98,4 +102,23 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     if (r.error) console.error("resend admin", r.error);
   }
   return results;
+}
+
+/** 앱 문의 화면 → 운영자 메일. 발송 성공 여부를 돌려준다. */
+export async function sendSupportMail(a: { email: string; type: string; rfqNo: string; text: string }): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !ADMIN.length) return false;
+  const resend = new Resend(key);
+  const r = await resend.emails.send({
+    from: FROM,
+    to: ADMIN,
+    replyTo: a.email,
+    subject: `[단추] 문의 · ${a.type}${a.rfqNo ? ` · ${a.rfqNo}` : ""}`,
+    html: wrap(`
+      <h2 style="margin:0 0 12px;font-size:20px">[단추] 앱 문의</h2>
+      <p>보낸 사람: <a href="mailto:${esc(a.email)}">${esc(a.email)}</a><br>유형: ${esc(a.type)}${a.rfqNo ? `<br>관련 요청: ${esc(a.rfqNo)}` : ""}</p>
+      <pre style="white-space:pre-wrap;font:inherit;padding:14px 16px;background:#F5F5F4;border-radius:10px">${esc(a.text)}</pre>`),
+  });
+  if (r.error) console.error("resend support", r.error);
+  return !r.error;
 }

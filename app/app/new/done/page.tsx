@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { CheckDisc } from "@/components/app/ui";
-import { addBusinessDays, formatKo } from "@/lib/dates";
+import { addBusinessDays, formatKo, nowSeoul } from "@/lib/dates";
 
+/** 웹 접수 완료·확인 메일과 같은 일정 기준: 배포 +1 · 회신 +5 · 비교표 +7 영업일 */
 const STEPS = [
-  { t: "CRO 배포", d: 1, note: "CDA 체결 기관에 전달" },
-  { t: "견적 회신", d: 6, note: "도착할 때마다 알림" },
-  { t: "비교표 수령", d: 8, note: "앱과 이메일로" },
+  { t: "CRO 배포", d: 1, note: "CDA 필요 시 체결 후 전달" },
+  { t: "견적 회신", d: 5, note: "도착할 때마다 알림" },
+  { t: "비교표 수령", d: 7, note: "앱과 이메일로" },
 ];
+
+export const dynamic = "force-dynamic";
 
 export default async function Done({ searchParams }: { searchParams: Promise<{ no?: string }> }) {
   const { no } = await searchParams;
-  const rfqNo = no ?? "DC-2026-0000";
-  const today = new Date();
+  const rfqNo = no && /^DC-\d{4}-\d{4,}$/.test(no) ? no : "DC-----";
+  const today = nowSeoul();
 
   return (
     <div className="scr scr--sf">

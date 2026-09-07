@@ -1,20 +1,13 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 /**
- * 견적 요청 진입점.
- * 폰(터치 + 좁은 화면)에서는 앱 위자드(/app/new)로, 그 외에는 웹 폼(/rfq)으로 보낸다.
- * 서버 렌더는 /rfq로 나가고, 마운트 후 기기 판정에 따라 href만 바꾼다.
+ * 견적 요청 진입점 — 항상 웹 폼(/rfq)으로 보낸다.
+ * 앱 위자드(/app/new)는 계정에서 담당자 정보를 채우는 구조라, 로그인이 붙기 전에는
+ * 실제 고객을 보내면 데모 인물 명의로 접수된다. 로그인 연동 후 기기 판정을 다시 넣는다.
  */
 export function RfqLink({ className, children }: { className?: string; children: React.ReactNode }) {
-  const [href, setHref] = useState("/rfq");
-  useEffect(() => {
-    if (matchMedia("(pointer: coarse) and (max-width: 900px)").matches) setHref("/app/new");
-  }, []);
   return (
-    <Link href={href} className={className}>
+    <Link href="/rfq" className={className}>
       {children}
     </Link>
   );

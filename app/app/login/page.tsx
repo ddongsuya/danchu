@@ -1,22 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { CheckDisc, Mark } from "@/components/app/ui";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Mark } from "@/components/app/ui";
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
+/**
+ * 로그인 화면.
+ * - 이메일 매직링크는 계정 연동(Supabase Auth) 전이라 안내만 둔다.
+ * - 데모 화면군(/app)은 운영자가 나눠 준 비밀번호로 연다 (APP_DEMO_PASSWORD).
+ */
 export default function Login() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const ok = EMAIL.test(email);
+  return (
+    <Suspense fallback={<div className="scr scr--sf" />}>
+      <LoginInner />
+    </Suspense>
+  );
+}
 
-  const send = () => {
-    if (!ok) return;
-    // 매직링크 발송은 계정 연동(Supabase Auth)이 붙으면 여기서 호출한다.
-    setSent(true);
+function LoginInner() {
+  const router = useRouter();
+  const sp = useSearchParams();
+  const next = sp.get("next");
+  const dest = next && next.startsWith("/app") ? next : "/app";
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const enter = async () => {
+    if (!pw || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/demo-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(d.error || "열 수 없습니다.");
+      router.push(dest);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "열 수 없습니다.");
+      setBusy(false);
+    }
   };
 
   return (
@@ -32,42 +59,30 @@ export default function Login() {
       </div>
 
       <div style={{ padding: "0 20px calc(40px + var(--bot))", display: "flex", flexDirection: "column", gap: 12 }}>
-        {!sent ? (
-          <>
-            <label className="fld__lab" htmlFor="email">업무용 이메일</label>
-            <input
-              id="email"
-              className="inp"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder="name@company.com"
-            />
-            <button type="button" className="b1" onClick={send} disabled={!ok}>
-              로그인 링크 보내기
-            </button>
-            <p style={{ marginTop: 4, textAlign: "center", fontSize: 13, color: "var(--muted)" }}>
-              비밀번호 없이 이메일로 받은 링크로 로그인합니다. 처음이면 계정이 자동으로 만들어집니다.
-            </p>
-          </>
-        ) : (
-          <div className="card rise-in" style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
-            <CheckDisc size={44} />
-            <div style={{ fontSize: 18, fontWeight: 700 }}>링크를 보냈습니다</div>
-            <div style={{ fontSize: 14, color: "var(--body)" }}>
-              <b style={{ fontWeight: 600 }}>{email}</b>의 받은편지함을 확인해 주세요. 링크는 15분간 유효합니다.
-            </div>
-            <button type="button" className="btxt" style={{ marginTop: 6 }} onClick={() => setSent(false)}>
-              다른 이메일로 받기
-            </button>
-            <button type="button" className="b1" style={{ marginTop: 8 }} onClick={() => router.push("/app")}>
-              데모 계정으로 둘러보기
-            </button>
-          </div>
+        <label className="fld__lab" htmlFor="pw">데모 비밀번호</label>
+        <input
+          id="pw"
+          className="inp"
+          type="password"
+          autoComplete="off"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && enter()}
+          placeholder="운영자에게 받은 비밀번호"
+        />
+        {error && (
+          <p role="alert" style={{ padding: "10px 14px", borderRadius: 10, background: "var(--err-bg)", color: "var(--err)", fontSize: 14 }}>
+            {error}
+          </p>
         )}
+        <button type="button" className="b1" onClick={enter} disabled={!pw || busy}>
+          {busy ? "확인 중…" : "데모 화면 열기"}
+        </button>
+        <p style={{ marginTop: 4, textAlign: "center", fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+          이 화면군은 예시 데이터로 구성된 데모입니다. 이메일 로그인은 계정 기능과 함께 제공됩니다.
+          <br />
+          견적 요청은 <Link href="/rfq">웹 양식</Link>에서 바로 할 수 있어요.
+        </p>
         <p style={{ marginTop: 6, textAlign: "center", fontSize: 12, color: "var(--ph)" }}>
           계속하면 <Link href="/terms">이용약관</Link> · <Link href="/privacy">개인정보처리방침</Link>에 동의합니다
         </p>

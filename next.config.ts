@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  // 첨부 업로드(최대 10개 × 20MB)를 위해 서버 액션/라우트 바디 제한 완화
-  experimental: { serverActions: { bodySizeLimit: "50mb" } },
-};
+// 첨부 업로드는 서버를 거치지 않고 Supabase Storage 서명 URL로 직접 올린다
+// (Vercel 함수 요청 본문 한도 4.5MB). 서버 바디 제한을 늘릴 필요가 없다.
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
