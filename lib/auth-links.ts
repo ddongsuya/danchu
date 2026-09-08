@@ -23,6 +23,7 @@ export async function sendLoginLink(kind: "signup" | "magic" | "recovery", email
     if (!notFound) console.error("generateLink", kind, error);
     return { ok: false, notFound };
   }
+  console.info("[auth/link] generated", { kind, type, verification: data.properties.verification_type, hashLen: data.properties.hashed_token.length });
   const q = new URLSearchParams({ token_hash: data.properties.hashed_token, type });
   if (next) q.set("next", next);
   const link = `${siteUrl()}/auth/confirm?${q}`;

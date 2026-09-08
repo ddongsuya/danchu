@@ -9,8 +9,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED = [/^\/app(\/|$)/, /^\/cro(\/|$)/, /^\/admin(\/|$)/];
 
 export async function proxy(req: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
   const { pathname } = req.nextUrl;
   const needsAuth = PROTECTED.some((re) => re.test(pathname));
 

@@ -18,7 +18,10 @@ export async function POST(req: Request) {
   if (!sb || !admin) return NextResponse.json({ error: "서버 설정이 완료되지 않았습니다." }, { status: 503 });
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if (error || !data.user) return NextResponse.json({ error: authErrorKo(error?.message) }, { status: 401 });
+  if (error || !data.user) {
+    console.warn("[auth/login] 실패", { status: error?.status, code: error?.code, message: error?.message });
+    return NextResponse.json({ error: authErrorKo(error?.message) }, { status: 401 });
+  }
 
   const { data: p } = await admin.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
   const role = ((p?.role as Role) || "requester") as Role;

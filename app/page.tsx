@@ -2,6 +2,7 @@ import Link from "next/link";
 import { RfqLink } from "@/components/RfqLink";
 import { Logo, LogoMark } from "@/components/Logo";
 import { LangToggle } from "@/components/LangToggle";
+import { HeaderAuth } from "@/components/HeaderAuth";
 import { Chevron } from "@/components/Chevron";
 import { Motion, IntroSplash } from "@/components/Motion";
 import { HowTimeline } from "@/components/HowTimeline";
@@ -64,7 +65,7 @@ export default function Landing() {
           </nav>
           <div className="lhead__right">
             <LangToggle />
-            <Link href="/login" style={{ fontSize: 14, color: "var(--body)", whiteSpace: "nowrap" }}>로그인</Link>
+            <HeaderAuth />
             <RfqLink className="btn btn--pill btn--sm">견적 요청하기</RfqLink>
           </div>
         </div>

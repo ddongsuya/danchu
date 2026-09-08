@@ -24,7 +24,11 @@ export async function GET(req: Request) {
   if (!sb || !admin) return fail("config");
 
   const { data, error } = await sb.auth.verifyOtp({ type, token_hash: tokenHash });
-  if (error || !data.user) return fail("expired");
+  if (error || !data.user) {
+    console.error("[auth/confirm] verifyOtp 실패", { type, status: error?.status, code: error?.code, message: error?.message, hasUser: !!data?.user });
+    return fail("expired");
+  }
+  console.info("[auth/confirm] ok", { type, user: data.user.id, email: data.user.email, confirmed: !!data.user.email_confirmed_at });
 
   if (type === "recovery") return NextResponse.redirect(new URL("/reset-password", url.origin), 303);
 

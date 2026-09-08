@@ -1,13 +1,18 @@
+"use client";
+
 import Link from "next/link";
+import { useMe } from "@/lib/use-me";
 
 /**
- * 견적 요청 진입점 — 항상 웹 폼(/rfq)으로 보낸다.
- * 앱 위자드(/app/new)는 계정에서 담당자 정보를 채우는 구조라, 로그인이 붙기 전에는
- * 실제 고객을 보내면 데모 인물 명의로 접수된다. 로그인 연동 후 기기 판정을 다시 넣는다.
+ * 견적 요청 진입점.
+ * 로그인한 의뢰자는 계정 정보가 채워지는 앱 위자드(/app/new)로, 그 외에는 공개 웹 폼(/rfq)으로.
+ * 서버 렌더는 /rfq로 나가고, 마운트 후 세션을 확인해 href만 바꾼다.
  */
 export function RfqLink({ className, children }: { className?: string; children: React.ReactNode }) {
+  const { me } = useMe();
+  const href = me?.role === "requester" ? "/app/new" : "/rfq";
   return (
-    <Link href="/rfq" className={className}>
+    <Link href={href} className={className}>
       {children}
     </Link>
   );
