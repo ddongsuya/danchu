@@ -4,6 +4,8 @@ import { sendRfqMails } from "@/lib/mail";
 import { validateRequired, type Values } from "@/lib/rfq-schema";
 import { nowSeoul } from "@/lib/dates";
 import { safeName, type UploadTicket } from "@/lib/upload";
+import { sessionOrNull } from "@/lib/auth";
+import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,8 +81,18 @@ export async function POST(req: Request) {
   let persisted = false;
   const uploads: UploadTicket[] = [];
 
+  // 로그인 사용자면 계정에 연결. 앱에서 온 요청은 이메일을 계정 이메일로 고정한다.
+  const sess = await sessionOrNull();
+  if (sess && values.source === "app") values.email = sess.email;
+  let userId: string | null = sess?.userId ?? null;
+
   if (supabase) {
     try {
+      if (!userId) {
+        // 로그인 없이 접수했지만 같은 이메일의 계정이 있으면 연결
+        const { data: prof } = await supabase.from("profiles").select("id").ilike("email", str("email")).maybeSingle();
+        userId = (prof?.id as string) ?? null;
+      }
       const { data: no, error: e1 } = await supabase.rpc("next_rfq_no", { p_year: year });
       if (e1 || !no) throw e1 || new Error("채번 실패");
       rfqNo = String(no);
@@ -103,6 +115,7 @@ export async function POST(req: Request) {
           confidentiality: nul("confid"),
           reply_by: /^\d{4}-\d{2}-\d{2}$/.test(str("replyBy")) ? str("replyBy") : null,
           payload: values,
+          user_id: userId,
           user_agent: req.headers.get("user-agent"),
           ip: /^[0-9a-fA-F.:]+$/.test(ip) ? ip : null,
         })
@@ -127,6 +140,11 @@ export async function POST(req: Request) {
         uploads.push({ name: f.name, path, signedUrl: signed.signedUrl });
       }
       persisted = true;
+
+      const cats = Array.isArray(values.categories) ? (values.categories as string[]).join(" · ") : "";
+      await logEvent(row.id, "received", "접수", `${cats}${files.length ? ` · 첨부 ${files.length}건` : ""}`, userId);
+      await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${rfqNo} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${rfqNo}` });
+      if (userId) await notifyUsers([userId], { kind: "접수", title: `${rfqNo} 접수되었습니다`, body: "요청서를 정리해 영업일 1일 내 참여 CRO에 배포합니다.", href: `/app/r/${rfqNo}` });
     } catch (e) {
       console.error("supabase", e);
       return NextResponse.json({ error: "접수 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });

@@ -14,7 +14,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const got = await loadQuote(token);
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
-  if (got.locked) return NextResponse.json({ error: "회신 기한이 지나 수정할 수 없습니다." }, { status: 403 });
+  if (got.locked || got.closed) return NextResponse.json({ error: "지금은 수정할 수 없습니다." }, { status: 403 });
 
   const b = (await req.json().catch(() => ({}))) as { name?: unknown; size?: unknown; type?: unknown };
   const name = typeof b.name === "string" ? b.name : "";
@@ -24,13 +24,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (size > MAX_PDF) return NextResponse.json({ error: "PDF는 20MB 이하만 첨부할 수 있습니다." }, { status: 400 });
   if (type && type !== "application/pdf" && !/\.pdf$/i.test(name)) return NextResponse.json({ error: "PDF 파일만 첨부할 수 있습니다." }, { status: 400 });
 
-  if (token.startsWith("demo")) {
-    // 데모 토큰: 업로드 없이 통과 (클라이언트는 signedUrl 없으면 업로드를 건너뛴다)
-    return NextResponse.json({ path: `demo/${safeName(name)}`, signedUrl: "" });
-  }
   const sb = getSupabaseAdmin();
   if (!sb) return NextResponse.json({ error: "저장소가 설정되지 않았습니다." }, { status: 503 });
-
   const path = `${got.rfq.no}/${got.inviteId}/${Date.now()}_${safeName(name)}`;
   const { data, error } = await sb.storage.from("cro-files").createSignedUploadUrl(path);
   if (error || !data) {

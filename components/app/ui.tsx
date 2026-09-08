@@ -1,6 +1,4 @@
-import Link from "next/link";
-
-/* ── 아이콘 ──────────────────────────────────────── */
+/* ── 포털 공통 아이콘·작은 조각 ─────────────────────── */
 
 export function Mark({ size = 26, shadow = true }: { size?: number; shadow?: boolean }) {
   return (
@@ -56,143 +54,26 @@ export function Lock({ size = 18 }: { size?: number }) {
   );
 }
 
-const TAB_ICONS = {
-  home: "M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
-  bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9",
-  plus: "M12 5v14M5 12h14",
-} as const;
-
-/* ── 화면 골격 ────────────────────────────────────── */
-
-/** 서브 화면 상단 바 — 좌 뒤로가기 · 중앙 제목 · 우 보조 액션 */
-export function SubHeader({
-  back,
-  backLabel,
-  title,
-  action,
-  sheet = false,
-  children,
-}: {
-  back?: string;
-  backLabel?: string;
-  title: string;
-  action?: { label: string; href?: string; brand?: boolean };
-  sheet?: boolean;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className={`hd${sheet ? " hd--sheet" : ""}`}>
-      <div className="hd__bar">
-        {back ? (
-          <Link href={back} className="hd__back">
-            <Caret />
-            {backLabel}
-          </Link>
-        ) : (
-          <span style={{ minWidth: 56 }} />
-        )}
-        <span className="hd__ttl">{title}</span>
-        {action ? (
-          action.href ? (
-            <Link href={action.href} className={`hd__act${action.brand ? " hd__act--brand" : ""}`}>
-              {action.label}
-            </Link>
-          ) : (
-            <span className={`hd__act${action.brand ? " hd__act--brand" : ""}`}>{action.label}</span>
-          )
-        ) : (
-          <span style={{ minWidth: 56 }} />
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-/** 하단 탭바 — 홈 · 알림 · [요청] · 프로필 */
-export function TabBar({ active, unread = false }: { active: "home" | "notifications" | "profile"; unread?: boolean }) {
-  const item = (key: "home" | "notifications" | "profile", href: string, icon: keyof typeof TAB_ICONS, label: string, dot = false) => (
-    <Link href={href} className="tab" data-on={active === key ? "1" : "0"}>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d={TAB_ICONS[icon]} />
-        {icon === "bell" && <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" />}
-      </svg>
-      <span>{label}</span>
-      {dot && <span className="tab__dot" />}
-    </Link>
-  );
-  return (
-    <nav className="tabs" aria-label="주요 메뉴">
-      {item("home", "/app", "home", "홈")}
-      {item("notifications", "/app/notifications", "bell", "알림", unread)}
-      <Link href="/app/new" className="tab tab--fab" aria-label="견적 요청">
-        <i>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-            <path d={TAB_ICONS.plus} />
-          </svg>
-        </i>
-        <span>요청</span>
-      </Link>
-      <Link href="/app/profile" className="tab" data-on={active === "profile" ? "1" : "0"}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21a8 8 0 0 1 16 0" />
-        </svg>
-        <span>프로필</span>
-      </Link>
-    </nav>
-  );
-}
-
-/** 상태 pill — 요청 상태 톤 3종 */
-export function StatusPill({ tone, children }: { tone: "sf" | "tint" | "ok" | "err"; children: React.ReactNode }) {
+/** 상태 pill */
+export function StatusPill({ tone, children }: { tone: "sf" | "tint" | "ok" | "err" | "warn" | "ink"; children: React.ReactNode }) {
   return <span className={`pill pill--${tone}`}>{children}</span>;
 }
 
 /** 진행바 */
-export function Bar({ pct }: { pct: number }) {
+export function Bar({ pct, err = false }: { pct: number; err?: boolean }) {
   return (
     <div className="bar">
-      <i style={{ width: `${pct}%` }} />
+      <i className={err ? "bar--err" : ""} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
     </div>
   );
 }
 
-/** CRO 탭바 — 받은 요청 · 제출한 견적 · 기관 */
-export function CroTabBar({ active }: { active: "inbox" | "quotes" | "org" }) {
-  const icons = {
-    inbox: (
-      <>
-        <path d="M4 4h16v12H4z" />
-        <path d="M4 16l3-6h10l3 6" />
-      </>
-    ),
-    quotes: (
-      <>
-        <path d="M5 4h14v16H5z" />
-        <path d="M9 9h6M9 13h6M9 17h3" />
-      </>
-    ),
-    org: (
-      <>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21a8 8 0 0 1 16 0" />
-      </>
-    ),
-  };
-  const item = (key: keyof typeof icons, href: string, label: string) => (
-    <Link href={href} className="tab" data-on={active === key ? "1" : "0"}>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        {icons[key]}
-      </svg>
-      <span>{label}</span>
-    </Link>
-  );
+/** 뒤로가기 줄 */
+export function Crumb({ href, label }: { href: string; label: string }) {
   return (
-    <nav className="tabs tabs--3" aria-label="CRO 메뉴">
-      {item("inbox", "/app/cro", "받은 요청")}
-      {item("quotes", "/app/cro/quotes", "제출한 견적")}
-      {item("org", "/app/cro/org", "기관")}
-    </nav>
+    <a href={href} className="crumb">
+      <Caret size={14} />
+      {label}
+    </a>
   );
 }

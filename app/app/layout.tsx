@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { requireSession } from "@/lib/auth";
+import { dbReady, unreadCount } from "@/lib/data";
 import { AppState } from "@/components/app/AppState";
-import "./app.css";
+import { Shell, type NavItem } from "@/components/shell/Shell";
 
 export const metadata: Metadata = {
-  title: "단추 — 견적 요청과 비교",
+  title: "단추 — 내 견적 요청",
   description: "비임상 시험 견적을 요청하고 도착한 견적을 비교합니다.",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추" },
   robots: { index: false, follow: false },
@@ -12,7 +14,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F5F5F4" },
@@ -20,19 +21,26 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await requireSession("requester", "/app");
+  const unread = dbReady() ? await unreadCount(session.userId) : 0;
+  const nav: NavItem[] = [
+    { href: "/app", label: "홈", icon: "home", exact: true },
+    { href: "/app/new", label: "새 요청", icon: "plus" },
+    { href: "/app/notifications", label: "알림", icon: "bell", badge: unread },
+    { href: "/app/profile", label: "프로필", icon: "user" },
+  ];
   return (
     <AppState>
-      {/* 첫 페인트 전에 테마를 확정해 화면이 번쩍이지 않게 한다 */}
       <script
         dangerouslySetInnerHTML={{
           __html:
             "(function(){try{var s=JSON.parse(localStorage.getItem('danchu.app.settings')||'{}');var t=s.theme||'system';var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})()",
         }}
       />
-      <div className="mobshell">
-        <div className="mob">{children}</div>
-      </div>
+      <Shell session={session} nav={nav}>
+        {children}
+      </Shell>
     </AppState>
   );
 }

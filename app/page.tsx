@@ -64,6 +64,7 @@ export default function Landing() {
           </nav>
           <div className="lhead__right">
             <LangToggle />
+            <Link href="/login" style={{ fontSize: 14, color: "var(--body)", whiteSpace: "nowrap" }}>로그인</Link>
             <RfqLink className="btn btn--pill btn--sm">견적 요청하기</RfqLink>
           </div>
         </div>

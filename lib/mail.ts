@@ -5,8 +5,42 @@ import { addBusinessDays, formatKo, nowSeoul } from "./dates";
 const FROM = process.env.RESEND_FROM || "단추 <onboarding@resend.dev>";
 const ADMIN = (process.env.ADMIN_EMAIL || "").split(",").map((s) => s.trim()).filter(Boolean);
 
-function esc(s: string) {
+export function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+}
+
+/** 범용 발송. 키가 없으면 false. */
+export async function sendMail(m: { to: string | string[]; subject: string; html: string; replyTo?: string }): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.warn("[danchu] RESEND 미설정 — 메일 미발송:", m.subject, m.to);
+    return false;
+  }
+  const resend = new Resend(key);
+  const r = await resend.emails.send({ from: FROM, to: m.to, subject: m.subject, html: m.html, replyTo: m.replyTo });
+  if (r.error) console.error("resend", m.subject, r.error);
+  return !r.error;
+}
+
+const BTN = (href: string, label: string) =>
+  `<a href="${esc(href)}" style="display:inline-block;background:#A3690F;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px">${esc(label)}</a>`;
+
+/** 인증 메일 — 가입 확인·로그인 링크·비밀번호 재설정 */
+export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: string, link: string): Promise<boolean> {
+  const t = {
+    signup: { subject: "[단추] 이메일 확인으로 가입을 완료하세요", h: "가입을 완료하세요", p: "아래 버튼을 누르면 이메일이 확인되고 바로 로그인됩니다. 링크는 1시간 동안 유효합니다.", b: "이메일 확인하고 시작" },
+    magic: { subject: "[단추] 로그인 링크", h: "로그인 링크입니다", p: "아래 버튼을 누르면 비밀번호 없이 로그인됩니다. 링크는 1시간 동안 유효하며 한 번만 쓸 수 있습니다.", b: "단추 로그인" },
+    recovery: { subject: "[단추] 비밀번호 재설정", h: "비밀번호를 재설정하세요", p: "아래 버튼을 누르면 새 비밀번호를 정할 수 있습니다. 요청하지 않았다면 이 메일은 무시하세요.", b: "새 비밀번호 정하기" },
+  }[kind];
+  return sendMail({
+    to,
+    subject: t.subject,
+    html: mailWrap(`
+      <h2 style="margin:0 0 12px;font-size:20px">${t.h}</h2>
+      <p>${t.p}</p>
+      <p style="margin:24px 0">${BTN(link, t.b)}</p>
+      <p style="font-size:13px;color:#6F6A63">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣으세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`),
+  });
 }
 
 function fmt(v: unknown): string {
@@ -16,9 +50,10 @@ function fmt(v: unknown): string {
   return String(v);
 }
 
-const wrap = (body: string) =>
+export const mailWrap = (body: string) =>
   `<div style="font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1815;line-height:1.6;max-width:640px">${body}
    <p style="margin-top:32px;font-size:13px;color:#9A948B">단추 Danchu · hello@danchu.kr</p></div>`;
+const wrap = mailWrap;
 
 /** 입력값 전체를 라벨 순으로 표 형태 HTML로 */
 export function renderValuesTable(values: Values): string {

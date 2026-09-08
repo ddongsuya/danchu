@@ -1,34 +1,41 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { QuoteRow } from "@/lib/quote-items";
-import type { ReplyItem } from "@/lib/cro-data";
+import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib/cro-data";
 import { loadQuote as load, type Loaded } from "@/lib/quote-load";
+import { sessionOrNull } from "@/lib/auth";
+import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { won } from "@/lib/format";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_PDF = 20 * 1024 * 1024;
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 type PdfRef = { path: string; name: string; size: number };
 
-/** GET — 회신 화면에 필요한 모든 것: 요청서 요약 + 자동 생성 행 + 저장된 초안 + 만료·잠금 상태 */
+/** GET — 회신 화면에 필요한 모든 것 */
 export async function GET(_req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const got = await load(token);
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked });
+  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed });
 }
 
-/** 저장·제출이 막힌 상태면 그 이유를 돌려준다 */
+/** 저장·제출이 막힌 상태면 그 이유 */
 function blocked(got: Loaded): string {
   if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
   if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
+  if (got.closed) return "의뢰자가 이미 CRO를 선택해 이 요청의 회신이 닫혔습니다.";
   return "";
 }
 
-/** 항목 3칸 + 전달 사항 파싱 · 검증 */
-function parseBody(raw: unknown, rows: QuoteRow[]): { items: ReplyItem[]; note: string; pdf?: PdfRef } | string {
-  const b = (raw ?? {}) as { items?: unknown; note?: unknown; pdf?: unknown };
+type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef };
+
+/** 항목 3칸 + 공통 조건 + 전달 사항 파싱 · 검증 */
+function parseBody(raw: unknown, rows: QuoteRow[]): Parsed | string {
+  const b = (raw ?? {}) as { items?: unknown; note?: unknown; common?: unknown; pdf?: unknown };
   const items = Array.isArray(b.items) ? (b.items as ReplyItem[]) : [];
   if (items.length !== rows.length) return "항목 수가 요청서와 다릅니다.";
   const seqs = new Set(rows.map((r) => r.seq));
@@ -37,7 +44,19 @@ function parseBody(raw: unknown, rows: QuoteRow[]): { items: ReplyItem[]; note: 
     if (!["", "가능", "조건부 가능", "불가"].includes(it.avail)) return "수행 가능 여부 값이 올바르지 않습니다.";
     if (it.amount && !/^\d{1,13}$/.test(it.amount)) return "금액은 숫자만 입력합니다.";
     if (it.weeks && !/^\d{1,3}$/.test(it.weeks)) return "기간은 주 단위 숫자만 입력합니다.";
+    if (it.reason != null && typeof it.reason !== "string") return "사유 형식이 올바르지 않습니다.";
+    if (typeof it.reason === "string") it.reason = it.reason.slice(0, 500);
   }
+  const c = (b.common && typeof b.common === "object" ? b.common : {}) as Partial<ReplyCommon>;
+  const s = (v: unknown, max = 120) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const common: ReplyCommon = {
+    validUntil: YMD.test(s(c.validUntil)) ? s(c.validUntil) : "",
+    startDate: YMD.test(s(c.startDate)) ? s(c.startDate) : "",
+    payTerms: s(c.payTerms, 60),
+    substanceQty: s(c.substanceQty, 120),
+    reportLang: REPORT_LANGS.includes(s(c.reportLang)) ? s(c.reportLang) : "",
+    includes: Array.isArray(c.includes) ? (c.includes as unknown[]).filter((x): x is string => typeof x === "string" && INCL_KEYS.includes(x)) : [],
+  };
   let pdf: PdfRef | undefined;
   if (b.pdf && typeof b.pdf === "object") {
     const p = b.pdf as Partial<PdfRef>;
@@ -45,13 +64,12 @@ function parseBody(raw: unknown, rows: QuoteRow[]): { items: ReplyItem[]; note: 
     if (p.size > MAX_PDF) return "PDF는 20MB 이하만 첨부할 수 있습니다.";
     pdf = { path: p.path, name: p.name.slice(0, 200), size: p.size };
   }
-  return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", pdf };
+  return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf };
 }
 
-async function upsert(got: Loaded, token: string, items: ReplyItem[], note: string, submit: boolean, pdf?: PdfRef) {
-  if (token.startsWith("demo")) return { ok: true }; // 데모 토큰은 저장하지 않는다
+async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string | null) {
   const sb = getSupabaseAdmin()!;
-
+  const { items, note, common, pdf } = p;
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const weeks = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
 
@@ -60,16 +78,23 @@ async function upsert(got: Loaded, token: string, items: ReplyItem[], note: stri
     rfq_id: got.rfqId,
     rfq_no: got.rfq.no,
     cro_name: got.croName,
+    cro_org_id: got.croOrgId,
     total_amount: total || null,
     total_weeks: weeks || null,
     vat: "별도",
+    valid_until: common.validUntil || null,
+    start_date: common.startDate || null,
+    pay_terms: common.payTerms || null,
+    substance_qty: common.substanceQty || null,
+    report_lang: common.reportLang || null,
+    includes: common.includes,
     note,
     status: submit ? "submitted" : "draft",
     submitted_at: submit ? new Date().toISOString() : null,
+    submitted_by: submit ? actorId : null,
   };
 
   if (pdf) {
-    // 서명 URL로 올린 객체가 이 초대의 경로 아래 실제로 존재하는지 확인
     const dir = `${got.rfq.no}/${got.inviteId}`;
     if (!pdf.path.startsWith(`${dir}/`)) return { error: "PDF 경로가 올바르지 않습니다.", status: 400 };
     const file = pdf.path.slice(dir.length + 1);
@@ -81,7 +106,10 @@ async function upsert(got: Loaded, token: string, items: ReplyItem[], note: stri
   }
 
   const { data: q, error: e1 } = await sb.from("cro_quotes").upsert(header, { onConflict: "invite_id" }).select("id").single();
-  if (e1 || !q) return { error: "저장에 실패했습니다.", status: 500 };
+  if (e1 || !q) {
+    console.error("cro_quotes upsert", e1);
+    return { error: "저장에 실패했습니다.", status: 500 };
+  }
 
   const rowsBySeq = new Map(got.rfq.rows.map((r) => [r.seq, r]));
   const itemRows = items.map((it) => {
@@ -91,14 +119,32 @@ async function upsert(got: Loaded, token: string, items: ReplyItem[], note: stri
       avail: it.avail || null,
       amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null,
       weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null,
+      reason: it.reason || null,
     };
   });
   const { error: e2 } = await sb.from("cro_quote_items").upsert(itemRows, { onConflict: "quote_id,seq" });
   if (e2) return { error: "항목 저장에 실패했습니다.", status: 500 };
 
   await sb.from("rfq_invites").update({ status: submit ? "submitted" : "draft" }).eq("id", got.inviteId);
-  if (submit) await sb.from("rfq_requests").update({ status: "quoted" }).eq("id", got.rfqId);
+  if (submit) {
+    const { data: r } = await sb.from("rfq_requests").select("status, user_id, company").eq("id", got.rfqId).maybeSingle();
+    if (r && ["received", "distributed"].includes(r.status)) await sb.from("rfq_requests").update({ status: "quoted" }).eq("id", got.rfqId);
+    const first = !got.draft || got.draft.status !== "submitted";
+    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: q.id });
+    const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", got.rfqId);
+    const { count: done } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", got.rfqId).eq("status", "submitted");
+    if (r?.user_id) {
+      await notifyUsers([r.user_id], { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done ?? 0}/${count ?? 0}곳 회신 · 비교표는 회신 기한 후 공개됩니다.`, href: `/app/r/${got.rfq.no}` });
+    }
+    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done ?? 0}/${count ?? 0} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
+  }
   return { ok: true, total, weeks };
+}
+
+/** 로그인 CRO면 행위자 ID, 토큰 접근이면 null */
+async function actor(_got: Loaded): Promise<string | null> {
+  const s = await sessionOrNull();
+  return s ? s.userId : null;
 }
 
 /** PUT — 초안 자동 저장 (JSON) */
@@ -110,13 +156,13 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
   if (why) return NextResponse.json({ error: why }, { status: 403 });
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
-  const r = await upsert(got, token, parsed.items, parsed.note, false);
+  if (got.draft?.status === "submitted") return NextResponse.json({ ok: true, skipped: true }); // 제출본은 자동 저장으로 덮지 않는다
+  const r = await upsert(got, parsed, false, await actor(got));
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true });
 }
 
-/** POST — 제출 (JSON: { items, note, pdf?: {path,name,size} }). 전 항목 답변 + PDF 필수.
- *  PDF 본문은 /api/quote/[token]/upload-url 로 받은 서명 URL에 브라우저가 직접 올린다. */
+/** POST — 제출 (JSON: { items, note, common, pdf? }). 전 항목 답변 + 공통 필수 + PDF 필수. */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const got = await load(token);
@@ -129,10 +175,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
 
   const incomplete = parsed.items.some((it) => !(it.avail === "불가" || (it.avail && it.amount && it.weeks)));
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
-  if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 회신하지 않음으로 처리해 주세요." }, { status: 400 });
+  if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });
+  if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 '회신하지 않음'으로 처리해 주세요." }, { status: 400 });
+  if (!parsed.common.validUntil || !parsed.common.startDate) return NextResponse.json({ error: "견적 유효기간과 착수 가능일을 입력해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
-  const r = await upsert(got, token, parsed.items, parsed.note, true, parsed.pdf);
+  const r = await upsert(got, parsed, true, await actor(got));
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, total: r.total ?? null, weeks: r.weeks ?? null });
 }

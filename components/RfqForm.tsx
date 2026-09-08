@@ -114,6 +114,7 @@ export function RfqForm() {
       );
       const q = new URLSearchParams({ no: data.rfqNo });
       if (files.length && failed) q.set("upfail", String(failed));
+      if (typeof values.email === "string") q.set("email", values.email);
       router.push(`/rfq/complete?${q}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");

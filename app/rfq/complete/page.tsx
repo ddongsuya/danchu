@@ -7,8 +7,9 @@ import { addBusinessDays, formatKo, nowSeoul } from "@/lib/dates";
 export const metadata: Metadata = { title: "접수 완료 — 단추" };
 export const dynamic = "force-dynamic";
 
-export default async function CompletePage({ searchParams }: { searchParams: Promise<{ no?: string; upfail?: string }> }) {
-  const { no, upfail } = await searchParams;
+export default async function CompletePage({ searchParams }: { searchParams: Promise<{ no?: string; upfail?: string; email?: string }> }) {
+  const { no, upfail, email } = await searchParams;
+  const signupHref = `/signup${email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? `?email=${encodeURIComponent(email)}` : ""}`;
   const rfqNo = no && /^DC-\d{4}-\d{4,}$/.test(no) ? no : "DC-----";
   const failed = upfail && /^\d{1,2}$/.test(upfail) ? Number(upfail) : 0;
   const now = nowSeoul();
@@ -70,6 +71,15 @@ export default async function CompletePage({ searchParams }: { searchParams: Pro
                 </div>
               </li>
             </ol>
+          </section>
+
+          <section className="next-card" style={{ background: "var(--brand-tint)", borderColor: "var(--brand-line)" }}>
+            <h2>진행 상황을 앱에서 보려면</h2>
+            <p style={{ margin: 0, color: "var(--body)", fontSize: 15 }}>같은 이메일로 가입하면 이 요청이 계정에 연결되고, 견적 도착·비교표·CRO 선택까지 한곳에서 진행할 수 있습니다.</p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link href={signupHref} className="btn btn--pill btn--sm">가입하고 진행 상황 보기</Link>
+              <Link href="/login" className="btn--outline" style={{ display: "inline-flex", alignItems: "center" }}>이미 계정이 있어요</Link>
+            </div>
           </section>
 
           <p className="done__contact">
