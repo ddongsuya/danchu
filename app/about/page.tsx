@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { RfqLink } from "@/components/RfqLink";
+import { FigBeforeAfter, FigMapping, FigConfidential } from "@/components/about/Figures";
 import "../home.css";
 
 export const metadata: Metadata = {
@@ -65,7 +66,8 @@ export default function About() {
             <p className="sub__lead">
               CRO 안팎에서 견적을 주고받아 보면 양쪽 모두가 같은 일을 반복하고 있었습니다. 의뢰자는 같은 내용을 기관마다 다시 설명하고, 기관은 형식이 다른 요청을 매번 다시 해석합니다. 그렇게 받은 견적서는 항목 구성이 달라 나란히 놓고 볼 수 없습니다. 총액만 보고 고르거나, 먼저 연락한 곳으로 정해집니다.
             </p>
-            <p className="sub__lead" style={{ margin: 0 }}>
+            <FigBeforeAfter />
+            <p className="sub__lead" style={{ margin: "28px 0 0" }}>
               단추는 이 반복을 없애려고 만들었습니다. 요청서와 견적 회신의 양식을 하나로 맞추면, 의뢰자는 한번 쓰고 여러 곳에서 받을 수 있고, 기관은 검증된 요청을 정리된 형태로 받을 수 있습니다. 단추라는 이름은 흩어진 조각을 한 자리에 모아 채운다는 뜻입니다.
             </p>
           </div>
@@ -115,6 +117,8 @@ export default function About() {
                 </div>
               ))}
             </div>
+            <FigMapping />
+            <FigConfidential />
             <p style={{ margin: "20px 0 0", fontSize: 15, color: "var(--muted)" }}>
               시험기관에는 영업 없이 수행 분야에 맞는 요청서가 정리되어 도착하고, 회신은 항목당 세 칸만 채우면 됩니다.{" "}
               <Link href="/for-cro">CRO 참여 안내 →</Link>
