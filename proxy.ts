@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 
 /**
  * 세션 갱신 + 보호 영역 접근 제어.
@@ -9,8 +10,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED = [/^\/app(\/|$)/, /^\/cro(\/|$)/, /^\/admin(\/|$)/];
 
 export async function proxy(req: NextRequest) {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
-  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+  const url = supabaseUrl();
+  const anon = supabaseAnonKey();
   const { pathname } = req.nextUrl;
   const needsAuth = PROTECTED.some((re) => re.test(pathname));
 

@@ -1,10 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { supabaseAnonKey, supabaseUrl } from "./env";
 
 /** 공개 키 (브라우저에도 노출되는 값). 세션 쿠키 처리에만 쓰고, 데이터 접근은 service role이 한다. */
 export function publicSupabaseEnv(): { url: string; anon: string } | null {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
-  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+  const url = supabaseUrl();
+  const anon = supabaseAnonKey();
   if (!url || !anon) return null;
   return { url, anon };
 }
