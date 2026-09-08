@@ -159,10 +159,10 @@
 .op__frame { position: absolute; left: 640px; top: 400px; width: 400px; height: 300px; border-radius: 20px; background: var(--white); border: 1px solid var(--card-line); box-shadow: 0 30px 70px -30px rgba(26,25,25,.35); z-index: 1; animation: inFrame 5s cubic-bezier(.2,.7,.2,1) both; }
 .op__frame .dh__ttl { left: 20px; top: 16px; font-size: 12px; }
 .op__frame .dh__hd { left: 38px; right: 38px; top: 46px; font-size: 11px; }
-.op__logo { position: absolute; left: 640px; top: 400px; width: 160px; height: 160px; z-index: 3; filter: drop-shadow(0 30px 60px rgba(26,25,25,.12)); animation: inLogo 5s cubic-bezier(.2,.8,.2,1) both; }
-.op__word { position: absolute; left: 0; right: 0; top: 508px; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
-.op__word b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
-.op__word span { font-size: 14px; color: var(--muted); }
+.op__logo { position: absolute; left: 640px; top: 400px; width: calc(160px * var(--boost, 1)); height: calc(160px * var(--boost, 1)); z-index: 3; filter: drop-shadow(0 30px 60px rgba(26,25,25,.12)); animation: inLogo 5s cubic-bezier(.2,.8,.2,1) both; }
+.op__word { position: absolute; left: 0; right: 0; top: calc(400px + 108px * var(--boost, 1)); display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
+.op__word b { font-size: calc(28px * var(--boost, 1)); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.op__word span { font-size: calc(14px * var(--boost, 1)); color: var(--muted); }
 .op__skip { position: absolute; right: 20px; bottom: 20px; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
 
 @keyframes inCard { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.9); } 6%, 14% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 20%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.8); } }

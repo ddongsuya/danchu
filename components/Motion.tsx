@@ -51,12 +51,23 @@ const NODES = [
 export function IntroSplash() {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [boost, setBoost] = useState(1);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || el.hidden) return;
     document.documentElement.style.overflow = "hidden";
-    const fit = () => setScale(Math.min(innerWidth / 1280, innerHeight / 800, 1));
+    /**
+     * 무대(1280×800) 축소 비율.
+     * 데스크톱은 화면에 다 들어가게, 폰은 폭 기준으로 0.29배까지 줄면 너무 작아서
+     * 640px 기준(≈0.59배)으로 덜 줄이고 바깥 여백은 잘라낸다. 마지막 로고·문구는 폰에서 1.6배 더 키운다.
+     */
+    const fit = () => {
+      const byW = innerWidth / 1280;
+      const byH = innerHeight / 800;
+      setScale(Math.min(Math.max(byW, innerWidth / 640), byH, 1));
+      setBoost(innerWidth < 700 ? 1.6 : 1);
+    };
     fit();
     addEventListener("resize", fit);
     const end = () => {
@@ -77,7 +88,7 @@ export function IntroSplash() {
 
   return (
     <>
-      <div ref={ref} className="op" aria-hidden="true">
+      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost } as React.CSSProperties}>
         <div className="op__stage" style={{ transform: `scale(${scale})` }}>
           <div className="op__zoom">
             <svg className="op__svg" viewBox="0 0 1280 800" fill="none" stroke="var(--brand-line)" strokeWidth="1.5" strokeDasharray="600">
