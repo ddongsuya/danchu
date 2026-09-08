@@ -140,30 +140,30 @@
 /* ── 오프닝 인트로 (5s, 세션당 1회) ── */
 .op { position: fixed; inset: 0; background: var(--surface); z-index: 100; overflow: hidden; cursor: pointer; animation: inOut 5s cubic-bezier(.6,0,.4,1) both; }
 .op[hidden] { display: none; }
-.in__stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 800px; margin: -400px 0 0 -640px; }
-.in__zoom { position: absolute; inset: 0; animation: inZoom 5s cubic-bezier(.6,0,.4,1) both; }
-.in__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.in__line { animation: inLine 5s linear both; }
-.in__card { position: absolute; left: 640px; top: 400px; width: 260px; height: 160px; background: var(--white); border-radius: 16px; box-shadow: 0 20px 50px -24px rgba(26,25,25,.35); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: inCard 5s cubic-bezier(.2,.7,.2,1) both; }
-.in__card .g-rfq { font-size: 12px; }
-.in__card .g-bar { height: 9px; }
-.in__card .g-tag { height: 20px; padding: 0 9px; font-size: 11px; }
-.in__fly { position: absolute; left: 640px; top: 400px; width: 200px; height: 120px; background: var(--white); border-radius: 14px; box-shadow: 0 14px 34px -18px rgba(26,25,25,.35); padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: inFly 5s cubic-bezier(.2,.7,.2,1) both; }
-.in__fly .g-bar { height: 7px; }
-.in__node { position: absolute; width: 88px; height: 88px; border-radius: 50%; background: var(--white); border: 1px solid var(--card-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; animation: inNode 5s cubic-bezier(.2,.7,.2,1) both; }
-.in__node b { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--ink-2); }
-.in__node span { font-size: 16px; font-weight: 700; color: var(--ink); }
-.in__row { position: absolute; left: 640px; top: 400px; width: 360px; height: 40px; background: var(--white); border-radius: 10px; border: 1px solid var(--card-line); display: grid; grid-template-columns: 1.1fr 1fr 1fr; align-items: center; padding: 0 18px; font-size: 14px; z-index: 2; animation: inRow 5s cubic-bezier(.2,.7,.2,1) both; }
-.in__row b { font-weight: 700; }
-.in__row span { color: var(--body); }
-.in__frame { position: absolute; left: 640px; top: 400px; width: 400px; height: 300px; border-radius: 20px; background: var(--white); border: 1px solid var(--card-line); box-shadow: 0 30px 70px -30px rgba(26,25,25,.35); z-index: 1; animation: inFrame 5s cubic-bezier(.2,.7,.2,1) both; }
-.in__frame .dh__ttl { left: 20px; top: 16px; font-size: 12px; }
-.in__frame .dh__hd { left: 38px; right: 38px; top: 46px; font-size: 11px; }
-.in__logo { position: absolute; left: 640px; top: 400px; width: 160px; height: 160px; z-index: 3; filter: drop-shadow(0 30px 60px rgba(26,25,25,.12)); animation: inLogo 5s cubic-bezier(.2,.8,.2,1) both; }
-.in__word { position: absolute; left: 0; right: 0; top: 508px; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
-.in__word b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
-.in__word span { font-size: 14px; color: var(--muted); }
-.in__skip { position: absolute; right: 20px; bottom: 20px; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
+.op__stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 800px; margin: -400px 0 0 -640px; }
+.op__zoom { position: absolute; inset: 0; animation: inZoom 5s cubic-bezier(.6,0,.4,1) both; }
+.op__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.op__line { animation: inLine 5s linear both; }
+.op__card { position: absolute; left: 640px; top: 400px; width: 260px; height: 160px; background: var(--white); border-radius: 16px; box-shadow: 0 20px 50px -24px rgba(26,25,25,.35); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: inCard 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__card .g-rfq { font-size: 12px; }
+.op__card .g-bar { height: 9px; }
+.op__card .g-tag { height: 20px; padding: 0 9px; font-size: 11px; }
+.op__fly { position: absolute; left: 640px; top: 400px; width: 200px; height: 120px; background: var(--white); border-radius: 14px; box-shadow: 0 14px 34px -18px rgba(26,25,25,.35); padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: inFly 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__fly .g-bar { height: 7px; }
+.op__node { position: absolute; width: 88px; height: 88px; border-radius: 50%; background: var(--white); border: 1px solid var(--card-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; animation: inNode 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__node b { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--ink-2); }
+.op__node span { font-size: 16px; font-weight: 700; color: var(--ink); }
+.op__row { position: absolute; left: 640px; top: 400px; width: 360px; height: 40px; background: var(--white); border-radius: 10px; border: 1px solid var(--card-line); display: grid; grid-template-columns: 1.1fr 1fr 1fr; align-items: center; padding: 0 18px; font-size: 14px; z-index: 2; animation: inRow 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__row b { font-weight: 700; }
+.op__row span { color: var(--body); }
+.op__frame { position: absolute; left: 640px; top: 400px; width: 400px; height: 300px; border-radius: 20px; background: var(--white); border: 1px solid var(--card-line); box-shadow: 0 30px 70px -30px rgba(26,25,25,.35); z-index: 1; animation: inFrame 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__frame .dh__ttl { left: 20px; top: 16px; font-size: 12px; }
+.op__frame .dh__hd { left: 38px; right: 38px; top: 46px; font-size: 11px; }
+.op__logo { position: absolute; left: 640px; top: 400px; width: 160px; height: 160px; z-index: 3; filter: drop-shadow(0 30px 60px rgba(26,25,25,.12)); animation: inLogo 5s cubic-bezier(.2,.8,.2,1) both; }
+.op__word { position: absolute; left: 0; right: 0; top: 508px; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
+.op__word b { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.op__word span { font-size: 14px; color: var(--muted); }
+.op__skip { position: absolute; right: 20px; bottom: 20px; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
 
 @keyframes inCard { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.9); } 6%, 14% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 20%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.8); } }
 @keyframes inLine { 0%, 12% { opacity: 0; stroke-dashoffset: 600; } 22%, 36% { opacity: 1; stroke-dashoffset: 0; } 42%, 100% { opacity: 0; stroke-dashoffset: 0; } }

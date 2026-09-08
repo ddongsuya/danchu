@@ -37,9 +37,10 @@ export async function proxy(req: NextRequest) {
   const { data } = await sb.auth.getUser();
 
   if (needsAuth && !data.user) {
-    const login = new URL("/login", req.url);
-    login.searchParams.set("next", pathname + (req.nextUrl.search || ""));
-    return NextResponse.redirect(login);
+    // 견적 요청 진입(/app/new)은 신규 방문자가 대부분이라 가입으로, 나머지는 로그인으로
+    const to = new URL(pathname.startsWith("/app/new") ? "/signup" : "/login", req.url);
+    to.searchParams.set("next", pathname + (req.nextUrl.search || ""));
+    return NextResponse.redirect(to);
   }
   return res;
 }
