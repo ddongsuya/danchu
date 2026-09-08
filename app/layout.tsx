@@ -17,8 +17,10 @@ export const metadata: Metadata = {
     siteName: "단추 Danchu",
     locale: "ko_KR",
     type: "website",
+    // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og.png · scripts/gen-images.js로 생성)
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "단추 — 비임상 시험 견적, 한번 요청으로 한눈에 비교" }],
   },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESC },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og.png"] },
   robots: { index: true, follow: true },
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
