@@ -5,11 +5,53 @@
 .wrap { max-width: 960px; width: 100%; margin: 0 auto; padding-left: 20px; padding-right: 20px; }
 
 /* 헤더 68px */
-.shead { max-width: 960px; width: 100%; margin: 0 auto; height: 68px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.shead { max-width: 960px; width: 100%; margin: 0 auto; min-height: 68px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.shead__left { display: flex; align-items: center; gap: 28px; min-width: 0; }
 .shead__right { display: flex; align-items: center; gap: 16px; }
 .shead__login { font-size: 15px; color: var(--body); padding: 12px 4px; white-space: nowrap; }
 .shead__login:hover { color: var(--ink); }
-@media (max-width: 480px) { .shead__right .lang { display: none; } }
+
+/* 가로 메뉴 (≥900px) */
+.snav { display: none; gap: 22px; font-size: 15px; }
+.snav a { color: var(--body); padding: 12px 0; white-space: nowrap; }
+.snav a:hover { color: var(--ink); }
+.snav a[aria-current=page] { color: var(--brand); font-weight: 600; }
+.burger { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px; border: 0; background: none; color: var(--ink); border-radius: 10px; }
+.burger:hover { background: var(--surface); }
+@media (min-width: 900px) {
+  .snav { display: flex; }
+  .burger { display: none; }
+}
+@media (max-width: 899px) {
+  .shead__left { gap: 4px; flex-direction: row-reverse; }
+  .shead__right .lang { display: none; }
+}
+@media (max-width: 400px) {
+  .shead__right .shead__login { display: none; }
+}
+
+/* 햄버거 패널 */
+.sheet { position: fixed; inset: 0; z-index: 90; }
+.sheet__bg { position: absolute; inset: 0; background: rgba(26, 25, 25, .32); animation: sheetFade .2s ease-out; }
+.sheet__panel {
+  position: absolute; left: 0; top: 0; bottom: 0; width: min(88vw, 340px);
+  background: var(--white); display: flex; flex-direction: column;
+  padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 0 60px -10px rgba(26, 25, 25, .35); animation: sheetIn .24s cubic-bezier(.2, .8, .2, 1);
+}
+.sheet__top { display: flex; align-items: center; justify-content: space-between; height: 54px; }
+.sheet__ttl { font-size: 15px; font-weight: 700; }
+.sheet__x { width: 44px; height: 44px; margin-right: -10px; border: 0; background: none; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
+.sheet__x:hover { background: var(--surface); }
+.sheet__links { display: flex; flex-direction: column; padding: 12px 0; border-top: 1px solid var(--track); }
+.sheet__links a { font-size: 18px; font-weight: 600; color: var(--ink); padding: 15px 0; border-bottom: 1px solid var(--track); }
+.sheet__links a[aria-current=page] { color: var(--brand); }
+.sheet__foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding-top: 20px; }
+.sheet__sub { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-top: 8px; font-size: 13px; }
+.sheet__sub a { color: var(--muted); padding: 6px 0; }
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetIn { from { transform: translateX(-100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sheet__bg, .sheet__panel { animation: none; } }
 
 /* 히어로 */
 .hero { padding: clamp(48px, 7vw, 72px) 20px 48px; }
@@ -140,27 +182,27 @@
 /* ── 오프닝 인트로 (5s, 세션당 1회) ── */
 .op { position: fixed; inset: 0; background: var(--surface); z-index: 100; overflow: hidden; cursor: pointer; animation: inOut 5s cubic-bezier(.6,0,.4,1) both; }
 .op[hidden] { display: none; }
-.op__stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 800px; margin: -400px 0 0 -640px; }
+.op__stage { position: absolute; left: 50%; top: 50%; }
 .op__zoom { position: absolute; inset: 0; animation: inZoom 5s cubic-bezier(.6,0,.4,1) both; }
 .op__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .op__line { animation: inLine 5s linear both; }
-.op__card { position: absolute; left: 640px; top: 400px; width: 260px; height: 160px; background: var(--white); border-radius: 16px; box-shadow: 0 20px 50px -24px rgba(26,25,25,.35); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: inCard 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__card { position: absolute; width: 260px; height: 160px; background: var(--white); border-radius: 16px; box-shadow: 0 20px 50px -24px rgba(26,25,25,.35); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: inCard 5s cubic-bezier(.2,.7,.2,1) both; }
 .op__card .g-rfq { font-size: 12px; }
 .op__card .g-bar { height: 9px; }
 .op__card .g-tag { height: 20px; padding: 0 9px; font-size: 11px; }
-.op__fly { position: absolute; left: 640px; top: 400px; width: 200px; height: 120px; background: var(--white); border-radius: 14px; box-shadow: 0 14px 34px -18px rgba(26,25,25,.35); padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: inFly 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__fly { position: absolute; width: 200px; height: 120px; background: var(--white); border-radius: 14px; box-shadow: 0 14px 34px -18px rgba(26,25,25,.35); padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: inFly 5s cubic-bezier(.2,.7,.2,1) both; }
 .op__fly .g-bar { height: 7px; }
 .op__node { position: absolute; width: 88px; height: 88px; border-radius: 50%; background: var(--white); border: 1px solid var(--card-line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; animation: inNode 5s cubic-bezier(.2,.7,.2,1) both; }
 .op__node b { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--ink-2); }
 .op__node span { font-size: 16px; font-weight: 700; color: var(--ink); }
-.op__row { position: absolute; left: 640px; top: 400px; width: 360px; height: 40px; background: var(--white); border-radius: 10px; border: 1px solid var(--card-line); display: grid; grid-template-columns: 1.1fr 1fr 1fr; align-items: center; padding: 0 18px; font-size: 14px; z-index: 2; animation: inRow 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__row { position: absolute; width: 360px; height: 40px; background: var(--white); border-radius: 10px; border: 1px solid var(--card-line); display: grid; grid-template-columns: 1.1fr 1fr 1fr; align-items: center; padding: 0 18px; font-size: 14px; z-index: 2; animation: inRow 5s cubic-bezier(.2,.7,.2,1) both; }
 .op__row b { font-weight: 700; }
 .op__row span { color: var(--body); }
-.op__frame { position: absolute; left: 640px; top: 400px; width: 400px; height: 300px; border-radius: 20px; background: var(--white); border: 1px solid var(--card-line); box-shadow: 0 30px 70px -30px rgba(26,25,25,.35); z-index: 1; animation: inFrame 5s cubic-bezier(.2,.7,.2,1) both; }
+.op__frame { position: absolute; width: 400px; height: 300px; border-radius: 20px; background: var(--white); border: 1px solid var(--card-line); box-shadow: 0 30px 70px -30px rgba(26,25,25,.35); z-index: 1; animation: inFrame 5s cubic-bezier(.2,.7,.2,1) both; }
 .op__frame .dh__ttl { left: 20px; top: 16px; font-size: 12px; }
 .op__frame .dh__hd { left: 38px; right: 38px; top: 46px; font-size: 11px; }
-.op__logo { position: absolute; left: 640px; top: 400px; width: calc(160px * var(--boost, 1)); height: calc(160px * var(--boost, 1)); z-index: 3; filter: drop-shadow(0 30px 60px rgba(26,25,25,.12)); animation: inLogo 5s cubic-bezier(.2,.8,.2,1) both; }
-.op__word { position: absolute; left: 0; right: 0; top: calc(400px + 108px * var(--boost, 1)); display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
+.op__logo { position: absolute; width: calc(160px * var(--boost, 1)); height: calc(160px * var(--boost, 1)); z-index: 3; filter: drop-shadow(0 30px 60px rgba(26,25,25,.12)); animation: inLogo 5s cubic-bezier(.2,.8,.2,1) both; }
+.op__word { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
 .op__word b { font-size: calc(28px * var(--boost, 1)); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
 .op__word span { font-size: calc(14px * var(--boost, 1)); color: var(--muted); }
 .op__skip { position: absolute; right: 20px; bottom: 20px; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }

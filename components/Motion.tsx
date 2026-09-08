@@ -36,11 +36,30 @@ export function Motion() {
   return null;
 }
 
-const NODES = [
-  { label: "A", x: 380, y: 230, tx: -260, ty: -170, fy: -30, cost: "1.2억", weeks: "16주", low: false },
-  { label: "B", x: 900, y: 230, tx: 260, ty: -170, fy: 14, cost: "1.35억", weeks: "14주", low: false },
-  { label: "C", x: 380, y: 570, tx: -260, ty: 170, fy: 58, cost: "1.1억", weeks: "18주", low: true },
-  { label: "D", x: 900, y: 570, tx: 260, ty: 170, fy: 102, cost: "1.28억", weeks: "15주", low: false },
+/**
+ * 인트로 무대 좌표. 가로 화면은 넓게, 세로(폰) 화면은 위아래로 긴 배치를 쓴다.
+ * 무대 전체가 화면 안에 들어가도록 축소하므로(contain) 잘리는 요소가 없다.
+ */
+type Stage = {
+  w: number;
+  h: number;
+  cx: number;
+  cy: number;
+  dx: number;
+  dy: number;
+  nodes: [number, number][];
+  /** 마지막 로고·문구 확대 배수 */
+  boost: number;
+};
+
+const WIDE: Stage = { w: 1280, h: 800, cx: 640, cy: 400, dx: 260, dy: 170, nodes: [[380, 230], [900, 230], [380, 570], [900, 570]], boost: 1 };
+const TALL: Stage = { w: 640, h: 800, cx: 320, cy: 400, dx: 150, dy: 210, nodes: [[140, 170], [500, 170], [140, 630], [500, 630]], boost: 1.7 };
+
+const ROWS = [
+  { label: "A", fy: -30, cost: "1.2억", weeks: "16주", low: false },
+  { label: "B", fy: 14, cost: "1.35억", weeks: "14주", low: false },
+  { label: "C", fy: 58, cost: "1.1억", weeks: "18주", low: true },
+  { label: "D", fy: 102, cost: "1.28억", weeks: "15주", low: false },
 ];
 
 /**
@@ -50,26 +69,27 @@ const NODES = [
  */
 export function IntroSplash() {
   const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [boost, setBoost] = useState(1);
+  const [stage, setStage] = useState<Stage>(WIDE);
+  const [scale, setScale] = useState(0);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || el.hidden) return;
     document.documentElement.style.overflow = "hidden";
-    /**
-     * 무대(1280×800) 축소 비율.
-     * 데스크톱은 화면에 다 들어가게, 폰은 폭 기준으로 0.29배까지 줄면 너무 작아서
-     * 640px 기준(≈0.59배)으로 덜 줄이고 바깥 여백은 잘라낸다. 마지막 로고·문구는 폰에서 1.6배 더 키운다.
-     */
+    /** 레이아웃 뷰포트 기준으로 무대를 고른 뒤 화면 안에 다 들어가도록 축소한다 */
     const fit = () => {
-      const byW = innerWidth / 1280;
-      const byH = innerHeight / 800;
-      setScale(Math.min(Math.max(byW, innerWidth / 640), byH, 1));
-      setBoost(innerWidth < 700 ? 1.6 : 1);
+      const root = document.documentElement;
+      const w = root.clientWidth || innerWidth;
+      const h = root.clientHeight || innerHeight;
+      const s = w < 760 || w < h ? TALL : WIDE;
+      setStage(s);
+      setScale(Math.min(w / s.w, h / s.h, 1));
     };
     fit();
-    addEventListener("resize", fit);
+    // resize 이벤트가 오지 않는 레이아웃 변화(주소창 접힘, 창 분할)도 잡는다
+    const ro = new ResizeObserver(fit);
+    ro.observe(document.documentElement);
+    addEventListener("orientationchange", fit);
     const end = () => {
       if (el.hidden) return;
       el.hidden = true;
@@ -80,23 +100,28 @@ export function IntroSplash() {
     el.addEventListener("click", end);
     return () => {
       clearTimeout(t);
-      removeEventListener("resize", fit);
+      ro.disconnect();
+      removeEventListener("orientationchange", fit);
       el.removeEventListener("click", end);
       document.documentElement.style.overflow = "";
     };
   }, []);
 
+  const { cx, cy, dx, dy, nodes, boost } = stage;
+  const mid = { left: cx, top: cy };
+
   return (
     <>
-      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost } as React.CSSProperties}>
-        <div className="op__stage" style={{ transform: `scale(${scale})` }}>
+      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost, visibility: scale ? "visible" : "hidden" } as React.CSSProperties}>
+        <div className="op__stage" style={{ width: stage.w, height: stage.h, marginLeft: -stage.w / 2, marginTop: -stage.h / 2, transform: `scale(${scale})` }}>
           <div className="op__zoom">
-            <svg className="op__svg" viewBox="0 0 1280 800" fill="none" stroke="var(--brand-line)" strokeWidth="1.5" strokeDasharray="600">
-              {NODES.map((n) => (
-                <path key={n.label} className="op__line" d={`M640 400 L${n.x} ${n.y}`} />
+            <svg className="op__svg" viewBox={`0 0 ${stage.w} ${stage.h}`} fill="none" stroke="var(--brand-line)" strokeWidth="1.5" strokeDasharray="600">
+              {nodes.map(([x, y]) => (
+                <path key={`${x}-${y}`} className="op__line" d={`M${cx} ${cy} L${x} ${y}`} />
               ))}
             </svg>
-            <div className="op__card">
+
+            <div className="op__card" style={mid}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span className="g-rfq">RFQ · DC-2026-0001</span>
                 <span className="g-dot" />
@@ -109,25 +134,32 @@ export function IntroSplash() {
                 <span className="g-tag">유전독성</span>
               </div>
             </div>
-            {NODES.map((n) => (
-              <div key={n.label}>
-                <div className="op__fly" style={{ "--tx": `${n.tx}px`, "--ty": `${n.ty}px` } as React.CSSProperties}>
-                  <span className="g-rfq">RFQ · DC-2026-0001</span>
-                  <div className="g-bar" style={{ width: "70%" }} />
-                  <div className="g-bar" style={{ width: "88%" }} />
+
+            {ROWS.map((r, i) => {
+              const [nx, ny] = nodes[i];
+              const tx = nx < cx ? -dx : dx;
+              const ty = ny < cy ? -dy : dy;
+              return (
+                <div key={r.label}>
+                  <div className="op__fly" style={{ ...mid, "--tx": `${tx}px`, "--ty": `${ty}px` } as React.CSSProperties}>
+                    <span className="g-rfq">RFQ · DC-2026-0001</span>
+                    <div className="g-bar" style={{ width: "70%" }} />
+                    <div className="g-bar" style={{ width: "88%" }} />
+                  </div>
+                  <div className="op__node" style={{ left: nx, top: ny }}>
+                    <b>CRO</b>
+                    <span>{r.label}</span>
+                  </div>
+                  <div className="op__row" style={{ ...mid, "--tx": `${tx}px`, "--ty": `${ty}px`, "--fy": `${r.fy}px` } as React.CSSProperties}>
+                    <b>CRO {r.label}</b>
+                    <span className={r.low ? "g-low" : undefined}>{r.cost}</span>
+                    <span>{r.weeks}</span>
+                  </div>
                 </div>
-                <div className="op__node" style={{ left: n.x, top: n.y }}>
-                  <b>CRO</b>
-                  <span>{n.label}</span>
-                </div>
-                <div className="op__row" style={{ "--tx": `${n.tx}px`, "--ty": `${n.ty}px`, "--fy": `${n.fy}px` } as React.CSSProperties}>
-                  <b>CRO {n.label}</b>
-                  <span className={n.low ? "g-low" : undefined}>{n.cost}</span>
-                  <span>{n.weeks}</span>
-                </div>
-              </div>
-            ))}
-            <div className="op__frame">
+              );
+            })}
+
+            <div className="op__frame" style={mid}>
               <div className="dh__ttl">견적 비교표 · DC-2026-0001</div>
               <div className="dh__hd">
                 <span>기관</span>
@@ -135,14 +167,15 @@ export function IntroSplash() {
                 <span>기간</span>
               </div>
             </div>
-            <svg className="op__logo" viewBox="0 0 28 28">
+
+            <svg className="op__logo" viewBox="0 0 28 28" style={mid}>
               <circle cx="14" cy="14" r="13" fill="var(--white)" />
               <circle cx="10" cy="10" r="1.9" fill="var(--brand)" />
               <circle cx="18" cy="10" r="1.9" fill="var(--brand)" />
               <circle cx="10" cy="18" r="1.9" fill="var(--brand)" />
               <circle cx="18" cy="18" r="1.9" fill="var(--brand)" />
             </svg>
-            <div className="op__word">
+            <div className="op__word" style={{ top: cy + 108 * boost }}>
               <b>단추</b>
               <span>여러 조각을 하나로</span>
             </div>
