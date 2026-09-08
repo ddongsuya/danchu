@@ -176,3 +176,17 @@
 @keyframes inOut { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes inZoom { 0%, 90% { transform: scale(1); } 100% { transform: scale(.78); } }
 @media (prefers-reduced-motion: reduce) { .op, .op * { animation-duration: .01ms !important; animation-delay: 0s !important; } }
+
+/* ── 서비스 소개: 배경·불편·해결 ── */
+.band--soft { background: var(--surface); padding: clamp(56px, 7vw, 80px) 0; border-top: 1px solid var(--track); border-bottom: 1px solid var(--track); }
+.band--soft .sub__lead { margin-bottom: 18px; }
+.pains { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--ink); }
+.pains li { display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--card-line); }
+.pains__no { font-size: 14px; font-weight: 600; color: var(--brand); font-variant-numeric: tabular-nums; padding-top: 4px; }
+.pains h3 { margin: 0 0 6px; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
+.pains p { margin: 0; color: var(--body); text-wrap: pretty; font-size: 16px; }
+.solves { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+.solve { background: var(--white); border: 1px solid var(--card-line); border-radius: 20px; padding: 26px 24px; display: flex; flex-direction: column; gap: 10px; }
+.solve__no { width: 32px; height: 32px; border-radius: 50%; background: var(--brand); color: var(--white); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+.solve h3 { margin: 6px 0 0; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
+.solve p { margin: 0; color: var(--body); font-size: 15px; text-wrap: pretty; }
