@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalLayout title="이용약관" effectiveDate="2026년 9월 6일" version="v1.0">
+    <LegalLayout title="이용약관" effectiveDate="2026년 9월 6일" version="v1.0" current="/terms">
       <h2>제1조 (목적)</h2>
       <p>
         이 약관은 단추(이하 &ldquo;회사&rdquo;)가 제공하는 비임상 시험 견적 중개 서비스(이하 &ldquo;서비스&rdquo;)의 이용에

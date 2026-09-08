@@ -1,27 +1,25 @@
 import Link from "next/link";
-import { Logo } from "./Logo";
-import { LangToggle } from "./LangToggle";
+import { SiteHeader } from "./SiteHeader";
+import { SiteFooter } from "./SiteFooter";
+import "@/app/home.css";
 
 /** 약관·개인정보처리방침 공통 레이아웃 */
 export function LegalLayout({
   title,
   effectiveDate,
   version,
+  current,
   children,
 }: {
   title: string;
   effectiveDate: string;
   version: string;
+  current?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="done">
-      <header className="done__head">
-        <div className="fm__head-in">
-          <Logo />
-          <LangToggle />
-        </div>
-      </header>
+    <div className="site">
+      <SiteHeader />
       <main className="legal-main">
         <article className="legal">
           <h1 className="legal__title">{title}</h1>
@@ -36,6 +34,7 @@ export function LegalLayout({
           </div>
         </article>
       </main>
+      <SiteFooter current={current} />
     </div>
   );
 }

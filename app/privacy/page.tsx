@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalLayout title="개인정보처리방침" effectiveDate="2026년 9월 6일" version="v1.0">
+    <LegalLayout title="개인정보처리방침" effectiveDate="2026년 9월 6일" version="v1.0" current="/privacy">
       <p>
         단추(이하 &ldquo;회사&rdquo;)는 비임상 시험 견적 요청(RFQ)을 접수하여 참여 CRO에 배포하고 견적 비교표를 제공하는 중개
         서비스를 운영합니다. 회사는 「개인정보 보호법」을 준수하며, 정보주체의 개인정보를 아래와 같이 처리합니다.

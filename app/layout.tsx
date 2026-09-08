@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* 스크립트가 없으면 등장 애니메이션 없이 바로 보이게 */}
         <noscript>
-          <style>{".rv{opacity:1;transform:none}.intro{display:none}"}</style>
+          <style>{".rv{opacity:1;transform:none}.op{display:none}"}</style>
         </noscript>
         {children}
       </body>

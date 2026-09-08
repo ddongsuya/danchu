@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
- * 랜딩 모션 컨트롤러
- * - [data-rv] 요소를 뷰포트 진입 시 .in 으로 전환 (스크롤 등장)
- * - [data-timeline] 의 스크롤 진행도를 --s1~--s5 로 스테이지에 기록
- * 두 동작 모두 prefers-reduced-motion 을 존중한다.
+ * 스크롤 등장 컨트롤러 — [data-rv] 요소를 뷰포트 진입 시 .in 으로 전환.
+ * 오프닝 인트로가 재생 중이면 끝나갈 무렵부터 관찰을 시작한다.
  */
 export function Motion() {
   useEffect(() => {
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    // 1) 스크롤 등장
     const io = new IntersectionObserver(
       (es) =>
         es.forEach((e) => {
@@ -23,125 +18,132 @@ export function Motion() {
         }),
       { threshold: 0.15 },
     );
-    const observeAll = () =>
-      document.querySelectorAll("[data-rv]:not(.in)").forEach((el) => io.observe(el));
-
-    // 인트로가 재생 중이면 끝나갈 무렵부터 관찰 시작
-    const introPlaying = !!document.querySelector(".intro:not([hidden])");
-    const startAt = introPlaying ? 2250 : 0;
-    const t = window.setTimeout(observeAll, startAt);
-
-    // 2) 스크롤 타임라인
-    const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-    const seg = (p: number, a: number, b: number) => ease(Math.min(1, Math.max(0, (p - a) / (b - a))));
-
-    let raf = 0;
-    const tick = () => {
-      const wrap = document.querySelector<HTMLElement>("[data-timeline]");
-      if (!wrap) return;
-      const stage = wrap.firstElementChild as HTMLElement | null;
-      if (!stage) return;
-      const r = wrap.getBoundingClientRect();
-      const vh = stage.clientHeight || innerHeight;
-      const span = r.height - vh;
-      if (!(span > 0)) return;
-      let p = reduce ? 1 : Math.min(1, Math.max(0, -r.top / span));
-      if (!isFinite(p)) p = 0;
-      [seg(p, 0, 0.14), seg(p, 0.14, 0.4), seg(p, 0.4, 0.6), seg(p, 0.6, 0.8), seg(p, 0.82, 1)].forEach(
-        (v, i) => stage.style.setProperty("--s" + (i + 1), v.toFixed(4)),
-      );
+    const observeAll = () => document.querySelectorAll("[data-rv]:not(.in)").forEach((el) => io.observe(el));
+    const introPlaying = !!document.querySelector(".op:not([hidden])");
+    const t = window.setTimeout(observeAll, introPlaying ? 4500 : 0);
+    // 인트로를 클릭으로 건너뛰면 바로 시작
+    const onSkip = () => {
+      clearTimeout(t);
+      observeAll();
     };
-    // 앵커 이동처럼 화면을 건너뛰었을 때 남는 미노출 요소를 정리한다
-    const sweep = () => {
-      document.querySelectorAll<HTMLElement>("[data-rv]:not(.in)").forEach((el) => {
-        if (el.getBoundingClientRect().top < innerHeight * 0.85) el.classList.add("in");
-      });
-    };
-
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        tick();
-        sweep();
-      });
-    };
-
-    addEventListener("scroll", onScroll, { capture: true, passive: true });
-    addEventListener("resize", onScroll);
-    tick();
-    requestAnimationFrame(tick);
-    const t2 = window.setTimeout(tick, 300);
-
+    addEventListener("dc:intro-end", onSkip);
     return () => {
       clearTimeout(t);
-      clearTimeout(t2);
-      if (raf) cancelAnimationFrame(raf);
-      removeEventListener("scroll", onScroll, { capture: true });
-      removeEventListener("resize", onScroll);
+      removeEventListener("dc:intro-end", onSkip);
       io.disconnect();
     };
   }, []);
-
   return null;
 }
 
-const HOLES: [number, number, string, string, string][] = [
-  [57, 57, "-40vw", "-40vh", "0s"],
-  [115, 57, "40vw", "-40vh", ".1s"],
-  [57, 115, "-40vw", "40vh", ".2s"],
-  [115, 115, "40vw", "40vh", ".3s"],
+const NODES = [
+  { label: "A", x: 380, y: 230, tx: -260, ty: -170, fy: -30, cost: "1.2억", weeks: "16주", low: false },
+  { label: "B", x: 900, y: 230, tx: 260, ty: -170, fy: 14, cost: "1.35억", weeks: "14주", low: false },
+  { label: "C", x: 380, y: 570, tx: -260, ty: 170, fy: 58, cost: "1.1억", weeks: "18주", low: true },
+  { label: "D", x: 900, y: 570, tx: 260, ty: 170, fy: 102, cost: "1.28억", weeks: "15주", low: false },
 ];
 
-/** 첫 방문(탭 세션 기준) 시 한 번 재생되는 인트로 스플래시 */
+/**
+ * 오프닝 인트로 (5초, 탭 세션당 1회) — 요청서 → CRO 4곳 → 회신 → 비교표 → 단추 로고로 수렴 → 홈.
+ * 서버가 오버레이를 그려 두고, 재방문·모션 최소화 설정이면 페인트 전에 인라인 스크립트가 숨긴다.
+ * 클릭하면 건너뛴다.
+ */
 export function IntroSplash() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
   useEffect(() => {
-    const el = document.querySelector<HTMLElement>(".intro");
+    const el = ref.current;
     if (!el || el.hidden) return;
     document.documentElement.style.overflow = "hidden";
-    const t = window.setTimeout(() => {
+    const fit = () => setScale(Math.min(innerWidth / 1280, innerHeight / 800, 1));
+    fit();
+    addEventListener("resize", fit);
+    const end = () => {
+      if (el.hidden) return;
       el.hidden = true;
       document.documentElement.style.overflow = "";
-    }, 2750);
+      dispatchEvent(new Event("dc:intro-end"));
+    };
+    const t = window.setTimeout(end, 5000);
+    el.addEventListener("click", end);
     return () => {
       clearTimeout(t);
+      removeEventListener("resize", fit);
+      el.removeEventListener("click", end);
       document.documentElement.style.overflow = "";
     };
   }, []);
 
   return (
     <>
-      <div className="intro" aria-hidden="true">
-        <div className="intro__in">
-          <div className="intro__disc-wrap">
-            <div className="intro__disc" />
-            {HOLES.map(([l, t, hx, hy, d]) => (
-              <span
-                key={`${l}-${t}`}
-                className="intro__hole"
-                style={
-                  {
-                    left: l,
-                    top: t,
-                    "--hx": hx,
-                    "--hy": hy,
-                    animationDelay: d,
-                  } as React.CSSProperties
-                }
-              />
+      <div ref={ref} className="op" aria-hidden="true">
+        <div className="op__stage" style={{ transform: `scale(${scale})` }}>
+          <div className="op__zoom">
+            <svg className="op__svg" viewBox="0 0 1280 800" fill="none" stroke="var(--brand-line)" strokeWidth="1.5" strokeDasharray="600">
+              {NODES.map((n) => (
+                <path key={n.label} className="op__line" d={`M640 400 L${n.x} ${n.y}`} />
+              ))}
+            </svg>
+            <div className="op__card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="g-rfq">RFQ · DC-2026-0001</span>
+                <span className="g-dot" />
+              </div>
+              <div className="g-bar" style={{ width: "70%" }} />
+              <div className="g-bar" style={{ width: "88%" }} />
+              <div className="g-bar" style={{ width: "55%" }} />
+              <div style={{ marginTop: "auto", display: "flex", gap: 6 }}>
+                <span className="g-tag">반복투여독성</span>
+                <span className="g-tag">유전독성</span>
+              </div>
+            </div>
+            {NODES.map((n) => (
+              <div key={n.label}>
+                <div className="op__fly" style={{ "--tx": `${n.tx}px`, "--ty": `${n.ty}px` } as React.CSSProperties}>
+                  <span className="g-rfq">RFQ · DC-2026-0001</span>
+                  <div className="g-bar" style={{ width: "70%" }} />
+                  <div className="g-bar" style={{ width: "88%" }} />
+                </div>
+                <div className="op__node" style={{ left: n.x, top: n.y }}>
+                  <b>CRO</b>
+                  <span>{n.label}</span>
+                </div>
+                <div className="op__row" style={{ "--tx": `${n.tx}px`, "--ty": `${n.ty}px`, "--fy": `${n.fy}px` } as React.CSSProperties}>
+                  <b>CRO {n.label}</b>
+                  <span className={n.low ? "g-low" : undefined}>{n.cost}</span>
+                  <span>{n.weeks}</span>
+                </div>
+              </div>
             ))}
-          </div>
-          <div className="intro__word">
-            <b>단추</b>
-            <span>여러 조각을 하나로</span>
+            <div className="op__frame">
+              <div className="dh__ttl">견적 비교표 · DC-2026-0001</div>
+              <div className="dh__hd">
+                <span>기관</span>
+                <span>반복투여 4주</span>
+                <span>기간</span>
+              </div>
+            </div>
+            <svg className="op__logo" viewBox="0 0 28 28">
+              <circle cx="14" cy="14" r="13" fill="var(--white)" />
+              <circle cx="10" cy="10" r="1.9" fill="var(--brand)" />
+              <circle cx="18" cy="10" r="1.9" fill="var(--brand)" />
+              <circle cx="10" cy="18" r="1.9" fill="var(--brand)" />
+              <circle cx="18" cy="18" r="1.9" fill="var(--brand)" />
+            </svg>
+            <div className="op__word">
+              <b>단추</b>
+              <span>여러 조각을 하나로</span>
+            </div>
           </div>
         </div>
+        <span className="op__skip">클릭하면 건너뜁니다</span>
       </div>
       {/* 재방문·모션 최소화 설정에서는 페인트 전에 즉시 숨긴다 */}
       <script
         dangerouslySetInnerHTML={{
           __html:
-            "(function(){try{var s=sessionStorage.getItem('dc_intro');var r=matchMedia('(prefers-reduced-motion: reduce)').matches;if(s||r){var e=document.querySelector('.intro');if(e)e.hidden=true;}else{sessionStorage.setItem('dc_intro','1');}}catch(e){}})()",
+            "(function(){try{var s=sessionStorage.getItem('dc_intro_v2');var r=matchMedia('(prefers-reduced-motion: reduce)').matches;if(s||r){var e=document.querySelector('.op');if(e)e.hidden=true;}else{sessionStorage.setItem('dc_intro_v2','1');}}catch(e){}})()",
         }}
       />
     </>
