@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -56,8 +56,15 @@ export function RfqForm() {
   const step = isContact ? revealed : isWizard ? CONTACT.length + q + 1 : TOTAL_STEPS;
   const pct = isDetail ? 100 : Math.round(((step - 1) / TOTAL_STEPS) * 100);
 
+  /**
+   * 담당자 정보는 입력칸 blur(onCommit)와 "다음" 클릭·Enter가 연달아 advance를 부른다.
+   * blur가 먼저 한 칸을 연 직후의 두 번째 호출은 같은 동작이므로 무시한다 (두 칸이 한 번에 열리던 문제).
+   */
+  const lastAdvance = useRef(0);
   const advance = () => {
     if (!ok) return;
+    if (Date.now() - lastAdvance.current < 400) return;
+    lastAdvance.current = Date.now();
     if (isContact) {
       if (revealed < CONTACT.length) setRevealed(revealed + 1);
       else {
