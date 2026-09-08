@@ -68,7 +68,7 @@ function Login() {
     <div className="auth__card">
       <div>
         <h1 className="auth__title">로그인</h1>
-        <p className="auth__sub">견적 요청 진행 상황과 비교표를 확인하세요.</p>
+        <p className="auth__sub">{next === "/app/new" ? "로그인하면 바로 견적 요청 화면이 열립니다." : "견적 요청 진행 상황과 비교표를 확인하세요."}</p>
       </div>
 
       <div className="auth__tabs" role="tablist">

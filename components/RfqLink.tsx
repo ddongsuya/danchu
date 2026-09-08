@@ -4,13 +4,16 @@ import Link from "next/link";
 import { useMe } from "@/lib/use-me";
 
 /**
- * 견적 요청 진입점.
- * 로그인한 의뢰자는 계정 정보가 채워지는 앱 위자드(/app/new)로, 그 외에는 공개 웹 폼(/rfq)으로.
- * 서버 렌더는 /rfq로 나가고, 마운트 후 세션을 확인해 href만 바꾼다.
+ * 견적 요청 진입점 — 항상 앱 위자드(/app/new)로 간다.
+ * 로그인 전이면 가입 화면을 거치고(next=/app/new), 확인 메일 버튼을 누르면 바로 위자드가 열린다.
+ * CRO·운영자 계정은 각자의 홈으로.
  */
+export const REQUEST_HREF = "/app/new";
+export const SIGNUP_HREF = `/signup?next=${encodeURIComponent(REQUEST_HREF)}`;
+
 export function RfqLink({ className, children }: { className?: string; children: React.ReactNode }) {
   const { me } = useMe();
-  const href = me?.role === "requester" ? "/app/new" : "/rfq";
+  const href = !me ? SIGNUP_HREF : me.role === "requester" ? REQUEST_HREF : me.to;
   return (
     <Link href={href} className={className}>
       {children}

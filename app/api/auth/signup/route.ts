@@ -18,7 +18,8 @@ export async function POST(req: Request) {
   const company = s("company");
 
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "이메일 형식을 확인해 주세요." }, { status: 400 });
-  if (password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
+  // 비밀번호는 선택 — 비우면 이메일 링크로만 로그인한다 (나중에 재설정 흐름으로 정할 수 있다)
+  if (password && password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
   if (!name || !company) return NextResponse.json({ error: "담당자 성명과 회사·기관명을 입력해 주세요." }, { status: 400 });
 
   const admin = getSupabaseAdmin();
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
 
   const { error } = await admin.auth.admin.createUser({
     email,
-    password,
+    ...(password ? { password } : {}),
     email_confirm: false,
     user_metadata: { role: "requester", name, company, dept: s("dept"), phone: s("phone", 40), org_type: s("orgType") },
   });

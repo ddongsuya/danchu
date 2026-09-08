@@ -5,7 +5,7 @@ Next.js(App Router) + Supabase(DB·Auth·Storage) + Resend · Vercel 배포 · �
 ## 흐름
 
 ```
-의뢰자  /rfq 또는 /app/new 접수 ─→ [운영자 /admin 배포] ─→ CRO /q/{token} 또는 /cro 회신
+의뢰자  가입(/signup) → /app/new 접수 ─→ [운영자 /admin 배포] ─→ CRO /q/{token} 또는 /cro 회신
         ─→ [운영자 비교표 공개] ─→ 의뢰자 /app 비교표·CRO 선택 ─→ CRO /cro/awards 연락처·계약 보고 ─→ [운영자 종료]
 ```
 
@@ -15,7 +15,7 @@ Next.js(App Router) + Supabase(DB·Auth·Storage) + Resend · Vercel 배포 · �
 
 | 영역 | 경로 | 설명 |
 |---|---|---|
-| 공개 | `/` `/rfq` `/rfq/complete` `/privacy` `/terms` | 랜딩, 로그인 없이 접수(같은 이메일로 가입하면 계정에 연결) |
+| 공개 | `/` `/privacy` `/terms` | 랜딩. "견적 요청하기"는 로그인 전이면 가입(`/signup?next=/app/new`)으로, 확인 메일 버튼을 누르면 바로 위자드. 옛 `/rfq`는 가입으로 리다이렉트 |
 | 인증 | `/login` `/signup` `/signup/cro` `/forgot` `/reset-password` `/auth/confirm` | 비밀번호 + 이메일 링크 로그인, 의뢰자 가입, CRO 가입 신청 |
 | 의뢰자 | `/app` `/app/new` `/app/r/[no]` `/app/r/[no]/compare` `/app/r/[no]/q/[quoteId]` `/app/notifications` `/app/profile` | 내 요청·진행 타임라인·비교표·CRO 선택·알림 |
 | CRO | `/cro` `/cro/r/[id]` `/cro/r/[id]/reply` `/cro/quotes` `/cro/awards` `/cro/org` | 받은 요청·회신·제출 목록·수주(연락처·계약 보고)·기관 정보 |
