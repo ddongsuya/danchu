@@ -70,25 +70,31 @@ const ROWS = [
 export function IntroSplash() {
   const ref = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<Stage>(WIDE);
-  const [scale, setScale] = useState(0);
+  const [box, setBox] = useState({ scale: 0, cx: 0, cy: 0 });
 
   useEffect(() => {
     const el = ref.current;
     if (!el || el.hidden) return;
     document.documentElement.style.overflow = "hidden";
-    /** 레이아웃 뷰포트 기준으로 무대를 고른 뒤 화면 안에 다 들어가도록 축소한다 */
+    /**
+     * 실제로 보이는 영역(visualViewport) 기준으로 무대를 고르고, 그 안에 다 들어가게 축소한다.
+     * iOS 사파리는 고정 오버레이가 하단 툴바 뒤까지 깔려 50%/50% 중심이 눈에 보이는 중심보다
+     * 아래로 밀리므로, 중심 좌표를 px로 직접 준다.
+     */
     const fit = () => {
-      const root = document.documentElement;
-      const w = root.clientWidth || innerWidth;
-      const h = root.clientHeight || innerHeight;
+      const vv = window.visualViewport;
+      const w = Math.round(vv?.width || document.documentElement.clientWidth || innerWidth);
+      const h = Math.round(vv?.height || document.documentElement.clientHeight || innerHeight);
       const s = w < 760 || w < h ? TALL : WIDE;
       setStage(s);
-      setScale(Math.min(w / s.w, h / s.h, 1));
+      setBox({ scale: Math.min(w / s.w, h / s.h, 1), cx: (vv?.offsetLeft || 0) + w / 2, cy: (vv?.offsetTop || 0) + h / 2 });
     };
     fit();
     // resize 이벤트가 오지 않는 레이아웃 변화(주소창 접힘, 창 분할)도 잡는다
     const ro = new ResizeObserver(fit);
     ro.observe(document.documentElement);
+    window.visualViewport?.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("scroll", fit);
     addEventListener("orientationchange", fit);
     const end = () => {
       if (el.hidden) return;
@@ -101,6 +107,8 @@ export function IntroSplash() {
     return () => {
       clearTimeout(t);
       ro.disconnect();
+      window.visualViewport?.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("scroll", fit);
       removeEventListener("orientationchange", fit);
       el.removeEventListener("click", end);
       document.documentElement.style.overflow = "";
@@ -112,8 +120,11 @@ export function IntroSplash() {
 
   return (
     <>
-      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost, visibility: scale ? "visible" : "hidden" } as React.CSSProperties}>
-        <div className="op__stage" style={{ width: stage.w, height: stage.h, marginLeft: -stage.w / 2, marginTop: -stage.h / 2, transform: `scale(${scale})` }}>
+      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost, visibility: box.scale ? "visible" : "hidden" } as React.CSSProperties}>
+        <div
+          className="op__stage"
+          style={{ width: stage.w, height: stage.h, left: box.cx, top: box.cy, marginLeft: -stage.w / 2, marginTop: -stage.h / 2, transform: `scale(${box.scale})` }}
+        >
           <div className="op__zoom">
             <svg className="op__svg" viewBox={`0 0 ${stage.w} ${stage.h}`} fill="none" stroke="var(--brand-line)" strokeWidth="1.5" strokeDasharray="600">
               {nodes.map(([x, y]) => (

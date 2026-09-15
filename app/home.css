@@ -182,7 +182,7 @@
 /* ── 오프닝 인트로 (5s, 세션당 1회) ── */
 .op { position: fixed; inset: 0; background: var(--surface); z-index: 100; overflow: hidden; cursor: pointer; animation: inOut 5s cubic-bezier(.6,0,.4,1) both; }
 .op[hidden] { display: none; }
-.op__stage { position: absolute; left: 50%; top: 50%; }
+.op__stage { position: absolute; left: 50%; top: 50%; will-change: transform; }
 .op__zoom { position: absolute; inset: 0; animation: inZoom 5s cubic-bezier(.6,0,.4,1) both; }
 .op__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .op__line { animation: inLine 5s linear both; }
@@ -205,7 +205,7 @@
 .op__word { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
 .op__word b { font-size: calc(28px * var(--boost, 1)); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
 .op__word span { font-size: calc(14px * var(--boost, 1)); color: var(--muted); }
-.op__skip { position: absolute; right: 20px; bottom: 20px; font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
+.op__skip { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
 
 @keyframes inCard { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.9); } 6%, 14% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 20%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.8); } }
 @keyframes inLine { 0%, 12% { opacity: 0; stroke-dashoffset: 600; } 22%, 36% { opacity: 1; stroke-dashoffset: 0; } 42%, 100% { opacity: 0; stroke-dashoffset: 0; } }
