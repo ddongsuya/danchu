@@ -34,6 +34,8 @@ export type CroOrg = {
   intro: string | null;
   created_at: string;
   approved_at: string | null;
+  /** 기한까지 손대지 않은 초안을 예비 견적으로 자동 제출 */
+  auto_reply?: boolean;
 };
 
 export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null };

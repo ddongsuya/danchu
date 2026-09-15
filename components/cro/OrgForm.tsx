@@ -17,6 +17,7 @@ export function OrgForm({ org }: { org: CroOrg }) {
   const [glp, setGlp] = useState<string[]>(org.glp_certs ?? []);
   const [cats, setCats] = useState<string[]>(org.categories ?? []);
   const [aaalac, setAaalac] = useState<boolean | null>(org.aaalac);
+  const [autoReply, setAutoReply] = useState<boolean>(!!org.auto_reply);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
@@ -28,7 +29,7 @@ export function OrgForm({ org }: { org: CroOrg }) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/cro/org", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, glpCerts: glp, categories: cats, aaalac }) });
+      const res = await fetch("/api/cro/org", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, glpCerts: glp, categories: cats, aaalac, autoReply }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(d.error || "저장하지 못했습니다.");
       setMsg({ ok: true, text: "저장했습니다." });
@@ -74,6 +75,13 @@ export function OrgForm({ org }: { org: CroOrg }) {
         </div>
       </div>
       <div className="fld"><label className="fld__lab" htmlFor="intro">기관 소개</label><textarea id="intro" className="ta" rows={3} value={f.intro} onChange={set("intro")} /></div>
+      <div className="kv" style={{ alignItems: "center", padding: "12px 14px", border: "1px solid var(--cline)", borderRadius: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontWeight: 600 }}>기한까지 손대지 않은 초안을 예비 견적으로 자동 제출</span>
+          <span style={{ fontSize: 12.5, color: "var(--muted)" }}>카탈로그로 채워진 초안이 확인 없이 기한에 제출됩니다. 의뢰자에게 "예비 견적"으로 표시되고, 확인 필요 항목이 남아 있으면 제출되지 않습니다.</span>
+        </div>
+        <button type="button" className="tgl" aria-pressed={autoReply} aria-label="자동 회신" onClick={() => setAutoReply(!autoReply)}><span /></button>
+      </div>
       {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status">{msg.text}</p>}
       <div><button type="submit" className="b1" disabled={busy || !f.name || cats.length === 0}>{busy ? "저장 중…" : "저장"}</button></div>
     </form>

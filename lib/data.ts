@@ -59,6 +59,11 @@ export type QuoteItemRow = {
   amount: number | null;
   weeks: number | null;
   reason: string | null;
+  design?: Record<string, unknown> | null;
+  source?: string | null;
+  unit?: string | null;
+  unit_price?: number | null;
+  sample_count?: number | null;
 };
 
 export type QuoteRow = {
@@ -84,6 +89,7 @@ export type QuoteRow = {
   status: string;
   submitted_at: string | null;
   updated_at: string;
+  auto?: boolean | null;
   cro_quote_items?: QuoteItemRow[];
 };
 

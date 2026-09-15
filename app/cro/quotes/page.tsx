@@ -20,6 +20,9 @@ export default async function CroQuotes() {
           <h1>제출한 견적</h1>
           <p>회신 기한 안에는 수정할 수 있습니다. 결과는 의뢰자 선택 후 안내됩니다.</p>
         </div>
+        <div className="ph__actions">
+          <Link href="/cro/awards" className="b2 bsm">수주·계약 보고</Link>
+        </div>
       </div>
       {list.length === 0 ? (
         <div className="empty">

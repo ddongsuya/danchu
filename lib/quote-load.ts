@@ -3,6 +3,8 @@ import { quoteRowsFromPayload } from "./quote-items";
 import { EMPTY_COMMON, type ReplyCommon, type ReplyDraft, type ReplyItem, type RfqView } from "./cro-data";
 import type { Values } from "./rfq-schema";
 import type { InviteRow, RfqRow } from "./data";
+import { catalogMap } from "./catalog-db";
+import { prefillRow, rowKey } from "./catalog";
 
 export type Loaded = {
   rfq: RfqView;
@@ -97,6 +99,27 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
   };
 }
 
+/** 카탈로그 → 회신 초안. 카탈로그에 해당 항목이 없으면 null (빈 폼) */
+async function prefillDraft(orgId: string, r: RfqRow, rfq: RfqView): Promise<ReplyDraft | null> {
+  const cat = await catalogMap(orgId);
+  if (!cat.size) return null;
+  const payload = r.payload as Values;
+  let touched = false;
+  const items: ReplyItem[] = rfq.rows.map((row) => {
+    const found = cat.get(rowKey(row));
+    const c = found && found.source !== "empty" ? found : undefined; // 등록하지 않은 항목은 빈 칸
+    const p = prefillRow(row, c, payload);
+    if (c) touched = true;
+    return { seq: row.seq, avail: p.avail, amount: p.amount, weeks: p.weeks, reason: p.reason, design: p.design, source: p.source, checks: p.checks, unit: p.unit, unitPrice: p.unitPrice, sampleCount: "" };
+  });
+  if (!touched) return null;
+  // 총액 포함 항목: 초안에 쓰인 카탈로그 행들이 공통으로 포함하는 것
+  const used = rfq.rows.map((row) => cat.get(rowKey(row))).filter((c): c is NonNullable<typeof c> => !!c && c.source !== "empty" && c.available);
+  const includes = used.length ? used[0].includes.filter((k) => used.every((c) => c.includes.includes(k))) : [];
+  const valid = new Date(Date.now() + 30 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  return { items, note: "", pdfName: "", status: "draft", common: { ...EMPTY_COMMON, validUntil: valid, includes }, prefilled: true };
+}
+
 /** 초대 행 → 회신 화면 전체 */
 export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
   const sb = getSupabaseAdmin();
@@ -114,7 +137,8 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
   const { data: q } = await sb.from("cro_quotes").select("*, cro_quote_items(*)").eq("invite_id", inv.id).maybeSingle();
   let draft: ReplyDraft | null = null;
   if (q) {
-    const items = (q.cro_quote_items as { seq: number; avail: string | null; amount: number | null; weeks: number | null; reason: string | null }[])
+    type ItemRow = { seq: number; avail: string | null; amount: number | null; weeks: number | null; reason: string | null; design?: Record<string, unknown> | null; source?: string | null; unit?: string | null; unit_price?: number | null; sample_count?: number | null };
+    const items: ReplyItem[] = (q.cro_quote_items as ItemRow[])
       .sort((x, y) => x.seq - y.seq)
       .map((it) => ({
         seq: it.seq,
@@ -122,6 +146,11 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
         amount: it.amount != null ? String(it.amount) : "",
         weeks: it.weeks != null ? String(it.weeks) : "",
         reason: it.reason ?? "",
+        design: it.design && typeof it.design === "object" ? it.design : {},
+        source: it.source === "catalog" || it.source === "learned" ? it.source : "manual",
+        unit: it.unit === "per_sample" ? "per_sample" : "total",
+        unitPrice: it.unit_price != null ? String(it.unit_price) : "",
+        sampleCount: it.sample_count != null ? String(it.sample_count) : "",
       }));
     const common: ReplyCommon = {
       ...EMPTY_COMMON,
@@ -133,6 +162,9 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
       includes: Array.isArray(q.includes) ? q.includes : [],
     };
     draft = { items, note: q.note ?? "", pdfName: q.pdf_name ?? "", status: q.status, common };
+  } else if (inv.cro_org_id) {
+    // 저장된 회신이 없으면 기관 카탈로그로 초안을 만든다 (저장은 CRO가 손댈 때)
+    draft = await prefillDraft(inv.cro_org_id, r as RfqRow, rfq);
   }
   const now = Date.now();
   const expired = !!inv.expires_at && new Date(inv.expires_at).getTime() < now;

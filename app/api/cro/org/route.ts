@@ -34,6 +34,7 @@ export async function POST(req: Request) {
       glp_certs: arr("glpCerts", GLP_OPTS),
       categories,
       aaalac: typeof b.aaalac === "boolean" ? b.aaalac : null,
+      auto_reply: b.autoReply === true,
     })
     .eq("id", s.profile.cro_org_id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });

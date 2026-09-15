@@ -5,7 +5,9 @@ import { validateRequired, type Values } from "@/lib/rfq-schema";
 import { nowSeoul } from "@/lib/dates";
 import { safeName, type UploadTicket } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
-import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { autoDistribute } from "@/lib/distribute";
+import type { RfqRow } from "@/lib/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,6 +147,21 @@ export async function POST(req: Request) {
       await logEvent(row.id, "received", "접수", `${cats}${files.length ? ` · 첨부 ${files.length}건` : ""}`, userId);
       await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${rfqNo} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${rfqNo}` });
       if (userId) await notifyUsers([userId], { kind: "접수", title: `${rfqNo} 접수되었습니다`, body: "요청서를 정리해 영업일 1일 내 참여 CRO에 배포합니다.", href: `/app/r/${rfqNo}` });
+
+      // 접수 즉시 자동 배포: 분야가 맞는 승인 기관 전부. 맞는 기관이 없으면 운영자가 수동 배포한다.
+      try {
+        const { data: full } = await supabase.from("rfq_requests").select("*").eq("id", row.id).single();
+        if (full) {
+          const r = await autoDistribute(full as RfqRow);
+          if (!r.matched) {
+            await notifyUsers(await adminUserIds(), { kind: "배포", title: `${rfqNo} 자동 배포 대상 없음`, body: "분야가 맞는 승인 기관이 없습니다. 수동 배포가 필요합니다.", href: `/admin/r/${rfqNo}` }, { to: adminEmails() });
+          } else if (r.skipped.length) {
+            await logEvent(row.id, "distributed", `배포 제외 ${r.skipped.length}곳`, r.skipped.join(", "), null, { skipped: r.skipped });
+          }
+        }
+      } catch (e) {
+        console.error("auto distribute", e);
+      }
     } catch (e) {
       console.error("supabase", e);
       return NextResponse.json({ error: "접수 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });

@@ -6,6 +6,7 @@ import { loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { won } from "@/lib/format";
+import { learnFromSubmission } from "@/lib/catalog-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,31 @@ function blocked(got: Loaded): string {
 
 type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef };
 
+const DESIGN_NUM = ["groups_ctrl", "groups_test", "per_sex", "recovery_weeks", "recovery_per_sex"] as const;
+const DESIGN_STR = ["route", "dosing"] as const;
+
+/** 설계 요약: 정해진 키만, 정해진 형으로 */
+function cleanDesign(d: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (Array.isArray(d.species)) out.species = (d.species as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 10);
+  for (const k of DESIGN_NUM) {
+    const v = d[k];
+    if (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 9999) out[k] = Math.round(v);
+    else if (typeof v === "string" && /^\d{1,4}$/.test(v)) out[k] = Number(v);
+    else out[k] = null;
+  }
+  for (const k of DESIGN_STR) out[k] = typeof d[k] === "string" ? (d[k] as string).slice(0, 120) : null;
+  if (d.extra && typeof d.extra === "object" && !Array.isArray(d.extra)) {
+    const ex: Record<string, string | string[]> = {};
+    for (const [k, v] of Object.entries(d.extra as Record<string, unknown>).slice(0, 30)) {
+      if (typeof v === "string") ex[k] = v.slice(0, 300);
+      else if (Array.isArray(v)) ex[k] = v.filter((x): x is string => typeof x === "string").slice(0, 20);
+    }
+    out.extra = ex;
+  }
+  return out;
+}
+
 /** 항목 3칸 + 공통 조건 + 전달 사항 파싱 · 검증 */
 function parseBody(raw: unknown, rows: QuoteRow[]): Parsed | string {
   const b = (raw ?? {}) as { items?: unknown; note?: unknown; common?: unknown; pdf?: unknown };
@@ -46,6 +72,14 @@ function parseBody(raw: unknown, rows: QuoteRow[]): Parsed | string {
     if (it.weeks && !/^\d{1,3}$/.test(it.weeks)) return "기간은 주 단위 숫자만 입력합니다.";
     if (it.reason != null && typeof it.reason !== "string") return "사유 형식이 올바르지 않습니다.";
     if (typeof it.reason === "string") it.reason = it.reason.slice(0, 500);
+    // 설계·출처·단가 (카탈로그 초안에서 오거나 CRO가 수정)
+    it.design = it.design && typeof it.design === "object" && !Array.isArray(it.design) ? cleanDesign(it.design) : {};
+    it.source = it.source === "catalog" || it.source === "learned" ? it.source : "manual";
+    it.unit = it.unit === "per_sample" ? "per_sample" : "total";
+    it.unitPrice = typeof it.unitPrice === "string" && /^\d{1,13}$/.test(it.unitPrice) ? it.unitPrice : "";
+    it.sampleCount = typeof it.sampleCount === "string" && /^\d{1,6}$/.test(it.sampleCount) ? it.sampleCount : "";
+    if (it.unit === "per_sample" && it.unitPrice && it.sampleCount) it.amount = String(Number(it.unitPrice) * Number(it.sampleCount));
+    delete it.checks; // 확인 필요 표시는 저장하지 않는다 (CRO가 저장하는 순간 확인한 것으로 본다)
   }
   const c = (b.common && typeof b.common === "object" ? b.common : {}) as Partial<ReplyCommon>;
   const s = (v: unknown, max = 120) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -82,7 +116,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     total_amount: total || null,
     total_weeks: weeks || null,
     vat: "별도",
-    valid_until: common.validUntil || null,
+    valid_until: common.validUntil || (submit ? new Date(Date.now() + 30 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null),
+    auto: false,
     start_date: common.startDate || null,
     pay_terms: common.payTerms || null,
     substance_qty: common.substanceQty || null,
@@ -120,10 +155,22 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
       amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null,
       weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null,
       reason: it.reason || null,
+      design: it.design ?? {},
+      source: it.source ?? "manual",
+      unit: it.unit ?? "total",
+      unit_price: it.unit === "per_sample" && it.unitPrice ? Number(it.unitPrice) : null,
+      sample_count: it.unit === "per_sample" && it.sampleCount ? Number(it.sampleCount) : null,
     };
   });
   const { error: e2 } = await sb.from("cro_quote_items").upsert(itemRows, { onConflict: "quote_id,seq" });
-  if (e2) return { error: "항목 저장에 실패했습니다.", status: 500 };
+  if (e2) {
+    console.error("cro_quote_items upsert", e2);
+    return { error: "항목 저장에 실패했습니다.", status: 500 };
+  }
+  if (submit && got.croOrgId) {
+    // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (실패해도 제출은 성공)
+    learnFromSubmission(got.croOrgId, itemRows.map((r) => ({ category: r.category, name: r.name, avail: r.avail, amount: r.amount, weeks: r.weeks, unit: r.unit, unitPrice: r.unit_price, design: r.design as Record<string, unknown> }))).catch((e) => console.error("learn", e));
+  }
 
   await sb.from("rfq_invites").update({ status: submit ? "submitted" : "draft" }).eq("id", got.inviteId);
   if (submit) {
@@ -177,7 +224,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });
   if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 '회신하지 않음'으로 처리해 주세요." }, { status: 400 });
-  if (!parsed.common.validUntil || !parsed.common.startDate) return NextResponse.json({ error: "견적 유효기간과 착수 가능일을 입력해 주세요." }, { status: 400 });
+  if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
   const r = await upsert(got, parsed, true, await actor(got));

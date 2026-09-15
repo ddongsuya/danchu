@@ -22,7 +22,22 @@ export type RfqView = {
   files: { id: string; name: string; size: number }[];
 };
 
-export type ReplyItem = { seq: number; avail: "" | "가능" | "조건부 가능" | "불가"; amount: string; weeks: string; reason?: string };
+export type ReplyItem = {
+  seq: number;
+  avail: "" | "가능" | "조건부 가능" | "불가";
+  amount: string;
+  weeks: string;
+  reason?: string;
+  /** 설계 요약 (카탈로그에서 채우거나 CRO가 수정) */
+  design?: Record<string, unknown>;
+  /** 초안 출처 */
+  source?: "catalog" | "learned" | "manual";
+  /** 요청 조건이 표준 설계와 달라 확인이 필요한 칸 */
+  checks?: string[];
+  unit?: "total" | "per_sample";
+  unitPrice?: string;
+  sampleCount?: string;
+};
 
 /** 회신 공통 조건 (§5) — 항목 3칸 외에 CRO가 채우는 것 */
 export type ReplyCommon = {
@@ -34,9 +49,9 @@ export type ReplyCommon = {
   includes: string[];   // 기본 포함 항목
 };
 
-export const INCL_KEYS = ["임상병리", "조직병리", "TK", "조제물분석", "QA 점검", "영문 보고서", "통계분석", "시험물질 보관"];
+export const INCL_KEYS = ["임상병리", "조직병리(검경 포함)", "TK 분석", "조제물분석", "통계분석", "QA 점검", "영문 보고서", "시험물질 보관"];
 export const REPORT_LANGS = ["국문", "영문", "국문 + 영문 번역", "일문"];
 
 export const EMPTY_COMMON: ReplyCommon = { validUntil: "", startDate: "", payTerms: "", substanceQty: "", reportLang: "", includes: [] };
 
-export type ReplyDraft = { items: ReplyItem[]; note: string; pdfName: string; status: "draft" | "submitted"; common: ReplyCommon };
+export type ReplyDraft = { items: ReplyItem[]; note: string; pdfName: string; status: "draft" | "submitted"; common: ReplyCommon; /** 저장된 회신이 없어 카탈로그로 만든 초안 */ prefilled?: boolean };

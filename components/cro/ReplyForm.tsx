@@ -7,13 +7,81 @@ import { Caret, CheckMark } from "@/components/app/ui";
 import { EMPTY_COMMON, INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem, type RfqView } from "@/lib/cro-data";
 import { won } from "@/lib/format";
 import { uploadToSigned } from "@/lib/upload";
+import { designSummary, ROUTES, SPECIES } from "@/lib/catalog";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
 const MAX_PDF = 20 * 1024 * 1024;
 
+type Design = Record<string, unknown>;
+const dnum = (d: Design, k: string) => (typeof d[k] === "number" ? String(d[k]) : typeof d[k] === "string" ? (d[k] as string) : "");
+const dstr = (d: Design, k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
+const dspecies = (d: Design) => (Array.isArray(d.species) ? (d.species as string[]) : []);
+
+/** 항목별 설계 요약 — 접힌 상태에서는 한 줄, 펼치면 칸별 수정 */
+function DesignEditor({ value, disabled, onChange }: { value: Design; disabled: boolean; onChange: (d: Design) => void }) {
+  const [open, setOpen] = useState(false);
+  const summary = designSummary({
+    species: dspecies(value),
+    groups_ctrl: dnum(value, "groups_ctrl") ? Number(dnum(value, "groups_ctrl")) : null,
+    groups_test: dnum(value, "groups_test") ? Number(dnum(value, "groups_test")) : null,
+    per_sex: dnum(value, "per_sex") ? Number(dnum(value, "per_sex")) : null,
+    recovery_weeks: dnum(value, "recovery_weeks") ? Number(dnum(value, "recovery_weeks")) : null,
+    recovery_per_sex: dnum(value, "recovery_per_sex") ? Number(dnum(value, "recovery_per_sex")) : null,
+    route: dstr(value, "route") || null,
+    dosing: dstr(value, "dosing") || null,
+  });
+  const setNum = (k: string, v: string) => onChange({ ...value, [k]: v ? Number(v.replace(/[^\d]/g, "").slice(0, 4)) : null });
+  const numIn = (k: string, label: string, unit: string) => (
+    <div className="fld" style={{ gap: 4 }}>
+      <span className="fld__lab" style={{ fontSize: 12 }}>{label}</span>
+      <div className="numin"><input type="text" inputMode="numeric" disabled={disabled} value={dnum(value, k)} onChange={(e) => setNum(k, e.target.value)} aria-label={label} /><span>{unit}</span></div>
+    </div>
+  );
+  return (
+    <div style={{ borderTop: "1px dashed var(--cline)", paddingTop: 10 }}>
+      <button type="button" onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 8, fontSize: 12.5, color: "var(--muted)", textAlign: "left", background: "none", border: 0, padding: 0 }}>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (표준 설계를 적어 두면 비교표에 표시됩니다)"}</span>
+        <span style={{ flex: "none", color: "var(--brand)", fontWeight: 600 }}>{open ? "접기" : "수정"}</span>
+      </button>
+      {open && (
+        <div className="stack" style={{ gap: 10, marginTop: 10 }}>
+          <div className="fld" style={{ gap: 4 }}>
+            <span className="fld__lab" style={{ fontSize: 12 }}>동물종·계통</span>
+            <div className="chips">
+              {SPECIES.map((s) => {
+                const on = dspecies(value).includes(s);
+                return <button key={s} type="button" className="chip" aria-pressed={on} disabled={disabled} onClick={() => onChange({ ...value, species: on ? dspecies(value).filter((x) => x !== s) : [...dspecies(value), s] })}>{s}</button>;
+              })}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 }}>
+            {numIn("groups_ctrl", "대조군", "군")}
+            {numIn("groups_test", "시험군", "군")}
+            {numIn("per_sex", "군당 마릿수", "/성")}
+            {numIn("recovery_weeks", "회복기간", "주")}
+            {numIn("recovery_per_sex", "회복군 추가", "/성")}
+          </div>
+          <div className="grid2">
+            <div className="fld" style={{ gap: 4 }}>
+              <span className="fld__lab" style={{ fontSize: 12 }}>투여경로</span>
+              <div className="chips">
+                {ROUTES.map((s) => <button key={s} type="button" className="chip" aria-pressed={dstr(value, "route") === s} disabled={disabled} onClick={() => onChange({ ...value, route: dstr(value, "route") === s ? null : s })}>{s}</button>)}
+              </div>
+            </div>
+            <div className="fld" style={{ gap: 4 }}>
+              <label className="fld__lab" style={{ fontSize: 12 }}>투여 빈도·기간</label>
+              <input className="inp" style={{ height: 40, fontSize: 13 }} placeholder="예: 1일 1회 · 4주" disabled={disabled} value={dstr(value, "dosing")} onChange={(e) => onChange({ ...value, dosing: e.target.value.slice(0, 120) })} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type Loaded = {
   rfq: RfqView;
-  draft: { items: ReplyItem[]; note: string; pdfName: string; status: string; common: ReplyCommon } | null;
+  draft: { items: ReplyItem[]; note: string; pdfName: string; status: string; common: ReplyCommon; prefilled?: boolean } | null;
   expired?: boolean;
   locked?: boolean;
   declined?: boolean;
@@ -48,7 +116,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         setCommon(d.draft?.common ?? EMPTY_COMMON);
         setNote(d.draft?.note ?? "");
         setPdfName(d.draft?.pdfName ?? "");
-        if (d.draft) setSaved("saved");
+        if (d.draft && !d.draft.prefilled) setSaved("saved");
       })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했습니다."));
   }, [token]);
@@ -74,10 +142,21 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
   const update = (seq: number, patch: Partial<ReplyItem>) => {
     if (readOnly) return;
-    const next = items.map((it) => (it.seq === seq ? { ...it, ...patch } : it));
+    const next = items.map((it) => {
+      if (it.seq !== seq) return it;
+      const n = { ...it, ...patch };
+      // 손댄 칸은 확인한 것으로 본다. 출처는 수정 시 '직접 입력'
+      if ("amount" in patch || "weeks" in patch || "unitPrice" in patch || "sampleCount" in patch || "design" in patch) {
+        n.source = "manual";
+        n.checks = [];
+      }
+      if (n.unit === "per_sample" && n.unitPrice && n.sampleCount) n.amount = String(Number(n.unitPrice) * Number(n.sampleCount));
+      return n;
+    });
     setItems(next);
     queueSave(next, note, common);
   };
+  const confirmChecks = (seq: number) => update(seq, { checks: [] });
   const updCommon = (patch: Partial<ReplyCommon>) => {
     if (readOnly) return;
     const next = { ...common, ...patch };
@@ -112,16 +191,19 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const maxW = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
   const allNo = items.length > 0 && items.every((it) => it.avail === "불가");
-  const commonOk = !!(common.validUntil && common.startDate);
-  const canSubmit = !readOnly && filled === items.length && !allNo && commonOk && (!!pdf || !!pdfName);
+  const commonOk = !!common.startDate;
+  const pending = items.filter((it) => it.checks && it.checks.length).length;
+  const canSubmit = !readOnly && filled === items.length && !allNo && commonOk && pending === 0 && (!!pdf || !!pdfName);
   const blockedLabel = readOnly
     ? "수정할 수 없습니다"
     : filled < items.length
       ? `항목 ${items.length - filled}개 남음`
       : allNo
         ? "전 항목 불가 — 회신하지 않음으로 처리"
+        : pending
+          ? `확인 필요 ${pending}건 남음`
         : !commonOk
-          ? "유효기간·착수일을 입력하세요"
+          ? "착수 가능일을 입력하세요"
           : !pdf && !pdfName
             ? "PDF를 첨부하세요"
             : isSubmitted
@@ -164,9 +246,17 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>견적 회신 · {rfq.no} · {filled} / {items.length} 항목 완료</p>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p>행은 요청서에서 자동 생성됩니다. 금액은 VAT 별도, 기간은 투여 개시~최종보고서 기준(주).</p>
+          <p>행은 요청서에서 자동 생성됩니다. 금액은 VAT 별도, 리드타임은 동물 입고일 ~ 최종보고서(안) 발행일 기준(주). 시험물질·표준품은 의뢰자 제공이 원칙입니다.</p>
         </div>
       </div>
+
+      {data.draft?.prefilled && !readOnly && (
+        <div className="note" style={{ marginBottom: 16 }}>
+          <b>카탈로그로 초안을 채웠습니다.</b>{" "}
+          {pending ? `요청 조건이 표준 설계와 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
+          <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
+        </div>
+      )}
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
@@ -180,32 +270,60 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             const it = items.find((x) => x.seq === r.seq)!;
             const no = it.avail === "불가";
             const needReason = it.avail === "불가" || it.avail === "조건부 가능";
+            const perSample = it.unit === "per_sample";
+            const checks = it.checks ?? [];
+            const src = it.source === "catalog" ? "카탈로그" : it.source === "learned" ? "최근 회신" : "";
             return (
-              <div key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, borderColor: checks.length ? "var(--warn, #C98A1B)" : undefined }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.name}</span>
                     <span style={{ fontSize: 12, color: "var(--muted)" }}>{r.cond || r.category}</span>
+                    {(src || checks.length > 0) && (
+                      <span style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                        {src && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--surface2, #F1EEE8)", color: "var(--muted)" }}>{src}</span>}
+                        {checks.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--tint)", color: "var(--brand)" }}>확인 필요 · {checks.join(" · ")}</span>}
+                      </span>
+                    )}
                   </div>
-                  <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: done(it) ? "var(--brand)" : "var(--dash)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: done(it) && !checks.length ? "var(--brand)" : "var(--dash)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                     <CheckMark size={12} />
                   </span>
                 </div>
+                {checks.length > 0 && !readOnly && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
+                    <span>요청 조건이 표준 설계와 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 그대로 맞으면 확인을 누르세요.</span>
+                    <button type="button" className="b2 bsm" style={{ flex: "none" }} onClick={() => confirmChecks(r.seq)}>그대로 확인</button>
+                  </div>
+                )}
                 <div className="seg seg--full" role="radiogroup" aria-label="수행 가능 여부">
                   {AVAILS.map((a) => (
                     <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} disabled={readOnly} onClick={() => update(r.seq, { avail: a })}>{a}</button>
                   ))}
                 </div>
+                {perSample && !no && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 8 }}>
+                    <div className="numin">
+                      <input type="text" inputMode="numeric" placeholder="검체당 단가" disabled={readOnly} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
+                      <span>원/검체</span>
+                    </div>
+                    <div className="numin">
+                      <input type="text" inputMode="numeric" placeholder="검체 수" disabled={readOnly} value={it.sampleCount ?? ""} onChange={(e) => update(r.seq, { sampleCount: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })} aria-label={`${r.name} 검체 수`} />
+                      <span>건</span>
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 8 }}>
                   <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder="금액" disabled={no || readOnly} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
+                    <input type="text" inputMode="numeric" placeholder={perSample ? "총액 (단가×검체 수)" : "금액"} disabled={no || readOnly || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
                     <span>원</span>
                   </div>
                   <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder="기간" disabled={no || readOnly} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 기간`} />
+                    <input type="text" inputMode="numeric" placeholder="리드타임" disabled={no || readOnly} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 리드타임`} />
                     <span>주</span>
                   </div>
                 </div>
+                {!no && <DesignEditor value={it.design ?? {}} disabled={readOnly} onChange={(d) => update(r.seq, { design: d })} />}
                 {needReason && (
                   <input className="inp" style={{ height: 44, fontSize: 14 }} placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
                 )}
@@ -219,7 +337,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             <h2 style={{ fontSize: 16, fontWeight: 700 }}>공통 조건</h2>
             <div className="grid2">
               <div className="fld">
-                <label className="fld__lab" htmlFor="valid">견적 유효기간<span className="req">*</span></label>
+                <label className="fld__lab" htmlFor="valid">견적 유효기간 <span style={{ fontWeight: 400, color: "var(--muted)" }}>(비우면 제출일 +30일)</span></label>
                 <input id="valid" className="inp" type="date" disabled={readOnly} value={common.validUntil} onChange={(e) => updCommon({ validUntil: e.target.value })} />
               </div>
               <div className="fld">

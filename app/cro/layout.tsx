@@ -18,9 +18,10 @@ export default async function CroLayout({ children }: { children: React.ReactNod
   const nav: NavItem[] = [
     { href: "/cro", label: "받은 요청", icon: "inbox", exact: true },
     { href: "/cro/quotes", label: "제출한 견적", icon: "doc" },
-    { href: "/cro/awards", label: "수주", icon: "award" },
+    { href: "/cro/catalog", label: "카탈로그", icon: "list" },
     { href: "/cro/notifications", label: "알림", icon: "bell", badge: unread },
     { href: "/cro/org", label: "기관", icon: "org" },
+    { href: "/cro/awards", label: "수주", icon: "award" },
   ];
   return (
     <AppState>

@@ -20,9 +20,11 @@ export type CompareCol = {
   glp: string[];
   unavailable: string[];
   conditional: number;
-  items: { seq: number; avail: string; amount: number | null; weeks: number | null }[];
+  items: { seq: number; avail: string; amount: number | null; weeks: number | null; design?: string }[];
   hasPdf: boolean;
   selected: boolean;
+  /** 카탈로그 기준 자동 제출된 예비 견적 */
+  auto: boolean;
 };
 export type CompareRowDef = { seq: number; name: string; category: string };
 
@@ -138,7 +140,7 @@ export function CompareBoard({ no, cols, rows, canSelect }: { no: string; cols: 
                 <th key={c.id} style={{ minWidth: 220, background: c.selected ? "var(--tint)" : undefined }}>
                   <div style={{ fontSize: 15, color: "var(--ink)", fontWeight: 700 }}>{c.name}</div>
                   <div style={{ fontSize: 12, fontWeight: 500 }}>
-                    {i + 1}위 · {SORTS.find(([k]) => k === sortBy)![1]} 기준{c.selected ? " · 선택함" : ""}
+                    {i + 1}위 · {SORTS.find(([k]) => k === sortBy)![1]} 기준{c.selected ? " · 선택함" : ""}{c.auto ? " · 예비 견적" : ""}
                   </div>
                 </th>
               ))}
@@ -203,6 +205,7 @@ export function CompareBoard({ no, cols, rows, canSelect }: { no: string; cols: 
                             {it!.weeks ? `${it!.weeks}주` : ""}
                             {it!.avail === "조건부 가능" ? " · 조건부" : ""}
                           </div>
+                          {it!.design && <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "normal", maxWidth: 220 }}>{it!.design}</div>}
                         </>
                       )}
                     </td>
