@@ -90,10 +90,10 @@ function Num({ id, label, value, onChange, unit, placeholder, max = 9999 }: { id
           id={id}
           type="text"
           inputMode="numeric"
-          value={value ?? ""}
+          value={value != null ? (max > 9999 ? value.toLocaleString("ko-KR") : String(value)) : ""}
           placeholder={placeholder}
           onChange={(e) => {
-            const v = e.target.value.replace(/[^\d]/g, "").slice(0, 7);
+            const v = e.target.value.replace(/[^\d]/g, "").slice(0, String(max).length);
             onChange(v ? Math.min(max, Number(v)) : null);
           }}
         />
