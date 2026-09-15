@@ -304,7 +304,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 {perSample && !no && (
                   <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 8 }}>
                     <div className="numin">
-                      <input type="text" inputMode="numeric" placeholder="검체당 단가" disabled={readOnly} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
+                      <input type="text" inputMode="numeric" placeholder="검체당 단가" style={{ paddingRight: 70 }} disabled={readOnly} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
                       <span>원/검체</span>
                     </div>
                     <div className="numin">
