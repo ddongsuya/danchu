@@ -23,6 +23,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
     { href: "/cro/org", label: "기관", icon: "org" },
     { href: "/cro/awards", label: "수주", icon: "award" },
   ];
+  if (session.profile.role === "admin") nav.push({ href: "/admin", label: "운영자 콘솔", icon: "settings" });
   return (
     <AppState>
       <script

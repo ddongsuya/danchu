@@ -30,6 +30,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/app/notifications", label: "알림", icon: "bell", badge: unread },
     { href: "/app/profile", label: "프로필", icon: "user" },
   ];
+  // 운영자가 의뢰자 화면을 볼 때는 운영자 콘솔로 돌아가는 길을 둔다
+  if (session.profile.role === "admin") nav.push({ href: "/admin", label: "운영자 콘솔", icon: "settings" });
   return (
     <AppState>
       <script
