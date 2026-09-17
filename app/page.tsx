@@ -1,7 +1,7 @@
 import { RfqLink } from "@/components/RfqLink";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { HeroGraphic } from "@/components/HeroGraphic";
+import { HowSequence } from "@/components/HowSequence";
 import { FieldsList } from "@/components/FieldsList";
 import { Motion, IntroSplash } from "@/components/Motion";
 import "./home.css";
@@ -41,29 +41,8 @@ export default function Landing() {
         </section>
 
         <section className="how" aria-label="진행 방식">
-          <div className="how__in">
-            <HeroGraphic />
-            {/* 단계 설명은 그래픽 박자에 맞춰 한 번에 하나씩 자막처럼 나온다. 화면 낭독기에는 목록으로 준다 */}
-            <div className="how__caps rv" data-rv style={{ "--ry": "16px", "--rd": ".1s" } as RV} aria-hidden="true">
-              {STEPS.map((s) => (
-                <div key={s.no} className="how__cap">
-                  <span className="how__no">{s.no}</span>
-                  <div>
-                    <div className="how__t">
-                      <h3>{s.t}</h3>
-                      <span className="how__tag">{s.tag}</span>
-                    </div>
-                    <p className="how__p">{s.p}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <ol className="sr-only">
-              {STEPS.map((s) => (
-                <li key={s.no}>{s.no}. {s.t} ({s.tag}) — {s.p}</li>
-              ))}
-            </ol>
-          </div>
+          {/* 그래픽 한 번 재생 → 비교표에서 정지 → 1·2·3 차례로 등장 */}
+          <HowSequence steps={STEPS} />
         </section>
 
         <section className="wrap board-sec">

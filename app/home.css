@@ -245,19 +245,9 @@
   .fig__cap { min-width: 0; position: sticky; left: 0; }
 }
 
-/* ── 진행 방식: 그래픽 아래 자막이 3초 루프와 같은 박자로 한 단계씩 나온다 ──
-   1 표준 양식 입력 = 요청서 카드(0~30%), 2 배포 = CRO 4곳으로 분배(30~62%), 3 비교표 = 회신 정렬(62~100%) */
-.how__in { grid-template-columns: 1fr; justify-items: center; gap: 4px; }
-.how__caps { position: relative; width: 100%; max-width: 440px; height: 96px; }
-.how__cap { position: absolute; inset: 0; display: grid; grid-template-columns: 32px 1fr; gap: 14px; align-items: start; opacity: 0; animation-duration: 3s; animation-timing-function: cubic-bezier(.2,.7,.2,1); animation-iteration-count: infinite; animation-fill-mode: both; }
-.how__cap:nth-child(1) { animation-name: capA; }
-.how__cap:nth-child(2) { animation-name: capB; }
-.how__cap:nth-child(3) { animation-name: capC; }
-@keyframes capA { 0% { opacity: 0; transform: translateY(10px); } 5%, 24% { opacity: 1; transform: none; } 30%, 100% { opacity: 0; transform: translateY(-8px); } }
-@keyframes capB { 0%, 30% { opacity: 0; transform: translateY(10px); } 35%, 56% { opacity: 1; transform: none; } 62%, 100% { opacity: 0; transform: translateY(-8px); } }
-@keyframes capC { 0%, 62% { opacity: 0; transform: translateY(10px); } 67%, 96% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+/* ── 진행 방식: 그래픽이 한 번 재생된 뒤(비교표에서 정지) 1 → 2 → 3이 차례로 나타난다 (components/HowSequence.tsx) ── */
+.dh--pause [class^="dh__"] { animation-play-state: paused !important; }
+.how__step { opacity: 0; transform: translateX(24px); transition: opacity .55s cubic-bezier(.2,.7,.2,1), transform .55s cubic-bezier(.2,.7,.2,1); }
+.how__step.in { opacity: 1; transform: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-@media (prefers-reduced-motion: reduce) {
-  .how__caps { height: auto; display: flex; flex-direction: column; gap: 18px; }
-  .how__cap { position: static; opacity: 1; animation: none; }
-}
+@media (prefers-reduced-motion: reduce) { .how__step { opacity: 1; transform: none; transition: none; } }

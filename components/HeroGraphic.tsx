@@ -14,7 +14,7 @@ const NODES = [
  * 히어로 루프 그래픽 — 요청서 1장 → CRO 4곳 → 회신 4행 → 비교표 (3초, 반복).
  * 440×340 고정 좌표로 그리고, 부모 폭이 좁으면 통째로 축소한다.
  */
-export function HeroGraphic({ mode = "loop" }: { mode?: "loop" | "static" }) {
+export function HeroGraphic({ mode = "loop", phase = "play" }: { mode?: "loop" | "static" | "seq"; phase?: "wait" | "play" | "hold" }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -31,7 +31,7 @@ export function HeroGraphic({ mode = "loop" }: { mode?: "loop" | "static" }) {
   return (
     <div ref={wrap} className="dh-wrap" aria-hidden="true">
       <div style={{ transform: `scale(${scale})` }}>
-        <div className={`dh${mode === "static" ? " dh--static" : ""}`}>
+        <div className={`dh${mode === "static" ? " dh--static" : ""}${mode === "seq" && phase !== "play" ? " dh--pause" : ""}`}>
           <svg className="dh__svg" viewBox="0 0 440 340" fill="none" stroke="var(--brand-line)" strokeWidth="1.5" strokeDasharray="400">
             {NODES.map((n) => (
               <path key={n.label} className="dh__line" d={`M220 170 L${n.x} ${n.y}`} />

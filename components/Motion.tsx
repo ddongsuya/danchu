@@ -136,7 +136,8 @@ export function IntroSplash() {
 
   return (
     <>
-      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost, "--lx": `${box.lx}px`, "--ly": `${box.ly}px`, "--ls": box.ls, "--lo": box.lo, visibility: box.scale ? "visible" : "hidden" } as React.CSSProperties}>
+      {/* 인라인 스크립트가 페인트 전에 hidden 을 붙일 수 있어 hydration 경고를 끈다 */}
+      <div ref={ref} className="op" aria-hidden="true" suppressHydrationWarning style={{ "--boost": boost, "--lx": `${box.lx}px`, "--ly": `${box.ly}px`, "--ls": box.ls, "--lo": box.lo, visibility: box.scale ? "visible" : "hidden" } as React.CSSProperties}>
         <div
           className="op__stage"
           style={{ width: stage.w, height: stage.h, left: box.cx, top: box.cy, marginLeft: -stage.w / 2, marginTop: -stage.h / 2, transform: `scale(${box.scale})` }}
