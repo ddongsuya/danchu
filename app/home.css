@@ -251,3 +251,23 @@
 .how__step.in { opacity: 1; transform: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 @media (prefers-reduced-motion: reduce) { .how__step { opacity: 1; transform: none; transition: none; } }
+
+/* ── 소개 도해 순서 등장: 화면에 들어오면(.fig.in) .fa 는 나타나고 .fl 은 선이 그어진다. --d = 지연 ── */
+.fig .fa { opacity: 0; transform-box: fill-box; }
+.fig .fl { stroke-dasharray: 700; stroke-dashoffset: 700; }
+.fig.in .fa { animation: figIn .55s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--d, 0s); }
+.fig.in .fl { animation: figDraw .7s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--d, 0s); }
+@keyframes figIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes figDraw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .fig .fa { opacity: 1; animation: none !important; } .fig .fl { stroke-dashoffset: 0; animation: none !important; } }
+
+/* ── 소개: 원칙 목록 ── */
+.principles { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.principle { background: var(--white); border: 1px solid var(--card-line); border-radius: 18px; padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 8px; }
+.principle h3 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.015em; }
+.principle p { margin: 0; color: var(--body); font-size: 15px; text-wrap: pretty; }
+.principle__lab { font-size: 12px; font-weight: 700; color: var(--brand); letter-spacing: .06em; }
+.same { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; margin-top: 8px; }
+.same > div { border-top: 2px solid var(--ink); padding-top: 12px; }
+.same b { display: block; font-size: 15px; margin-bottom: 4px; }
+.same span { font-size: 14px; color: var(--muted); }
