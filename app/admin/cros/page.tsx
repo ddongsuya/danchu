@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listCroOrgs } from "@/lib/data";
 import { ymd } from "@/lib/format";
+import { QuickApprove } from "@/components/admin/QuickApprove";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
     <div className="card tbl-wrap">
       <table className="tbl">
         <thead>
-          <tr><th>기관</th><th>상태</th><th>GLP</th><th>수행 분야</th><th>담당자</th><th>신청일</th></tr>
+          <tr><th>기관</th><th>상태</th><th>GLP</th><th>수행 분야</th><th>담당자</th><th>신청일</th><th>처리</th></tr>
         </thead>
         <tbody>
           {rows.map((o) => (
@@ -32,6 +33,12 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
               <td style={{ fontSize: 12 }}>{o.categories.join(" · ") || "—"}</td>
               <td className="tnum">{o.members}</td>
               <td className="tnum">{ymd(o.created_at)}</td>
+              <td style={{ whiteSpace: "nowrap" }}>
+                <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                  {o.status === "pending" && <QuickApprove id={o.id} name={o.name} />}
+                  <Link href={`/admin/cros/${o.id}`} className="b2 bsm">상세</Link>
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>
