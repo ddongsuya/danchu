@@ -244,3 +244,20 @@
   .fig__svg { min-width: 560px; }
   .fig__cap { min-width: 0; position: sticky; left: 0; }
 }
+
+/* ── 진행 방식 3단계: 히어로 루프(3초)와 같은 박자로 켜진다 ──
+   1 표준 양식 입력 = 요청서 카드(0~30%), 2 배포 = CRO 4곳으로 분배(30~62%), 3 비교표 = 회신 정렬(62~100%) */
+.how__no, .how__body { animation-duration: 3s; animation-timing-function: cubic-bezier(.2,.7,.2,1); animation-iteration-count: infinite; }
+.how__step:nth-child(1) .how__body { animation-name: howA; }
+.how__step:nth-child(2) .how__body { animation-name: howB; }
+.how__step:nth-child(3) .how__body { animation-name: howC; }
+.how__step:nth-child(1) .how__no { animation-name: howNoA; }
+.how__step:nth-child(2) .how__no { animation-name: howNoB; }
+.how__step:nth-child(3) .how__no { animation-name: howNoC; }
+@keyframes howA   { 0%, 26% { opacity: 1; transform: none; } 32%, 94% { opacity: .42; transform: translateX(-6px); } 100% { opacity: 1; transform: none; } }
+@keyframes howB   { 0%, 26% { opacity: .42; transform: translateX(-6px); } 32%, 58% { opacity: 1; transform: none; } 64%, 100% { opacity: .42; transform: translateX(-6px); } }
+@keyframes howC   { 0%, 58% { opacity: .42; transform: translateX(-6px); } 64%, 96% { opacity: 1; transform: none; } 100% { opacity: .42; transform: translateX(-6px); } }
+@keyframes howNoA { 0%, 26% { background: var(--brand); color: var(--white); transform: scale(1); } 32%, 94% { background: var(--white); color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand-line); transform: scale(.92); } 100% { background: var(--brand); color: var(--white); transform: scale(1); } }
+@keyframes howNoB { 0%, 26% { background: var(--white); color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand-line); transform: scale(.92); } 32%, 58% { background: var(--brand); color: var(--white); transform: scale(1); } 64%, 100% { background: var(--white); color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand-line); transform: scale(.92); } }
+@keyframes howNoC { 0%, 58% { background: var(--white); color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand-line); transform: scale(.92); } 64%, 96% { background: var(--brand); color: var(--white); transform: scale(1); } 100% { background: var(--white); color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand-line); transform: scale(.92); } }
+@media (prefers-reduced-motion: reduce) { .how__no, .how__body { animation: none; } }

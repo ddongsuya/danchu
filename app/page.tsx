@@ -47,7 +47,7 @@ export default function Landing() {
               {STEPS.map((s, i) => (
                 <li key={s.no} className="how__step rv" data-rv style={{ "--rx": "24px", "--rd": `${i * 0.1}s` } as RV}>
                   <span className="how__no">{s.no}</span>
-                  <div>
+                  <div className="how__body">
                     <div className="how__t">
                       <h3>{s.t}</h3>
                       <span className="how__tag">{s.tag}</span>
