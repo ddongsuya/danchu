@@ -43,18 +43,24 @@ export default function Landing() {
         <section className="how" aria-label="진행 방식">
           <div className="how__in">
             <HeroGraphic />
-            <ol className="how__steps">
-              {STEPS.map((s, i) => (
-                <li key={s.no} className="how__step rv" data-rv style={{ "--rx": "24px", "--rd": `${i * 0.1}s` } as RV}>
+            {/* 단계 설명은 그래픽 박자에 맞춰 한 번에 하나씩 자막처럼 나온다. 화면 낭독기에는 목록으로 준다 */}
+            <div className="how__caps rv" data-rv style={{ "--ry": "16px", "--rd": ".1s" } as RV} aria-hidden="true">
+              {STEPS.map((s) => (
+                <div key={s.no} className="how__cap">
                   <span className="how__no">{s.no}</span>
-                  <div className="how__body">
+                  <div>
                     <div className="how__t">
                       <h3>{s.t}</h3>
                       <span className="how__tag">{s.tag}</span>
                     </div>
                     <p className="how__p">{s.p}</p>
                   </div>
-                </li>
+                </div>
+              ))}
+            </div>
+            <ol className="sr-only">
+              {STEPS.map((s) => (
+                <li key={s.no}>{s.no}. {s.t} ({s.tag}) — {s.p}</li>
               ))}
             </ol>
           </div>
