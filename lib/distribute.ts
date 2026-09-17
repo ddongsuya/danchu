@@ -27,14 +27,17 @@ export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: st
   const rows = quoteRowsFromPayload(rfq.payload);
   const keys = rows.map(rowKey);
   const { data: cat } = await sb.from("cro_catalog").select("org_id, item_key, available").in("org_id", candidates.map((o) => o.id)).in("item_key", keys);
-  const off = new Map<string, Set<string>>();
+  // 항목마다 조합이 여러 개: 켜진 조합이 하나라도 있으면 그 항목은 수행
+  const on = new Map<string, Set<string>>();
+  const has = new Map<string, Set<string>>();
   for (const r of cat ?? []) {
-    if (r.available === false) off.set(r.org_id, (off.get(r.org_id) ?? new Set()).add(r.item_key));
+    has.set(r.org_id, (has.get(r.org_id) ?? new Set()).add(r.item_key));
+    if (r.available !== false) on.set(r.org_id, (on.get(r.org_id) ?? new Set()).add(r.item_key));
   }
   const skipped: string[] = [];
   const orgs = candidates.filter((o) => {
-    const s = off.get(o.id);
-    const allOff = !!s && keys.length > 0 && keys.every((k) => s.has(k));
+    const h = has.get(o.id);
+    const allOff = !!h && keys.length > 0 && keys.every((k) => h.has(k) && !on.get(o.id)?.has(k));
     if (allOff) skipped.push(o.name);
     return !allOff;
   });

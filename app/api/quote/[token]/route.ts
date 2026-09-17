@@ -35,7 +35,7 @@ function blocked(got: Loaded): string {
 type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef };
 
 const DESIGN_NUM = ["groups_ctrl", "groups_test", "per_sex", "recovery_weeks", "recovery_per_sex"] as const;
-const DESIGN_STR = ["route", "dosing"] as const;
+const DESIGN_STR = ["route", "dosing", "method"] as const;
 
 /** 설계 요약: 정해진 키만, 정해진 형으로 */
 function cleanDesign(d: Record<string, unknown>): Record<string, unknown> {

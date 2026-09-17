@@ -29,6 +29,7 @@ function DesignEditor({ value, disabled, onChange }: { value: Design; disabled: 
     recovery_per_sex: dnum(value, "recovery_per_sex") ? Number(dnum(value, "recovery_per_sex")) : null,
     route: dstr(value, "route") || null,
     dosing: dstr(value, "dosing") || null,
+    method: dstr(value, "method") || null,
   });
   const setNum = (k: string, v: string) => onChange({ ...value, [k]: v ? Number(v.replace(/[^\d]/g, "").slice(0, 4)) : null });
   const numIn = (k: string, label: string, unit: string) => (
@@ -71,6 +72,10 @@ function DesignEditor({ value, disabled, onChange }: { value: Design; disabled: 
             <div className="fld" style={{ gap: 4 }}>
               <label className="fld__lab" style={{ fontSize: 12 }}>투여 빈도·기간</label>
               <input className="inp" style={{ height: 40, fontSize: 13 }} placeholder="예: 1일 1회 · 4주" disabled={disabled} value={dstr(value, "dosing")} onChange={(e) => onChange({ ...value, dosing: e.target.value.slice(0, 120) })} />
+            </div>
+            <div className="fld" style={{ gap: 4 }}>
+              <label className="fld__lab" style={{ fontSize: 12 }}>시험법·가이드라인</label>
+              <input className="inp" style={{ height: 40, fontSize: 13 }} placeholder="예: OECD TG 423 급성독성등급법" disabled={disabled} value={dstr(value, "method")} onChange={(e) => onChange({ ...value, method: e.target.value.slice(0, 120) })} />
             </div>
           </div>
         </div>

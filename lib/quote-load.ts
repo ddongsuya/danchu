@@ -4,7 +4,8 @@ import { EMPTY_COMMON, type ReplyCommon, type ReplyDraft, type ReplyItem, type R
 import type { Values } from "./rfq-schema";
 import type { InviteRow, RfqRow } from "./data";
 import { catalogMap } from "./catalog-db";
-import { prefillRow, rowKey } from "./catalog";
+import type { CatalogRow } from "./catalog";
+import { pickVariant, prefillRow, rowKey } from "./catalog";
 
 export type Loaded = {
   rfq: RfqView;
@@ -105,16 +106,16 @@ async function prefillDraft(orgId: string, r: RfqRow, rfq: RfqView): Promise<Rep
   if (!cat.size) return null;
   const payload = r.payload as Values;
   let touched = false;
+  const used: CatalogRow[] = [];
   const items: ReplyItem[] = rfq.rows.map((row) => {
-    const found = cat.get(rowKey(row));
-    const c = found && found.source !== "empty" ? found : undefined; // 등록하지 않은 항목은 빈 칸
-    const p = prefillRow(row, c, payload);
-    if (c) touched = true;
+    const picked = pickVariant(cat.get(rowKey(row)) ?? [], row, payload); // 등록하지 않은 항목은 빈 칸
+    const p = prefillRow(row, picked, payload);
+    if (picked) touched = true;
+    if (picked?.row.available) used.push(picked.row);
     return { seq: row.seq, avail: p.avail, amount: p.amount, weeks: p.weeks, reason: p.reason, design: p.design, source: p.source, checks: p.checks, unit: p.unit, unitPrice: p.unitPrice, sampleCount: "" };
   });
   if (!touched) return null;
-  // 총액 포함 항목: 초안에 쓰인 카탈로그 행들이 공통으로 포함하는 것
-  const used = rfq.rows.map((row) => cat.get(rowKey(row))).filter((c): c is NonNullable<typeof c> => !!c && c.source !== "empty" && c.available);
+  // 총액 포함 항목: 초안에 쓰인 조합들이 공통으로 포함하는 것
   const includes = used.length ? used[0].includes.filter((k) => used.every((c) => c.includes.includes(k))) : [];
   const valid = new Date(Date.now() + 30 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   return { items, note: "", pdfName: "", status: "draft", common: { ...EMPTY_COMMON, validUntil: valid, includes }, prefilled: true };

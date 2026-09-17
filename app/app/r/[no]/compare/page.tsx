@@ -93,6 +93,7 @@ function designOf(d: Record<string, unknown> | null | undefined): string | undef
     groups_ctrl: n("groups_ctrl"), groups_test: n("groups_test"), per_sex: n("per_sex"),
     recovery_weeks: n("recovery_weeks"), recovery_per_sex: n("recovery_per_sex"),
     route: typeof d.route === "string" ? d.route : null, dosing: typeof d.dosing === "string" ? d.dosing : null,
+    method: typeof d.method === "string" ? d.method : null,
   });
   return s || undefined;
 }

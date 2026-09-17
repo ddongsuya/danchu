@@ -379,6 +379,7 @@ export const DETAILS: Record<Cat, Field[]> = {
       ],
     },
     { id: "species", type: "chips", label: "동물종", options: SPECIES },
+    { id: "method", type: "chips", label: "시험법·가이드라인 (알면 선택)", options: ["OECD TG 420 고정용량법", "OECD TG 423 급성독성등급법", "OECD TG 425 상하법", "용량증량(DE)법", "최대투여량(Limit test)", "ICH M3 단회 설계", "OECD TG 407 (28일)", "OECD TG 408 (90일)", "OECD TG 409 (비설치류 90일)", "ICH M3/S4 반복투여", "MFDS 독성시험기준", "기관 추천"] },
     { id: "recovery", type: "select", label: "회복시험", options: ["없음", "2주", "4주", "기타", "미정"] },
     yn("tk", "TK 병행"),
     yn("formulation", "조제물분석 포함"),

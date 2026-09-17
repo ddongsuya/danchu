@@ -9,6 +9,7 @@ import { Chevron } from "@/components/Chevron";
 import { Caret, Lock } from "@/components/app/ui";
 import { clearDraft, loadDraft, saveDraft } from "@/components/app/AppState";
 import { uploadToSigned, type UploadTicket } from "@/lib/upload";
+import { PRESETS, presetItems, type Preset } from "@/lib/presets";
 
 type Contact = { company: string; name: string; dept: string; email: string; phone: string; orgType: string };
 type Phase = "wizard" | "detail" | "summary";
@@ -54,6 +55,26 @@ export function NewRequest({ contact }: { contact: Contact }) {
 
   const set = (id: string, v: string | string[] | boolean) => {
     const next = { ...values, [id]: v };
+    setValues(next);
+    setError("");
+    saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
+  };
+
+  /** 패키지 프리셋 → 시험 항목·세부 항목·동물종·시험법을 한 번에 채운다 (이미 고른 것에 더한다) */
+  const applyPreset = (p: Preset) => {
+    const next: Values = { ...values };
+    const add = (key: string, vals: string[]) => {
+      const cur = Array.isArray(next[key]) ? (next[key] as string[]) : [];
+      next[key] = [...new Set([...cur, ...vals])];
+    };
+    for (const pi of presetItems(p)) {
+      add("categories", [pi.category]);
+      const f = DETAILS[pi.category as Cat]?.find((x) => x.id === "items" || x.id === "segment");
+      if (f && pi.item !== pi.category) add(`${pi.category}.${f.id}`, [pi.item]);
+      if (pi.requestSpecies?.length) add(`${pi.category}.species`, pi.requestSpecies);
+      if (pi.method && DETAILS[pi.category as Cat]?.some((x) => x.id === "method")) add(`${pi.category}.method`, [pi.method.replace(/\(관찰 14일\)/, "").trim()]);
+    }
+    next.presetKey = p.key;
     setValues(next);
     setError("");
     saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
@@ -263,6 +284,22 @@ export function NewRequest({ contact }: { contact: Contact }) {
       </div>
 
       <div key={q} className="rise-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {step.fields[0]?.id === "categories" && (
+          <div className="dcard" style={{ gap: 8 }}>
+            <div>
+              <h2 style={{ fontSize: 15 }}>패키지로 시작하기 <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 13 }}>(선택)</span></h2>
+              <p className="dcard__desc">개발 분야에 맞는 시험 세트를 한 번에 고릅니다. 고른 뒤 항목을 빼거나 더할 수 있습니다.</p>
+            </div>
+            <div className="chips">
+              {PRESETS.map((p) => (
+                <button key={p.key} type="button" className="chip" aria-pressed={values.presetKey === p.key} onClick={() => applyPreset(p)} title={p.desc}>{p.name}</button>
+              ))}
+            </div>
+            {typeof values.presetKey === "string" && values.presetKey && (
+              <p style={{ fontSize: 13, color: "var(--ok)", margin: 0 }}>{PRESETS.find((p) => p.key === values.presetKey)?.name} 항목을 넣었습니다. 세부 항목과 동물종은 상세 조건 단계에서 확인할 수 있습니다.</p>
+            )}
+          </div>
+        )}
         {step.fields.map((f, i) => (
           <RfqField
             key={f.id}
