@@ -180,10 +180,12 @@
 .steps p { margin: 0; color: var(--body); text-wrap: pretty; }
 
 /* ── 오프닝 인트로 (5s, 세션당 1회) ── */
-.op { position: fixed; inset: 0; background: var(--surface); z-index: 100; overflow: hidden; cursor: pointer; animation: inOut 5s cubic-bezier(.6,0,.4,1) both; }
+.op { position: fixed; inset: 0; z-index: 100; overflow: hidden; cursor: pointer; }
+/* 배경만 따로 사라진다 — 로고는 끝까지 보이며 헤더 로고 자리로 날아간다 */
+.op::before { content: ""; position: absolute; inset: 0; background: var(--surface); animation: inOut 5s cubic-bezier(.6,0,.4,1) both; }
 .op[hidden] { display: none; }
-.op__stage { position: absolute; left: 50%; top: 50%; will-change: transform; }
-.op__zoom { position: absolute; inset: 0; animation: inZoom 5s cubic-bezier(.6,0,.4,1) both; }
+.op__stage { position: absolute; left: 50%; top: 50%; z-index: 1; will-change: transform; }
+.op__zoom { position: absolute; inset: 0; }
 .op__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .op__line { animation: inLine 5s linear both; }
 .op__card { position: absolute; width: 260px; height: 160px; background: var(--white); border-radius: 16px; box-shadow: 0 20px 50px -24px rgba(26,25,25,.35); padding: 18px; display: flex; flex-direction: column; gap: 10px; animation: inCard 5s cubic-bezier(.2,.7,.2,1) both; }
@@ -205,7 +207,7 @@
 .op__word { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: inWord 5s cubic-bezier(.2,.8,.2,1) both; }
 .op__word b { font-size: calc(28px * var(--boost, 1)); font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
 .op__word span { font-size: calc(14px * var(--boost, 1)); color: var(--muted); }
-.op__skip { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
+.op__skip { position: absolute; z-index: 2; animation: inOut 5s cubic-bezier(.6,0,.4,1) both; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); font-size: 13px; color: var(--muted); background: rgba(255,255,255,.7); border: 1px solid var(--card-line); border-radius: 999px; padding: 8px 14px; }
 
 @keyframes inCard { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.9); } 6%, 14% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 20%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.8); } }
 @keyframes inLine { 0%, 12% { opacity: 0; stroke-dashoffset: 600; } 22%, 36% { opacity: 1; stroke-dashoffset: 0; } 42%, 100% { opacity: 0; stroke-dashoffset: 0; } }
@@ -213,10 +215,9 @@
 @keyframes inNode { 0%, 16% { opacity: 0; transform: translate(-50%,-50%) scale(.7); } 22%, 46% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 52%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(1); } }
 @keyframes inRow { 0%, 36% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(.7); } 40% { opacity: 1; } 46%, 66% { opacity: 1; transform: translate(-50%, calc(-50% + var(--fy))) scale(1); } 72%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.1); } }
 @keyframes inFrame { 0%, 44% { opacity: 0; transform: translate(-50%,-50%) scale(.94); } 52%, 66% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 72%, 100% { opacity: 0; transform: translate(-50%,-50%) scale(.1); } }
-@keyframes inLogo { 0%, 60% { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(0deg); } 72% { opacity: 1; transform: translate(-50%,-50%) scale(1.06) rotate(180deg); } 78%, 100% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(180deg); } }
-@keyframes inWord { 0%, 76% { opacity: 0; transform: translateY(14px); } 86%, 100% { opacity: 1; transform: none; } }
-@keyframes inOut { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
-@keyframes inZoom { 0%, 90% { transform: scale(1); } 100% { transform: scale(.78); } }
+@keyframes inLogo { 0%, 60% { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(0deg); } 72% { opacity: 1; transform: translate(-50%,-50%) scale(1.06) rotate(180deg); } 78%, 90% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(180deg); } 100% { opacity: var(--lo, 1); transform: translate(calc(-50% + var(--lx, 0px)), calc(-50% + var(--ly, 0px))) scale(var(--ls, .2)) rotate(180deg); } }
+@keyframes inWord { 0%, 76% { opacity: 0; transform: translateY(14px); } 86%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes inOut { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .op, .op * { animation-duration: .01ms !important; animation-delay: 0s !important; } }
 
 /* ── 서비스 소개: 배경·불편·해결 ── */

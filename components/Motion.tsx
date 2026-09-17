@@ -70,7 +70,7 @@ const ROWS = [
 export function IntroSplash() {
   const ref = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<Stage>(WIDE);
-  const [box, setBox] = useState({ scale: 0, cx: 0, cy: 0 });
+  const [box, setBox] = useState({ scale: 0, cx: 0, cy: 0, lx: 0, ly: 0, ls: 0.2, lo: 0 });
 
   useEffect(() => {
     const el = ref.current;
@@ -87,7 +87,23 @@ export function IntroSplash() {
       const h = Math.round(vv?.height || document.documentElement.clientHeight || innerHeight);
       const s = w < 760 || w < h ? TALL : WIDE;
       setStage(s);
-      setBox({ scale: Math.min(w / s.w, h / s.h, 1), cx: (vv?.offsetLeft || 0) + w / 2, cy: (vv?.offsetTop || 0) + h / 2 });
+      const scale = Math.min(w / s.w, h / s.h, 1);
+      const cx = (vv?.offsetLeft || 0) + w / 2;
+      const cy = (vv?.offsetTop || 0) + h / 2;
+      /**
+       * 마지막에 로고가 헤더의 로고 자리로 날아가 합쳐진다.
+       * 헤더 로고의 화면 좌표를 무대 좌표(무대 중심 기준, 축소 전 px)로 바꿔 CSS 변수로 넘긴다.
+       */
+      const mark = document.querySelector<HTMLElement>("header .logo svg");
+      const r = mark?.getBoundingClientRect();
+      const found = !!r && r.width > 0;
+      setBox({
+        scale, cx, cy,
+        lx: found ? (r.left + r.width / 2 - cx) / scale : 0,
+        ly: found ? (r.top + r.height / 2 - cy) / scale : 0,
+        ls: found ? r.width / (160 * s.boost * scale) : 0.2,
+        lo: found ? 1 : 0,
+      });
     };
     fit();
     // resize 이벤트가 오지 않는 레이아웃 변화(주소창 접힘, 창 분할)도 잡는다
@@ -120,7 +136,7 @@ export function IntroSplash() {
 
   return (
     <>
-      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost, visibility: box.scale ? "visible" : "hidden" } as React.CSSProperties}>
+      <div ref={ref} className="op" aria-hidden="true" style={{ "--boost": boost, "--lx": `${box.lx}px`, "--ly": `${box.ly}px`, "--ls": box.ls, "--lo": box.lo, visibility: box.scale ? "visible" : "hidden" } as React.CSSProperties}>
         <div
           className="op__stage"
           style={{ width: stage.w, height: stage.h, left: box.cx, top: box.cy, marginLeft: -stage.w / 2, marginTop: -stage.h / 2, transform: `scale(${box.scale})` }}
