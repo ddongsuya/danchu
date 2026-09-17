@@ -235,15 +235,24 @@
 .solve p { margin: 0; color: var(--body); font-size: 15px; text-wrap: pretty; }
 
 /* ── 소개 도해 ── */
-.fig { margin: 28px 0 0; display: flex; flex-direction: column; gap: 10px; }
-.fig__svg { width: 100%; height: auto; display: block; font-family: inherit; }
-.fig__cap { font-size: 14px; color: var(--muted); line-height: 1.55; text-wrap: pretty; }
+.fig { margin: 28px 0 0; display: flex; flex-direction: column; gap: 12px; max-width: 100%; }
+.fig__svg { width: 100%; max-width: 100%; height: auto; display: block; font-family: inherit; }
+.fig__panels { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px 16px; align-items: center; }
+.fig__panels--wide { grid-template-columns: minmax(0, 300fr) auto minmax(0, 390fr); }
+.fig__panel { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.fig__lab { font-size: 13px; font-weight: 700; color: var(--muted); }
+.fig__lab--brand { color: var(--brand); }
+.fig__link { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--brand); text-align: center; max-width: 80px; }
+.fig__link i { display: block; width: 28px; height: 1.6px; background: var(--brand); position: relative; }
+.fig__link i::after { content: ""; position: absolute; right: -1px; top: -4px; width: 8px; height: 8px; border-top: 1.6px solid var(--brand); border-right: 1.6px solid var(--brand); transform: rotate(45deg); }
+.fig__mark { width: 44px; height: 44px; }
 @media (max-width: 640px) {
-  /* 가로로 긴 도해는 좁은 화면에서 밀어서 본다 */
-  .fig { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .fig__svg { min-width: 560px; }
-  .fig__cap { min-width: 0; position: sticky; left: 0; }
+  .fig__panels, .fig__panels--wide { grid-template-columns: 1fr; gap: 8px; }
+  .fig__link { flex-direction: row; max-width: none; justify-content: center; padding: 4px 0; }
+  .fig__link i { width: 1.6px; height: 28px; }
+  .fig__link i::after { right: -3.2px; top: auto; bottom: -1px; transform: rotate(135deg); }
 }
+.fig__cap { font-size: 14px; color: var(--muted); line-height: 1.55; text-wrap: pretty; }
 
 /* ── 진행 방식: 그래픽이 한 번 재생된 뒤(비교표에서 정지) 1 → 2 → 3이 차례로 나타난다 (components/HowSequence.tsx) ── */
 .dh--pause [class^="dh__"] { animation-play-state: paused !important; }
