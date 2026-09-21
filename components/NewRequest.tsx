@@ -10,6 +10,8 @@ import { Caret, Lock } from "@/components/app/ui";
 import { clearDraft, loadDraft, saveDraft } from "@/components/app/AppState";
 import { uploadToSigned, type UploadTicket } from "@/lib/upload";
 import { PRESETS, presetItems, type Preset } from "@/lib/presets";
+import { DesignHints } from "@/components/guide/DesignHints";
+import { PACKAGE_WHY, requestChecks } from "@/lib/design-guide";
 
 type Contact = { company: string; name: string; dept: string; email: string; phone: string; orgType: string };
 type Phase = "wizard" | "detail" | "summary";
@@ -53,6 +55,15 @@ export function NewRequest({ contact }: { contact: Contact }) {
     setReady(true);
   }, []);
 
+  // 가이드 페이지의 "이 구성으로 견적 요청" (/app/new?preset=키) — 준비된 뒤 한 번만 적용
+  useEffect(() => {
+    if (!ready) return;
+    const key = new URLSearchParams(window.location.search).get("preset");
+    const p = key && PRESETS.find((x) => x.key === key);
+    if (p && values.presetKey !== p.key) applyPreset(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
   const set = (id: string, v: string | string[] | boolean) => {
     const next = { ...values, [id]: v };
     setValues(next);
@@ -75,6 +86,13 @@ export function NewRequest({ contact }: { contact: Contact }) {
       if (pi.method && DETAILS[pi.category as Cat]?.some((x) => x.id === "method")) add(`${pi.category}.method`, [pi.method.replace(/\(관찰 14일\)/, "").trim()]);
     }
     next.presetKey = p.key;
+    setValues(next);
+    setError("");
+    saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
+  };
+  /** 여러 칸을 한 번에 채운다 (표준 설계로 채우기) */
+  const setMany = (patch: Record<string, string | string[]>) => {
+    const next = { ...values, ...patch };
     setValues(next);
     setError("");
     saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
@@ -131,6 +149,7 @@ export function NewRequest({ contact }: { contact: Contact }) {
 
   /* ── 요약 ── */
   if (phase === "summary") {
+    const checks = requestChecks(values);
     const show = (key: string) => {
       const v = values[key];
       if (Array.isArray(v)) return v.length ? v.join(", ") : "";
@@ -149,6 +168,15 @@ export function NewRequest({ contact }: { contact: Contact }) {
           </div>
         </div>
 
+        {checks.length > 0 && (
+          <div className="note note--tint" style={{ marginBottom: 12 }}>
+            <b style={{ display: "block", marginBottom: 6 }}>제출 전에 확인해 보세요</b>
+            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+              {checks.map((c) => <li key={c}>{c}</li>)}
+            </ul>
+            <span style={{ display: "block", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>안내일 뿐이며 그대로 제출해도 됩니다.</span>
+          </div>
+        )}
         <div className="stack" style={{ gap: 12 }}>
           <div className="card" style={{ padding: "6px 18px" }}>
             <div style={{ padding: "12px 0 8px", fontSize: 13, fontWeight: 600, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
@@ -245,6 +273,7 @@ export function NewRequest({ contact }: { contact: Contact }) {
                 <Chevron />
               </summary>
               <div className="acc__fields">
+                {cat === "일반독성" && <DesignHints values={values} onFill={setMany} />}
                 {DETAILS[cat].map((f) => (
                   <RfqField key={f.id} field={f} id={`${cat}.${f.id}`} values={values} onChange={set} />
                 ))}
@@ -298,6 +327,22 @@ export function NewRequest({ contact }: { contact: Contact }) {
             {typeof values.presetKey === "string" && values.presetKey && (
               <p style={{ fontSize: 13, color: "var(--ok)", margin: 0 }}>{PRESETS.find((p) => p.key === values.presetKey)?.name} 항목을 넣었습니다. 세부 항목과 동물종은 상세 조건 단계에서 확인할 수 있습니다.</p>
             )}
+            {(() => {
+              const why = PACKAGE_WHY.find((w) => w.presetKey === values.presetKey);
+              if (!why) return null;
+              return (
+                <details className="hints" style={{ marginTop: 4 }}>
+                  <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>왜 이 시험들인가요</summary>
+                  <p style={{ fontSize: 13, margin: "8px 0 6px", color: "var(--body)" }}>{why.headline}</p>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: "flex", flexDirection: "column", gap: 6, color: "var(--body)" }}>
+                    {why.blocks.map((b) => (
+                      <li key={b.t}><b style={{ color: "var(--ink)" }}>{b.t}</b> — {b.why}</li>
+                    ))}
+                  </ul>
+                  <p style={{ fontSize: 12, color: "var(--muted)", margin: "8px 0 0" }}>근거 · {why.basis.join(" · ")}</p>
+                </details>
+              );
+            })()}
           </div>
         )}
         {step.fields.map((f, i) => (

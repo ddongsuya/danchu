@@ -280,3 +280,50 @@
 .same > div { border-top: 2px solid var(--ink); padding-top: 12px; }
 .same b { display: block; font-size: 15px; margin-bottom: 4px; }
 .same span { font-size: 14px; color: var(--muted); }
+
+/* ── 비임상 시험 가이드 (/guide) ── */
+.guide__disc { margin: 8px 0 0; font-size: 14px; color: var(--muted); border-left: 3px solid var(--brand-line); padding-left: 12px; }
+.guide__draft { margin: 12px 0 0; font-size: 13px; font-weight: 600; color: var(--brand); }
+.calc { background: var(--white); border: 1px solid var(--card-line); border-radius: 20px; padding: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; margin-top: 8px; }
+.calc__in { display: flex; flex-direction: column; gap: 18px; }
+.calc__fld { display: flex; flex-direction: column; gap: 8px; }
+.calc__lab { font-size: 13px; font-weight: 600; color: var(--muted); }
+.calc .seg { display: inline-flex; border: 1px solid var(--input-line); border-radius: 12px; overflow: hidden; align-self: flex-start; }
+.calc .seg button { border: 0; background: var(--white); padding: 0 16px; height: 40px; font-size: 14px; color: var(--ink); }
+.calc .seg button[aria-pressed="true"] { background: var(--ink); color: var(--white); font-weight: 600; }
+.calc__out { background: var(--brand-tint); border: 1px solid var(--brand-line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.calc__res { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.calc__res div { display: flex; flex-direction: column; }
+.calc__res b { font-size: clamp(24px, 3.4vw, 32px); letter-spacing: -0.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.calc__res span { font-size: 13px; color: var(--muted); }
+.calc__note { margin: 0; font-size: 14px; color: var(--body); }
+.guide__tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-top: 20px; }
+.gtbl { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--white); border: 1px solid var(--card-line); border-radius: 14px; overflow: hidden; }
+.gtbl caption { text-align: left; font-size: 13px; font-weight: 600; color: var(--muted); padding: 0 0 8px; }
+.gtbl th, .gtbl td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--track); }
+.gtbl th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface); }
+.gtbl tr:last-child td { border-bottom: 0; }
+.gpack { border: 1px solid var(--card-line); border-radius: 20px; padding: 24px; background: var(--white); display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.gpack header h3 { margin: 0 0 6px; font-size: 20px; font-weight: 700; letter-spacing: -0.015em; }
+.gpack header p { margin: 0; color: var(--body); }
+.gpack__why { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; border-top: 1px solid var(--ink); }
+.gpack__why li { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--card-line); }
+.gpack__why b { font-size: 15px; }
+.gpack__why span { font-size: 15px; color: var(--body); text-wrap: pretty; }
+.gpack__later { margin: 0; font-size: 14px; color: var(--muted); }
+.gpack__later b { color: var(--ink); margin-right: 6px; }
+.gpack__basis { margin: 0; font-size: 12.5px; color: var(--muted); }
+.gpack__cta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.gcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.gcard { background: var(--white); border: 1px solid var(--card-line); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+.gcard h3 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+.gcard__purpose { margin: 0; color: var(--body); font-size: 15px; }
+.gcard dl { margin: 0; display: flex; flex-direction: column; border-top: 1px solid var(--track); }
+.gcard dl > div { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--track); font-size: 14px; }
+.gcard dt { color: var(--muted); font-weight: 600; font-size: 13px; }
+.gcard dd { margin: 0; color: var(--ink); text-wrap: pretty; }
+.gloss { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 0 32px; border-top: 1px solid var(--ink); }
+.gloss > div { padding: 16px 0; border-bottom: 1px solid var(--card-line); }
+.gloss dt { font-weight: 700; margin-bottom: 4px; }
+.gloss dd { margin: 0; color: var(--body); font-size: 15px; }
+@media (max-width: 640px) { .gpack__why li { grid-template-columns: 1fr; } .gpack { padding: 20px 18px; } }

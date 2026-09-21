@@ -257,3 +257,21 @@
 .tile { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 2px; }
 .tile span:first-child { font-size: 12px; color: var(--muted); }
 .tile span:last-child { font-size: 24px; font-weight: 700; }
+
+/* ── 요청서의 설계 단서 (components/guide/DesignHints.tsx) ── */
+.hints { border: 1px solid var(--cline); background: var(--tint); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+.hints__hd { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.hints__hd b { color: var(--brand); }
+.hints__hd span { color: var(--muted); font-size: 12px; }
+.hints__m3 { margin: 0; font-size: 13.5px; color: var(--body); }
+.hints__m3 b { color: var(--ink); }
+.hint { background: var(--wh); border: 1px solid var(--cline); border-radius: 12px; padding: 12px 14px; }
+.hint__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.hint__t { flex: 1; min-width: 200px; text-align: left; background: none; border: 0; padding: 0; color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+.hint__t b { font-size: 14px; }
+.hint__t span { font-size: 12.5px; color: var(--muted); }
+.hint__dl { margin: 10px 0 0; border-top: 1px solid var(--track); display: flex; flex-direction: column; }
+.hint__dl > div { display: grid; grid-template-columns: 70px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--track); font-size: 13px; }
+.hint__dl dt { color: var(--muted); font-weight: 600; font-size: 12px; }
+.hint__dl dd { margin: 0; color: var(--ink); }
+.hint__dl p { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
