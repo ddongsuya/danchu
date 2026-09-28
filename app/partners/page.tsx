@@ -1,36 +1,37 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import "../home.css";
+import "../site.css";
 
-export const metadata: Metadata = { title: "협력기관 — 단추" };
+export const metadata: Metadata = {
+  title: "협력기관 · 단추",
+  description: "바이오 클러스터, 협회, 창업 지원기관과의 제휴를 준비하고 있습니다.",
+};
 
 export default function Partners() {
   return (
     <div className="site">
       <SiteHeader />
-      <main style={{ flex: 1 }}>
-        <section className="sub">
-          <h1 className="sub__title">클러스터·협회와 함께 준비하고 있습니다</h1>
-          <p className="sub__lead">
-            바이오 클러스터, 산업 협회, 창업 지원기관과 제휴해 입주 기업과 회원사가 비임상 시험 견적을 더 쉽게 받을 수 있도록 준비 중입니다. 제휴 기관은 확정되는 대로 이곳에 안내합니다.
-          </p>
-          <div className="partners" style={{ margin: "32px 0 40px" }}>
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="partner">준비 중</div>
-            ))}
+      <main>
+        <section className="ph">
+          <div className="wrap ph__grid">
+            <span className="ph__k">협력기관</span>
+            <h1>클러스터, 협회, 창업 지원기관과 함께 준비하고 있습니다</h1>
+            <p className="ph__lead">입주 기업과 회원사가 비임상 견적을 같은 양식으로 받을 수 있도록 제휴를 준비합니다. 아직 확정된 협력기관은 없습니다.</p>
           </div>
-          <div className="ctacard">
-            <div>
-              <h2>제휴를 제안해 주세요</h2>
-              <p>기관 소속 기업·회원 대상 안내, 공동 세미나, 요청서 표준화 협력을 논의합니다.</p>
+        </section>
+        <section className="doc doc--tight">
+          <div className="wrap doc__grid">
+            <div className="doc__aside"><h2>제휴로 할 수 있는 것</h2></div>
+            <div className="doc__body">
+              <dl className="dl">
+                <div><dt>입주 기업 안내</dt><dd>입주 기업과 회원사가 요청서 작성과 제안 받기를 쓸 수 있도록 안내 자료를 함께 만듭니다.</dd></div>
+                <div><dt>기관 참여 연결</dt><dd>지역의 비임상 기관이 참여 신청과 카탈로그 등록을 할 수 있도록 연결합니다.</dd></div>
+                <div><dt>교육</dt><dd>비임상 시험 구성과 가이드라인 근거에 대한 설명회를 함께 엽니다.</dd></div>
+              </dl>
+              <p>제휴 문의는 <a href="mailto:hello@danchu.kr?subject=%ED%98%91%EB%A0%A5%EA%B8%B0%EA%B4%80%20%EC%A0%9C%ED%9C%B4%20%EB%AC%B8%EC%9D%98">hello@danchu.kr</a>로 보내 주세요.</p>
             </div>
-            <a href="mailto:hello@danchu.kr?subject=%5B%EB%8B%A8%EC%B6%94%5D%20%EC%A0%9C%ED%9C%B4%20%EC%A0%9C%EC%95%88" className="btn btn--pill btn--lg">제휴 문의</a>
           </div>
-          <p style={{ margin: "24px 0 0", fontSize: 14, color: "var(--muted)" }}>
-            시험기관(CRO) 참여는 <Link href="/for-cro">CRO 참여 안내</Link>를 봐 주세요.
-          </p>
         </section>
       </main>
       <SiteFooter current="/partners" />

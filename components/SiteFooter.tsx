@@ -1,54 +1,33 @@
 import Link from "next/link";
-import { LogoMark } from "@/components/Logo";
 
-const SERVICE: [string, string][] = [
-  ["/about", "서비스 소개"],
-  ["/#fields", "시험 분야"],
-  ["/faq", "자주 묻는 질문"],
-];
-const JOIN: [string, string][] = [
-  ["/for-cro", "CRO 참여 안내"],
-  ["/partners", "협력기관"],
-];
-const POLICY: [string, string][] = [
-  ["/terms", "이용약관"],
-  ["/privacy", "개인정보처리방침"],
+const COLS: [string, [string, string][]][] = [
+  ["서비스", [["/about", "서비스 소개"], ["/#fields", "시험 분야"], ["/faq", "자주 묻는 질문"]]],
+  ["참여", [["/for-cro", "기관 참여 안내"], ["/partners", "협력기관"]]],
+  ["정책", [["/terms", "이용약관"], ["/privacy", "개인정보처리방침"]]],
 ];
 
-function Col({ title, links, current }: { title: string; links: [string, string][]; current?: string }) {
-  return (
-    <nav className="sfoot__col" aria-label={title}>
-      <span className="sfoot__coltitle">{title}</span>
-      {links.map(([href, label]) => (
-        <Link key={href} href={href} aria-current={current === href ? "page" : undefined}>
-          {label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-/** 공개 사이트 꼬리말 — 브랜드 · 3단 링크 · 사업자 정보 */
+/** 공개 사이트 꼬리말. 유일한 반전 면 */
 export function SiteFooter({ current }: { current?: string }) {
   return (
-    <footer className="sfoot">
-      <div className="sfoot__in">
-        <div className="sfoot__top">
-          <div className="sfoot__brand">
-            <span className="sfoot__mark">
-              <LogoMark size={24} />
-              <b>단추</b>
-            </span>
-            <p>비임상 시험 의뢰자와 GLP 시험기관을 잇는 견적 비교 플랫폼</p>
+    <footer className="ft">
+      <div className="wrap">
+        <div className="ft__top">
+          <div className="ft__brand">
+            <b>단추</b>
+            <p>비임상 시험의 견적과 계약을 한곳에서. 의뢰자가 한 번 요청하면 여러 기관이 같은 양식으로 회신합니다.</p>
           </div>
-          <Col title="서비스" links={SERVICE} current={current} />
-          <Col title="참여" links={JOIN} current={current} />
-          <Col title="정책" links={POLICY} current={current} />
+          {COLS.map(([title, links]) => (
+            <nav key={title} className="ft__col" aria-label={title}>
+              <span>{title}</span>
+              {links.map(([href, label]) => (
+                <Link key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</Link>
+              ))}
+            </nav>
+          ))}
         </div>
-        <div className="sfoot__legal">
+        <div className="ft__legal">
           <span>
-            [상호] · 대표 [대표자명] · 사업자등록번호 [000-00-00000] · [사업장 주소] ·{" "}
-            <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
+            [상호] · 대표 [대표자명] · 사업자등록번호 [000-00-00000] · [사업장 주소] · <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
           </span>
           <span>© 2026 Danchu</span>
         </div>

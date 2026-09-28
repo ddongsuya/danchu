@@ -1,43 +1,23 @@
 import Link from "next/link";
 
 /**
- * 단추 로고 마크 — 흰 원 + 브랜드색 구멍 4개
- * ring: 흰 배경 위(헤더)에서 쓰는 외곽 브랜드 링 (app/icon.svg와 동일)
- * plain: 폭을 CSS가 제어
+ * 단추 워드마크. 그림 마크 없이 글자만 쓴다 (로고 유지 여부는 PRODUCT.md에서 미정).
+ * 포털 사이드바 등 옛 호출부와의 호환을 위해 LogoMark는 작은 사각 마크로 남긴다.
  */
-export function LogoMark({ size = 28, plain = false, ring = false }: { size?: number; plain?: boolean; ring?: boolean }) {
+export function LogoMark({ size = 20, plain = false }: { size?: number; plain?: boolean; ring?: boolean }) {
   const props = plain ? {} : { width: size, height: size };
   return (
-    <svg viewBox="0 0 28 28" aria-hidden="true" {...props}>
-      {ring ? (
-        <>
-          <circle cx="14" cy="14" r="13" fill="var(--brand)" />
-          <circle cx="14" cy="14" r="12" fill="#fff" />
-        </>
-      ) : (
-        <circle cx="14" cy="14" r="13" fill="#fff" />
-      )}
-      <circle cx="10" cy="10" r="1.9" fill="var(--brand)" />
-      <circle cx="18" cy="10" r="1.9" fill="var(--brand)" />
-      <circle cx="10" cy="18" r="1.9" fill="var(--brand)" />
-      <circle cx="18" cy="18" r="1.9" fill="var(--brand)" />
+    <svg viewBox="0 0 20 20" aria-hidden="true" {...props}>
+      <rect x="1" y="1" width="18" height="18" rx="3" fill="var(--brand)" />
+      <rect x="6" y="6" width="8" height="8" rx="1" fill="var(--on-brand)" />
     </svg>
   );
 }
 
-export function Logo({
-  href = "/",
-  size = 28,
-  nameSize = 18,
-}: {
-  href?: string;
-  size?: number;
-  nameSize?: number;
-}) {
+export function Logo({ href = "/", nameSize = 20 }: { href?: string; size?: number; nameSize?: number }) {
   return (
-    <Link href={href} className="logo" aria-label="단추 홈">
-      <LogoMark size={size} ring />
-      <span className="logo__name" style={{ fontSize: nameSize }}>단추</span>
+    <Link href={href} className="wordmark" aria-label="단추 홈" style={{ fontSize: nameSize }}>
+      단추<small>danchu.kr</small>
     </Link>
   );
 }

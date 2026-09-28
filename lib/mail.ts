@@ -23,7 +23,7 @@ export async function sendMail(m: { to: string | string[]; subject: string; html
 }
 
 const BTN = (href: string, label: string) =>
-  `<a href="${esc(href)}" style="display:inline-block;background:#A3690F;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600;font-size:15px">${esc(label)}</a>`;
+  `<a href="${esc(href)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">${esc(label)}</a>`;
 
 /** 인증 메일 — 가입 확인·로그인 링크·비밀번호 재설정 */
 export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: string, link: string): Promise<boolean> {
@@ -152,7 +152,7 @@ export async function sendSupportMail(a: { email: string; type: string; rfqNo: s
     html: wrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 앱 문의</h2>
       <p>보낸 사람: <a href="mailto:${esc(a.email)}">${esc(a.email)}</a><br>유형: ${esc(a.type)}${a.rfqNo ? `<br>관련 요청: ${esc(a.rfqNo)}` : ""}</p>
-      <pre style="white-space:pre-wrap;font:inherit;padding:14px 16px;background:#F5F5F4;border-radius:10px">${esc(a.text)}</pre>`),
+      <pre style="white-space:pre-wrap;font:inherit;padding:14px 16px;background:#F5F5F4;border-radius:6px">${esc(a.text)}</pre>`),
   });
   if (r.error) console.error("resend support", r.error);
   return !r.error;

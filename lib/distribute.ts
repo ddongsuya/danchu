@@ -98,7 +98,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
       시험 항목: ${esc(rfq.categories.join(", "))}<br>
       의뢰 목적: ${esc(rfq.purpose || "—")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}</p>
       <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b> · 링크는 기한 +7일까지 열립니다.</p>
-      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#A3690F;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:600">요청서 보고 회신하기</a></p>
+      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">요청서 보고 회신하기</a></p>
       <p style="font-size:13px;color:#6F6A63">카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다. 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.</p>`);
     if (to.length && (await sendMail({ to, subject: `[단추] 견적 요청 ${rfq.rfq_no} · ${rfq.substance} · 회신 기한 ${replyBy}`, html }))) res.mailed++;
     await notifyUsers(memberIds, { kind: "배포", title: `새 견적 요청 · ${rfq.rfq_no} ${rfq.substance}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy}`, href: `/cro/r/${inv.id}` });

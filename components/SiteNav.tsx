@@ -6,22 +6,20 @@ import { useEffect, useState } from "react";
 import { useMe } from "@/lib/use-me";
 import { REQUEST_HREF, SIGNUP_HREF } from "@/components/RfqLink";
 
-const LINKS: [string, string][] = [
+export const SITE_LINKS: [string, string][] = [
   ["/about", "서비스 소개"],
-  ["/#fields", "시험 분야"],
-  ["/for-cro", "CRO 참여"],
+  ["/for-cro", "기관 참여"],
   ["/faq", "자주 묻는 질문"],
 ];
 
-const PORTAL = { requester: "내 요청", cro: "CRO 포털", admin: "운영" } as const;
+const PORTAL = { requester: "내 요청", cro: "기관 포털", admin: "운영" } as const;
 
-/** 공개 사이트 메뉴 — 넓은 화면은 가로 링크, 좁은 화면은 햄버거 패널 */
+/** 공개 사이트 메뉴. 넓은 화면은 가로 링크, 좁은 화면은 오른쪽 시트 */
 export function SiteNav() {
   const pathname = usePathname();
   const { me, loading } = useMe();
   const [open, setOpen] = useState(false);
 
-  // 화면 이동·ESC·리사이즈 시 닫기, 열려 있는 동안 배경 스크롤 잠금
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
@@ -42,8 +40,8 @@ export function SiteNav() {
 
   return (
     <>
-      <nav className="snav" aria-label="주요 메뉴">
-        {LINKS.map(([href, label]) => (
+      <nav className="nav" aria-label="주요 메뉴">
+        {SITE_LINKS.map(([href, label]) => (
           <Link key={href} href={href} aria-current={on(href) ? "page" : undefined}>
             {label}
           </Link>
@@ -51,9 +49,7 @@ export function SiteNav() {
       </nav>
 
       <button type="button" className="burger" aria-label="메뉴 열기" aria-expanded={open} onClick={() => setOpen(true)}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
+        <i /><i /><i />
       </button>
 
       {open && (
@@ -62,27 +58,19 @@ export function SiteNav() {
           <div className="sheet__panel">
             <div className="sheet__top">
               <span className="sheet__ttl">메뉴</span>
-              <button type="button" className="sheet__x" aria-label="메뉴 닫기" onClick={() => setOpen(false)}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
+              <button type="button" className="sheet__x" aria-label="메뉴 닫기" onClick={() => setOpen(false)}>×</button>
             </div>
             <nav className="sheet__links" aria-label="사이트 메뉴">
               <Link href="/" aria-current={on("/") ? "page" : undefined}>홈</Link>
-              {LINKS.map(([href, label]) => (
+              {SITE_LINKS.map(([href, label]) => (
                 <Link key={href} href={href} aria-current={on(href) ? "page" : undefined}>
                   {label}
                 </Link>
               ))}
             </nav>
             <div className="sheet__foot">
-              <Link href={requestHref} className="btn btn--pill btn--lg" style={{ width: "100%" }}>
-                무료로 견적 요청
-              </Link>
-              <Link href={me ? me.to : "/login"} className="btn--ghost" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                {me ? PORTAL[me.role] : "로그인"}
-              </Link>
+              <Link href={requestHref} className="b b--fill b--lg">요청서 작성</Link>
+              <Link href={me ? me.to : "/login"} className="b b--line b--lg">{me ? PORTAL[me.role] : "로그인"}</Link>
               <div className="sheet__sub">
                 <Link href="/privacy">개인정보처리방침</Link>
                 <Link href="/terms">이용약관</Link>

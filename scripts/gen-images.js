@@ -9,10 +9,10 @@ const sharp = require("sharp");
 
 const OUT_ICONS = path.join(__dirname, "..", "public", "icons");
 const OUT_PUBLIC = path.join(__dirname, "..", "public");
-const BRAND = "#A3690F";
-const INK = "#1A1919";
-const MUTED = "#6F6E6B";
-const SURFACE = "#F5F5F4";
+const BRAND = "#2A55A5";
+const INK = "#15171B";
+const MUTED = "#666C76";
+const SURFACE = "#F5F6F7";
 const FONT = "Pretendard, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif";
 
 /** 단추 마크 — 브랜드 링 + 흰 원 + 구멍 4개 */

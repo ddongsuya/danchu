@@ -25,7 +25,7 @@ export function DurationCalc() {
           <span className="calc__lab">임상에서 얼마나 투여할 예정인가요</span>
           <div className="chips">
             {CLIN_DURATIONS.map((d) => (
-              <button key={d} type="button" className="chip" aria-pressed={clin === d} onClick={() => setClin(d)}>{d}</button>
+              <button key={d} type="button" className="chipb" aria-pressed={clin === d} onClick={() => setClin(d)}>{d}</button>
             ))}
           </div>
         </div>
@@ -33,10 +33,10 @@ export function DurationCalc() {
       <div className="calc__out" role="status">
         <span className="calc__lab">필요한 반복투여독성 기간</span>
         <div className="calc__res">
-          <div><b>{r.rodent}</b><span>설치류</span></div>
-          <div><b>{r.nonRodent}</b><span>비설치류</span></div>
+          <div><b key={r.rodent}>{r.rodent}</b><span>설치류</span></div>
+          <div><b key={r.nonRodent}>{r.nonRodent}</b><span>비설치류</span></div>
         </div>
-        <p className="calc__note">단추 요청서에서는 <b>{r.items.join(" · ")}</b> 항목에 해당합니다.{r.note ? ` ${r.note}` : ""}</p>
+        <p className="calc__note">요청서에서는 <b>{r.items.join(" · ")}</b> 항목에 해당합니다.{r.note ? ` ${r.note}` : ""}</p>
       </div>
     </div>
   );

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const TITLE = "단추 — 비임상 시험 한번 요청으로 한눈에 비교하세요";
+const TITLE = "단추 · 비임상 시험 견적, 근거부터 비교표까지";
 const DESC =
-  "여러 기관에 따로 연락하지 마세요. 한번 입력하면 단추가 배포하고 비교 견적서로 드려요.";
+  "개발 단계와 임상 계획을 답하면 공개 가이드라인에 근거해 필요한 시험을 제안합니다. 요청서 하나로 여러 기관이 같은 양식으로 회신합니다.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://danchu.kr"),
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     type: "website",
     // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og.png · scripts/gen-images.js로 생성)
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "단추 — 비임상 시험 견적, 한번 요청으로 한눈에 비교" }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "단추, 비임상 시험 견적을 같은 양식으로" }],
   },
   twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og.png"] },
   robots: { index: true, follow: true },
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <head>
         {/* 같은 도메인에서 서비스하는 Pretendard 가변 폰트 (public/fonts/pretendard) */}
         <link rel="stylesheet" href="/fonts/pretendard/pretendard.css" />

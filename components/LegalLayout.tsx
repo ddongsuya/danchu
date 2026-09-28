@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
-import "@/app/home.css";
+import "@/app/site.css";
 
 /** 약관·개인정보처리방침 공통 레이아웃 */
 export function LegalLayout({
@@ -28,8 +28,8 @@ export function LegalLayout({
           </p>
           {children}
           <div className="legal__back">
-            <Link href="/" className="btn btn--outline">
-              ← 홈으로
+            <Link href="/" className="b b--line b--sm">
+              홈으로
             </Link>
           </div>
         </article>
