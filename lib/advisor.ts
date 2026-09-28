@@ -30,10 +30,11 @@ export type Question = {
 
 export const PRODUCTS = ["합성의약품", "바이오의약품", "세포·유전자치료제", "건강기능식품", "화장품", "의료기기", "화학물질·농약"] as const;
 /** 지금 제안을 만들 수 있는 유형 */
-export const SUPPORTED_PRODUCTS: readonly string[] = ["합성의약품", "바이오의약품", "세포·유전자치료제", "건강기능식품"];
+export const SUPPORTED_PRODUCTS: readonly string[] = ["합성의약품", "바이오의약품", "세포·유전자치료제", "건강기능식품", "화장품", "의료기기", "화학물질·농약"];
 const HF = "건강기능식품";
 /** 의약품 질문(단계, 임상 계획)은 건강기능식품에는 묻지 않는다 */
-const pharma = (a: Answers) => a.product !== HF;
+const NON_PHARMA = [HF, "화장품", "의료기기", "화학물질·농약"];
+const pharma = (a: Answers) => !NON_PHARMA.includes(String(a.product ?? ""));
 const BIO_TYPES = ["단클론항체", "재조합 단백질·펩타이드", "항체약물접합체", "백신", "동등생물의약품", "세포·유전자치료제"];
 
 const PRIOR = [
@@ -56,6 +57,29 @@ const PRIOR = [
   "조제물 분석법 검증",
 ];
 
+/** 의료기기: 접촉 부위와 기간 → 공통기준규격 표 1, 표 2 */
+const MD_COLS: [string, string, string][] = [
+  ["md-cyto", "세포독성", "세포독성(10993-5)"],
+  ["md-sens", "감작성", "감작성(10993-10)"],
+  ["md-irr", "자극성·피내반응", "자극성·피내반응(10993-23)"],
+  ["md-acute", "급성 전신독성", "급성전신독성(10993-11)"],
+  ["md-sub", "아급성·아만성 독성", "아급성·아만성독성(10993-11)"],
+  ["md-geno", "유전독성", "유전독성(10993-3)"],
+  ["md-impl", "이식", "이식(10993-6)"],
+  ["md-hemo", "혈액적합성", "혈액적합성(10993-4)"],
+];
+/** o 지정 시험, t 추가로 적용될 수 있는 시험, - 해당 없음. 열 순서는 MD_COLS */
+const MD_TABLE: Record<string, [string, string, string]> = {
+  "표면접촉 · 피부": ["ooo-----", "ooo-----", "ooo-----"],
+  "표면접촉 · 점막": ["ooo-----", "ooott-t-", "oootoot-"],
+  "표면접촉 · 파열·외상 표면": ["ooot----", "ooott-t-", "oootoot-"],
+  "체내외 연결 · 간접 혈액경로": ["oooo---o", "oooot--o", "ootoooto"],
+  "체내외 연결 · 조직·뼈·상아질": ["ooot----", "ooooooo-", "ooooooo-"],
+  "체내외 연결 · 순환 혈액": ["oooo-t-o", "oooooooo", "oooooooo"],
+  "이식 · 조직·뼈": ["ooot----", "ooooooo-", "ooooooo-"],
+  "이식 · 혈액": ["ooooo-oo", "oooooooo", "oooooooo"],
+};
+
 export const QUESTIONS: Question[] = [
   { id: "product", step: 1, q: "무엇을 개발하시나요?", options: [...PRODUCTS], required: true },
   { id: "bioType", step: 1, q: "어떤 바이오의약품인가요?", options: BIO_TYPES, required: true, when: (a) => a.product === "바이오의약품" },
@@ -77,7 +101,15 @@ export const QUESTIONS: Question[] = [
   { id: "hfFood", step: 2, q: "식품이나 식품첨가물로 쓸 수 있는 원료인가요?", options: ["예", "아니오", "모름"], when: (a) => a.product === HF && (a.hfKind === "그 밖의 추출·정제·발효" || a.hfKind === "합성 원료") },
   { id: "hfMarker", step: 2, q: "지표 성분과 분석법이 있나요?", sub: "조제물분석에 필요합니다.", options: ["있음", "없음"], when: (a) => a.product === HF },
   { id: "hfComplex", step: 2, q: "여러 원료를 섞은 복합원료인가요?", options: ["예", "아니오"], when: (a) => a.product === HF },
-  { id: "prior", step: 3, q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외합니다.", multi: true, options: PRIOR, required: true },
+  { id: "cosPurpose", step: 1, q: "어떤 목적의 시험인가요?", options: ["기능성화장품 심사", "새 원료의 사용기준 지정", "자율 안전성 확인", "수출 (상대국 요구)"], required: true, when: (a) => a.product === "화장품" },
+  { id: "cosListed", step: 2, q: "원료가 고시, 국제화장품원료집, 식품공전에 실려 있나요?", sub: "실려 있는 원료로 제조하면 안전성 자료를 면제받을 수 있습니다.", options: ["예", "아니오", "모름"], required: true, when: (a) => a.product === "화장품" },
+  { id: "cosUv", step: 2, q: "자외선을 흡수하는 원료인가요?", sub: "흡수하지 않으면 광독성 자료가 면제됩니다.", options: ["예", "아니오", "모름"], when: (a) => a.product === "화장품" },
+  { id: "mdContact", step: 1, q: "기기가 몸의 어디에 닿나요?", options: Object.keys(MD_TABLE), required: true, when: (a) => a.product === "의료기기" },
+  { id: "mdDuration", step: 2, q: "얼마 동안 닿나요?", sub: "둘 이상에 해당하면 더 긴 쪽을 고르세요.", options: ["A · 24시간 이내", "B · 24시간 이상 30일 이내", "C · 30일 초과"], required: true, when: (a) => a.product === "의료기기" },
+  { id: "chType", step: 1, q: "어떤 물질인가요?", options: ["일반 화학물질", "농약 원제", "농약 품목"], required: true, when: (a) => a.product === "화학물질·농약" },
+  { id: "chTon", step: 2, q: "연간 제조·수입량은 얼마인가요?", sub: "등록 톤수에 따라 제출 자료가 정해집니다.", options: ["1톤 이상 10톤 미만", "10톤 이상 100톤 미만", "100톤 이상 1,000톤 미만", "1,000톤 이상"], required: true, when: (a) => a.product === "화학물질·농약" && a.chType === "일반 화학물질" },
+  { id: "chGas", step: 2, q: "기체이거나 주로 흡입으로 노출되나요?", options: ["예", "아니오"], when: (a) => a.product === "화학물질·농약" && a.chType === "일반 화학물질" },
+  { id: "prior", step: 3, when: (a) => !["화장품", "의료기기", "화학물질·농약"].includes(String(a.product ?? "")), q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외합니다.", multi: true, options: PRIOR, required: true },
 ];
 
 export function visibleQuestions(a: Answers): Question[] {
@@ -140,6 +172,9 @@ export function advise(a: Answers): Advice {
     };
   }
   if (product === HF) return adviseHf(a);
+  if (product === "화장품") return adviseCosmetic(a);
+  if (product === "의료기기") return adviseDevice(a);
+  if (product === "화학물질·농약") return adviseChemical(a);
   if (product === "바이오의약품" || product === "세포·유전자치료제") return adviseBio(product === "세포·유전자치료제" ? { ...a, bioType: "세포·유전자치료제" } : a);
 
   const tests: Suggest[] = [];
@@ -440,7 +475,10 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
   const hf = a.product === HF;
   v.purpose = a.stage === "자체 연구" ? "자체 연구용" : "허가자료 제출용";
   if (hf) { v.authority = ["식약처(MFDS)"]; v.route = "경구(PO)"; }
-  v.devField = hf ? "건강기능식품" : a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
+  const pr = String(a.product ?? "");
+  if (pr === "화장품" || pr === "의료기기") v.authority = ["식약처(MFDS)"];
+  if (pr === "화학물질·농약") v.authority = [String(a.chType ?? "").startsWith("농약") ? "농촌진흥청" : "기후에너지환경부·국립환경과학원"];
+  v.devField = pr === "화장품" ? "화장품" : pr === "의료기기" ? "의료기기" : pr === "화학물질·농약" ? (String(a.chType ?? "").startsWith("농약") ? "농약·작물보호제" : "일반화학물질") : hf ? "건강기능식품" : a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
   const auth = arr(a.auth).map((x) => AUTH_MAP[x]).filter(Boolean);
   if (auth.length) v.authority = auth;
   const route = ROUTE_MAP[String(a.route ?? "")];
@@ -679,4 +717,190 @@ function adviseHf(a: Answers): Advice {
   const seen = new Set<string>();
   const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.rule === "R-F2-09" ? "기능성 자료" : n.rule.startsWith("R-F2-0") && ["R-F2-01", "R-F2-02", "R-F2-03", "R-F2-08"].includes(n.rule) ? "독성시험이 필요한가" : "시험 요건" }));
   return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
+}
+
+/* ── 화장품, 의료기기, 화학물질·농약 (기술문서 F2, E1·E2) ───────────────── */
+
+function finish(tests: Suggest[], notes: Note[], later: Later[], askCro: Set<string>, prereq: string[], owned: string[], topic: string): Advice {
+  const seen = new Set<string>();
+  const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.topic ?? topic }));
+  return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
+}
+
+/** 화장품: 동물실험이 금지되어 있어 동물대체시험을 제안한다 */
+function adviseCosmetic(a: Answers): Advice {
+  const tests: Suggest[] = [];
+  const notes: Note[] = [];
+  const later: Later[] = [];
+  const askCro = new Set<string>();
+  const prereq: string[] = [];
+  const purpose = String(a.cosPurpose ?? "");
+  const listed = a.cosListed === "예";
+  const uv = a.cosUv !== "아니오";
+  const ALT = "동물대체시험";
+  const FUNC = "기능성화장품 심사에 관한 규정";
+  const ING = "화장품 원료 사용금지 해제·변경 및 사용기준 지정·변경 심사에 관한 규정";
+  const ingredient = purpose === "새 원료의 사용기준 지정";
+  const functional = purpose === "기능성화장품 심사";
+  const exportUse = purpose === "수출 (상대국 요구)";
+
+  notes.push({ text: "동물실험을 한 화장품이나 그런 원료를 쓴 화장품은 국내에서 유통·판매할 수 없습니다. 그래서 동물을 쓰지 않는 시험으로 제안했습니다. 사용기준 지정, 대체시험법이 없는 경우, 수출 상대국 요구 등은 예외입니다.", basis: "화장품법 제15조의2", rule: "R-F2-20", topic: "동물실험 제한" });
+
+  if (functional && listed) {
+    notes.push({ text: "고시된 원료, 국제화장품원료집 수재 원료, 식품공전 원료로 제조하면 안전성 자료를 면제받을 수 있습니다. 시험은 해제해 두었습니다. 안전성이 우려되면 예외입니다.", basis: `${FUNC} 제6조제1항`, rule: "R-F2-21", topic: "면제" });
+  }
+  const need = !(functional && listed);
+  const basis = ingredient ? `${ING} 제4조제4호, 제5조` : functional ? `${FUNC} 제4조, 제5조` : "자율 확인 (법정 요구 없음)";
+
+  tests.push({ key: "skin-corr", label: "피부부식 (재구성 인체 표피)", category: ALT, item: "피부부식 인체피부모델(TG 431)", reason: "피부자극 시험으로는 부식과 자극을 구분할 수 없어 부식 시험을 먼저 합니다. 부식성이 없다고 알려진 원료면 빼세요", basis: "OECD TG 431, 439", rule: "R-E-06", on: false });
+  tests.push({ key: "skin-irr", label: "피부자극 (재구성 인체 표피)", category: ALT, item: "피부자극 인체피부모델(TG 439)", reason: "1차 피부자극 자료", basis: `${basis} · OECD TG 439`, rule: "R-F2-20", on: need, fill: { "동물대체시험.glpLevel": "GLP" } });
+  tests.push({ key: "eye-irr", label: "안자극 (재구성 인체 각막 상피)", category: ALT, item: "안자극 각막모델(TG 492)", reason: "안점막자극 자료. 이 시험은 자극 없음만 판정합니다. 분류까지 필요하면 시험을 조합해야 합니다", basis: `${basis} · OECD TG 492, 467`, rule: "R-E-05", on: need });
+  tests.push({ key: "sens-1", label: "피부감작 · 단백질 결합 (DPRA)", category: ALT, item: "피부감작 DPRA(TG 442C)", reason: "피부감작은 한 시험으로 결론이 나지 않습니다. 핵심사건이 다른 시험 2개로 시작합니다", basis: `${basis} · OECD GL 497`, rule: "R-E-03", on: need });
+  tests.push({ key: "sens-2", label: "피부감작 · 각질세포 활성화 (KeratinoSens)", category: ALT, item: "피부감작 KeratinoSens(TG 442D)", reason: "두 번째 시험. 두 결과가 다르면 세 번째가 필요합니다", basis: "OECD GL 497 §41", rule: "R-E-03", on: need });
+  tests.push({ key: "sens-3", label: "피부감작 · 수지상세포 활성화 (h-CLAT)", category: ALT, item: "피부감작 h-CLAT(TG 442E)", reason: "앞의 두 시험 결과가 다를 때 필요. 처음부터 하려면 체크하세요", basis: "OECD GL 497 §42", rule: "R-E-03", on: false });
+  if (uv) {
+    tests.push({ key: "photo", label: "광독성 (3T3 NRU)", category: ALT, item: "광독성 3T3 NRU(TG 432)", reason: "자외선을 흡수하는 원료. 흡수하지 않음을 입증하는 흡광도 자료를 내면 면제됩니다", basis: `${FUNC} 제4조제1호나목(5) · OECD TG 432`, rule: "R-F2-21", on: need && a.cosUv === "예" });
+    if (a.cosUv !== "예") prereq.push("자외선 흡수 여부 확인 (흡광도 측정). 흡수하지 않으면 광독성·광감작성 자료 면제");
+  } else {
+    notes.push({ text: "자외선을 흡수하지 않으면 흡광도 자료로 광독성·광감작성 자료를 면제받습니다. 흡광도 시험성적서를 준비하세요.", basis: `${FUNC} 제4조제1호나목(5)`, rule: "R-F2-21", topic: "면제" });
+  }
+  if (functional || ingredient) {
+    tests.push({ key: "patch", label: "인체첩포시험", category: "기타(임상병리·조직병리 등)", item: "인체첩포시험", reason: "30명 이상. 대학 또는 전문 연구기관에서 5년 이상 경력자의 지도·감독 아래 실시", basis: `${FUNC} 제4조제1호나목(6), 제5조`, rule: "R-F2-20", on: need });
+    notes.push({ text: "단회투여독성 자료도 제출 대상입니다. 동물을 쓰지 않는 방법이 제한적이어서 제안에 넣지 않았습니다. 문헌이나 기존 자료로 갈음할 수 있는지, 과학적 타당성으로 생략할 수 있는지 확인하세요.", basis: `${FUNC} 제4조제1호나목`, rule: "R-F2-20", topic: "확인할 자료" });
+  }
+  if (ingredient) {
+    notes.push({ text: "원료 사용기준 지정에는 안전성 자료 11종이 있습니다. 위 시험 외에 반복투여독성, 생식·발생·유전독성·발암성, 흡입독성, 피부흡수 자료가 포함됩니다. 동물대체시험법 적용이 원칙이고, 적용할 수 없으면 동물 시험법을 따릅니다. 타당한 사유가 있으면 생략할 수 있습니다.", basis: `${ING} 제4조제4호, 제5조제1항제4호`, rule: "R-F2-20", topic: "확인할 자료" });
+    tests.push({ key: "absorb", label: "피부흡수 (체외)", category: ALT, item: "피부흡수(TG 428)", reason: "원료 사용기준 지정의 안전성 자료", basis: `${ING} 제4조제4호 · OECD TG 428`, rule: "R-F2-20", on: true });
+    tests.push({ key: "ames", label: "복귀돌연변이(Ames)", category: "유전독성", item: "복귀돌연변이(Ames, TG 471)", reason: "유전독성 자료. 체외 시험이라 동물을 쓰지 않습니다", basis: `${ING} 제4조제4호`, rule: "R-F2-20", on: true });
+    tests.push({ key: "invitro-ca", label: "체외 염색체이상", category: "유전독성", item: "염색체이상 in vitro(TG 473)", reason: "유전독성 자료. 체외 시험", basis: `${ING} 제4조제4호`, rule: "R-F2-20", on: true });
+  }
+  if (exportUse) notes.push({ text: "수출 상대국이 동물시험 자료를 요구하면 예외에 해당합니다. 상대국의 요구 시험과 시험법을 먼저 확인하고, 직접 고르기로 항목을 추가하세요.", basis: "화장품법 제15조의2", rule: "R-F2-20", topic: "동물실험 제한" });
+  if (functional || ingredient) notes.push({ text: "안전성 자료는 비임상시험관리기준에 따라 시험한 자료여야 합니다. 동물대체시험도 GLP로 수행할 수 있는 기관이어야 합니다.", basis: functional ? `${FUNC} 제5조제1호나목(1)` : `${ING} 제5조제1항제4호`, rule: "R-E-02", topic: "시험 요건" });
+  notes.push({ text: "대체시험은 물질에 따라 쓸 수 없는 경우가 있습니다. 물에 녹지 않거나, 색이 있거나, 금속 화합물이거나, 지용성이 매우 높으면 시험법이 제한됩니다. 시험물질의 성상을 요청서에 적어 주세요.", basis: "OECD TG 439, 442C, 442E", rule: "R-E-07", topic: "시험 요건" });
+  askCro.add("제안하는 시험 조합과 근거, 사용 모델·키트");
+  askCro.add("결과에 따라 추가되는 시험의 비용과 중단 기준");
+  askCro.add("시험물질의 적용 가능성 사전 확인(용해도, 간섭) 포함 여부");
+  return finish(tests, notes, later, askCro, prereq, [], "시험 구성");
+}
+
+function adviseDevice(a: Answers): Advice {
+  const tests: Suggest[] = [];
+  const notes: Note[] = [];
+  const later: Later[] = [];
+  const askCro = new Set<string>();
+  const prereq: string[] = [];
+  const CAT = "의료기기 생물학적 안전성";
+  const STD = "의료기기의 생물학적 안전에 관한 공통기준규격";
+  const contact = String(a.mdContact ?? "");
+  const durIdx = String(a.mdDuration ?? "").startsWith("A") ? 0 : String(a.mdDuration ?? "").startsWith("B") ? 1 : 2;
+  const row = MD_TABLE[contact]?.[durIdx] ?? "ooo-----";
+  MD_COLS.forEach(([key, label, item], i) => {
+    const c = row[i];
+    if (c === "-") return;
+    tests.push({ key, label, category: CAT, item, reason: c === "o" ? "이 접촉 부위와 기간에 지정된 시험" : "추가로 적용될 수 있는 시험. 필요하면 체크하세요", basis: `${STD} 별표 제1장 표 1`, rule: "R-F2-22", on: c === "o", fill: { "의료기기 생물학적 안전성.glpLevel": "GLP" } });
+  });
+  if (durIdx === 2) {
+    const deep = contact.startsWith("체내외 연결") || contact.startsWith("이식");
+    const mucosa = contact === "표면접촉 · 점막" || contact === "표면접촉 · 파열·외상 표면";
+    if (deep || mucosa) tests.push({ key: "md-chronic", label: "만성독성", category: CAT, item: "만성독성(10993-11)", reason: deep ? "영구 접촉에 지정된 추가 평가시험" : "추가로 적용될 수 있는 시험. 필요하면 체크하세요", basis: `${STD} 별표 제1장 표 2`, rule: "R-F2-22", on: deep });
+    if (deep) tests.push({ key: "md-carc", label: "발암성", category: CAT, item: "발암성(10993-3)", reason: "영구 접촉에 지정된 추가 평가시험. 기간이 긴 시험이므로 기존 자료로 충족되는지 먼저 확인하고, 충족되면 빼세요", basis: `${STD} 별표 제1장 표 2, 6.1`, rule: "R-F2-22", on: true });
+  }
+  notes.push({ text: "표의 시험을 모두 해야 하는 것은 아닙니다. 기존 자료로 충족되면 추가 시험을 하지 않아야 하고, 선택하거나 면제한 근거를 기록해야 합니다. 체외 시험을 먼저 합니다.", basis: `${STD} 별표 제1장 4.6, 6.1, 7`, rule: "R-F2-22" });
+  notes.push({ text: "접촉 기간은 24시간 이내, 24시간 이상 30일 이내, 30일 초과로 나눕니다. 둘 이상에 해당하면 더 엄격한 기준을 적용합니다. 시험은 완제품이나 같은 방법으로 처리한 대표 검체로 합니다.", basis: `${STD} 별표 제1장 5.3, 6.1`, rule: "R-F2-22" });
+  notes.push({ text: "국내 고시가 채택한 국제 규격은 최신판이 아닙니다. 해외 인증을 함께 준비하면 어느 판으로 시험할지 정해야 합니다.", basis: `${STD} 별표 각 장의 관련규격`, rule: "R-F2-22", topic: "국내와 해외의 차이" });
+  notes.push({ text: "시험은 비임상시험관리기준에 적합하게 시행합니다.", basis: `${STD} 별표 제1장 4.6`, rule: "R-F2-22", topic: "시험 요건" });
+  if (tests.some((t) => t.key === "md-geno")) notes.push({ text: "체외 유전독성이 양성이면 체내 시험을 하거나 돌연변이 유발성이 있다고 가정합니다.", basis: `${STD} 별표 제1장 6.2.6`, rule: "R-F2-22" });
+  prereq.push("시험에 제공할 검체 수량 확인 (항목이 많아 필요 수량이 많음)");
+  askCro.add("추출 조건 (용매, 온도, 시간, 검체 대 용매 비율)과 추출 공유 여부");
+  askCro.add("검체 필요 수량과 표면적·중량 산정 방법");
+  askCro.add("적용하는 국제 규격의 판");
+  if (tests.some((t) => t.key === "md-impl")) askCro.add("이식 시험의 동물종, 이식 부위, 기간");
+  return finish(tests, notes, later, askCro, prereq, [], "시험 구성");
+}
+
+/** 화학물질·농약: 등록 톤수와 유형 */
+function adviseChemical(a: Answers): Advice {
+  const tests: Suggest[] = [];
+  const notes: Note[] = [];
+  const later: Later[] = [];
+  const askCro = new Set<string>();
+  const prereq: string[] = [];
+  const type = String(a.chType ?? "");
+  const gas = a.chGas === "예";
+  const GEN = "일반독성";
+  const ENV = "환경유해성";
+  const add = (key: string, label: string, category: string, item: string, reason: string, basis: string, on = true) => tests.push({ key, label, category, item, reason, basis, rule: "R-F2-23", on, fill: { [`${category}.glpLevel`]: "GLP" } });
+
+  if (type.startsWith("농약")) {
+    const B = "농약 및 원제의 등록기준 별표 1";
+    const raw = type === "농약 원제";
+    add("single", "급성경구독성", GEN, "단회(급성)투여독성", "원제와 품목 모두 필요", B);
+    add("dermal", "급성경피독성", GEN, "급성경피독성", "원제와 품목 모두 필요", B);
+    add("inhal", "급성흡입독성", GEN, "단회 흡입독성", "원제와 품목 모두 필요", B);
+    add("skin-irr", "피부자극성", "국소독성", "피부 1차 자극", "원제와 품목 모두 필요", B);
+    add("eye-irr", "안점막자극성", "국소독성", "안점막 자극(세안군 비적용)", "원제와 품목 모두 필요", B);
+    add("sens", "피부과민성", "항원성·면역독성", "피부감작성 LLNA", "원제와 품목 모두 필요. 기니피그 또는 마우스", B);
+    if (raw) {
+      add("repeat-13", "90일 반복투여 경구독성", GEN, "반복투여 13주", "원제에 필요", B);
+      add("ames", "유전독성 · 복귀돌연변이", "유전독성", "복귀돌연변이(Ames, TG 471)", "원제에 필요", B);
+      add("invitro-ca", "유전독성 · 염색체이상", "유전독성", "염색체이상 in vitro(TG 473)", "원제에 필요", B);
+      add("invivo-mn", "유전독성 · 체내 소핵", "유전독성", "소핵 in vivo(마우스)", "체내 시험을 최소 1건 제출", B);
+      add("efd", "기형독성 · 랫드와 토끼", "생식발생독성", "배·태자발생(Seg. II)", "원제에 필요. 2종", B);
+      add("repro", "번식독성", "생식발생독성", "확장 1세대·2세대 생식독성", "원제에 필요", B);
+      add("carc", "만성독성과 발암성", "발암성·종양원성", "장기발암성(2년)", "원제에 필요. 병합시험으로 내면 각각 면제", B);
+      notes.push({ text: "원제는 이 밖에 신경독성, 지발성 신경독성(닭), 발달신경독성, 21일 또는 28일 경피 반복투여, 90일 흡입 반복투여, 동물체내 대사, 피부흡수율 자료가 있습니다. 해당하는 항목은 직접 고르기로 추가하세요.", basis: B, rule: "R-F2-23" });
+      notes.push({ text: "체내 축적 가능성이 높으면 비설치류 만성독성시험(1년 이상)이 요구됩니다.", basis: `${B} 주 1`, rule: "R-F2-23" });
+    } else {
+      notes.push({ text: "품목(제제)은 급성독성과 자극·과민성 자료가 필요합니다. 반복투여, 유전독성, 발암성 등은 원제 자료입니다.", basis: B, rule: "R-F2-23" });
+    }
+    notes.push({ text: "시험성적서는 농촌진흥청장이 분야별로 지정한 시험연구기관에서 수행한 것이어야 합니다. 기관의 지정 분야를 확인하세요.", basis: "농약 및 원제의 등록기준 제4조", rule: "R-F2-23", topic: "시험 요건" });
+    askCro.add("농촌진흥청 지정 분야와 해당 시험의 수행 실적");
+    return finish(tests, notes, later, askCro, prereq, [], "시험 구성");
+  }
+
+  const B = "화학물질의 등록 및 평가 등에 관한 법률 시행규칙 별표 1";
+  const tons = String(a.chTon ?? "");
+  const lv = tons.startsWith("1,000") ? 4 : tons.startsWith("100") ? 3 : tons.startsWith("10") ? 2 : 1;
+  const b1 = `${B} 제1호`;
+  add("single", gas ? "급성흡입독성" : "급성경구독성", GEN, gas ? "단회 흡입독성" : "단회(급성)투여독성", gas ? "기체이거나 주 노출이 흡입이면 급성흡입독성" : "1톤 이상 구간의 인체 유해성 자료", b1);
+  add("ames", "복귀돌연변이", "유전독성", "복귀돌연변이(Ames, TG 471)", "양성이면 염색체이상과 체내 유전독성 자료를 추가로 제출", b1);
+  add("skin-irr", "피부 자극성·부식성", "동물대체시험", "피부자극 인체피부모델(TG 439)", "시험법은 기관과 협의. 체외 시험으로 제안했습니다", b1);
+  add("sens", "피부 과민성", "항원성·면역독성", "피부감작성 LLNA", "시험법은 기관과 협의", b1);
+  add("fish", "어류 급성독성", ENV, "어류 급성독성(TG 203)", "환경 유해성 자료", b1);
+  add("daphnia", "물벼룩 급성독성", ENV, "물벼룩 급성 유영저해(TG 202)", "환경 유해성 자료", b1);
+  add("biodeg", "이분해성", ENV, "생분해성(TG 301)", "환경 유해성 자료", b1);
+  if (lv >= 2) {
+    const b2 = `${B} 제2호`;
+    if (!gas) add("dermal", "급성경피독성", GEN, "급성경피독성", "급성경피 또는 급성흡입. 노출 경로에 맞는 것을 고르세요", b2);
+    add("eye-irr", "눈 자극성·부식성", "동물대체시험", "안자극 각막모델(TG 492)", "시험법은 기관과 협의. 체외 시험으로 제안했습니다", b2);
+    add("invitro-ca", "체외 염색체이상", "유전독성", "염색체이상 in vitro(TG 473)", "10톤 이상 구간", b2);
+    add("invivo-mn", "체내 체세포 유전독성", "유전독성", "소핵 in vivo(마우스)", "복귀돌연변이와 염색체이상이 모두 음성이면 포유류 배양세포 유전자변이 시험으로 대신할 수 있습니다", b2);
+    add("repeat-4", "반복투여독성 28일", GEN, "반복투여 4주", "10톤 이상 구간", b2);
+    add("screen", "생식·발달독성 스크리닝", "생식발생독성", "생식발생 스크리닝", "10톤 이상 구간", b2);
+    add("algae", "담수조류 생장저해", ENV, "조류 생장저해(TG 201)", "환경 유해성 자료", b2);
+    add("hydro", "가수분해", ENV, "가수분해(TG 111)", "환경 유해성 자료", b2);
+  }
+  if (lv >= 3) {
+    const b3 = `${B} 제3호`;
+    add("fish-c", "어류 만성독성", ENV, "어류 초기생활단계(TG 210)", "100톤 이상 구간", b3);
+    add("daphnia-c", "물벼룩 만성독성", ENV, "물벼룩 번식(TG 211)", "100톤 이상 구간", b3);
+    add("worm", "육생 무척추동물 급성독성", ENV, "지렁이 급성독성(TG 207)", "100톤 이상 구간", b3);
+    add("plant", "육생 식물 급성독성", ENV, "육상식물 생장(TG 208)", "100톤 이상 구간", b3);
+    add("adsorp", "흡착 및 탈착", ENV, "흡착·탈착(TG 106)", "100톤 이상 구간", b3);
+    notes.push({ text: "100톤 이상 구간에는 추가 유전독성(생식세포 유전독성 등), 본질적 분해성, 분해산물 확인, 활성슬러지 호흡저해 자료가 있습니다. 해당하는 항목은 직접 고르기로 추가하세요.", basis: b3, rule: "R-F2-23" });
+  }
+  if (lv >= 4) {
+    const b4 = `${B} 제4호`;
+    add("repeat-13", "반복투여독성 90일", GEN, "반복투여 13주", "1,000톤 이상 구간", b4);
+    add("efd", "최기형성", "생식발생독성", "배·태자발생(Seg. II)", "1,000톤 이상 구간", b4);
+    add("repro", "2세대 또는 확장 1세대 생식독성", "생식발생독성", "확장 1세대·2세대 생식독성", "1,000톤 이상 구간", b4);
+    add("carc", "발암성", "발암성·종양원성", "장기발암성(2년)", "1,000톤 이상 구간", b4);
+    notes.push({ text: "1,000톤 이상 구간에는 생물농축성, 저서생물 만성독성, 육생 생물 만성독성 등 환경 자료가 더 있습니다.", basis: b4, rule: "R-F2-23" });
+  }
+  notes.push({ text: "상위 톤수 구간은 하위 구간의 자료를 모두 포함합니다. 물리·화학적 특성 자료도 구간별로 필요합니다.", basis: B, rule: "R-F2-23" });
+  notes.push({ text: "일정 자료는 기후에너지환경부장관이 지정한 시험기관, 또는 OECD 우수실험실 기준 준수가 확인된 외국 시험기관의 결과로 내야 합니다. 기관이 지정받은 시험 분야와 항목을 확인하세요.", basis: "화학물질의 등록 및 평가 등에 관한 법률 제14조제2항, 제22조", rule: "R-F2-23", topic: "시험 요건" });
+  notes.push({ text: "고분자화합물, 나노물질 등은 별도 특례가 있습니다.", basis: `${B} 제5호~제7호`, rule: "R-F2-23" });
+  askCro.add("지정받은 시험 분야·항목과 지정 부처");
+  askCro.add("자극성·과민성 시험에 쓰는 시험법 (체외, 동물)");
+  return finish(tests, notes, later, askCro, prereq, [], "시험 구성");
 }

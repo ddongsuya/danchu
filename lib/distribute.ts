@@ -129,7 +129,7 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
 /**
  * 새로 승인된 기관에 아직 열려 있는 요청서를 배포한다.
  * - 대상: 이미 배포되어 회신을 받는 중이고(비교표 공개 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
- *   아직 한 번도 배포하지 않은 요청은 건드리지 않는다 (배포 시작은 접수 시 자동 배포나 운영자가 정한다)
+ *   아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 포함한다 (해당 분야 기관이 없어 기다리던 요청)
  * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
  * - 이미 초대한 요청은 건너뛴다
  * 기관이 참여하는 즉시 보이도록 승인할 때, 기관이 수행 분야를 바꿀 때, 기관 화면을 열 때 부른다.
@@ -140,8 +140,10 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   const out = { rfqs: 0, invites: 0 };
   if (!sb) return out;
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).gte("reply_by", today).order("created_at");
-  let list = (data ?? []) as RfqRow[];
+  const { data } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
+  // 아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 살린다 (기관이 없어 기다리던 요청)
+  const fresh = new Date(Date.now() - 30 * 864e5).toISOString();
+  let list = ((data ?? []) as RfqRow[]).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
   if (orgId) {
     // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
     const { data: org } = await sb.from("cro_orgs").select("status, categories").eq("id", orgId).maybeSingle();
@@ -153,8 +155,9 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   }
   for (const rfq of list) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
-    if (!rfq.reply_by || rfq.reply_by < today) continue;
-    const replyBy = rfq.reply_by;
+    // 회신 기한: 정해져 있으면 그대로(먼저 받은 기관과 같게), 없으면 지금 기준으로 새로 잡는다
+    const replyBy = defaultReplyBy(rfq);
+    if (replyBy < today) continue;
     const { orgs } = await matchOrgs(rfq);
     const targets = orgId ? orgs.filter((o) => o.id === orgId) : orgs;
     if (!targets.length) continue;

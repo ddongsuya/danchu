@@ -32,7 +32,15 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
     const next = o === "없음" ? (cur.includes(o) ? [] : [o]) : cur.includes(o) ? cur.filter((x) => x !== o) : [...cur.filter((x) => x !== "없음"), o];
     setA({ ...a, [q.id]: next });
   };
-  const move = (n: number) => { setStep(n); window.scrollTo(0, 0); };
+  /** 질문이 없는 단계는 건너뛴다 (제품 유형에 따라 단계가 비는 경우) */
+  const move = (n: number) => {
+    const dir = n >= step ? 1 : -1;
+    let to = n;
+    while (to >= 1 && to <= 3 && !qs.some((q) => q.step === to)) to += dir;
+    if (to < 1) to = 1;
+    setStep(to);
+    window.scrollTo(0, 0);
+  };
 
   /* ── 제안 화면 ── */
   if (step === 4 && advice) {
