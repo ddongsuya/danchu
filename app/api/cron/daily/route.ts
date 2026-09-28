@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import type { InviteRow, RfqRow } from "@/lib/data";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { publishCompare } from "@/lib/compare";
+import { distributeOpenRfqs } from "@/lib/distribute";
 import { loadByInvite } from "@/lib/quote-load";
 import { todaySeoul } from "@/lib/format";
 import { won } from "@/lib/format";
@@ -35,7 +36,14 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
-  const out = { reminded: 0, autoSubmitted: 0, compared: 0, errors: [] as string[] };
+  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, errors: [] as string[] };
+
+  // 0) 빠진 배포 보충: 승인된 기관 중 열린 요청을 아직 받지 못한 곳
+  try {
+    out.distributed = (await distributeOpenRfqs()).invites;
+  } catch (e) {
+    out.errors.push(`distribute: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
   // 1) 리마인더
   for (const [kind, day] of [["d2", addDays(today, 2)], ["d0", today]] as const) {

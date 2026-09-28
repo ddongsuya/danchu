@@ -3,6 +3,7 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getCroOrg } from "@/lib/data";
 import { notifyUsers } from "@/lib/notify";
+import { distributeOpenRfqs } from "@/lib/distribute";
 
 export const runtime = "nodejs";
 
@@ -32,5 +33,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const ids = (members ?? []).map((x) => x.id as string);
   const mails = [...new Set([...(members ?? []).map((x) => x.email as string), org.contact_email].filter((x): x is string => !!x))];
   await notifyUsers(ids, { kind: "기관", title: m.title, body: m.body, href: "/cro" }, { to: mails });
-  return NextResponse.json({ ok: true, message: m.msg });
+  // 승인하면 아직 열려 있는 요청서를 이 기관에도 배포한다
+  let extra = "";
+  if (action === "approve") {
+    try {
+      const d = await distributeOpenRfqs(id, s.userId);
+      if (d.invites) extra = ` 진행 중인 요청 ${d.invites}건을 함께 배포했습니다.`;
+    } catch (e) {
+      console.error("distribute open rfqs", e);
+    }
+  }
+  return NextResponse.json({ ok: true, message: m.msg + extra });
 }

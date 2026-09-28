@@ -125,3 +125,29 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
   const r = await distributeTo(rfq, orgs, defaultReplyBy(rfq), null, true);
   return { ...r, skipped: [...r.skipped, ...skipped], matched: orgs.length };
 }
+
+/**
+ * 새로 승인된 기관에 아직 열려 있는 요청서를 배포한다.
+ * - 대상: 접수·배포·회신 중이고(비교표 공개 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
+ * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
+ * - 이미 초대한 요청은 건너뛴다
+ * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행).
+ */
+export async function distributeOpenRfqs(orgId?: string, actorId: string | null = null): Promise<{ rfqs: number; invites: number }> {
+  const sb = getSupabaseAdmin();
+  const out = { rfqs: 0, invites: 0 };
+  if (!sb) return out;
+  const today = nowSeoul().toLocaleDateString("sv-SE");
+  const { data } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
+  for (const rfq of (data ?? []) as RfqRow[]) {
+    if (rfq.compared_at || rfq.selected_quote_id) continue;
+    const replyBy = defaultReplyBy(rfq);
+    if (replyBy < today) continue;
+    const { orgs } = await matchOrgs(rfq);
+    const targets = orgId ? orgs.filter((o) => o.id === orgId) : orgs;
+    if (!targets.length) continue;
+    const r = await distributeTo(rfq, targets, replyBy, actorId, true);
+    if (r.sent) { out.rfqs++; out.invites += r.sent; }
+  }
+  return out;
+}
