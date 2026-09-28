@@ -11,13 +11,22 @@ export async function uploadToSigned(ticket: UploadTicket, file: File): Promise<
       headers: { "Content-Type": file.type || "application/octet-stream" },
       body: file,
     });
+    if (!res.ok) console.error("upload failed", res.status, await res.text().catch(() => ""));
     return res.ok;
-  } catch {
+  } catch (e) {
+    console.error("upload failed", e);
     return false;
   }
 }
 
-/** 파일명에서 경로·특수문자 제거 (한글 유지) */
+/**
+ * 저장 경로용 파일명. 영문·숫자·점·하이픈·밑줄만 남긴다.
+ * Supabase Storage는 경로에 한글 등 비ASCII 문자가 있으면 업로드를 거부한다.
+ * 원래 파일명은 DB(file_name, pdf_name)에 따로 저장해 화면과 내려받기에 쓴다.
+ */
 export function safeName(name: string): string {
-  return name.replace(/[^\w.\-가-힣]/g, "_").slice(0, 120) || "file";
+  const dot = name.lastIndexOf(".");
+  const ext = dot > 0 ? name.slice(dot + 1).replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toLowerCase() : "";
+  const base = (dot > 0 ? name.slice(0, dot) : name).replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+  return (base || "file") + (ext ? `.${ext}` : "");
 }
