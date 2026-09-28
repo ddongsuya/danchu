@@ -128,7 +128,8 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
 
 /**
  * 새로 승인된 기관에 아직 열려 있는 요청서를 배포한다.
- * - 대상: 접수·배포·회신 중이고(비교표 공개 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
+ * - 대상: 이미 배포되어 회신을 받는 중이고(비교표 공개 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
+ *   아직 한 번도 배포하지 않은 요청은 건드리지 않는다 (배포 시작은 접수 시 자동 배포나 운영자가 정한다)
  * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
  * - 이미 초대한 요청은 건너뛴다
  * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행).
@@ -138,11 +139,11 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   const out = { rfqs: 0, invites: 0 };
   if (!sb) return out;
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
+  const { data } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).order("created_at");
   for (const rfq of (data ?? []) as RfqRow[]) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
-    const replyBy = defaultReplyBy(rfq);
-    if (replyBy < today) continue;
+    if (!rfq.reply_by || rfq.reply_by < today) continue;
+    const replyBy = rfq.reply_by;
     const { orgs } = await matchOrgs(rfq);
     const targets = orgId ? orgs.filter((o) => o.id === orgId) : orgs;
     if (!targets.length) continue;

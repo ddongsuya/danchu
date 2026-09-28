@@ -57,7 +57,8 @@ declare
   md jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
   r  text := coalesce(md->>'role', 'requester');
 begin
-  if r not in ('requester', 'cro', 'admin') then r := 'requester'; end if;
+  -- 운영자는 가입으로 만들 수 없다
+  if r not in ('requester', 'cro') then r := 'requester'; end if;
   insert into public.profiles (id, email, role, name, company, dept, phone, org_type, cro_org_id)
   values (
     new.id, new.email, r,
