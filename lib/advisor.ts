@@ -45,6 +45,8 @@ const PRIOR = [
   "hERG (GLP)",
   "hERG (Non-GLP 선별)",
   "안전성약리 코어배터리 (GLP)",
+  "배·태자 발생시험 (GLP)",
+  "수태능 시험 (GLP)",
   "생체시료 분석법 검증",
   "조제물 분석법 검증",
 ];
@@ -58,6 +60,8 @@ export const QUESTIONS: Question[] = [
   { id: "duration", step: 2, q: "임상에서 얼마나 투여할 예정인가요?", sub: "반복투여독성 기간을 정합니다.", options: ["단회", "2주 이내", "1개월 이내", "3개월 이내", "6개월 이내", "6개월 초과·만성", "미정"], required: true },
   { id: "freq", step: 2, q: "임상 투여 빈도는요?", options: ["1일 1회", "1일 2회 이상", "주 1회", "간헐", "지속주입", "미정"] },
   { id: "wocbp", step: 2, q: "임상에 가임 여성이 포함되나요?", options: ["예", "아니오", "미정"], required: true },
+  { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => a.wocbp === "예" },
+  { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => a.wocbp === "예" },
   { id: "prior", step: 3, q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외합니다.", multi: true, options: PRIOR, required: true },
 ];
 
@@ -260,27 +264,34 @@ export function advise(a: Answers): Advice {
       if (approval) tests.push({ key: "efd", label: "배·태자 발생시험", category: REPRO, item: "배·태자발생(Seg. II)", reason: "진행암 의약품은 허가 신청 때 필요. 수태능과 출생 전후 시험은 필요 없음", basis: "ICH S9 §2.5", rule: "R-A5-16", on: true, fill: efdFill });
       else later.push({ label: "배·태자 발생시험", when: "품목허가 신청 전. 유전독성이 있고 빠르게 분열하는 세포를 표적하는 약물은 예외", basis: "ICH S9 §2.5" });
     } else {
-      if (a.wocbp === "예" || late) {
+      if ((a.wocbp === "예" || late) && !own("배·태자 발생시험")) {
         const noW = a.wocbp === "아니오" && !approval;
+        const small = a.wocbp === "예" && a.wScale === "150명 이하이고 3개월 이하" && a.contra === "예";
+        const noContra = a.wocbp === "예" && a.contra === "아니오";
         const euJp = auth.includes("유럽 EMA") || auth.includes("일본 PMDA");
-        tests.push({ key: "efd", label: "배·태자 발생시험 · 랫드와 토끼", category: REPRO, item: "배·태자발생(Seg. II)", reason: noW ? "임상에 가임 여성을 포함하지 않으면 허가 신청 전까지. 필요하면 체크하세요" : late ? "3상 전까지 필요" : euJp ? "유럽·일본은 가임 여성 노출 전에 본시험을 완료" : "미국은 피임 조치 아래 3상 전까지 미룰 수 있음. 필요하면 체크하세요", basis: "ICH M3(R2) §11.3 · ICH S5(R3) 부록 1 표 3", rule: euJp ? "R-A5-04" : "R-A5-05", on: !noW && (late || euJp), fill: efdFill });
+        tests.push({ key: "efd", label: "배·태자 발생시험 · 랫드와 토끼", category: REPRO, item: "배·태자발생(Seg. II)", reason: noContra ? "고효율 피임 없이 가임 여성을 포함하려면 먼저 완료" : small && !late ? "예비 시험으로 제한적 포함이 가능한 조건입니다. 본시험은 이후 단계에 필요" : noW ? "임상에 가임 여성을 포함하지 않으면 허가 신청 전까지. 필요하면 체크하세요" : late ? "3상 전까지 필요" : euJp ? "유럽·일본은 가임 여성 노출 전에 본시험을 완료" : "미국은 피임 조치 아래 3상 전까지 미룰 수 있음. 필요하면 체크하세요", basis: "ICH M3(R2) §11.3 · ICH S5(R3) 부록 1 표 3", rule: euJp ? "R-A5-04" : "R-A5-05", on: noContra || (!noW && (late || (euJp && !small))), fill: efdFill });
         if (!late) {
-          tests.push({ key: "pefd", label: "예비 배·태자 발생시험 · 2종", category: REPRO, item: "배·태자발생 예비(pEFD)", reason: "피임 조치가 있으면 가임 여성 150명 이하, 3개월 이하 투여를 본시험 전에 뒷받침", basis: "ICH M3(R2) §11.3, 주석 4", rule: "R-A5-02", on: false, fill: { "생식발생독성.species": ["랫드", "토끼"] } });
+          tests.push({ key: "pefd", label: "예비 배·태자 발생시험 · 2종", category: REPRO, item: "배·태자발생 예비(pEFD)", reason: "피임 조치가 있으면 가임 여성 150명 이하, 3개월 이하 투여를 본시험 전에 뒷받침", basis: "ICH M3(R2) §11.3, 주석 4", rule: "R-A5-02", on: small, fill: { "생식발생독성.species": ["랫드", "토끼"] } });
           notes.push({ text: "가임 여성 포함 시 필요한 시험은 인원, 투여기간, 피임 조치, 제출 지역에 따라 달라집니다. 단기(예: 2주) 임상에서 임신 위험을 집중 관리하면 발생독성시험 없이 포함할 수 있는 경우도 있습니다.", basis: "ICH M3(R2) §11.3", rule: "R-A5-02" });
           if (mfds) notes.push({ text: "국내 고시에는 임상 단계별 생식독성 자료 제출 시기가 정해져 있지 않습니다. 제출 전에 식약처와 확인하세요.", basis: "고시 별표 3", rule: "R-A5-06" });
         }
+        if (noContra) {
+          notes.push({ text: "고효율 피임을 하지 않는 가임 여성을 포함하려면 모든 여성 생식독성시험과 유전독성 표준 배터리를 먼저 완료해야 합니다. 수태능과 출생 전후 발생시험의 시기도 함께 검토하세요.", basis: "ICH M3(R2) §11.3", rule: "" });
+          for (const t of tests) if (t.category === "유전독성") t.on = true;
+        }
+        if (small && !late) notes.push({ text: "예비 시험을 임상 진입 근거로 쓰려면 군당 임신동물 최소 6마리, 기관형성기 투여, 태자 생존·체중·외표·내장 검사를 갖추고 높은 과학적 수준 또는 GLP로 수행해야 합니다.", basis: "ICH M3(R2) 주석 4", rule: "R-A5-02" });
         notes.push({ text: "한 종에서 명백한 기형이나 배·태자 치사가 나오면 두 번째 종 시험은 필요 없을 수 있습니다. 일정에 여유가 있으면 순차 착수를 검토하세요.", basis: "ICH S5(R3) §4.2", rule: "R-A5-10" });
         prereq.push("토끼 혈장 생체시료 분석법 검증 (토끼 독성동태 포함 시)");
         askCro.add("임신동물 확보 방식과 교배 시작 동물 수");
         askCro.add("생식독성 독성동태의 채혈 방식(본시험 동물·위성군)과 예상 검체 수");
         askCro.add("태자 검사 범위(전수·절반)와 용량설정시험의 견적 포함 여부");
-      } else {
+      } else if (!own("배·태자 발생시험")) {
         later.push({ label: "배·태자 발생시험", when: "가임 여성을 임상에 포함하기 전 (지역과 조건에 따라 다름)", basis: "ICH M3(R2) §11.3" });
       }
-      if (late) {
+      if (late && !own("수태능 시험")) {
         tests.push({ key: "feed", label: "수태능 및 초기배 발생시험", category: REPRO, item: "수태능·초기배발생(Seg. I)", reason: "대규모 또는 장기 임상(예: 3상) 개시 전에 완료", basis: "ICH M3(R2) §11.1, §11.3", rule: "R-A5-07", on: true });
         notes.push({ text: mfds ? "수태능 시험의 수컷 교배 전 투여는 국내 기준으로 4주가 기본이며, 2주로 하려면 타당성 설명이 필요합니다." : "수태능 시험의 수컷 교배 전 투여는 반복투여독성에서 막는 소견이 없으면 2주로 할 수 있습니다.", basis: mfds ? "고시 별표 3 ⑤2가(1)5, 별표 13 주18" : "ICH S5(R3) 부록 1 표 2", rule: mfds ? "R-A5-11" : "R-A5-12" });
-      } else {
+      } else if (!late) {
         later.push({ label: "수태능 및 초기배 발생시험", when: "3상 등 대규모·장기 임상 개시 전. 그 전에는 반복투여독성의 생식기관 조직검사가 근거", basis: "ICH M3(R2) §11.1, 주석 2" });
       }
       if (approval) {
