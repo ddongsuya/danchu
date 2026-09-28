@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { distributeOpenRfqs } from "@/lib/distribute";
 
 export const runtime = "nodejs";
 
@@ -17,5 +18,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (id === s.userId && role !== "admin") return NextResponse.json({ error: "본인의 운영자 권한은 해제할 수 없습니다." }, { status: 400 });
   const { error } = await getSupabaseAdmin()!.from("profiles").update({ role, cro_org_id: role === "cro" ? croOrgId : null }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  // 기관 담당자로 연결하면 그 기관이 받을 요청을 바로 채운다
+  if (role === "cro" && croOrgId) {
+    try {
+      await distributeOpenRfqs(croOrgId, s.userId);
+    } catch (e) {
+      console.error("sync invites", e);
+    }
+  }
   return NextResponse.json({ ok: true });
 }

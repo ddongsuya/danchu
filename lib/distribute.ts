@@ -132,15 +132,26 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
  *   아직 한 번도 배포하지 않은 요청은 건드리지 않는다 (배포 시작은 접수 시 자동 배포나 운영자가 정한다)
  * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
  * - 이미 초대한 요청은 건너뛴다
- * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행).
+ * 기관이 참여하는 즉시 보이도록 승인할 때, 기관이 수행 분야를 바꿀 때, 기관 화면을 열 때 부른다.
+ * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행, 안전망).
  */
 export async function distributeOpenRfqs(orgId?: string, actorId: string | null = null): Promise<{ rfqs: number; invites: number }> {
   const sb = getSupabaseAdmin();
   const out = { rfqs: 0, invites: 0 };
   if (!sb) return out;
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).order("created_at");
-  for (const rfq of (data ?? []) as RfqRow[]) {
+  const { data } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).gte("reply_by", today).order("created_at");
+  let list = (data ?? []) as RfqRow[];
+  if (orgId) {
+    // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
+    const { data: org } = await sb.from("cro_orgs").select("status, categories").eq("id", orgId).maybeSingle();
+    if (!org || org.status !== "approved") return out;
+    const cats = (org.categories ?? []) as string[];
+    const { data: inv } = await sb.from("rfq_invites").select("rfq_id").eq("cro_org_id", orgId);
+    const invited = new Set((inv ?? []).map((i) => i.rfq_id as string));
+    list = list.filter((r) => !invited.has(r.id) && r.categories.some((c) => cats.includes(c)));
+  }
+  for (const rfq of list) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
     if (!rfq.reply_by || rfq.reply_by < today) continue;
     const replyBy = rfq.reply_by;
