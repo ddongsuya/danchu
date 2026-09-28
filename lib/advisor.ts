@@ -87,7 +87,16 @@ export type Suggest = {
   fill?: Record<string, string | string[]>;
 };
 
-export type Note = { text: string; basis: string; rule: string };
+export type Note = { text: string; basis: string; rule: string; /** 화면에서 묶는 분야 */ topic?: string };
+
+const TOPIC_BY_RULE: [string, string][] = [["R-A13", "안전성약리"], ["R-A12", "광안전성"], ["R-A11", "국소독성·국소내성"], ["R-A1-", "일반독성"], ["R-A4", "유전독성"], ["R-A5", "생식·발생독성"], ["R-A6", "발암성"], ["R-A8", "항원성·감작성"], ["R-A9", "면역독성"], ["R-B1", "독성동태"], ["R-B3", "분석"], ["R-B4", "분석"]];
+function topicOf(n: Note): string {
+  const hit = TOPIC_BY_RULE.find(([p]) => n.rule.startsWith(p));
+  if (hit) return hit[1];
+  if (/진행암/.test(n.text)) return "항암제";
+  if (/가임 여성|수태능|생식/.test(n.text)) return "생식·발생독성";
+  return "제출·보고서";
+}
 export type Later = { label: string; when: string; basis: string };
 
 export type Advice = {
@@ -348,7 +357,7 @@ export function advise(a: Answers): Advice {
   if (research) notes.push({ text: "자체 연구용으로 보고 GLP를 지정하지 않았습니다. 나중에 허가 자료로 쓰려면 GLP로 다시 해야 합니다.", basis: "", rule: "" });
 
   const seen = new Set<string>();
-  const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text));
+  const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: topicOf(n) }));
   return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
 }
 

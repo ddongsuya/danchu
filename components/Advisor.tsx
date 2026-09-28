@@ -102,12 +102,20 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.notes.length > 0 && (
             <section className="dcard">
-              {sec("확인할 점")}
-              <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--body)", lineHeight: 1.55 }}>
-                {advice.notes.map((n) => (
-                  <li key={n.text}>{n.text}{n.basis && <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>근거 · {n.basis}</span>}</li>
-                ))}
-              </ul>
+              {sec(`확인할 점 ${advice.notes.length}`, "분야를 눌러 펼쳐 보세요.")}
+              {[...new Set(advice.notes.map((n) => n.topic ?? "기타"))].map((topic, i) => {
+                const list = advice.notes.filter((n) => (n.topic ?? "기타") === topic);
+                return (
+                  <details key={topic} open={i === 0} style={{ borderTop: i ? "1px solid var(--track)" : undefined, paddingTop: i ? 10 : 0 }}>
+                    <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{topic} <span style={{ fontWeight: 400, color: "var(--muted)" }}>{list.length}</span></summary>
+                    <ul style={{ margin: "8px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--body)", lineHeight: 1.55 }}>
+                      {list.map((n) => (
+                        <li key={n.text}>{n.text}{n.basis && <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>근거 · {n.basis}</span>}</li>
+                      ))}
+                    </ul>
+                  </details>
+                );
+              })}
             </section>
           )}
 
