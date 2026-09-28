@@ -134,10 +134,15 @@ export function advise(a: Answers): Advice {
 
   /* ── 일반독성 ── */
   const tableStage: TableStage = approval ? "품목허가 신청" : "임상시험 진입";
-  const repeatItems = dur === "미정" ? ["반복투여 4주"] : repeatDoseFor(dur as ClinDuration, tableStage).items;
+  // 진행암(ICH S9): 기간을 임상 투여기간이 아니라 임상 일정과 단계로 정한다
+  const oncLate = onc && (approval || stage === "3상");
+  const repeatItems = onc ? [oncLate ? "반복투여 13주" : "반복투여 4주"] : dur === "미정" ? ["반복투여 4주"] : repeatDoseFor(dur as ClinDuration, tableStage).items;
   const species = ["랫드", "개(비글)"];
 
-  if (dur === "미정") {
+  if (onc) {
+    notes.push({ text: oncLate ? "진행암 의약품은 3상 개시 전에 임상 일정을 따른 3개월 반복투여독성시험을 제출하며, 대부분 이것으로 허가까지 충분합니다." : "진행암 의약품의 1상용 독성시험은 임상 투여 일정에 맞춥니다. 매일 투여를 기준으로 4주를 제안했습니다. 주 1회면 주 1회 4~5회, 3~4주 1회면 단회 투여 설계가 됩니다.", basis: oncLate ? "ICH S9 §3.4" : "ICH S9 §3.3 표 1", rule: "" });
+    notes.push({ text: "진행암 의약품은 회복성 평가는 필요하지만 회복군을 자동으로 넣지는 않습니다. 회복군을 뺄지 검토하세요.", basis: "ICH S9 §2.4", rule: "" });
+  } else if (dur === "미정") {
     notes.push({ text: "임상 투여기간이 정해지지 않아 1상에 흔한 4주로 제안했습니다. 1상이 2주 이내라면 2주 시험으로도 진입할 수 있지만, 이후 임상이 길어지면 시험을 다시 해야 합니다.", basis: "ICH M3(R2) 표 1", rule: "R-A1-03" });
   }
   const split = repeatItems.length === 2; // 만성: 설치류와 비설치류의 기간이 다르다
@@ -149,8 +154,8 @@ export function advise(a: Answers): Advice {
     const firstGlp = !own("반복투여");
     tests.push({
       key: `repeat-${weeks}`, label: `${it} · ${who}`, category: "일반독성", item: it,
-      reason: approval ? "적응 투여기간에 맞는 허가용 반복투여독성" : "임상 투여기간 이상으로 두 종에서 표적 장기와 무독성량을 확인",
-      basis: approval ? "ICH M3(R2) 표 2 · 고시 별표 2 ③" : "ICH M3(R2) 표 1 · 고시 별표 2 ③", rule: approval ? "R-A1-02" : "R-A1-01", on: true,
+      reason: onc ? (oncLate ? "3상 개시 전 제출. 임상 일정을 따른 3개월 시험" : "임상 투여 일정에 맞춘 1상용 독성시험") : approval ? "적응 투여기간에 맞는 허가용 반복투여독성" : "임상 투여기간 이상으로 두 종에서 표적 장기와 무독성량을 확인",
+      basis: onc ? (oncLate ? "ICH S9 §3.4" : "ICH S9 §3.3 표 1") : approval ? "ICH M3(R2) 표 2 · 고시 별표 2 ③" : "ICH M3(R2) 표 1 · 고시 별표 2 ③", rule: approval ? "R-A1-02" : "R-A1-01", on: true,
       fill: { "일반독성.species": split ? [species[i]] : species, "일반독성.tk": research ? "미정" : "포함", "일반독성.formulation": research ? "미정" : "포함", "일반독성.histopath": "포함", "일반독성.glpLevel": glp, "일반독성.recovery": firstGlp ? (weeks >= 13 ? "4주" : "2주") : "미정" },
     });
     if (firstGlp) notes.push({ text: "첫 GLP 반복투여독성이므로 회복 평가를 포함해 제안했습니다. 한 번 가역성을 확인하면 이후 시험에서는 생략할 수 있습니다.", basis: "고시 별표 2 ② 4 · ICH M3(R2) 질의응답 3장", rule: "R-A1-12" });
@@ -194,7 +199,7 @@ export function advise(a: Answers): Advice {
       notes.push({ text: "체내 소핵시험은 반복투여독성시험에 통합할 수 있습니다. 통합하려면 독성시험의 최고용량이 조건을 충족해야 하며, 임상 노출 배수만으로 정한 용량은 인정되지 않습니다.", basis: "ICH S2(R1) §4.3.2 · 고시 [주40]", rule: "R-A4-06" });
     }
     askCro.add("유전독성의 용량 설정 예비시험·확인 시험 포함 여부");
-    // 진행암: 임상 진입에는 필수가 아니고 허가 신청 때 필요 (ICH S9 §2.6 — 조항 원문 재확인 대상)
+    // 진행암: 임상 진입에는 필수가 아니고 허가 신청 때 필요 (ICH S9 §2.6, 원문 확인)
     if (onc && !approval) {
       for (const t of tests) if (t.category === "유전독성") { t.on = false; t.reason = "진행암 환자 대상 임상에는 필수가 아닙니다. 허가 신청 때 필요"; t.basis = "ICH S9 §2.6"; t.rule = ""; }
       const i = later.findIndex((l) => l.label.startsWith("유전독성"));
@@ -246,9 +251,47 @@ export function advise(a: Answers): Advice {
   }
 
   /* ── 나중 단계 ── */
-  if (a.wocbp !== "예" && !research) later.push({ label: "배·태자 발생시험 등 생식·발생독성", when: "가임 여성을 임상에 포함하기 전", basis: "ICH M3(R2) §11" });
-  if (a.wocbp === "예") notes.push({ text: "가임 여성이 임상에 포함되면 생식·발생독성시험의 시기를 검토해야 합니다. 이 부분의 상세 제안은 준비 중입니다.", basis: "ICH M3(R2) §11", rule: "" });
-  if (!approval && !research && ["1개월 이내", "2주 이내", "단회", "미정"].includes(dur)) later.push({ label: "더 긴 반복투여독성 (13주 이상)", when: "임상 투여기간이 늘어날 때", basis: "ICH M3(R2) 표 1" });
+  /* ── 생식·발생독성 (기술문서 A5) ── */
+  if (!research) {
+    const REPRO = "생식발생독성";
+    const efdFill = { "생식발생독성.species": ["랫드", "토끼"], "생식발생독성.tk": "포함", "생식발생독성.glpLevel": "GLP" };
+    const late = stage === "3상" || approval;
+    if (onc) {
+      if (approval) tests.push({ key: "efd", label: "배·태자 발생시험", category: REPRO, item: "배·태자발생(Seg. II)", reason: "진행암 의약품은 허가 신청 때 필요. 수태능과 출생 전후 시험은 필요 없음", basis: "ICH S9 §2.5", rule: "R-A5-16", on: true, fill: efdFill });
+      else later.push({ label: "배·태자 발생시험", when: "품목허가 신청 전. 유전독성이 있고 빠르게 분열하는 세포를 표적하는 약물은 예외", basis: "ICH S9 §2.5" });
+    } else {
+      if (a.wocbp === "예" || late) {
+        const noW = a.wocbp === "아니오" && !approval;
+        const euJp = auth.includes("유럽 EMA") || auth.includes("일본 PMDA");
+        tests.push({ key: "efd", label: "배·태자 발생시험 · 랫드와 토끼", category: REPRO, item: "배·태자발생(Seg. II)", reason: noW ? "임상에 가임 여성을 포함하지 않으면 허가 신청 전까지. 필요하면 체크하세요" : late ? "3상 전까지 필요" : euJp ? "유럽·일본은 가임 여성 노출 전에 본시험을 완료" : "미국은 피임 조치 아래 3상 전까지 미룰 수 있음. 필요하면 체크하세요", basis: "ICH M3(R2) §11.3 · ICH S5(R3) 부록 1 표 3", rule: euJp ? "R-A5-04" : "R-A5-05", on: !noW && (late || euJp), fill: efdFill });
+        if (!late) {
+          tests.push({ key: "pefd", label: "예비 배·태자 발생시험 · 2종", category: REPRO, item: "배·태자발생 예비(pEFD)", reason: "피임 조치가 있으면 가임 여성 150명 이하, 3개월 이하 투여를 본시험 전에 뒷받침", basis: "ICH M3(R2) §11.3, 주석 4", rule: "R-A5-02", on: false, fill: { "생식발생독성.species": ["랫드", "토끼"] } });
+          notes.push({ text: "가임 여성 포함 시 필요한 시험은 인원, 투여기간, 피임 조치, 제출 지역에 따라 달라집니다. 단기(예: 2주) 임상에서 임신 위험을 집중 관리하면 발생독성시험 없이 포함할 수 있는 경우도 있습니다.", basis: "ICH M3(R2) §11.3", rule: "R-A5-02" });
+          if (mfds) notes.push({ text: "국내 고시에는 임상 단계별 생식독성 자료 제출 시기가 정해져 있지 않습니다. 제출 전에 식약처와 확인하세요.", basis: "고시 별표 3", rule: "R-A5-06" });
+        }
+        notes.push({ text: "한 종에서 명백한 기형이나 배·태자 치사가 나오면 두 번째 종 시험은 필요 없을 수 있습니다. 일정에 여유가 있으면 순차 착수를 검토하세요.", basis: "ICH S5(R3) §4.2", rule: "R-A5-10" });
+        prereq.push("토끼 혈장 생체시료 분석법 검증 (토끼 독성동태 포함 시)");
+        askCro.add("임신동물 확보 방식과 교배 시작 동물 수");
+        askCro.add("생식독성 독성동태의 채혈 방식(본시험 동물·위성군)과 예상 검체 수");
+        askCro.add("태자 검사 범위(전수·절반)와 용량설정시험의 견적 포함 여부");
+      } else {
+        later.push({ label: "배·태자 발생시험", when: "가임 여성을 임상에 포함하기 전 (지역과 조건에 따라 다름)", basis: "ICH M3(R2) §11.3" });
+      }
+      if (late) {
+        tests.push({ key: "feed", label: "수태능 및 초기배 발생시험", category: REPRO, item: "수태능·초기배발생(Seg. I)", reason: "대규모 또는 장기 임상(예: 3상) 개시 전에 완료", basis: "ICH M3(R2) §11.1, §11.3", rule: "R-A5-07", on: true });
+        notes.push({ text: mfds ? "수태능 시험의 수컷 교배 전 투여는 국내 기준으로 4주가 기본이며, 2주로 하려면 타당성 설명이 필요합니다." : "수태능 시험의 수컷 교배 전 투여는 반복투여독성에서 막는 소견이 없으면 2주로 할 수 있습니다.", basis: mfds ? "고시 별표 3 ⑤2가(1)5, 별표 13 주18" : "ICH S5(R3) 부록 1 표 2", rule: mfds ? "R-A5-11" : "R-A5-12" });
+      } else {
+        later.push({ label: "수태능 및 초기배 발생시험", when: "3상 등 대규모·장기 임상 개시 전. 그 전에는 반복투여독성의 생식기관 조직검사가 근거", basis: "ICH M3(R2) §11.1, 주석 2" });
+      }
+      if (approval) {
+        tests.push({ key: "ppnd", label: "출생 전후 발생시험", category: REPRO, item: "출생전후발생(Seg. III)", reason: "허가 신청 시 제출", basis: "ICH M3(R2) §11.3", rule: "R-A5-08", on: true });
+        askCro.add("출생 전후 발생시험의 행동·기능 검사 항목과 방법");
+      } else {
+        later.push({ label: "출생 전후 발생시험", when: "품목허가 신청 시", basis: "ICH M3(R2) §11.3" });
+      }
+    }
+  }
+  if (!approval && !research && (onc ? !oncLate : ["1개월 이내", "2주 이내", "단회", "미정"].includes(dur))) later.push(onc ? { label: "반복투여 13주 (임상 일정을 따른 3개월 시험)", when: "3상 개시 전", basis: "ICH S9 §3.4" } : { label: "더 긴 반복투여독성 (13주 이상)", when: "임상 투여기간이 늘어날 때", basis: "ICH M3(R2) 표 1" });
   if (!research && stage !== "1상 진입") later.push({ label: "사람 주요 대사체의 노출 평가", when: "3상 전. 사람에서 총 노출의 10%를 넘는 대사체가 있을 때", basis: "ICH M3(R2) §3" });
   if (overseas) notes.push({ text: "해외 제출이 포함되어 있습니다. 영문 보고서가 필요한지, 미국 제출이면 SEND 자료가 필요한지 확인하세요.", basis: "", rule: "R-A1-21" });
   if (research) notes.push({ text: "자체 연구용으로 보고 GLP를 지정하지 않았습니다. 나중에 허가 자료로 쓰려면 GLP로 다시 해야 합니다.", basis: "", rule: "" });

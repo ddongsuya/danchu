@@ -430,6 +430,7 @@ export const DETAILS: Record<Cat, Field[]> = {
       options: [
         "수태능·초기배발생(Seg. I)",
         "배·태자발생 예비(DRF)",
+        "배·태자발생 예비(pEFD)",
         "배·태자발생(Seg. II)",
         "출생전후발생(Seg. III)",
         "생식발생 스크리닝",
