@@ -25,7 +25,6 @@ export default function ForCro() {
       <SiteHeader />
       <main style={{ flex: 1 }}>
         <section className="sub">
-          <p className="eyebrow">CRO 참여 안내</p>
           <h1 className="sub__title">요청서는 단추가 모으고, 회신은 5분이면 됩니다</h1>
           <p className="sub__lead">
             영업 문의를 따로 받지 않아도 수행 분야에 맞는 요청서가 정리되어 도착합니다. 항목별 금액과 기간만 채우면 의뢰자에게 같은 형식의 비교표로 전달됩니다.

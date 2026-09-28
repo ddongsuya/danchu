@@ -20,6 +20,8 @@ const ITEMS: [string, string, string, string, string][] = [
   ["독성동태(TK)", "1,200", "1,400", "별도 견적", "1,100"],
   ["조직병리", "포함", "포함", "800", "포함"],
 ];
+const CROS = ["CRO A", "CRO B", "CRO C", "CRO D"];
+
 const CONDS: [string, string, string, string, string][] = [
   ["기간 (입고 ~ 보고서안)", "16주", "14주", "18주", "15주"],
   ["착수 가능일", "10월 6일", "9월 22일", "10월 20일", "9월 29일"],
@@ -89,22 +91,16 @@ export default function Landing() {
           </p>
           <div className="rv" data-rv style={{ "--ry": "16px", "--rd": ".16s" } as RV}>
             <EmailStart id="hero-email" />
-            <p className="lp-hero__note">비밀유지계약(CDA) 지원 · 접수 후 약 7영업일</p>
+            <p className="lp-hero__note">공개 가이드라인 근거로 필요한 시험을 제안합니다 · 비밀유지계약(CDA) 지원 · 접수 후 약 7영업일</p>
           </div>
         </section>
 
         {/* 제품 화면 */}
-        <section className="lp-shotband" aria-label="비교표 예시">
+        <section className="lp-shotband" aria-labelledby="sample-title">
           <div className="lp-shot">
-            <div className="lp-shot__bar">
-              <span className="lp-shot__crumb">
-                <span className="lp-shot__id">DC-2026-0142</span>
-                <span className="lp-shot__slash">/</span>
-                <b>28일 반복투여 독성시험 · 랫드 · 회복군 포함</b>
-              </span>
-              <span className="lp-shot__state">
-                <i /> 4개 기관 회신 · 9월 14일 비교표 공개
-              </span>
+            <div className="lp-shot__head">
+              <h2 id="sample-title">28일 반복투여 독성시험(랫드, 회복군 포함)을 요청하면 이렇게 돌아옵니다</h2>
+              <p>기관 4곳이 같은 양식으로 회신한 예시입니다. 회신 기한이 지난 뒤 검수해 공개합니다.</p>
             </div>
             <div className="lp-shot__scroll">
               <div className="lp-tbl">
@@ -121,7 +117,7 @@ export default function Landing() {
                 <div key={k} className="lp-tbl__row">
                   <span className="lp-tbl__k">{k}</span>
                   {cells.map((c, i) => (
-                    <span key={i} className={c === "포함" ? "lp-dim" : c === "별도 견적" ? "lp-warn" : undefined}>
+                    <span key={i} data-label={CROS[i]} className={c === "포함" ? "lp-dim" : c === "별도 견적" ? "lp-warn" : undefined}>
                       {c}
                     </span>
                   ))}
@@ -129,41 +125,28 @@ export default function Landing() {
               ))}
               <div className="lp-tbl__row lp-tbl__row--total">
                 <span className="lp-tbl__k">총액</span>
-                <span>11,200</span>
-                <span className="lp-low">10,500</span>
-                <span>
+                <span data-label="CRO A">11,200</span>
+                <span data-label="CRO B" className="lp-low">10,500</span>
+                <span data-label="CRO C">
                   10,100<em className="lp-warn"> + TK</em>
                 </span>
-                <span>11,700</span>
+                <span data-label="CRO D">11,700</span>
               </div>
                 {CONDS.map(([k, ...cells]) => (
                   <div key={k} className="lp-tbl__row">
                     <span className="lp-tbl__k">{k}</span>
                     {cells.map((c, i) => (
-                      <span key={i}>{c}</span>
+                      <span key={i} data-label={CROS[i]}>
+                        {c}
+                      </span>
                     ))}
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* 참여 기관 로고 자리 */}
-        <section className="lp-logos" aria-label="참여 기관">
-          <p className="lp-logos__lead">국내 규제기관 GLP 인증을 보유한 국내 비임상 시험기관이 참여합니다</p>
-          <div className="lp-marquee">
-            <div className="lp-marquee__track">
-              {Array.from({ length: 2 }).map((_, dup) => (
-                <div key={dup} className="lp-marquee__set" aria-hidden={dup === 1}>
-                  {Array.from({ length: 6 }).map((__, i) => (
-                    <span key={i} className="lp-logo">
-                      [기관 로고]
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
+            <p className="lp-shot__note">
+              최저 총액은 표시만 하며, 단추는 기관에 순위를 매기지 않습니다. 비교표와 정본 견적서가 다르면 기관이 첨부한 견적서가 우선합니다.
+            </p>
           </div>
         </section>
 
@@ -224,7 +207,6 @@ export default function Landing() {
         {/* STEP 1 */}
         <section className="lp-row">
           <div className="lp-row__text rv" data-rv style={{ "--ry": "16px" } as RV}>
-            <span className="lp-step">STEP 1 · 약 5분</span>
             <h3>
               필요한 건
               <br />
@@ -256,7 +238,6 @@ export default function Landing() {
         {/* STEP 2 */}
         <section className="lp-row lp-row--flip">
           <div className="lp-row__text rv" data-rv style={{ "--ry": "16px" } as RV}>
-            <span className="lp-step">STEP 2 · 영업일 1일 내</span>
             <h3>
               수행 가능한 기관
               <br />
@@ -286,7 +267,6 @@ export default function Landing() {
         {/* STEP 3 */}
         <section className="lp-row">
           <div className="lp-row__text rv" data-rv style={{ "--ry": "16px" } as RV}>
-            <span className="lp-step">STEP 3 · 약 7영업일</span>
             <h3>쉽게 비교합니다.</h3>
             <p>
               비교표를 확인하고 선택 한 기관의 연락처만 공개 됩니다.
@@ -330,14 +310,14 @@ export default function Landing() {
               어느 기관의 견적이든 같은 조건에서 보고 고르실 수 있게 운영합니다. 선택은 의뢰자가 합니다.
             </p>
           </div>
-          <ul className="lp-dark__grid">
+          <dl className="lp-rules">
             {PRINCIPLES.map(([t, p], i) => (
-              <li key={t} className="rv" data-rv style={{ "--ry": "14px", "--rd": `${i * 0.08}s` } as RV}>
-                <h3>{t}</h3>
-                <p>{p}</p>
-              </li>
+              <div key={t} className="rv" data-rv style={{ "--ry": "12px", "--rd": `${i * 0.06}s` } as RV}>
+                <dt>{t}</dt>
+                <dd>{p}</dd>
+              </div>
             ))}
-          </ul>
+          </dl>
         </section>
 
         {/* 시험 분야 */}

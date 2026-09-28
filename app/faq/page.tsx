@@ -24,7 +24,6 @@ export default function Faq() {
       <SiteHeader />
       <main style={{ flex: 1 }}>
         <section className="sub">
-          <p className="eyebrow">자주 묻는 질문</p>
           <h1 className="sub__title">궁금한 점을 모았습니다</h1>
           <div className="faq">
             {FAQ.map((q) => (

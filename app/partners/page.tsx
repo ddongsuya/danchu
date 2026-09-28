@@ -12,7 +12,6 @@ export default function Partners() {
       <SiteHeader />
       <main style={{ flex: 1 }}>
         <section className="sub">
-          <p className="eyebrow">협력기관</p>
           <h1 className="sub__title">클러스터·협회와 함께 준비하고 있습니다</h1>
           <p className="sub__lead">
             바이오 클러스터, 산업 협회, 창업 지원기관과 제휴해 입주 기업과 회원사가 비임상 시험 견적을 더 쉽게 받을 수 있도록 준비 중입니다. 제휴 기관은 확정되는 대로 이곳에 안내합니다.

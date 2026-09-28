@@ -4,11 +4,12 @@
    레이아웃: ≥960px 왼쪽 사이드바, 그 아래에서는 상단 바 + 하단 탭. */
 
 .pt {
-  --brand: #A3690F; --brand-dark: #835409; --tint: #FAF3E6; --bline: #EAD6AE;
-  --ink: #1A1919; --body: #3D3C3A; --ink2: #5A5957; --muted: #6F6E6B; --ph: #98968F;
-  --iline: #D9D8D5; --cline: #E5E4E2; --dash: #CBCAC5; --track: #ECEBE9;
-  --sf: #F5F5F4; --wh: #FFFFFF; --onbrand: #FFFFFF;
-  --err-bg: #FBEFEB; --err: #8F3A27; --ok-bg: #EAF3EC; --ok: #2F6B3A; --warn-bg: #FFF4DC; --warn: #8A5A12;
+  /* 색은 app/globals.css 한곳에서 정의한다. 여기서는 포털이 쓰는 이름으로 잇기만 한다. */
+  --tint: var(--brand-tint); --bline: var(--brand-line);
+  --ink2: var(--ink-2); --ph: var(--placeholder);
+  --iline: var(--input-line); --cline: var(--card-line);
+  --sf: var(--surface); --wh: var(--white); --onbrand: var(--on-brand);
+  --err-bg: var(--error-bg); --err: var(--error-fg); --ok: var(--ok-fg); --warn: var(--warn-fg);
   --top: env(safe-area-inset-top, 0px); --bot: env(safe-area-inset-bottom, 0px);
   --side: 232px;
 
@@ -16,13 +17,7 @@
   font-size: 15px; line-height: 1.55; word-break: keep-all; -webkit-font-smoothing: antialiased;
   min-height: 100dvh; display: flex; flex-direction: column;
 }
-:root[data-theme="dark"] .pt {
-  --brand: #D19A3A; --brand-dark: #E4B25A; --tint: #2A2116; --bline: #5C4621;
-  --ink: #F5F5F4; --body: #DAD8D3; --ink2: #BDBAB4; --muted: #A19F99; --ph: #6F6D68;
-  --iline: #3A3937; --cline: #2E2D2B; --dash: #454340; --track: #2A2927;
-  --sf: #141414; --wh: #1E1D1C; --onbrand: #1A1919;
-  --err-bg: #3A221C; --err: #F0A48F; --ok-bg: #1F2F22; --ok: #8FD19C; --warn-bg: #3A2E14; --warn: #E8C270;
-}
+/* 다크 값도 globals.css의 :root[data-theme="dark"]에서 온다 */
 .pt * { box-sizing: border-box; }
 .pt button { font: inherit; cursor: pointer; }
 .pt button:disabled { cursor: default; }

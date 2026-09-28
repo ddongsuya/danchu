@@ -23,8 +23,7 @@ export default function Guide() {
       <SiteHeader />
       <main style={{ flex: 1 }}>
         <section className="sub">
-          <p className="eyebrow">비임상 시험 가이드 · 의약품</p>
-          <h1 className="sub__title">무슨 시험을, 어떤 설계로 해야 할까요</h1>
+          <h1 className="sub__title">의약품 비임상, 무슨 시험을 어떤 설계로 해야 할까요</h1>
           <p className="sub__lead">
             처음 비임상을 준비하면 견적보다 먼저 막히는 곳이 시험 구성입니다. 공개된 가이드라인을 기준으로 출발점을 정리했습니다. 여기서 구성을 잡고, 그대로 견적을 요청할 수 있습니다.
           </p>
@@ -34,7 +33,6 @@ export default function Guide() {
 
         <section className="band--soft">
           <div className="sub" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <p className="eyebrow">1 · 기간</p>
             <h2 className="h2">반복투여독성은 몇 주를 해야 할까요</h2>
             <p className="sub__lead">임상에서 투여할 기간이 비임상 기간을 정합니다. ICH M3(R2)의 기간 대응표를 그대로 옮겼습니다.</p>
             <DurationCalc />
@@ -53,7 +51,6 @@ export default function Guide() {
         </section>
 
         <section className="sub">
-          <p className="eyebrow">2 · 구성</p>
           <h2 className="h2">임상 1상 전에 필요한 시험 묶음</h2>
           {PACKAGE_WHY.map((w) => {
             const p = PRESETS.find((x) => x.key === w.presetKey);
@@ -86,7 +83,6 @@ export default function Guide() {
 
         <section className="band--soft">
           <div className="sub" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <p className="eyebrow">3 · 설계</p>
             <h2 className="h2">항목별 설계 예</h2>
             <p className="sub__lead">가이드라인에 근거한 설계 예입니다. 단추가 정한 기준이 아니며, 세부는 기관마다 다릅니다. 요청서에서 "이 예로 채우기"를 누르면 조건이 채워지고, 기관은 자신의 방식을 회신에 설명합니다.</p>
             <div className="gcards">
@@ -107,7 +103,6 @@ export default function Guide() {
         </section>
 
         <section className="sub">
-          <p className="eyebrow">용어</p>
           <h2 className="h2">견적서에서 자주 만나는 말</h2>
           <dl className="gloss">
             {GLOSSARY.map(([t, d]) => (

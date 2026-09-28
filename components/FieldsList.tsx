@@ -33,9 +33,8 @@ export function FieldsList() {
         </button>
       </div>
       <ol className="fields">
-        {shown.map(([name, desc], i) => (
+        {shown.map(([name, desc]) => (
           <li key={name}>
-            <span className="fields__no">{String(i + 1).padStart(2, "0")}</span>
             <div>
               <div className="fields__name">{name}</div>
               <div className="fields__desc">{desc}</div>

@@ -22,6 +22,61 @@
 
   --error-bg: #fbefeb;
   --error-fg: #8f3a27;
+
+  --ok-bg: #eaf3ec;
+  --ok-fg: #2f6b3a;
+  --warn-bg: #fff4dc;
+  --warn-fg: #8a5a12;
+  --on-brand: #ffffff;
+
+  /* 어두운 면(원칙 섹션·꼬리말) — 라이트에서는 잉크 위 밝은 글자, 다크에서는 한 단계 위 표면 */
+  --inverse-surface: #16150f;
+  --inverse-ink: #f3f1ea;
+  --inverse-body: #b4b0a5;
+  --inverse-muted: #9a968b;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  color-scheme: light;
+}
+
+/* 다크 — 포털(components/shell/portal.css)과 같은 값. 두 화면의 색이 갈라지지 않게 한곳에서 정의한다. */
+:root[data-theme="dark"] {
+  --brand: #d19a3a;
+  --brand-dark: #e4b25a;
+  --brand-tint: #2a2116;
+  --brand-line: #5c4621;
+
+  --ink: #f5f5f4;
+  --body: #dad8d3;
+  --ink-2: #bdbab4;
+  --muted: #a19f99;
+  --placeholder: #6f6d68;
+
+  --input-line: #3a3937;
+  --card-line: #2e2d2b;
+  --dash: #454340;
+  --track: #2a2927;
+
+  --surface: #141414;
+  --white: #1e1d1c;
+  --dark-body: #dad8d3;
+
+  --error-bg: #3a221c;
+  --error-fg: #f0a48f;
+  --ok-bg: #1f2f22;
+  --ok-fg: #8fd19c;
+  --warn-bg: #3a2e14;
+  --warn-fg: #e8c270;
+  --on-brand: #1a1919;
+
+  --inverse-surface: #0e0e0d;
+  --inverse-ink: #f5f5f4;
+  --inverse-body: #a19f99;
+  --inverse-muted: #7d7b76;
+
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -43,7 +98,18 @@ details > summary { list-style: none; cursor: pointer; }
 details > summary::-webkit-details-marker { display: none; }
 details[open] .chev { transform: rotate(180deg); }
 input::placeholder, textarea::placeholder { color: var(--placeholder); }
-:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+
+/* 우리가 그리지 않은 표면도 같은 팔레트로 */
+::selection { background: var(--brand-tint); color: var(--ink); }
+:root[data-theme="dark"] ::selection { background: var(--brand-line); color: var(--ink); }
+input, textarea { caret-color: var(--brand); }
+a { text-underline-offset: 3px; }
+* { scrollbar-color: var(--dash) transparent; scrollbar-width: thin; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--dash); border: 3px solid var(--white); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise .28s ease-out; }
@@ -60,8 +126,10 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 .lang span { color: var(--dash); }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; border: 0; font-weight: 600; white-space: nowrap; }
-.btn--pill { border-radius: 999px; background: var(--brand); color: var(--white); }
-.btn--pill:hover { background: var(--brand-dark); color: var(--white); }
+.btn--pill { border-radius: 999px; background: var(--brand); color: var(--on-brand); }
+.btn--pill:hover { background: var(--brand-dark); color: var(--on-brand); }
+.btn, .btn--next, .btn--ghost { transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease; }
+.btn:active, .btn--next:active:not(:disabled), .btn--ghost:active:not(:disabled) { transform: scale(0.97); }
 .btn--sm { padding: 11px 16px; font-size: 14px; }
 .btn--lg { padding: 16px 28px; font-size: 17px; }
 .btn--outline { background: var(--white); color: var(--ink); border: 1px solid var(--input-line); border-radius: 10px; padding: 10px 16px; font-size: 14px; }
@@ -70,7 +138,7 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 /* 폼 하단 큰 버튼 (인증·위자드) */
 .btn--next {
   width: 100%; height: 56px; border-radius: 14px; font-size: 17px; font-weight: 600;
-  background: var(--brand); color: var(--white); border: 0;
+  background: var(--brand); color: var(--on-brand); border: 0;
 }
 .btn--next:hover:not(:disabled) { filter: brightness(.95); }
 .btn--next:disabled { background: var(--track); color: var(--placeholder); cursor: default; }
@@ -192,7 +260,7 @@ input::placeholder, textarea::placeholder { color: var(--placeholder); }
 .rv {
   opacity: 0;
   transform: translate(var(--rx, 0), var(--ry, 0));
-  transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1);
+  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
   transition-delay: var(--rd, 0s);
 }
 .rv.in { opacity: 1; transform: none; }

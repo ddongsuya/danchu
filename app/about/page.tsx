@@ -56,7 +56,6 @@ export default function About() {
       <SiteHeader />
       <main style={{ flex: 1 }}>
         <section className="sub">
-          <p className="eyebrow">서비스 소개</p>
           <h1 className="sub__title">
             모든 기관의 견적을
             <br />
@@ -69,7 +68,6 @@ export default function About() {
 
         <section className="band--soft">
           <div className="sub" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <p className="eyebrow">왜 만들었나</p>
             <h2 className="h2">견적은 받았는데, 비교가 까다로워요</h2>
             <p className="sub__lead">
               비임상 시험은 신약이든 건강기능식품이든 의료기기든 허가로 가는 길목에서 반드시 거쳐야 하고, 한 건에 수천만 원에서 수억 원이 듭니다. 그런데 이 큰 결정을 내리는 과정이 아직도 메일과 전화, 담당자의 기억에 기대고 있습니다.
@@ -90,7 +88,6 @@ export default function About() {
         </section>
 
         <section className="sub">
-          <p className="eyebrow">단추의 방식</p>
           <h2 className="h2">한 번 요청하면, 같은 양식으로 돌아옵니다</h2>
           <div className="solves">
             {HOW.map(([t, p], i) => (
@@ -105,7 +102,6 @@ export default function About() {
 
         <section className="band--soft">
           <div className="sub" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <p className="eyebrow">같은 양식</p>
             <h2 className="h2">비교하기 쉽게 전해드려요</h2>
             <p className="sub__lead">
               기관마다 다른 견적서를 읽고 항목을 맞춰 보는 일이 사라집니다. 요청서에 적은 시험 항목이 그대로 모든 기관 회신 표의 행이 되고, 기관은 그 행에 답합니다. 의뢰자는 아래 정보를 기관 수만큼 나란히 봅니다.
@@ -123,7 +119,6 @@ export default function About() {
         </section>
 
         <section className="sub">
-          <p className="eyebrow">기밀</p>
           <h2 className="h2">물질 정보는 필요한 기관에, 필요한 범위까지만</h2>
           <p className="sub__lead">
             기밀 등급을 지정하면 비밀유지계약을 체결한 기관에만 요청서 전문이 전달되고, 그 전까지 회사명은 가려집니다. 수행 분야가 다른 기관에는 아예 전달하지 않습니다.
@@ -133,7 +128,6 @@ export default function About() {
 
         <section className="band--soft">
           <div className="sub" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            <p className="eyebrow">신뢰</p>
             <h2 className="h2">안심하고 고르실 수 있도록</h2>
             <p className="sub__lead">
               어느 기관의 견적이든 같은 조건에서 보고 고르실 수 있게, 단추는 아래 원칙을 지킵니다.
