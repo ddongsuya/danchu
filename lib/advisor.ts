@@ -30,7 +30,10 @@ export type Question = {
 
 export const PRODUCTS = ["합성의약품", "바이오의약품", "세포·유전자치료제", "건강기능식품", "화장품", "의료기기", "화학물질·농약"] as const;
 /** 지금 제안을 만들 수 있는 유형 */
-export const SUPPORTED_PRODUCTS: readonly string[] = ["합성의약품", "바이오의약품", "세포·유전자치료제"];
+export const SUPPORTED_PRODUCTS: readonly string[] = ["합성의약품", "바이오의약품", "세포·유전자치료제", "건강기능식품"];
+const HF = "건강기능식품";
+/** 의약품 질문(단계, 임상 계획)은 건강기능식품에는 묻지 않는다 */
+const pharma = (a: Answers) => a.product !== HF;
 const BIO_TYPES = ["단클론항체", "재조합 단백질·펩타이드", "항체약물접합체", "백신", "동등생물의약품", "세포·유전자치료제"];
 
 const PRIOR = [
@@ -57,17 +60,23 @@ export const QUESTIONS: Question[] = [
   { id: "product", step: 1, q: "무엇을 개발하시나요?", options: [...PRODUCTS], required: true },
   { id: "bioType", step: 1, q: "어떤 바이오의약품인가요?", options: BIO_TYPES, required: true, when: (a) => a.product === "바이오의약품" },
   { id: "bioSpecies", step: 1, q: "약리 활성이 나타나는 동물종(관련 종)을 확인했나요?", sub: "바이오의약품의 독성시험은 관련 종에서 합니다.", options: ["설치류와 비설치류 모두", "영장류만", "설치류만", "관련 종 없음", "아직 확인 안 함"], required: true, when: (a) => a.product === "바이오의약품" && a.bioType !== "백신" && a.bioType !== "세포·유전자치료제" },
-  { id: "stage", step: 1, q: "어느 단계를 준비하시나요?", sub: "단계에 따라 필요한 시험 범위가 달라집니다.", options: ["1상 진입", "2상", "3상", "품목허가", "자체 연구"], required: true },
-  { id: "auth", step: 1, q: "어디에 제출하시나요?", sub: "해당하는 곳을 모두 고르세요.", multi: true, options: ["식약처", "미국 FDA", "유럽 EMA", "일본 PMDA", "기타"], required: true, when: (a) => a.stage !== "자체 연구" },
-  { id: "indication", step: 1, q: "적응증은 어디에 해당하나요?", options: ["진행암", "중대하거나 생명을 위협하는 질환", "그 외"], required: true },
-  { id: "route", step: 2, q: "임상 투여경로는 무엇인가요?", options: ["경구", "정맥", "피하", "근육", "국소 적용(피부·점안 등)", "흡입", "기타"], required: true },
-  { id: "duration", step: 2, q: "임상에서 얼마나 투여할 예정인가요?", sub: "반복투여독성 기간을 정합니다.", options: ["단회", "2주 이내", "1개월 이내", "3개월 이내", "6개월 이내", "6개월 초과·만성", "미정"], required: true },
-  { id: "freq", step: 2, q: "임상 투여 빈도는요?", options: ["1일 1회", "1일 2회 이상", "주 1회", "간헐", "지속주입", "미정"] },
-  { id: "wocbp", step: 2, q: "임상에 가임 여성이 포함되나요?", options: ["예", "아니오", "미정"], required: true },
-  { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => a.wocbp === "예" },
-  { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => a.wocbp === "예" },
-  { id: "ped", step: 2, q: "소아를 임상에 포함하거나 소아 적응증을 개발하나요?", options: ["아니오", "예 · 2세 미만 포함", "예 · 2세 이상", "미정"] },
-  { id: "cns", step: 1, when: (a) => a.product !== "바이오의약품", q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
+  { id: "stage", step: 1, when: pharma, q: "어느 단계를 준비하시나요?", sub: "단계에 따라 필요한 시험 범위가 달라집니다.", options: ["1상 진입", "2상", "3상", "품목허가", "자체 연구"], required: true },
+  { id: "auth", step: 1, q: "어디에 제출하시나요?", sub: "해당하는 곳을 모두 고르세요.", multi: true, options: ["식약처", "미국 FDA", "유럽 EMA", "일본 PMDA", "기타"], required: true, when: (a) => pharma(a) && a.stage !== "자체 연구" },
+  { id: "indication", step: 1, when: pharma, q: "적응증은 어디에 해당하나요?", options: ["진행암", "중대하거나 생명을 위협하는 질환", "그 외"], required: true },
+  { id: "route", step: 2, when: pharma, q: "임상 투여경로는 무엇인가요?", options: ["경구", "정맥", "피하", "근육", "국소 적용(피부·점안 등)", "흡입", "기타"], required: true },
+  { id: "duration", step: 2, when: pharma, q: "임상에서 얼마나 투여할 예정인가요?", sub: "반복투여독성 기간을 정합니다.", options: ["단회", "2주 이내", "1개월 이내", "3개월 이내", "6개월 이내", "6개월 초과·만성", "미정"], required: true },
+  { id: "freq", step: 2, when: pharma, q: "임상 투여 빈도는요?", options: ["1일 1회", "1일 2회 이상", "주 1회", "간헐", "지속주입", "미정"] },
+  { id: "wocbp", step: 2, when: pharma, q: "임상에 가임 여성이 포함되나요?", options: ["예", "아니오", "미정"], required: true },
+  { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => pharma(a) && a.wocbp === "예" },
+  { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => pharma(a) && a.wocbp === "예" },
+  { id: "ped", step: 2, when: pharma, q: "소아를 임상에 포함하거나 소아 적응증을 개발하나요?", options: ["아니오", "예 · 2세 미만 포함", "예 · 2세 이상", "미정"] },
+  { id: "cns", step: 1, when: (a) => pharma(a) && a.product !== "바이오의약품", q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
+  { id: "hfKind", step: 1, q: "원료는 어떤 성격인가요?", sub: "독성시험이 필요한지는 원료의 성격으로 정해집니다.", options: ["섭취 경험이 있는 원료 자체", "단순 추출물 (물·주정·이산화탄소)", "그 밖의 추출·정제·발효", "합성 원료", "섭취 경험이 없는 원료"], required: true, when: (a) => a.product === HF },
+  { id: "hfAdverse", step: 1, q: "알려진 부작용이 있나요?", options: ["예", "아니오", "모름"], when: (a) => a.product === HF },
+  { id: "hfIntake", step: 2, q: "제안하는 섭취량이 평소 섭취량보다 많은가요?", sub: "식품으로 먹던 원료는 평균 섭취량의 3배 또는 극단 섭취량과 비교합니다.", options: ["예", "아니오", "근거 자료 없음"], required: true, when: (a) => a.product === HF },
+  { id: "hfFood", step: 2, q: "식품이나 식품첨가물로 쓸 수 있는 원료인가요?", options: ["예", "아니오", "모름"], when: (a) => a.product === HF && (a.hfKind === "그 밖의 추출·정제·발효" || a.hfKind === "합성 원료") },
+  { id: "hfMarker", step: 2, q: "지표 성분과 분석법이 있나요?", sub: "조제물분석에 필요합니다.", options: ["있음", "없음"], when: (a) => a.product === HF },
+  { id: "hfComplex", step: 2, q: "여러 원료를 섞은 복합원료인가요?", options: ["예", "아니오"], when: (a) => a.product === HF },
   { id: "prior", step: 3, q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외합니다.", multi: true, options: PRIOR, required: true },
 ];
 
@@ -130,6 +139,7 @@ export function advise(a: Answers): Advice {
       tests: [], owned: [], later: [], notes: [], askCro: [], prereq: [],
     };
   }
+  if (product === HF) return adviseHf(a);
   if (product === "바이오의약품" || product === "세포·유전자치료제") return adviseBio(product === "세포·유전자치료제" ? { ...a, bioType: "세포·유전자치료제" } : a);
 
   const tests: Suggest[] = [];
@@ -427,8 +437,10 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
     const cur = Array.isArray(v[key]) ? (v[key] as string[]) : [];
     v[key] = [...new Set([...cur, ...vals])];
   };
+  const hf = a.product === HF;
   v.purpose = a.stage === "자체 연구" ? "자체 연구용" : "허가자료 제출용";
-  v.devField = a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
+  if (hf) { v.authority = ["식약처(MFDS)"]; v.route = "경구(PO)"; }
+  v.devField = hf ? "건강기능식품" : a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
   const auth = arr(a.auth).map((x) => AUTH_MAP[x]).filter(Boolean);
   if (auth.length) v.authority = auth;
   const route = ROUTE_MAP[String(a.route ?? "")];
@@ -599,5 +611,72 @@ function adviseBio(a: Answers): Advice {
 
   const seen = new Set<string>();
   const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.rule.startsWith("R-F1") ? "바이오의약품" : topicOf(n) }));
+  return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
+}
+
+/* ── 건강기능식품 (기술문서 F2) ───────────────────────────
+ * 독성시험이 필요한지는 원료의 성격(섭취 경험, 제조 방법, 섭취량)으로 정해진다.
+ * 최종 구분은 식약처가 판단한다. 여기서는 해당 가능성을 안내한다.
+ */
+function adviseHf(a: Answers): Advice {
+  const tests: Suggest[] = [];
+  const notes: Note[] = [];
+  const later: Later[] = [];
+  const askCro = new Set<string>();
+  const prereq: string[] = [];
+  const kind = String(a.hfKind ?? "");
+  const adverse = a.hfAdverse === "예";
+  const more = a.hfIntake === "예" || a.hfIntake === "근거 자료 없음";
+  const food = String(a.hfFood ?? "모름");
+  const owned = arr(a.prior).filter((p) => p !== "없음");
+  const own = (s: string) => owned.some((p) => p.startsWith(s));
+  const BASIS = "건강기능식품 기능성 원료 및 기준·규격 인정에 관한 규정 별표 3";
+
+  // 별표 3 의사결정도
+  let need: boolean;
+  let why: string;
+  if (kind === "섭취 경험이 있는 원료 자체" || kind === "단순 추출물 (물·주정·이산화탄소)") {
+    need = adverse || more;
+    why = adverse ? "알려진 부작용이 있는 원료" : more ? "제안 섭취량이 평소 섭취량보다 많거나 근거 자료가 없는 경우" : "섭취 경험이 있고 섭취량이 늘지 않은 원료";
+  } else if (kind === "그 밖의 추출·정제·발효" || kind === "합성 원료") {
+    need = food !== "예" || more;
+    why = food !== "예" ? "식품이나 식품첨가물로 쓸 수 있는지 확인되지 않은 원료" : more ? "제안 섭취량이 평소 섭취량보다 많거나 근거 자료가 없는 경우" : "식품으로 쓸 수 있고 섭취량이 늘지 않은 원료";
+    if (kind === "합성 원료" && food !== "예") notes.push({ text: "합성 원료가 식품이나 식품첨가물로 쓸 수 없고 천연에 존재하는 단일물질과도 같지 않으면 기능성 원료로 신청할 수 없습니다. 먼저 확인하세요.", basis: BASIS, rule: "R-F2-03" });
+  } else {
+    need = true;
+    why = "섭취 경험이 없는 원료";
+  }
+
+  notes.push({ text: need ? `${why}에 해당해 독성시험 자료가 필요한 구분으로 보입니다. 기본은 단회투여독성, 90일 반복투여독성, 유전독성입니다.` : `${why}에 해당해 섭취 근거, 안전성 정보, 섭취량평가 자료로 가능한 구분으로 보입니다. 독성시험은 필요하지 않을 수 있어 해제해 두었습니다.`, basis: `${BASIS} 의사결정도, 주 5`, rule: need ? "R-F2-02" : "R-F2-01" });
+  notes.push({ text: "어느 구분에 해당하는지는 식약처가 최종 판단합니다. 여기의 안내는 답하신 내용으로 본 해당 가능성입니다. 제안 섭취량은 식품으로 쓰던 원료면 평균 섭취량의 3배 또는 극단 섭취량과 비교합니다.", basis: `${BASIS} 주요 검토 사항`, rule: "R-F2-08" });
+
+  const reason = (s: string) => (need ? s : `${s}. 독성시험이 필요한 구분이면 체크하세요`);
+  const common = { "일반독성.species": ["랫드"], "일반독성.glpLevel": "GLP", "일반독성.histopath": "포함", "일반독성.formulation": "포함" };
+  if (!own("단회투여독성")) tests.push({ key: "single", label: "단회투여독성", category: "일반독성", item: "단회(급성)투여독성", reason: reason("기본 독성시험"), basis: `${BASIS} 주 5`, rule: "R-F2-02", on: need, fill: common });
+  if (!own("반복투여 13주")) {
+    tests.push({ key: "repeat-13", label: "반복투여 13주 (90일)", category: "일반독성", item: "반복투여 13주", reason: reason("기본 독성시험. 건강기능식품은 90일이 기본이며 임상 기간에 따라 달라지지 않습니다"), basis: `${BASIS} 주 5 · OECD TG 408`, rule: "R-F2-05", on: need, fill: common });
+    if (!own("용량결정시험")) tests.push({ key: "drf", label: "용량결정시험(DRF) 4주", category: "일반독성", item: "용량결정(DRF) 4주", reason: "고시가 요구하는 시험은 아닙니다. 90일 시험의 용량을 정하려고 하는 경우가 많습니다. 필요하면 체크하세요", basis: "고시 요구 아님", rule: "R-F2-05", on: false });
+    askCro.add("용량결정시험의 기간과 본시험 견적 포함 여부, 회복군 포함 여부");
+    askCro.add("시험물질 조제 방법과 부형제, 조제 가능한 최고 농도, 고용량 설정 근거");
+  }
+  if (!own("복귀돌연변이")) tests.push({ key: "ames", label: "복귀돌연변이(Ames)", category: "유전독성", item: "복귀돌연변이(Ames, TG 471)", reason: reason("유전독성 기본 조합"), basis: `${BASIS} 주 5 · 의약품등의 독성시험기준 별표 4`, rule: "R-F2-02", on: need, fill: { "유전독성.glpLevel": "GLP" } });
+  if (!own("체외 염색체 손상")) tests.push({ key: "invitro-ca", label: "체외 염색체이상", category: "유전독성", item: "염색체이상 in vitro(TG 473)", reason: reason("유전독성 기본 조합"), basis: `${BASIS} 주 5`, rule: "R-F2-02", on: need });
+  if (!own("체내 소핵")) tests.push({ key: "invivo-mn", label: "체내 소핵", category: "유전독성", item: "소핵 in vivo(마우스)", reason: reason("유전독성 기본 조합"), basis: `${BASIS} 주 5`, rule: "R-F2-02", on: need });
+  if (tests.some((t) => t.category === "유전독성")) askCro.add("유전독성의 용량 설정 예비시험 포함 여부");
+
+  tests.push({ key: "form-conc", label: "조제물분석 · 함량", category: "조제물분석", item: "함량", reason: "GLP 독성시험에 따라옵니다. 추출물은 지표 성분으로 측정합니다", basis: "OECD GLP 원칙 II.6.2.5", rule: "R-B4-01", on: need });
+  tests.push({ key: "form-homo", label: "조제물분석 · 균질성", category: "조제물분석", item: "균질성", reason: "추출물은 현탁 상태인 경우가 많아 필요", basis: "OECD GLP 원칙 II.6.2.5", rule: "R-B4-02", on: need });
+  tests.push({ key: "form-stab", label: "조제물분석 · 안정성", category: "조제물분석", item: "안정성", reason: "조제 후 투여까지 농도가 유지되는지", basis: "OECD GLP 원칙 II.6.2.5", rule: "R-B4-06", on: need });
+  askCro.add("조제물분석의 지표 성분과 분석법 개발·검증 포함 여부");
+  if (a.hfMarker !== "있음") prereq.push("지표 성분과 분석법 확정 (조제물분석에 필요)");
+  else prereq.push("조제물 분석법 검증 (독성시험 착수 전 완료)");
+
+  later.push({ label: "생식·발생독성, 항원성, 면역독성, 발암성", when: "기본시험에서 원료와 관련된 이상반응이 있거나 안전성이 확인되지 못했을 때 요구될 수 있음", basis: `${BASIS} 주 5 단서` });
+  notes.push({ text: "독성시험 자료는 GLP에 따라 운영된 기관이 OECD 시험 지침에 준하여 시험한 보고서여야 합니다. 원자료를 제출합니다.", basis: "같은 규정 제13조제4호, 제14조제7호다목", rule: "R-F2-05" });
+  notes.push({ text: "기능성 자료로 내는 동물시험과 시험관시험은 학술지에 게재된 자료여야 합니다. 독성시험(GLP 보고서)과 요건이 다릅니다.", basis: "같은 규정 제14조제8호다목", rule: "R-F2-09" });
+  if (a.hfComplex === "예") notes.push({ text: "복합원료는 원재료별로 각각 판단하고 상호작용 자료를 추가로 냅니다. 복합원료 자체로 독성시험을 하면 추가 자료를 면제받을 수 있습니다.", basis: `${BASIS} 주요 검토 사항`, rule: "R-F2-03" });
+
+  const seen = new Set<string>();
+  const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.rule === "R-F2-09" ? "기능성 자료" : n.rule.startsWith("R-F2-0") && ["R-F2-01", "R-F2-02", "R-F2-03", "R-F2-08"].includes(n.rule) ? "독성시험이 필요한가" : "시험 요건" }));
   return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
 }
