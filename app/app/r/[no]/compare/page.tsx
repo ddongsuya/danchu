@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { glpCoverage } from "@/lib/quote-items";
-import { designSummary } from "@/lib/catalog";
+import { designSummary, explainOf } from "@/lib/catalog";
 import { Crumb } from "@/components/app/ui";
 import { CompareBoard, type CompareCol } from "@/components/CompareBoard";
 
@@ -54,7 +54,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: i.design && typeof i.design.note === "string" ? i.design.note : undefined })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: i.design && typeof i.design.note === "string" ? i.design.note : undefined, explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,

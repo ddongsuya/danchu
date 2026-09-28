@@ -7,7 +7,8 @@ import { Caret, CheckMark } from "@/components/app/ui";
 import { EMPTY_COMMON, INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem, type RfqView } from "@/lib/cro-data";
 import { won } from "@/lib/format";
 import { uploadToSigned } from "@/lib/upload";
-import { designSummary, ROUTES, SPECIES } from "@/lib/catalog";
+import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
+import type { Cat } from "@/lib/rfq-schema";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
 const MAX_PDF = 20 * 1024 * 1024;
@@ -18,8 +19,11 @@ const dstr = (d: Design, k: string) => (typeof d[k] === "string" ? (d[k] as stri
 const dspecies = (d: Design) => (Array.isArray(d.species) ? (d.species as string[]) : []);
 
 /** 항목별 설계 요약 — 접힌 상태에서는 한 줄, 펼치면 칸별 수정 */
-function DesignEditor({ value, disabled, onChange }: { value: Design; disabled: boolean; onChange: (d: Design) => void }) {
+function DesignEditor({ value, category, disabled, onChange }: { value: Design; category: string; disabled: boolean; onChange: (d: Design) => void }) {
   const [open, setOpen] = useState(false);
+  const explain = EXPLAIN_FIELDS[category as Cat] ?? [];
+  const extra = (value.extra && typeof value.extra === "object" ? value.extra : {}) as Record<string, unknown>;
+  const filledExp = explain.filter((f) => typeof extra[f.id] === "string" && (extra[f.id] as string).trim()).length;
   const summary = designSummary({
     species: dspecies(value),
     groups_ctrl: dnum(value, "groups_ctrl") ? Number(dnum(value, "groups_ctrl")) : null,
@@ -80,8 +84,21 @@ function DesignEditor({ value, disabled, onChange }: { value: Design; disabled: 
           </div>
         </div>
       )}
+      {explain.length > 0 && (
+        <details style={{ marginTop: 10 }}>
+          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>기관마다 다른 부분 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>{filledExp} / {explain.length} · 비교표에 나란히 표시됩니다</span></summary>
+          <div className="stack" style={{ gap: 8, marginTop: 8 }}>
+            {explain.map((f) => (
+              <div key={f.id} className="fld" style={{ gap: 4 }}>
+                <label className="fld__lab" style={{ fontSize: 12 }}>{f.label}</label>
+                <input className="inp" style={{ height: 40, fontSize: 13 }} placeholder={f.placeholder} disabled={disabled} value={typeof extra[f.id] === "string" ? (extra[f.id] as string) : ""} onChange={(e) => onChange({ ...value, extra: { ...extra, [f.id]: e.target.value.slice(0, 300) } })} aria-label={f.label} />
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       <div className="fld" style={{ gap: 4, marginTop: 10 }}>
-        <label className="fld__lab" style={{ fontSize: 12 }}>설계 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 기관의 방식을 적으면 비교표에 그대로 표시됩니다</span></label>
+        <label className="fld__lab" style={{ fontSize: 12 }}>그 밖의 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 비교표에 그대로 표시됩니다</span></label>
         <textarea className="ta" rows={2} style={{ fontSize: 13 }} placeholder="예: 회복 동물은 대조군·고용량군의 마지막 5마리/성 지정. 분석법 검증 1회 포함." disabled={disabled} value={dstr(value, "note")} onChange={(e) => onChange({ ...value, note: e.target.value.slice(0, 1000) })} />
       </div>
     </div>
@@ -342,7 +359,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                     <span>주</span>
                   </div>
                 </div>
-                {!no && <DesignEditor value={it.design ?? {}} disabled={readOnly} onChange={(d) => update(r.seq, { design: d })} />}
+                {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly} onChange={(d) => update(r.seq, { design: d })} />}
                 {needReason && (
                   <input className="inp" style={{ height: 44, fontSize: 14 }} placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
                 )}

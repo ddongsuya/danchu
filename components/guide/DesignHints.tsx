@@ -8,7 +8,7 @@ const CAT = "일반독성";
 
 /**
  * 요청서 상세 조건의 일반독성 영역에 붙는 설계 단서.
- * 고른 항목의 표준 설계 카드 + "표준 설계로 채우기", 임상 투여기간에서 역산한 필요 기간.
+ * 고른 항목의 표준 설계 카드 + "이 예로 채우기", 임상 투여기간에서 역산한 필요 기간.
  */
 export function DesignHints({ values, onFill }: { values: Values; onFill: (patch: Record<string, string | string[]>) => void }) {
   const items = Array.isArray(values[`${CAT}.items`]) ? (values[`${CAT}.items`] as string[]) : [];
@@ -46,7 +46,7 @@ export function DesignHints({ values, onFill }: { values: Values; onFill: (patch
               <b>{c.title}</b>
               <span>{c.purpose}</span>
             </button>
-            <button type="button" className="b2 bsm" onClick={() => fill(c)}>{filled === c.title ? "채웠습니다" : "표준 설계로 채우기"}</button>
+            <button type="button" className="b2 bsm" onClick={() => fill(c)}>{filled === c.title ? "채웠습니다" : "이 예로 채우기"}</button>
           </div>
           {open === c.title && (
             <dl className="hint__dl">

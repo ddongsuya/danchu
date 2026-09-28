@@ -171,7 +171,7 @@ export function NewRequest({ contact }: { contact: Contact }) {
           </div>
         </div>
         <div className="stack" style={{ gap: 12 }}>
-          {path("상황을 말하고 제안 받기", "개발 단계와 임상 계획, 이미 가진 자료를 답하면 필요한 시험을 가이드라인 근거와 함께 제안합니다. 지금은 합성의약품을 지원합니다.", "질문 10개 안팎 · 2분", true, () => { setPhase("advisor"); window.scrollTo(0, 0); })}
+          {path("상황을 말하고 제안 받기", "개발 단계와 임상 계획, 이미 가진 자료를 답하면 필요한 시험을 가이드라인 근거와 함께 제안합니다. 지금은 합성의약품을 지원합니다.", "질문 12개 안팎 · 3분", true, () => { setPhase("advisor"); window.scrollTo(0, 0); })}
           {path("직접 고르기", "필요한 시험을 이미 알고 있다면 항목을 바로 고릅니다. 패키지로 한 번에 채울 수도 있습니다.", "바로 작성", false, () => { setPhase("wizard"); window.scrollTo(0, 0); })}
         </div>
       </div>
@@ -306,7 +306,7 @@ export function NewRequest({ contact }: { contact: Contact }) {
           <div>
             <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>상세 조건 (선택)</p>
             <h1>알고 있는 조건만 입력하세요</h1>
-            <p>비워 두면 CRO가 표준 설계로 견적합니다. 앞에서 고른 시험 항목의 세부 조건은 아래에 있습니다.</p>
+            <p>비워 두면 기관이 자신의 설계로 견적하고 그 내용을 회신에 설명합니다. 앞에서 고른 시험 항목의 세부 조건은 아래에 있습니다.</p>
           </div>
         </div>
         <div className="stack" style={{ gap: 14 }}>

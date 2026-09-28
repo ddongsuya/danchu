@@ -10,7 +10,7 @@ import "../home.css";
 
 export const metadata: Metadata = {
   title: "비임상 시험 가이드 · 의약품 — 단추",
-  description: "임상 진입 전에 어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주를 해야 하는지, 표준 설계는 어떤지 ICH·식약처 기준으로 정리했습니다.",
+  description: "임상 진입 전에 어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주를 해야 하는지, 통상 어떻게 설계하는지 ICH·식약처 기준으로 정리했습니다.",
   robots: GUIDE_REVIEWED ? undefined : { index: false, follow: false },
 };
 
@@ -87,8 +87,8 @@ export default function Guide() {
         <section className="band--soft">
           <div className="sub" style={{ paddingTop: 0, paddingBottom: 0 }}>
             <p className="eyebrow">3 · 설계</p>
-            <h2 className="h2">항목별 표준 설계</h2>
-            <p className="sub__lead">기관마다 세부는 다르지만, 가이드라인이 요구하는 최소 구성은 같습니다. 요청서에서 "표준 설계로 요청"을 누르면 아래 기준으로 조건이 채워지고, 모르는 칸은 기관 제안으로 남습니다.</p>
+            <h2 className="h2">항목별 설계 예</h2>
+            <p className="sub__lead">가이드라인에 근거한 설계 예입니다. 단추가 정한 기준이 아니며, 세부는 기관마다 다릅니다. 요청서에서 "이 예로 채우기"를 누르면 조건이 채워지고, 기관은 자신의 방식을 회신에 설명합니다.</p>
             <div className="gcards">
               {DESIGN_CARDS.map((c, i) => (
                 <article key={c.title} className="gcard rv" data-rv style={{ "--ry": "16px", "--rd": `${(i % 2) * 0.08}s` } as RV}>

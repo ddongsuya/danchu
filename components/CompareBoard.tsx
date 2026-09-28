@@ -20,7 +20,7 @@ export type CompareCol = {
   glp: string[];
   unavailable: string[];
   conditional: number;
-  items: { seq: number; avail: string; amount: number | null; weeks: number | null; design?: string; note?: string }[];
+  items: { seq: number; avail: string; amount: number | null; weeks: number | null; design?: string; note?: string; explain?: [string, string][] }[];
   hasPdf: boolean;
   selected: boolean;
   /** 카탈로그 기준 자동 제출된 예비 견적 */
@@ -206,6 +206,9 @@ export function CompareBoard({ no, cols, rows, canSelect }: { no: string; cols: 
                             {it!.avail === "조건부 가능" ? " · 조건부" : ""}
                           </div>
                           {it!.design && <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "normal", maxWidth: 220 }}>{it!.design}</div>}
+                          {it!.explain?.map(([k, v]) => (
+                            <div key={k} style={{ fontSize: 11, color: "var(--body)", whiteSpace: "normal", maxWidth: 220, marginTop: 3 }}><span style={{ color: "var(--muted)" }}>{k}</span><br />{v}</div>
+                          ))}
                           {it!.note && <div style={{ fontSize: 11, color: "var(--body)", whiteSpace: "pre-wrap", maxWidth: 220, marginTop: 3 }}>기관 설명 · {it!.note}</div>}
                         </>
                       )}

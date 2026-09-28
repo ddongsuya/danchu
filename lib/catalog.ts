@@ -79,7 +79,7 @@ export const SINGLE_DOSE_METHODS = ["OECD TG 420 고정용량법", "OECD TG 423 
 export const REPEAT_DOSE_METHODS = ["OECD TG 407 (설치류 28일)", "OECD TG 408 (설치류 90일)", "OECD TG 409 (비설치류 90일)", "OECD TG 410 (경피 반복)", "OECD TG 412 (흡입 28일)", "OECD TG 413 (흡입 90일)", "OECD TG 452 (만성)", "ICH M3/S4 반복투여 설계", "MFDS 독성시험기준"];
 
 const METHODS_BY_CAT: Partial<Record<Cat, string[]>> = {
-  "발암성·종양원성": ["OECD TG 451 발암성", "OECD TG 453 만성·발암 복합", "ICH S1B rasH2 26주", "MFDS 독성시험기준"],
+  "발암성·종양원성": ["OECD TG 451 발암성", "OECD TG 453 만성·발암 복합", "ICH S1B rasH2", "MFDS 독성시험기준"],
   유전독성: ["OECD TG 기준", "ICH S2(R1)", "MFDS 독성시험기준"],
   생식발생독성: ["OECD TG 421/422 스크리닝", "OECD TG 414 배·태자발생", "OECD TG 415/416 세대", "OECD TG 443 (EOGRTS)", "ICH S5(R3)", "MFDS 독성시험기준"],
   "항원성·면역독성": ["OECD TG 406 GPMT/Buehler", "OECD TG 429 LLNA", "ICH S8 면역독성", "MFDS 독성시험기준"],
@@ -142,6 +142,65 @@ export const EXTRA_FIELDS: Partial<Record<Cat, Field[]>> = {
   ],
   환경유해성: [{ id: "fish", type: "text", label: "어종", placeholder: "예: 송사리(Oryzias latipes)" }],
 };
+
+/**
+ * 기관 설명 칸 — 가이드라인이 정하지 않아 기관마다 다른 부분 (기술문서의 [기관 재량]).
+ * 단추는 값을 정하지 않는다. 기관이 적은 내용을 비교표에 나란히 보여 준다.
+ * id는 exp_ 로 시작하고, 카탈로그와 회신의 design.extra 에 저장된다.
+ */
+const EXPLAIN: Partial<Record<Cat, [string, string, string][]>> = {
+  일반독성: [
+    ["exp_recovery", "회복 동물 지정 방식", "예: 대조군·고용량군의 마지막 5마리/성을 회복 동물로 지정"],
+    ["exp_tk", "독성동태 채혈 방식·시점·검체 수", "예: 위성군 3마리/성/군, 투여 1일·종료일 각 6시점, 총 288검체"],
+    ["exp_histo", "조직병리 범위", "예: 대조군·고용량군 전 장기 판독, 표적 장기는 전 군. 특수염색 별도"],
+    ["exp_drf", "용량결정시험 구성·포함 여부", "예: 2주 DRF 3마리/성/군, 본시험 견적에 미포함"],
+    ["exp_site", "투여 부위 조직병리 (주사제)", "예: 투여 부위 1곳 채취, 견적 포함"],
+    ["exp_inhal", "흡입 노출 방식·입자 크기·기관지폐포세척", "예: 비부 노출, MMAD 1~3 µm 목표, BAL 포함"],
+  ],
+  유전독성: [["exp_prelim", "용량 설정 예비시험·확인 시험", "예: 용량 설정 시험 포함, 확인 시험은 별도"]],
+  생식발생독성: [
+    ["exp_animals", "임신동물 확보·교배 시작 동물 수", "예: 자체 교배, 군당 22마리 교배 시작"],
+    ["exp_tk", "독성동태 채혈 방식·검체 수", "예: 위성군 3마리/군, 임신 6일·17일"],
+    ["exp_fetal", "태자 검사 범위·골격 염색", "예: 한 배의 절반 내장, 절반 골격(알리자린 레드 단일 염색)"],
+    ["exp_behav", "행동·기능 검사 (출생 전후 시험)", "예: 수중미로, 운동량, 청각 놀람 반응"],
+  ],
+  "발암성·종양원성": [
+    ["exp_strain", "계통과 배경자료 보유 기간", "예: SD 랫드, 최근 5년 배경자료 보유"],
+    ["exp_tg", "형질전환 마우스 시험 설계", "예: 기간, 군당 동물 수, 양성대조군"],
+    ["exp_tk", "독성동태 위성군·채혈 시점", ""],
+    ["exp_path", "병리 판독 범위·피어리뷰", "예: 전 군 전 장기 판독, 피어리뷰 포함"],
+  ],
+  "항원성·면역독성": [
+    ["exp_groups", "군 구성 (용량·보조제·결합체)", "예: 저·고용량 × 보조제 유무, 단백 결합체 군 포함, 군당 5마리"],
+    ["exp_tdar", "면역기능시험 설계 (항원·일정·측정법)", "예: KLH, 투여 15일 면역, ELISA로 IgM·IgG"],
+    ["exp_pos", "양성대조 실시 방식", "예: 시험마다 동시 실시"],
+  ],
+  국소독성: [["exp_n", "동물 수와 판정 기준", "예: 토끼 3마리, 1차 자극 지수로 판정"]],
+  국소내성: [["exp_design", "동물종·동물 수·투여 기간", "예: 토끼 3마리/군, 단회 정맥 주위 투여"]],
+  안전성약리: [
+    ["exp_tele", "텔레메트리 동물 수와 설계", "예: 비글 4마리 교차 설계, 노출 확인 포함"],
+    ["exp_herg", "hERG 농도 수·농도 검증", "예: 4농도, 조제액 농도 검증 포함"],
+  ],
+  "PK/TK/ADME·생체시료분석": [
+    ["exp_val", "분석법 검증 횟수와 구분", "예: 랫드 혈장 전체 검증 1회, 개 혈장 부분 검증 1회"],
+    ["exp_samples", "채혈 시점과 예상 검체 수", "예: 8시점 × 3마리 × 3용량 = 72검체"],
+  ],
+  조제물분석: [
+    ["exp_val", "분석법 검증 횟수와 구분", "예: 체외 유전독성 1회, 체외 약리 1회, 체내 1회"],
+    ["exp_crit", "허용 기준과 분석 횟수", "예: 함량 ±10%, 투여 1주·종료 주 분석"],
+  ],
+};
+export const EXPLAIN_FIELDS: Partial<Record<Cat, Field[]>> = {};
+for (const [cat, list] of Object.entries(EXPLAIN) as [Cat, [string, string, string][]][]) {
+  EXPLAIN_FIELDS[cat] = list.map(([id, label, placeholder]) => ({ id, type: "text", label, placeholder }));
+  EXTRA_FIELDS[cat] = [...(EXTRA_FIELDS[cat] ?? []), ...EXPLAIN_FIELDS[cat]!];
+}
+/** design.extra 에서 기관 설명만 뽑아 [라벨, 값] 으로 */
+export function explainOf(category: string, extra: unknown): [string, string][] {
+  if (!extra || typeof extra !== "object") return [];
+  const e = extra as Record<string, unknown>;
+  return (EXPLAIN_FIELDS[category as Cat] ?? []).flatMap((f) => (typeof e[f.id] === "string" && (e[f.id] as string).trim() ? [[f.label ?? f.id, e[f.id] as string] as [string, string]] : []));
+}
 
 let seq = 0;
 /** 새 조합 (저장 전). 축 값은 프리셋이나 복제 원본에서 받을 수 있다 */

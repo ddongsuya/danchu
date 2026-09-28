@@ -47,6 +47,7 @@ const PRIOR = [
   "안전성약리 코어배터리 (GLP)",
   "배·태자 발생시험 (GLP)",
   "수태능 시험 (GLP)",
+  "체외 대사·혈장단백결합 자료",
   "생체시료 분석법 검증",
   "조제물 분석법 검증",
 ];
@@ -62,6 +63,8 @@ export const QUESTIONS: Question[] = [
   { id: "wocbp", step: 2, q: "임상에 가임 여성이 포함되나요?", options: ["예", "아니오", "미정"], required: true },
   { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => a.wocbp === "예" },
   { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => a.wocbp === "예" },
+  { id: "ped", step: 2, q: "소아를 임상에 포함하거나 소아 적응증을 개발하나요?", options: ["아니오", "예 · 2세 미만 포함", "예 · 2세 이상", "미정"] },
+  { id: "cns", step: 1, q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
   { id: "prior", step: 3, q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외합니다.", multi: true, options: PRIOR, required: true },
 ];
 
@@ -89,7 +92,7 @@ export type Suggest = {
 
 export type Note = { text: string; basis: string; rule: string; /** 화면에서 묶는 분야 */ topic?: string };
 
-const TOPIC_BY_RULE: [string, string][] = [["R-A13", "안전성약리"], ["R-A12", "광안전성"], ["R-A11", "국소독성·국소내성"], ["R-A1-", "일반독성"], ["R-A4", "유전독성"], ["R-A5", "생식·발생독성"], ["R-A6", "발암성"], ["R-A8", "항원성·감작성"], ["R-A9", "면역독성"], ["R-B1", "독성동태"], ["R-B3", "분석"], ["R-B4", "분석"]];
+const TOPIC_BY_RULE: [string, string][] = [["R-A14", "의존성"], ["R-A13", "안전성약리"], ["R-A3", "소아"], ["R-B2", "약물동태"], ["R-A12", "광안전성"], ["R-A11", "국소독성·국소내성"], ["R-A1-", "일반독성"], ["R-A4", "유전독성"], ["R-A5", "생식·발생독성"], ["R-A6", "발암성"], ["R-A8", "항원성·감작성"], ["R-A9", "면역독성"], ["R-B1", "독성동태"], ["R-B3", "분석"], ["R-B4", "분석"]];
 function topicOf(n: Note): string {
   const hit = TOPIC_BY_RULE.find(([p]) => n.rule.startsWith(p));
   if (hit) return hit[1];
@@ -315,6 +318,38 @@ export function advise(a: Answers): Advice {
     }
   }
   if (!approval && !research && (onc ? !oncLate : ["1개월 이내", "2주 이내", "단회", "미정"].includes(dur))) later.push(onc ? { label: "반복투여 13주 (임상 일정을 따른 3개월 시험)", when: "3상 개시 전", basis: "ICH S9 §3.4" } : { label: "더 긴 반복투여독성 (13주 이상)", when: "임상 투여기간이 늘어날 때", basis: "ICH M3(R2) 표 1" });
+  /* ── 약물동태 (기술문서 B2) ── */
+  if (!research) {
+    const PK = "PK/TK/ADME·생체시료분석";
+    if (!own("체외 대사")) {
+      tests.push({ key: "adme-met", label: "체외 대사 (동물과 사람 비교)", category: PK, item: "체외 대사 안정성·종간 비교", reason: "임상 개시 전에 동물과 사람의 체외 대사 자료가 필요. 독성시험 동물종이 적절한지 판단하는 근거", basis: "ICH M3(R2) §3", rule: "R-B2-01", on: true });
+      tests.push({ key: "adme-ppb", label: "혈장단백결합", category: PK, item: "혈장단백결합", reason: "임상 개시 전 필요", basis: "ICH M3(R2) §3", rule: "R-B2-01", on: true });
+    }
+    const beyond1 = stage !== "1상 진입";
+    const ddiWhy = beyond1 ? "더 큰 규모의 환자 시험 전에 필요" : "환자 대상 시험이 커지기 전까지. 지금 하려면 체크하세요";
+    tests.push({ key: "ddi-inh", label: "효소 억제 체외 시험", category: PK, item: "CYP 억제", reason: ddiWhy, basis: "ICH M12 §1.4", rule: "R-B2-04", on: beyond1 });
+    tests.push({ key: "ddi-ind", label: "효소 유도 체외 시험", category: PK, item: "CYP 유도", reason: ddiWhy, basis: "ICH M12 §1.4", rule: "R-B2-04", on: beyond1 });
+    notes.push({ text: "약물동태 시험은 대부분 GLP 요구가 없고, 체외 상호작용 시험은 GLP가 요구되지 않습니다. 다만 국내 허가 자료는 분석방법과 밸리데이션이 포함돼야 합니다.", basis: "ICH M12 §7.3.1 · 품목허가·신고·심사 규정 제7조제5호", rule: "R-B2-09" });
+    if (!beyond1) notes.push({ text: "반복투여독성의 독성동태 검체를 보관해 두면, 나중에 사람 대사체가 확인됐을 때 동물 노출과 비교하는 데 쓸 수 있습니다. 사람 노출의 10%를 넘는 대사체는 동물에서 충분히 노출됐는지 3상 전에 확인합니다.", basis: "ICH M3(R2) §3, 질의응답 2장", rule: "R-B2-06" });
+    later.push({ label: stage === "3상" || approval ? "동물 조직분포·배설 시험, 사람 물질수지 시험" : "동물 조직분포·배설 등 추가 약물동태", when: "3상 전. 방사성 표지 물질이 필요하면 합성 기간을 감안", basis: "ICH M3(R2) §3 · ICH M12 §1.4" });
+    askCro.add("약물동태·체외 시험의 설계(동물 수, 시점, 농도)와 예상 검체 수, 분석법 검증 포함 여부");
+  }
+
+  /* ── 소아, 의존성 (기술문서 A3, A14) ── */
+  if (!research) {
+    const ped = String(a.ped ?? "");
+    if (ped.startsWith("예")) {
+      tests.push({ key: "juv", label: "발육기동물 독성시험", category: "일반독성", item: "발육기동물 독성", reason: (ped.includes("2세 미만") ? "2세 미만이 대상이면 필요할 가능성이 높은 조건입니다. " : "") + "기존 자료가 부족할 때만 필요하며, 규제기관과 먼저 협의하세요", basis: "ICH S11 §1.4, §2.2 · ICH M3(R2) §12", rule: "R-A3-02", on: false });
+      notes.push({ text: "발육기동물시험이 필요한지는 최연소 대상 연령, 발달 중인 장기에 대한 영향, 기존 자료, 약리 표적, 임상 투여기간을 함께 보고 판단합니다. 단기 소아 약동학 시험에는 일반적으로 필요 없고, 장기 소아 임상에 필요하면 임상 개시 전에 완료합니다.", basis: "ICH S11 §2.2 · ICH M3(R2) §12", rule: "R-A3-02" });
+      askCro.add("발육기동물시험의 새끼 확보·한배 배정 방법, 가능한 최소 투여 일령, 수행 가능한 추가 평가항목");
+    }
+    if (a.cns === "예") {
+      if (stage === "3상" || approval) tests.push({ key: "dep", label: "의존성 평가 (금단 평가 등)", category: "안전성약리", item: "의존성 · 금단 평가", reason: "중추신경계에 작용하는 약물은 남용 가능성을 검토합니다. 신호가 있거나 새로운 작용기전이면 시험이 필요. 해당하면 체크하세요", basis: "ICH M3(R2) §15 · 품목허가·신고·심사 규정 제7조제4호다목", rule: "R-A14-03", on: false });
+      else later.push({ label: "의존성 평가 (자가투여, 약물변별, 금단)", when: "3상 전. 신호가 있거나 새로운 작용기전일 때", basis: "ICH M3(R2) §15" });
+      notes.push({ text: "중추신경계 작용 약물은 수용체 결합과 행동 관찰 같은 조기 지표를 사람 최초 투여 전에 확보합니다. 안전성약리와 반복투여독성의 관찰 결과를 함께 씁니다. 미국과 유럽은 자가투여 방식과 GLP 요구가 다르고, 국내는 시험방법 규정이 없습니다. 금단 평가는 반복투여독성의 회복군에 넣을 수 있습니다.", basis: "ICH M3(R2) §15", rule: "R-A14-02" });
+    }
+  }
+
   /* ── 흡입 경로 (기술문서 A2) ── */
   if (String(a.route ?? "") === "흡입" && !research) {
     for (const t of tests) if (t.key.startsWith("repeat") || t.key === "drf" || t.key === "single") { t.label = t.label.replace("반복투여", "반복 흡입").replace("단회투여독성", "단회 흡입독성"); t.basis += " · 고시 별표 10, 11"; }

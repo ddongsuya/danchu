@@ -88,7 +88,7 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
 
           <div className="card" style={{ padding: "6px 18px" }}>
             <div style={{ padding: "12px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>공통 조건</div>
-            {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>의뢰자가 상세 조건을 입력하지 않았습니다. 표준 설계로 견적해 주세요.</p>}
+            {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>의뢰자가 상세 조건을 입력하지 않았습니다. 기관의 설계로 견적하고 회신에 설명해 주세요.</p>}
             {rfq.common.map(([k, v]) => (
               <div key={k} className="kv" style={{ borderTop: "1px solid var(--track)" }}>
                 <span className="kv__k">{k}</span>
