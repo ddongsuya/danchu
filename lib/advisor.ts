@@ -30,7 +30,8 @@ export type Question = {
 
 export const PRODUCTS = ["합성의약품", "바이오의약품", "세포·유전자치료제", "건강기능식품", "화장품", "의료기기", "화학물질·농약"] as const;
 /** 지금 제안을 만들 수 있는 유형 */
-export const SUPPORTED_PRODUCTS: readonly string[] = ["합성의약품"];
+export const SUPPORTED_PRODUCTS: readonly string[] = ["합성의약품", "바이오의약품", "세포·유전자치료제"];
+const BIO_TYPES = ["단클론항체", "재조합 단백질·펩타이드", "항체약물접합체", "백신", "동등생물의약품", "세포·유전자치료제"];
 
 const PRIOR = [
   "없음",
@@ -54,6 +55,8 @@ const PRIOR = [
 
 export const QUESTIONS: Question[] = [
   { id: "product", step: 1, q: "무엇을 개발하시나요?", options: [...PRODUCTS], required: true },
+  { id: "bioType", step: 1, q: "어떤 바이오의약품인가요?", options: BIO_TYPES, required: true, when: (a) => a.product === "바이오의약품" },
+  { id: "bioSpecies", step: 1, q: "약리 활성이 나타나는 동물종(관련 종)을 확인했나요?", sub: "바이오의약품의 독성시험은 관련 종에서 합니다.", options: ["설치류와 비설치류 모두", "영장류만", "설치류만", "관련 종 없음", "아직 확인 안 함"], required: true, when: (a) => a.product === "바이오의약품" && a.bioType !== "백신" && a.bioType !== "세포·유전자치료제" },
   { id: "stage", step: 1, q: "어느 단계를 준비하시나요?", sub: "단계에 따라 필요한 시험 범위가 달라집니다.", options: ["1상 진입", "2상", "3상", "품목허가", "자체 연구"], required: true },
   { id: "auth", step: 1, q: "어디에 제출하시나요?", sub: "해당하는 곳을 모두 고르세요.", multi: true, options: ["식약처", "미국 FDA", "유럽 EMA", "일본 PMDA", "기타"], required: true, when: (a) => a.stage !== "자체 연구" },
   { id: "indication", step: 1, q: "적응증은 어디에 해당하나요?", options: ["진행암", "중대하거나 생명을 위협하는 질환", "그 외"], required: true },
@@ -64,7 +67,7 @@ export const QUESTIONS: Question[] = [
   { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => a.wocbp === "예" },
   { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => a.wocbp === "예" },
   { id: "ped", step: 2, q: "소아를 임상에 포함하거나 소아 적응증을 개발하나요?", options: ["아니오", "예 · 2세 미만 포함", "예 · 2세 이상", "미정"] },
-  { id: "cns", step: 1, q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
+  { id: "cns", step: 1, when: (a) => a.product !== "바이오의약품", q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
   { id: "prior", step: 3, q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외합니다.", multi: true, options: PRIOR, required: true },
 ];
 
@@ -127,6 +130,7 @@ export function advise(a: Answers): Advice {
       tests: [], owned: [], later: [], notes: [], askCro: [], prereq: [],
     };
   }
+  if (product === "바이오의약품" || product === "세포·유전자치료제") return adviseBio(product === "세포·유전자치료제" ? { ...a, bioType: "세포·유전자치료제" } : a);
 
   const tests: Suggest[] = [];
   const notes: Note[] = [];
@@ -424,7 +428,7 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
     v[key] = [...new Set([...cur, ...vals])];
   };
   v.purpose = a.stage === "자체 연구" ? "자체 연구용" : "허가자료 제출용";
-  v.devField = "의약품(합성)";
+  v.devField = a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
   const auth = arr(a.auth).map((x) => AUTH_MAP[x]).filter(Boolean);
   if (auth.length) v.authority = auth;
   const route = ROUTE_MAP[String(a.route ?? "")];
@@ -451,4 +455,149 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
   v.advisorNotes = advice.notes.map((n) => (n.basis ? `${n.text} (${n.basis})` : n.text));
   v.advisorPrereq = advice.prereq;
   return v;
+}
+
+/* ── 바이오의약품 (기술문서 F1) ───────────────────────────
+ * 합성의약품과 달리 정해진 시험 목록이 없다. 약리학적 관련 종에서 설계가 출발한다.
+ * 세포·유전자치료제는 아직 제안하지 않는다.
+ */
+function adviseBio(a: Answers): Advice {
+  const tests: Suggest[] = [];
+  const notes: Note[] = [];
+  const later: Later[] = [];
+  const askCro = new Set<string>();
+  const prereq: string[] = [];
+  const type = String(a.bioType ?? "");
+  if (type === "세포·유전자치료제") {
+    return {
+      supported: false,
+      message: "세포·유전자치료제의 제안은 준비 중입니다. 이 유형은 체내 분포와 종양원성 평가가 핵심이며, 제품 특성에 맞춰 설계합니다. 지금은 시험 항목을 직접 골라 요청해 주세요.",
+      tests: [], owned: [], later: [], notes: [], askCro: [], prereq: [],
+    };
+  }
+
+  const stage = String(a.stage ?? "");
+  const research = stage === "자체 연구";
+  const approval = stage === "품목허가";
+  const late = stage === "3상" || approval;
+  const auth = arr(a.auth);
+  const mfds = auth.includes("식약처");
+  const overseas = auth.some((x) => x !== "식약처");
+  const onc = a.indication === "진행암";
+  const sp = String(a.bioSpecies ?? "아직 확인 안 함");
+  const dur = String(a.duration ?? "미정");
+  const owned = arr(a.prior).filter((p) => p !== "없음");
+  const own = (s: string) => owned.some((p) => p.startsWith(s));
+  const vaccine = type === "백신";
+  const similar = type === "동등생물의약품";
+  const adc = type === "항체약물접합체";
+  const antibody = type === "단클론항체" || adc;
+  const PK = "PK/TK/ADME·생체시료분석";
+  const glp = research ? "미정" : "GLP";
+
+  // 동물종: 관련 종이 확인된 경우에만 채운다
+  const speciesFill: string[] = sp === "영장류만" ? ["원숭이(영장류)"] : sp === "설치류만" ? ["랫드"] : sp === "설치류와 비설치류 모두" ? ["랫드", "원숭이(영장류)"] : [];
+  if (sp === "아직 확인 안 함" && !vaccine) {
+    prereq.unshift("약리학적 관련 종 확인 (결합 친화도, 기능 활성 비교). 확인 전에는 독성시험 동물종을 정할 수 없음");
+    notes.push({ text: "바이오의약품의 독성시험은 약리 활성이 나타나는 동물종(관련 종)에서 해야 합니다. 관련 없는 종의 시험은 권장되지 않습니다. 종 교차반응성 자료부터 확인하세요.", basis: "ICH S6(R1) 1부 §3.3, 2부 §2.1", rule: "R-F1-02" });
+  }
+  if (sp === "관련 종 없음") {
+    notes.push({ text: "관련 종이 없으면 표준 독성시험이 맞지 않습니다. 사람 표적을 발현하는 형질전환 동물이나 상동 단백질을 고려하고, 불가능하면 1종에서 14일 이하의 제한 평가를 합니다. 규제기관과 먼저 협의하세요.", basis: "ICH S6(R1) 1부 §3.3", rule: "R-F1-06" });
+  }
+
+  /* 반복투여독성 */
+  if (sp !== "관련 종 없음") {
+    let item = "반복투여 4주";
+    let why = "임상 투여기간에 맞춘 반복투여독성";
+    let basis = "ICH S6(R1) 1부 §4.4, 2부 §3.2";
+    if (vaccine) { why = "면역반응을 보이는 1종에서 간격 투여. 투여 횟수는 사람 예정 횟수와 같거나 그 이상"; basis = "WHO 백신 비임상 평가 가이드라인 §4.1"; }
+    else if (onc) { item = late ? "반복투여 13주" : "반복투여 4주"; basis = late ? "ICH S9 §3.4" : "ICH S9 §3.3"; why = late ? "3상 개시 전 제출. 임상 일정을 따른 3개월 시험" : "임상 투여 일정에 맞춘 1상용 독성시험"; }
+    else if (dur === "6개월 초과·만성" || dur === "6개월 이내") { item = "반복투여 26주"; why = "만성 적응증은 6개월로 충분합니다. 9개월 시험은 필요하지 않습니다"; }
+    else if (dur === "3개월 이내") item = "반복투여 13주";
+    else if (dur === "단회" || dur === "2주 이내") item = "반복투여 2주";
+    const weeks = parseInt(item.replace(/\D/g, ""), 10);
+    if (!own(`반복투여 ${weeks}주`)) {
+      const fill: Record<string, string | string[]> = { "일반독성.tk": research || vaccine ? "미정" : "포함", "일반독성.histopath": "포함", "일반독성.glpLevel": glp, "일반독성.recovery": weeks >= 13 ? "4주" : "2주" };
+      if (speciesFill.length && !vaccine) fill["일반독성.species"] = speciesFill;
+      tests.push({
+        key: "repeat", label: similar ? `${item} (대조약과 비교 설계)` : vaccine ? `${item} · 면역반응을 보이는 1종` : `${item} · 관련 종`, category: "일반독성", item,
+        reason: similar ? "관련 종에서 대조약과 비교하는 반복투여독성 1건. 국내는 품질과 약리의 비교동등성이 입증되면 면제할 수 있습니다. 필요하면 체크하세요" : why,
+        basis: similar ? "동등생물의약품 평가 가이드라인 §6 · 생물학적제제 등의 품목허가·심사 규정 제24조제5항" : basis,
+        rule: similar ? "R-F1-14" : vaccine ? "R-F1-13" : "R-F1-03", on: !similar, fill,
+      });
+      if (!vaccine) notes.push({ text: "회복 평가는 최소 1개 시험의 1개 용량에 둡니다. 목적은 가역성 확인이며 완전한 회복을 입증할 필요는 없습니다. 고용량은 최대 약리 효과 용량과 임상 최대 노출의 약 10배 중 높은 쪽입니다.", basis: "ICH S6(R1) 2부 §3.1, §3.3", rule: "R-F1-03" });
+      if (sp === "설치류와 비설치류 모두" && !vaccine && !similar) notes.push({ text: "관련 종이 설치류와 비설치류 모두이면 1개월 이하 단기 시험은 2종으로 합니다. 두 종의 소견이 비슷하면 장기 시험은 1종(설치류 우선)으로 줄일 수 있습니다.", basis: "ICH S6(R1) 2부 §2.2", rule: "R-F1-05" });
+      if (!vaccine) notes.push({ text: "항약물항체 시료는 독성시험에서 미리 채취해 둡니다. 분석은 노출이나 약리 활성이 설명되지 않게 변할 때 합니다. 채취와 분석을 나눠 견적받으세요.", basis: "ICH S6(R1) 2부 4장", rule: "R-F1-07" });
+      notes.push({ text: "국소내성은 반복투여독성에서 투여 부위를 평가하면 별도 시험이 필요 없습니다.", basis: vaccine ? "WHO 백신 비임상 평가 가이드라인 §4.1.5" : "ICH S6(R1) 1부 §4.9", rule: "R-F1-03" });
+      askCro.add("군당 동물 수, 용량군 수, 회복기 길이 (가이드라인에 수치가 없음)");
+      if (!vaccine) askCro.add("항약물항체 시료 채취 시점과 분석 포함 여부");
+      if (sp === "영장류만") askCro.add("영장류 확보 예상 기간과 동물비 포함 여부");
+      if (vaccine) askCro.add("백신 투여 횟수와 간격, 사용 동물종");
+    }
+  }
+
+  /* 시험하지 않는 것 */
+  notes.push({
+    text: vaccine ? "백신 최종 제형에는 유전독성, 발암성, 약동학 시험이 통상 필요하지 않습니다. 신규 면역증강제나 첨가제가 있으면 필요할 수 있습니다." : similar ? "동등생물의약품은 안전성약리, 생식독성, 유전독성, 발암성 시험이 필요하지 않습니다. 대조약의 독성 특성이나 반복투여 결과에 따라 추가될 수 있습니다." : "바이오의약품은 유전독성 표준 배터리, 대사·물질수지 시험이 통상 필요하지 않습니다. 발암성은 표준 시험 대신 가진 자료로 평가합니다.",
+    basis: vaccine ? "WHO 백신 비임상 평가 가이드라인 §4.2" : similar ? "동등생물의약품 평가 가이드라인 §6" : "ICH S6(R1) 1부 §4.2, §4.7, 2부 6장", rule: "R-F1-01",
+  });
+
+  /* 조직교차반응성 */
+  if (antibody && !research) tests.push({ key: "tcr", label: "조직교차반응성 (인체 조직)", category: "기타(임상병리·조직병리 등)", item: "조직교차반응성(인체 조직)", reason: "항체 의약품의 초회 임상 투여를 뒷받침하는 권장 구성요소", basis: "ICH S6(R1) 1부 §3.2, 2부 주석 1", rule: "R-F1-08", on: true });
+
+  /* 안전성약리 */
+  if (!research && !vaccine && !similar && !onc && sp !== "관련 종 없음") {
+    tests.push({ key: "sp-cv", label: "안전성약리 · 심혈관계", category: "안전성약리", item: "심혈관계(Telemetry)", reason: "바이오의약품은 안전성약리를 독성시험에 통합할 수 있습니다. 독립 시험으로 하려면 체크하세요", basis: "ICH S6(R1) 1부 §4.1", rule: "R-F1-09", on: false });
+    askCro.add("안전성약리 항목을 독성시험에 통합하는 방식");
+  }
+
+  /* 분석 */
+  if (!research && !vaccine && tests.some((t) => t.key === "repeat")) {
+    // 반복투여독성을 하지 않으면(동등생물의약품의 기본값) 따라오는 분석도 해제해 둔다
+    const withTox = tests.find((t) => t.key === "repeat")!.on;
+    if (!own("생체시료 분석법 검증")) {
+      tests.push({ key: "ba-val", label: "생체시료 분석법 검증 (약물 농도)", category: PK, item: "분석법 검증(Full)", reason: "독성동태 검체를 분석하려면 검증된 분석법이 필요. 검증된 방법 하나면 통상 충분", basis: "ICH S6(R1) 1부 §4.2.2 · ICH M10", rule: "R-B1-05", on: withTox });
+      prereq.push("생체시료 분석법 검증 (독성시험 착수 전 완료)");
+    }
+    tests.push({ key: "tk", label: "독성동태(TK) 검체 분석", category: PK, item: "TK(독성동태)", reason: "동물의 실제 노출 확인. 항약물항체로 노출이 떨어지는지 함께 봅니다", basis: "ICH S6(R1) 1부 §4.4", rule: "R-B1-01", on: withTox });
+    tests.push({ key: "ada", label: "항약물항체(ADA) 분석", category: PK, item: "항약물항체(ADA) 분석", reason: "시료는 채취하되 분석은 조건부입니다. 분석까지 견적에 넣으려면 체크하세요", basis: "ICH S6(R1) 2부 4장", rule: "R-F1-07", on: false });
+    tests.push({ key: "form-conc", label: "조제물분석 · 함량", category: "조제물분석", item: "함량", reason: "투여한 조제물의 농도 확인. GLP 시험에 따라옵니다", basis: "OECD GLP 원칙 II.6.2.5", rule: "R-B4-01", on: withTox });
+    tests.push({ key: "form-stab", label: "조제물분석 · 안정성", category: "조제물분석", item: "안정성", reason: "조제 후 투여까지 농도가 유지되는지", basis: "OECD GLP 원칙 II.6.2.5", rule: "R-B4-06", on: withTox });
+    askCro.add("분석법(약물 농도, 항약물항체) 개발·검증의 견적 포함 여부와 횟수");
+    if (adc) {
+      notes.push({ text: "항체약물접합체의 독성동태는 접합체와 독소를 측정하고 유리 항체량을 추정합니다. 분석법이 여러 개 필요합니다. 초회 임상 전에 사람과 독성 종의 체외 혈장 안정성 자료가 있어야 합니다.", basis: "ICH S9 질의응답 4.4, 4.5", rule: "R-F1-15" });
+      prereq.push("체외 혈장 안정성 시험 (사람과 독성 종)");
+      notes.push({ text: "접합체 전체가 평가 대상입니다. 항체 단독이나 링커 단독 시험은 일반적으로 필요하지 않습니다. 독소가 신규이면 비접합 독소를 최소 1종에서 추가로 평가합니다.", basis: "ICH S9 질의응답 4.2, 4.3 · ICH S6(R1) 2부 주석 2", rule: "R-F1-15" });
+      if (!onc) notes.push({ text: "항체약물접합체의 기준은 항암제 지침에 있습니다. 항암 이외 적응증의 접합체는 전용 지침을 확인하지 못했으니 규제기관과 협의하세요.", basis: "ICH S9 §4.1", rule: "R-F1-15" });
+    }
+  }
+
+  /* 동등생물의약품: 체외 비교 */
+  if (similar) notes.push({ text: "동등생물의약품의 비임상은 대조약과의 비교가 기본입니다. 수용체 결합과 세포 수준의 체외 비교 시험이 먼저이며, 체외 자료로 충분하면 체내 효력시험 없이 제출할 수 있습니다.", basis: "동등생물의약품 평가 가이드라인 §6 · 생물학적제제 등의 품목허가·심사 규정 별표 1 비고", rule: "R-F1-14" });
+
+  /* 생식·발생독성 */
+  if (!research && !similar && !onc) {
+    if (vaccine) {
+      if (a.wocbp === "예") later.push({ label: "발생독성시험 (출생 전후 발생)", when: "임부나 가임 여성이 접종 대상일 때 고려", basis: "WHO 백신 비임상 평가 가이드라인 §4.2.2" });
+    } else if (sp === "영장류만") {
+      later.push({ label: "확장 출생 전후 발생시험 (영장류)", when: "피임이 충분하면 3상 중 수행해 허가 신청 시 제출. 불충분하면 3상 개시 전", basis: "ICH S6(R1) 2부 §5.3, §5.4" });
+      notes.push({ text: "영장류만 관련 종이면 수태능은 성 성숙 영장류의 3개월 이상 반복투여독성에서 생식기관 평가로 대신합니다. 해당 시험에 성 성숙 동물을 쓰는지 확인하세요.", basis: "ICH S6(R1) 2부 §5.2", rule: "R-F1-10" });
+    } else if (sp !== "관련 종 없음") {
+      later.push({ label: "생식·발생독성시험 (관련 종에서만)", when: a.wocbp === "예" ? "가임 여성 포함 조건과 제출 지역에 따라. 시기는 합성의약품과 같음" : "가임 여성을 임상에 포함하기 전", basis: "ICH S6(R1) 2부 §5.1, §5.4 · ICH M3(R2) §11" });
+    }
+  }
+
+  /* 국내 */
+  if (mfds && !research && !vaccine && !similar) {
+    tests.push({ key: "asa", label: "항원성시험 · 능동 전신 아나필락시스(ASA)", category: "항원성·면역독성", item: "ASA(능동전신아나필락시스)", reason: "국내 규정은 전신 투여하는 단백성 의약품에 항원성 자료를 요구합니다. ICH는 이 시험의 가치가 적다고 봅니다. 필요 여부를 식약처에 확인하세요", basis: "생물학적제제 등의 품목허가·심사 규정 별표 1 비고 4 · ICH S6(R1) 1부 §3.6", rule: "R-F1-12", on: false });
+    askCro.add("항원성시험의 군 구성");
+  }
+  if (mfds) notes.push({ text: "국내 제출 범위는 대부분 개별 판단입니다. 국내 규정은 종 수, 기간, 용량을 정하지 않으며 ICH 가이드라인을 준용할 수 있습니다. 시험 구성을 식약처와 미리 협의하는 것이 안전합니다.", basis: "생물학적제제 등의 품목허가·심사 규정 별표 1, 제43조", rule: "R-F1-12" });
+  if (overseas) notes.push({ text: "해외 제출이 포함되어 있습니다. 영문 보고서가 필요한지, 미국 제출이면 SEND 자료가 필요한지 확인하세요.", basis: "", rule: "" });
+  if (research) notes.push({ text: "자체 연구용으로 보고 GLP를 지정하지 않았습니다. 나중에 허가 자료로 쓰려면 GLP로 다시 해야 합니다.", basis: "", rule: "" });
+  if (onc && !adc) notes.push({ text: "항암 바이오의약품은 ICH S9를 따릅니다. 면역 작용성 의약품의 첫 임상 용량은 최소 예상 생물학적 효과 수준을 고려합니다.", basis: "ICH S6(R1) 2부 §1.3 · ICH S9 §3.1", rule: "R-F1-03" });
+
+  const seen = new Set<string>();
+  const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.rule.startsWith("R-F1") ? "바이오의약품" : topicOf(n) }));
+  return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
 }
