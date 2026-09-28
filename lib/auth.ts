@@ -40,8 +40,6 @@ export type CroOrg = {
 
 export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null };
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAIL || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-
 /** 역할별 홈 */
 export function homeOf(role: Role): string {
   return role === "admin" ? "/admin" : role === "cro" ? "/cro" : "/app";
@@ -74,11 +72,8 @@ export const getSession = cache(async (): Promise<Session | null> => {
   }
   if (!profile) return null;
 
-  // 운영자 이메일이면 자동 승격
-  if (profile.role !== "admin" && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
-    await admin.from("profiles").update({ role: "admin" }).eq("id", user.id);
-    profile.role = "admin";
-  }
+  // 운영자 권한은 DB의 role 로만 정한다. 이메일이 설정값과 같다는 이유로 자동 승격하지 않는다.
+  // (ADMIN_EMAIL 은 알림 메일 수신 주소로만 쓴다. 운영자 지정은 운영자 콘솔이나 SQL 로 한다)
 
   let org: CroOrg | null = null;
   if (profile.cro_org_id) {
