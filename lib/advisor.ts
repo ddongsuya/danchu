@@ -303,6 +303,46 @@ export function advise(a: Answers): Advice {
     }
   }
   if (!approval && !research && (onc ? !oncLate : ["1개월 이내", "2주 이내", "단회", "미정"].includes(dur))) later.push(onc ? { label: "반복투여 13주 (임상 일정을 따른 3개월 시험)", when: "3상 개시 전", basis: "ICH S9 §3.4" } : { label: "더 긴 반복투여독성 (13주 이상)", when: "임상 투여기간이 늘어날 때", basis: "ICH M3(R2) 표 1" });
+  /* ── 발암성 (기술문서 A6) ── */
+  if (!research && !onc) {
+    const longUse = ["3개월 이내", "6개월 이내", "6개월 초과·만성"].includes(dur);
+    if (longUse && (stage === "3상" || approval)) {
+      tests.push({ key: "carc", label: "발암성시험 (장기 설치류 1건 + 추가 시험 1건)", category: "발암성·종양원성", item: "장기발암성(2년)", reason: "임상 사용이 6개월 이상 예상되면 허가 신청 때 필요. 3개월 투여 적응증도 대부분 해당. 필요하면 체크하세요", basis: "ICH S1A §4.1 · ICH M3(R2) §10", rule: "R-A6-02", on: false });
+      notes.push({ text: "발암성시험은 명백한 유전독성 물질, 기대여명이 짧은 환자 대상 의약품에는 필요 없을 수 있습니다. 이미 가진 자료로 평가해 2년 랫드 시험을 생략할 수 있는 경우도 있으나 규제기관 협의가 필요하고, 국내 고시에는 이 접근이 없습니다. 용량은 착수 전에 규제기관과 협의하는 것이 일반적입니다.", basis: "ICH S1A §4.3, §4.4 · ICH S1B(R1) 부록", rule: "R-A6-10" });
+      prereq.push("발암성 용량설정시험 (본시험과 같은 계통·경로의 90일 시험. 마우스 시험을 하면 마우스에서도)");
+      askCro.add("발암성시험의 동물 계통과 배경자료 보유 기간, 형질전환 마우스 시험의 표준 설계");
+    } else if (longUse) {
+      later.push({ label: "발암성시험", when: "품목허가 신청 시. 2년 투여와 용량설정시험 기간을 감안해 착수 시점을 미리 검토", basis: "ICH S1A §4.1 · ICH M3(R2) §10" });
+    }
+  }
+
+  /* ── 면역독성·항원성·국소내성·광안전성 (기술문서 A8~A12) ── */
+  if (!research) {
+    const routeA = String(a.route ?? "");
+    const parenteral = ["정맥", "피하", "근육"].includes(routeA);
+    if (tests.some((t) => t.key.startsWith("repeat") && t.on)) {
+      notes.push({ text: "면역독성은 먼저 반복투여독성시험 안에서 평가합니다. 흉선·비장 중량과 림프절·골수 조직병리가 견적에 포함됐는지 확인하세요. 추가 면역독성시험은 소견이나 약리작용으로 우려가 있을 때만 하며, 통상 3상 전까지입니다.", basis: "ICH S8 §2.1, §4, 부록 §1", rule: "R-A9-01" });
+      if (parenteral) {
+        notes.push({ text: "주사제의 국소내성은 반복투여독성시험에서 임상 제형 또는 유사 제형으로 투여 부위를 조직병리 검사하면 별도 시험을 생략할 수 있습니다.", basis: "ICH M3(R2) §8 · 고시 별표 9", rule: "R-A11-02" });
+        askCro.add("투여 부위 조직병리의 채취 방법과 견적 포함 여부");
+      }
+    }
+    if (routeA === "정맥" && (auth.includes("유럽 EMA") || auth.includes("일본 PMDA"))) later.push({ label: "정맥 주위 단회 투여 국소내성 시험", when: "3상 전. 유럽·일본은 권장, 미국은 일반적으로 권장하지 않음", basis: "ICH M3(R2) §8" });
+    if (topical) {
+      tests.push({ key: "skin-irr", label: "피부자극시험", category: "국소독성", item: "피부 1차 자극", reason: "피부·점막에 직접 적용하는 의약품. 피부에 쓰지 않는 제품이면 빼세요", basis: "품목허가·신고·심사 규정 · 고시 별표 8", rule: "R-A11-06", on: true });
+      tests.push({ key: "eye-irr", label: "안점막자극시험", category: "국소독성", item: "안점막 자극(세안군 비적용)", reason: "점안제이거나 눈에 닿을 수 있는 제품이면 체크하세요", basis: "고시 별표 8 · 제4조", rule: "R-A11-07", on: false });
+      tests.push({ key: "skin-sens", label: "피부감작성시험", category: "항원성·면역독성", item: "피부감작성 GPMT", reason: "피부외용제에 실시. 국내 고시의 시험법은 기니피그 Maximization", basis: "고시 별표 5 ① · EMA 국소내성 가이드라인 §7.5", rule: "R-A8-04", on: true });
+      if (mfds && overseas) notes.push({ text: "자극·감작성 시험은 국내 고시와 OECD 시험법의 동물 수가 다릅니다. 어느 설계로 할지 제출처와 확인하세요. 동물을 쓰지 않는 시험으로 대신할 수 있는지도 검토할 수 있습니다.", basis: "고시 별표 5, 8 · OECD TG 404, 405, 406", rule: "R-A11-08" });
+      askCro.add("자극·감작성 시험의 동물 수와 판정 기준");
+    }
+    if (mfds && !onc) {
+      tests.push({ key: "asa", label: "항원성시험 · 능동 전신 아나필락시스(ASA)", category: "항원성·면역독성", item: "ASA(능동전신아나필락시스)", reason: "국내 고시에 시험법이 있고 타당한 사유가 있으면 생략할 수 있습니다. ICH 지역에서는 요구되지 않습니다. 제출 의무는 식약처에 확인하세요", basis: "고시 별표 5, 별표 13 주44 · ICH S8 §1.2", rule: "R-A8-02", on: false });
+      tests.push({ key: "pca", label: "항원성시험 · 수동 피부 아나필락시스(PCA)", category: "항원성·면역독성", item: "PCA(수동피부아나필락시스)", reason: "ASA와 같습니다", basis: "고시 별표 5, 별표 13 주44", rule: "R-A8-02", on: false });
+      askCro.add("항원성시험의 군 구성 (용량, 보조제 유무, 결합체 포함 여부)");
+    }
+    notes.push({ text: "광안전성은 흡광도부터 확인합니다. 290~700 nm에서 몰흡광계수가 1000을 넘지 않으면 추가 평가가 필요 없습니다. 넘으면 3상 전까지 시험이나 임상 평가가 필요하고, 그 전 외래 임상에서는 차광 조치를 검토합니다." + (mfds ? " 국내 독성시험기준에는 광독성 규정이 없습니다." : ""), basis: "ICH S10 §2.1, §5 · ICH M3(R2) §14", rule: "R-A12-01" });
+  }
+
   if (!research && stage !== "1상 진입") later.push({ label: "사람 주요 대사체의 노출 평가", when: "3상 전. 사람에서 총 노출의 10%를 넘는 대사체가 있을 때", basis: "ICH M3(R2) §3" });
   if (overseas) notes.push({ text: "해외 제출이 포함되어 있습니다. 영문 보고서가 필요한지, 미국 제출이면 SEND 자료가 필요한지 확인하세요.", basis: "", rule: "R-A1-21" });
   if (research) notes.push({ text: "자체 연구용으로 보고 GLP를 지정하지 않았습니다. 나중에 허가 자료로 쓰려면 GLP로 다시 해야 합니다.", basis: "", rule: "" });
