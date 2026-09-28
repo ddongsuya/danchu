@@ -10,6 +10,7 @@
 .shead__right { display: flex; align-items: center; gap: 16px; }
 .shead__login { font-size: 15px; color: var(--body); padding: 12px 4px; white-space: nowrap; }
 .shead__login:hover { color: var(--ink); }
+.shead .btn--pill { border-radius: 8px; }
 
 /* 가로 메뉴 (≥900px) */
 .snav { display: none; gap: 22px; font-size: 15px; }
@@ -137,14 +138,24 @@
 .ctacard h2 { margin: 0 0 8px; font-size: clamp(22px, 3vw, 28px); line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
 .ctacard p { margin: 0; color: var(--muted); font-size: 15px; }
 
-/* 푸터 */
-.sfoot { max-width: 960px; width: 100%; margin: auto auto 0; padding: 40px 20px; font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; border-top: 1px solid var(--track); }
-.sfoot__brand { display: flex; flex-direction: column; gap: 6px; }
-.sfoot__brand b { font-weight: 700; color: var(--ink); font-size: 15px; }
-.sfoot a { color: var(--body); padding: 8px 0; }
-.sfoot a:hover { color: var(--ink); }
-.sfoot__links { display: flex; gap: 4px 20px; flex-wrap: wrap; }
-.sfoot__links a[aria-current="page"] { color: var(--brand); }
+/* 푸터 — 어두운 바탕, 브랜드 + 3단 링크 + 사업자 정보 */
+.sfoot { margin-top: auto; background: #16150f; color: #b4b0a5; }
+.sfoot__in { max-width: 1240px; margin: 0 auto; padding: clamp(48px, 6vw, 72px) clamp(20px, 4vw, 56px) clamp(36px, 4vw, 56px); display: flex; flex-direction: column; gap: clamp(32px, 4vw, 48px); }
+.sfoot__top { display: grid; grid-template-columns: 1fr; gap: 32px; }
+.sfoot__brand { display: flex; flex-direction: column; gap: 14px; max-width: 420px; }
+.sfoot__mark { display: flex; align-items: center; gap: 10px; color: #f3f1ea; }
+.sfoot__mark b { font-size: 18px; font-weight: 700; }
+.sfoot__brand p { margin: 0; font-size: 15px; line-height: 1.7; }
+.sfoot__col { display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+.sfoot__coltitle { font-size: 13px; font-weight: 600; color: #f3f1ea; margin-bottom: 4px; }
+.sfoot a { color: #b4b0a5; padding: 4px 0; }
+.sfoot a:hover { color: #f3f1ea; }
+.sfoot a[aria-current="page"] { color: #f3f1ea; font-weight: 600; }
+.sfoot__legal { border-top: 1px solid rgba(243, 241, 234, .14); padding-top: 24px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; line-height: 1.8; color: #9a968b; }
+.sfoot__legal a { color: #9a968b; padding: 0; }
+@media (min-width: 720px) {
+  .sfoot__top { grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
+}
 
 /* ── 서브페이지 (/about /faq /partners /for-cro) ── */
 .sub { max-width: 800px; width: 100%; margin: 0 auto; padding: clamp(56px, 7vw, 80px) 20px clamp(56px, 7vw, 72px); }

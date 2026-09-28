@@ -8,9 +8,9 @@ import { REQUEST_HREF, SIGNUP_HREF } from "@/components/RfqLink";
 
 const LINKS: [string, string][] = [
   ["/about", "서비스 소개"],
-  ["/faq", "자주 묻는 질문"],
-  ["/partners", "협력기관"],
+  ["/#fields", "시험 분야"],
   ["/for-cro", "CRO 참여"],
+  ["/faq", "자주 묻는 질문"],
 ];
 
 const PORTAL = { requester: "내 요청", cro: "CRO 포털", admin: "운영" } as const;
