@@ -204,8 +204,11 @@ export function advise(a: Answers): Advice {
   if (!research) {
     const single = dur === "단회";
     const full = stage !== "1상 진입" || a.wocbp === "예";
+    // 국내: 체외 돌연변이와 염색체 손상 시험은 1상 전, 체내 소핵은 체외 음성이면 2상 전까지 (임상규정 별표 1 주 5)
+    const krFirst = mfds && stage === "1상 진입";
     if (!own("복귀돌연변이")) tests.push({ key: "ames", label: "복귀돌연변이(Ames)", category: "유전독성", item: "복귀돌연변이(Ames, TG 471)", reason: "유전자 돌연변이 평가. 첫 임상 전 필요", basis: "ICH M3(R2) §9 · 고시 별표 4", rule: "R-A4-02", on: true, fill: { "유전독성.glpLevel": "GLP" } });
-    if (!own("체외 염색체 손상")) tests.push({ key: "invitro-ca", label: "체외 염색체 손상 시험 (염색체이상 또는 소핵)", category: "유전독성", item: "염색체이상 in vitro(TG 473)", reason: single && !full ? "단회 투여 임상은 복귀돌연변이로 진입할 수 있습니다. 반복 투여 임상 전에 필요" : "반복 투여 임상 전에 염색체 손상 평가가 필요", basis: "ICH M3(R2) §9", rule: single && !full ? "R-A4-02" : "R-A4-03", on: !(single && !full) });
+    if (!own("체외 염색체 손상")) tests.push({ key: "invitro-ca", label: "체외 염색체 손상 시험 (염색체이상 또는 소핵)", category: "유전독성", item: "염색체이상 in vitro(TG 473)", reason: single && !full ? "단회 투여 임상은 복귀돌연변이로 진입할 수 있습니다. 반복 투여 임상 전에 필요" : "반복 투여 임상 전에 염색체 손상 평가가 필요", basis: "ICH M3(R2) §9", rule: single && !full ? "R-A4-02" : "R-A4-03", on: !(single && !full) || krFirst });
+    if (mfds) notes.push({ text: "국내는 체외 돌연변이 시험과 체외 염색체 손상 시험을 1상 전에 제출합니다. 체외 결과가 양성 또는 의양성이면 체내 소핵시험도 1상 전에, 음성이면 2상 전까지 제출합니다.", basis: "의약품 임상시험 계획 승인에 관한 규정 별표 1 주 5", rule: "R-A4-03" });
     if (!own("체내 소핵")) {
       tests.push({ key: "invivo-mn", label: "체내 소핵", category: "유전독성", item: "소핵 in vivo(랫드)", reason: full ? "전체 배터리. 2상 전 또는 가임 여성 포함 전에 필요" : "전체 배터리는 2상 전까지. 반복투여독성에 통합하면 동물을 따로 쓰지 않습니다", basis: "ICH M3(R2) §9, §11.3 · ICH S2(R1) §4.3.2", rule: full ? "R-A4-04" : "R-A4-05", on: full });
       if (!full) later.push({ label: "유전독성 전체 배터리 (체내 시험 포함)", when: "2상 개시 전, 또는 가임 여성 포함 전", basis: "ICH M3(R2) §9" });
@@ -282,7 +285,7 @@ export function advise(a: Answers): Advice {
         if (!late) {
           tests.push({ key: "pefd", label: "예비 배·태자 발생시험 · 2종", category: REPRO, item: "배·태자발생 예비(pEFD)", reason: "피임 조치가 있으면 가임 여성 150명 이하, 3개월 이하 투여를 본시험 전에 뒷받침", basis: "ICH M3(R2) §11.3, 주석 4", rule: "R-A5-02", on: small, fill: { "생식발생독성.species": ["랫드", "토끼"] } });
           notes.push({ text: "가임 여성 포함 시 필요한 시험은 인원, 투여기간, 피임 조치, 제출 지역에 따라 달라집니다. 단기(예: 2주) 임상에서 임신 위험을 집중 관리하면 발생독성시험 없이 포함할 수 있는 경우도 있습니다.", basis: "ICH M3(R2) §11.3", rule: "R-A5-02" });
-          if (mfds) notes.push({ text: "국내 고시에는 임상 단계별 생식독성 자료 제출 시기가 정해져 있지 않습니다. 제출 전에 식약처와 확인하세요.", basis: "고시 별표 3", rule: "R-A5-06" });
+          if (mfds) notes.push({ text: "국내 규정은 수컷·암컷 생식독성 자료를 3상 시작 전까지 내도록 하지만, 가임 여성을 임상에 포함할 때의 배·태자 발생시험 시기는 명시하지 않습니다. 제출 전에 식약처와 확인하세요.", basis: "의약품 임상시험 계획 승인에 관한 규정 별표 1 주 3, 4", rule: "R-A5-06" });
         }
         if (noContra) {
           notes.push({ text: "고효율 피임을 하지 않는 가임 여성을 포함하려면 모든 여성 생식독성시험과 유전독성 표준 배터리를 먼저 완료해야 합니다. 수태능과 출생 전후 발생시험의 시기도 함께 검토하세요.", basis: "ICH M3(R2) §11.3", rule: "" });
@@ -312,11 +315,21 @@ export function advise(a: Answers): Advice {
     }
   }
   if (!approval && !research && (onc ? !oncLate : ["1개월 이내", "2주 이내", "단회", "미정"].includes(dur))) later.push(onc ? { label: "반복투여 13주 (임상 일정을 따른 3개월 시험)", when: "3상 개시 전", basis: "ICH S9 §3.4" } : { label: "더 긴 반복투여독성 (13주 이상)", when: "임상 투여기간이 늘어날 때", basis: "ICH M3(R2) 표 1" });
+  /* ── 흡입 경로 (기술문서 A2) ── */
+  if (String(a.route ?? "") === "흡입" && !research) {
+    for (const t of tests) if (t.key.startsWith("repeat") || t.key === "drf" || t.key === "single") { t.label = t.label.replace("반복투여", "반복 흡입").replace("단회투여독성", "단회 흡입독성"); t.basis += " · 고시 별표 10, 11"; }
+    notes.push({ text: "흡입 경로는 흡입독성시험으로 수행합니다. 수행 가능한 기관이 제한되고, 에어로졸 발생 조건 설정과 챔버 농도 분석법이 먼저 필요합니다. 시험물질 소요량이 경구 시험보다 훨씬 많습니다.", basis: "고시 별표 10, 11 · OECD TG 412, 413", rule: "R-A1-17" });
+    notes.push({ text: "흡입제의 고용량은 혈중 노출과 폐 침착 계산량을 함께 봅니다. 전신작용은 임상 노출의 50배와 폐 침착량의 10배, 국소작용은 폐 침착량의 50배와 임상 노출의 10배입니다.", basis: "고시 별표 13 주61 · ICH M3(R2) 질의응답", rule: "R-A1-17" });
+    if (overseas) notes.push({ text: "OECD 2018년 개정 시험법은 기관지폐포세척이 필수입니다. 국내 고시에는 없으므로 어느 기준으로 할지 정해야 합니다.", basis: "OECD TG 412, 413", rule: "R-A1-17" });
+    prereq.push("에어로졸 발생 조건 설정과 챔버 농도 분석법 (흡입독성 착수 전)");
+    askCro.add("흡입 노출 방식(비부·전신), 입자 크기 측정, 기관지폐포세척 포함 여부, 예상 시험물질 소요량");
+  }
+
   /* ── 발암성 (기술문서 A6) ── */
   if (!research && !onc) {
     const longUse = ["3개월 이내", "6개월 이내", "6개월 초과·만성"].includes(dur);
     if (longUse && (stage === "3상" || approval)) {
-      tests.push({ key: "carc", label: "발암성시험 (장기 설치류 1건 + 추가 시험 1건)", category: "발암성·종양원성", item: "장기발암성(2년)", reason: "임상 사용이 6개월 이상 예상되면 허가 신청 때 필요. 3개월 투여 적응증도 대부분 해당. 필요하면 체크하세요", basis: "ICH S1A §4.1 · ICH M3(R2) §10", rule: "R-A6-02", on: false });
+      tests.push({ key: "carc", label: "발암성시험 (장기 설치류 1건 + 추가 시험 1건)", category: "발암성·종양원성", item: "장기발암성(2년)", reason: "임상 사용이 6개월 이상 예상되면 허가 신청 때 필요. 3개월 투여 적응증도 대부분 해당. 국내 기준은 대다수 사용례가 6개월 초과. 필요하면 체크하세요", basis: "ICH S1A §4.1 · ICH M3(R2) §10 · 품목허가·신고·심사 규정 제7조제4호다목", rule: "R-A6-02", on: false });
       notes.push({ text: "발암성시험은 명백한 유전독성 물질, 기대여명이 짧은 환자 대상 의약품에는 필요 없을 수 있습니다. 이미 가진 자료로 평가해 2년 랫드 시험을 생략할 수 있는 경우도 있으나 규제기관 협의가 필요하고, 국내 고시에는 이 접근이 없습니다. 용량은 착수 전에 규제기관과 협의하는 것이 일반적입니다.", basis: "ICH S1A §4.3, §4.4 · ICH S1B(R1) 부록", rule: "R-A6-10" });
       prereq.push("발암성 용량설정시험 (본시험과 같은 계통·경로의 90일 시험. 마우스 시험을 하면 마우스에서도)");
       askCro.add("발암성시험의 동물 계통과 배경자료 보유 기간, 형질전환 마우스 시험의 표준 설계");
@@ -345,7 +358,7 @@ export function advise(a: Answers): Advice {
       askCro.add("자극·감작성 시험의 동물 수와 판정 기준");
     }
     if (mfds && !onc) {
-      tests.push({ key: "asa", label: "항원성시험 · 능동 전신 아나필락시스(ASA)", category: "항원성·면역독성", item: "ASA(능동전신아나필락시스)", reason: "국내 고시에 시험법이 있고 타당한 사유가 있으면 생략할 수 있습니다. ICH 지역에서는 요구되지 않습니다. 제출 의무는 식약처에 확인하세요", basis: "고시 별표 5, 별표 13 주44 · ICH S8 §1.2", rule: "R-A8-02", on: false });
+      tests.push({ key: "asa", label: "항원성시험 · 능동 전신 아나필락시스(ASA)", category: "항원성·면역독성", item: "ASA(능동전신아나필락시스)", reason: "국내 제출 대상은 전신 투여하는 고분자·단백성 의약품과 합텐이 될 가능성이 있는 저분자입니다. 해당 여부는 식약처에 확인하세요. ICH 지역에서는 요구되지 않습니다", basis: "품목허가·신고·심사 규정 제7조제4호다목 · 고시 별표 5 · ICH S8 §1.2", rule: "R-A8-02", on: false });
       tests.push({ key: "pca", label: "항원성시험 · 수동 피부 아나필락시스(PCA)", category: "항원성·면역독성", item: "PCA(수동피부아나필락시스)", reason: "ASA와 같습니다", basis: "고시 별표 5, 별표 13 주44", rule: "R-A8-02", on: false });
       askCro.add("항원성시험의 군 구성 (용량, 보조제 유무, 결합체 포함 여부)");
     }
