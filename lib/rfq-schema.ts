@@ -12,6 +12,8 @@
  * 세부 조건 값의 키는 `${대분류}.${fieldId}`
  */
 
+import { AREA_NAMES } from "./efficacy";
+
 export type FieldType =
   | "text"
   | "email"
@@ -600,14 +602,15 @@ export const DETAILS: Record<Cat, Field[]> = {
     GLP_LEVEL,
   ],
   "효력시험(약효)": [
-    {
-      id: "area",
-      type: "select",
-      label: "질환 영역",
-      options: ["항암", "대사·내분비", "심혈관", "면역·염증", "신경계", "감염", "호흡기", "소화기", "피부", "근골격", "안과", "비뇨생식", "희귀질환", "기타"],
-    },
-    { id: "species", type: "chips", label: "동물종", options: [...RODENT, "누드마우스", "기타"] },
-    { id: "model", type: "textarea", label: "질환 모델·설계", placeholder: "예: DSS 대장염 마우스, 군당 8마리, 양성대조군 포함" },
+    { id: "items", type: "chips", label: "질환 영역", options: [...AREA_NAMES], help: "영역마다 회신 행이 하나씩 생깁니다." },
+    { id: "method", type: "text", label: "질환 모델", placeholder: "예: DSS 유도 대장염. 모르면 비워 두세요 (기관 제안)" },
+    { id: "species", type: "chips", label: "동물종", options: [...RODENT, "누드마우스", "개(비글)", "미니피그", "원숭이(영장류)", "세포·조직(체외)", "기관 제안"] },
+    { id: "groups", type: "text", label: "희망 군 수와 군당 마릿수", placeholder: "예: 5군, 군당 8마리. 모르면 비워 두세요", help: "기관 제안에 맡기면 기관마다 설계가 달라져 비교가 어려워질 수 있습니다." },
+    { id: "positive", type: "radio", label: "양성 대조군", options: ["필요", "불필요", "기관 제안"] },
+    { id: "duration", type: "text", label: "투여 기간", placeholder: "예: 2주, 1일 1회" },
+    { id: "endpoints", type: "textarea", label: "꼭 필요한 평가 지표", placeholder: "예: 체중, 질병활성지수, 대장 길이, 조직 점수, 사이토카인" },
+    { id: "pilot", type: "radio", label: "예비시험", options: ["필요", "불필요", "기관 제안"] },
+    { id: "use", type: "select", label: "자료의 용도", options: ["내부 판단 (후보물질 선별·용량 탐색)", "허가·임상시험계획 제출", "학술지 게재 (건강기능식품 기능성 등)", "투자 유치·기술 이전", "기타"], help: "용도에 따라 보고서 형식과 기관에 요구할 것이 달라집니다." },
     GLP_LEVEL,
   ],
   환경유해성: [

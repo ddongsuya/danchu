@@ -7,6 +7,7 @@
  */
 import { CATS, DETAILS, type Cat, type Field, type Values } from "./rfq-schema";
 import type { QuoteRow } from "./quote-items";
+import { EFFICACY_CAT, costLines, modelsOf } from "./efficacy";
 
 export type Glp = "GLP" | "Non-GLP" | "both";
 export type CatalogOption = { name: string; amount: number | null };
@@ -98,6 +99,8 @@ const METHODS_BY_CAT: Partial<Record<Cat, string[]>> = {
 /** 항목별 시험법 후보. 목록에 없으면 직접 입력 */
 export function methodOptions(category: string, item: string): string[] {
   if (category === "일반독성") return /단회|급성/.test(item) ? SINGLE_DOSE_METHODS : REPEAT_DOSE_METHODS;
+  // 효력시험은 시험법 자리에 질환 모델을 적는다. 후보는 공개 자료에서 확인된 예시
+  if (category === EFFICACY_CAT) return modelsOf(item);
   return METHODS_BY_CAT[category as Cat] ?? [];
 }
 
@@ -137,8 +140,10 @@ export const EXTRA_FIELDS: Partial<Record<Cat, Field[]>> = {
   동물대체시험: [{ id: "model", type: "text", label: "모델·키트", placeholder: "예: EpiDerm, KeraSkin, SkinEthic" }],
   "의료기기 생물학적 안전성": [{ id: "extract", type: "select", label: "표준 추출 조건", options: ["37℃ 72h", "50℃ 72h", "70℃ 24h", "121℃ 1h", "협의"] }],
   "효력시험(약효)": [
-    { id: "diseaseModel", type: "text", label: "질환 모델", placeholder: "예: DSS 대장염, STZ 당뇨, MCAO" },
-    { id: "endpoints", type: "text", label: "평가 지표", placeholder: "예: 체중, DAI, 조직 점수, 혈당" },
+    { id: "induction", type: "text", label: "유도 방법", placeholder: "예: DSS 음수 투여 7일" },
+    { id: "positiveControl", type: "text", label: "검증된 양성 대조약", placeholder: "이 모델에서 자료를 가진 대조약" },
+    { id: "endpoints", type: "text", label: "기본 평가 지표", placeholder: "예: 체중, 질병활성지수, 대장 길이, 조직 점수" },
+    { id: "customDev", type: "radio", label: "맞춤 모델 개발", options: ["가능", "불가"] },
   ],
   환경유해성: [{ id: "fish", type: "text", label: "어종", placeholder: "예: 송사리(Oryzias latipes)" }],
 };
@@ -185,6 +190,14 @@ const EXPLAIN: Partial<Record<Cat, [string, string, string][]>> = {
     ["exp_val", "분석법 검증 횟수와 구분", "예: 랫드 혈장 전체 검증 1회, 개 혈장 부분 검증 1회"],
     ["exp_samples", "채혈 시점과 예상 검체 수", "예: 8시점 × 3마리 × 3용량 = 72검체"],
   ],
+  "효력시험(약효)": [
+    ["exp_groups", "군 구성 (군 이름·처치·마릿수)", "예: 정상 8, 유도 대조 8, 양성 대조 8, 시험물질 저·중·고 각 8"],
+    ["exp_schedule", "유도·투여·관찰 일정", "예: 유도 7일, 투여 14일(1일 1회 경구), 15일째 종료"],
+    ["exp_endpoints", "포함한 평가 지표", "총액에 든 지표"],
+    ["exp_options", "선택 평가 지표와 금액", "예: 사이토카인 5종 +3,000,000원"],
+    ["exp_posdata", "양성 대조약과 자료 보유", "예: 설파살라진, 이 모델에서 자료 보유"],
+    ["exp_assume", "가정과 제외 사항", "예: 시험물질 조제는 의뢰자 제공 용액 기준, 예비시험 미포함"],
+  ],
   조제물분석: [
     ["exp_val", "분석법 검증 횟수와 구분", "예: 체외 유전독성 1회, 체외 약리 1회, 체내 1회"],
     ["exp_crit", "허용 기준과 분석 횟수", "예: 함량 ±10%, 투여 1주·종료 주 분석"],
@@ -199,7 +212,8 @@ for (const [cat, list] of Object.entries(EXPLAIN) as [Cat, [string, string, stri
 export function explainOf(category: string, extra: unknown): [string, string][] {
   if (!extra || typeof extra !== "object") return [];
   const e = extra as Record<string, unknown>;
-  return (EXPLAIN_FIELDS[category as Cat] ?? []).flatMap((f) => (typeof e[f.id] === "string" && (e[f.id] as string).trim() ? [[f.label ?? f.id, e[f.id] as string] as [string, string]] : []));
+  const costs = category === EFFICACY_CAT ? costLines(e) : [];
+  return [...(EXPLAIN_FIELDS[category as Cat] ?? []).flatMap((f) => (typeof e[f.id] === "string" && (e[f.id] as string).trim() ? [[f.label ?? f.id, e[f.id] as string] as [string, string]] : [])), ...costs];
 }
 
 let seq = 0;
@@ -272,6 +286,14 @@ function methodMatch(req: string[], m: string | null): boolean | null {
   return req.some((r) => norm(m).includes(norm(r)) || norm(r).includes(norm(m)) || key(r) === key(m));
 }
 
+/** "DSS 유도 대장염" vs "대장염(DSS)" 처럼 두 글자 이상 낱말이 하나라도 겹치면 같은 모델 */
+function modelMatch(req: string[], m: string | null): boolean | null {
+  if (!req.length || !m) return null;
+  const words = (x: string) => new Set(x.toLowerCase().split(/[^0-9a-z가-힣]+/).filter((w) => w.length >= 2 && !["유도", "모델", "마우스", "랫드"].includes(w)));
+  const mine = words(m);
+  return req.some((r) => [...words(r)].some((w) => mine.has(w)));
+}
+
 /** 요청 조건과 가장 가까운 조합을 고른다. 없으면 undefined */
 export function pickVariant(variants: CatalogRow[], row: QuoteRow, payload: Values): { row: CatalogRow; mismatch: string[] } | undefined {
   if (!variants.length) return undefined;
@@ -287,8 +309,10 @@ export function pickVariant(variants: CatalogRow[], row: QuoteRow, payload: Valu
     const sm = speciesMatch(reqSpecies, v.species);
     if (sm === true) score += 4; else if (sm === false) mismatch.push("동물종");
     if (reqRoute && v.route) { if (v.route === reqRoute) score += 2; else mismatch.push("투여경로"); }
-    const mm = methodMatch(reqMethod, v.method);
-    if (mm === true) score += 2; else if (mm === false) mismatch.push("시험법");
+    // 효력시험은 시험법 자리에 질환 모델이 있다. 이름 표기가 기관마다 달라 핵심어가 겹치면 같은 모델로 본다
+    const eff = c === EFFICACY_CAT;
+    const mm = eff ? modelMatch(reqMethod, v.method) : methodMatch(reqMethod, v.method);
+    if (mm === true) score += 2; else if (mm === false) mismatch.push(eff ? "질환 모델" : "시험법");
     if (typeof reqGlp === "string" && (reqGlp === "GLP" || reqGlp === "Non-GLP") && v.glp !== "both") { if (v.glp === reqGlp) score += 1; else mismatch.push(`${reqGlp} 수행`); }
     if (v.source === "manual") score += 0.5;
     if (!best || score > best.score) best = { row: v, score, mismatch };

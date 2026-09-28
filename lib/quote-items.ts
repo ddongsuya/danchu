@@ -22,6 +22,8 @@ function detail(payload: Values, cat: string, id: string): string | string[] | u
 
 function condOf(payload: Values, cat: string): string {
   const parts: string[] = [];
+  const model = detail(payload, cat, "method");
+  if (typeof model === "string" && model.trim()) parts.push(model.trim().slice(0, 80));
   const species = detail(payload, cat, "species");
   if (Array.isArray(species) && species.length) parts.push(species.join("·"));
   const recovery = detail(payload, cat, "recovery");
