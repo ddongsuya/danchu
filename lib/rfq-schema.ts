@@ -688,5 +688,10 @@ export function labelMap(): Record<string, string> {
   for (const s of WIZ) for (const f of s.fields) m[f.id] = f.label || s.q;
   for (const g of STEP2) for (const f of g.fields) m[f.id] = f.label || f.id;
   for (const cat of CATS) for (const f of DETAILS[cat]) m[`${cat}.${f.id}`] = `${cat} · ${f.label}`;
+  // 제안 받기(lib/advisor.ts)로 만든 요청서의 기록
+  m.advisorAnswers = "상황 확인 답변";
+  m.advisorNotes = "확인할 점";
+  m.advisorPrereq = "일정상 선행";
+  m.advisorAsk = "기관에 설명 요청";
   return m;
 }

@@ -95,6 +95,8 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
     overview,
     rows: quoteRowsFromPayload(p),
     common,
+    situation: a("advisorAnswers").filter((x) => typeof x === "string").slice(0, 20),
+    ask: a("advisorAsk").filter((x) => typeof x === "string").slice(0, 30),
     attachments: masked ? (files.length ? `${files.length}건 · CDA 체결 후 열람` : "없음") : files.length ? `${files.length}건` : "없음",
     files: masked ? [] : files.map((f) => ({ id: f.id, name: f.file_name, size: f.size_bytes })),
   };

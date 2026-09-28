@@ -48,6 +48,8 @@ function cleanDesign(d: Record<string, unknown>): Record<string, unknown> {
     else out[k] = null;
   }
   for (const k of DESIGN_STR) out[k] = typeof d[k] === "string" ? (d[k] as string).slice(0, 120) : null;
+  // 기관의 설계 설명 (회복 동물 지정 방식, 분석법 검증 횟수 등 기관마다 다른 부분)
+  out.note = typeof d.note === "string" && d.note.trim() ? d.note.slice(0, 1000) : null;
   if (d.extra && typeof d.extra === "object" && !Array.isArray(d.extra)) {
     const ex: Record<string, string | string[]> = {};
     for (const [k, v] of Object.entries(d.extra as Record<string, unknown>).slice(0, 30)) {

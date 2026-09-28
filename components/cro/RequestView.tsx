@@ -65,6 +65,27 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
             ))}
           </div>
 
+          {(rfq.situation.length > 0 || rfq.ask.length > 0) && (
+            <div className="card" style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {rfq.situation.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>의뢰자 상황</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, display: "flex", flexDirection: "column", gap: 3 }}>
+                    {rfq.situation.map((x) => <li key={x}>{x}</li>)}
+                  </ul>
+                </div>
+              )}
+              {rfq.ask.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)", marginBottom: 6 }}>회신에서 설명해 주세요</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, display: "flex", flexDirection: "column", gap: 3 }}>
+                    {rfq.ask.map((x) => <li key={x}>{x}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="card" style={{ padding: "6px 18px" }}>
             <div style={{ padding: "12px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>공통 조건</div>
             {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>의뢰자가 상세 조건을 입력하지 않았습니다. 표준 설계로 견적해 주세요.</p>}

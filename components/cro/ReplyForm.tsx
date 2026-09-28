@@ -80,6 +80,10 @@ function DesignEditor({ value, disabled, onChange }: { value: Design; disabled: 
           </div>
         </div>
       )}
+      <div className="fld" style={{ gap: 4, marginTop: 10 }}>
+        <label className="fld__lab" style={{ fontSize: 12 }}>설계 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 기관의 방식을 적으면 비교표에 그대로 표시됩니다</span></label>
+        <textarea className="ta" rows={2} style={{ fontSize: 13 }} placeholder="예: 회복 동물은 대조군·고용량군의 마지막 5마리/성 지정. 분석법 검증 1회 포함." disabled={disabled} value={dstr(value, "note")} onChange={(e) => onChange({ ...value, note: e.target.value.slice(0, 1000) })} />
+      </div>
     </div>
   );
 }
@@ -260,6 +264,16 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
           <b>카탈로그로 초안을 채웠습니다.</b>{" "}
           {pending ? `요청 조건이 표준 설계와 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
           <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
+        </div>
+      )}
+
+      {rfq.ask.length > 0 && (
+        <div className="note note--tint" style={{ marginBottom: 16, flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+          <b>회신에서 설명해 주세요</b>
+          <span style={{ fontSize: 13 }}>가이드라인이 정하지 않아 기관마다 다른 부분입니다. 해당 항목의 설계 설명 칸이나 전달 사항에 기관의 방식을 적어 주세요. 의뢰자는 기관별 설명을 나란히 봅니다.</span>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: "flex", flexDirection: "column", gap: 3 }}>
+            {rfq.ask.map((x) => <li key={x}>{x}</li>)}
+          </ul>
         </div>
       )}
 

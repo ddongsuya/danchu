@@ -15,6 +15,10 @@ export type RfqView = {
   overview: [string, string][];
   rows: QuoteRow[];
   common: [string, string][];
+  /** 의뢰자가 제안 받기에서 답한 상황 */
+  situation: string[];
+  /** 기관마다 달라 회신에서 설명을 요청하는 항목 */
+  ask: string[];
   attachments: string;
   replyBy: string;
   authorities: string[];

@@ -54,7 +54,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design) })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: i.design && typeof i.design.note === "string" ? i.design.note : undefined })),
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,

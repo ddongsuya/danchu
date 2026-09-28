@@ -12,9 +12,12 @@ import { uploadToSigned, type UploadTicket } from "@/lib/upload";
 import { PRESETS, presetItems, type Preset } from "@/lib/presets";
 import { DesignHints } from "@/components/guide/DesignHints";
 import { PACKAGE_WHY, requestChecks } from "@/lib/design-guide";
+import { Advisor } from "@/components/Advisor";
 
 type Contact = { company: string; name: string; dept: string; email: string; phone: string; orgType: string };
-type Phase = "wizard" | "detail" | "summary";
+type Phase = "start" | "advisor" | "wizard" | "detail" | "summary";
+/** 시험물질명 문항 — 제안을 적용한 뒤 여기서 이어 간다 */
+const Q_SUBSTANCE = WIZ.findIndex((s) => s.fields[0]?.id === "substance");
 
 /** 요약 화면 행 — [라벨, 값 키, 문항 번호, 필수] */
 const ROWS: [string, string, number, boolean][] = [
@@ -51,6 +54,8 @@ export function NewRequest({ contact }: { contact: Contact }) {
     if (d) {
       setValues((v) => ({ ...v, ...d.values }));
       setQ(Math.min(d.q, WIZ.length - 1));
+    } else if (!new URLSearchParams(window.location.search).get("preset")) {
+      setPhase("start"); // 새 요청: 제안 받기와 직접 고르기 중 선택
     }
     setReady(true);
   }, []);
@@ -147,6 +152,50 @@ export function NewRequest({ contact }: { contact: Contact }) {
 
   if (!ready) return null;
 
+  /* ── 시작: 두 가지 길 ── */
+  if (phase === "start") {
+    const path = (title: string, desc: string, cta: string, primary: boolean, onClick: () => void) => (
+      <button type="button" onClick={onClick} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 6, textAlign: "left", borderColor: primary ? "var(--brand)" : undefined }}>
+        <b style={{ fontSize: 17, color: "var(--ink)" }}>{title}</b>
+        <span style={{ fontSize: 14, color: "var(--body)", lineHeight: 1.55 }}>{desc}</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)", marginTop: 6 }}>{cta} →</span>
+      </button>
+    );
+    return (
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <Link href="/app" className="crumb">닫기</Link>
+        <div className="ph">
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>새 견적 요청</p>
+            <h1>어떻게 시작할까요?</h1>
+          </div>
+        </div>
+        <div className="stack" style={{ gap: 12 }}>
+          {path("상황을 말하고 제안 받기", "개발 단계와 임상 계획, 이미 가진 자료를 답하면 필요한 시험을 가이드라인 근거와 함께 제안합니다. 지금은 합성의약품을 지원합니다.", "질문 9개 · 2분", true, () => { setPhase("advisor"); window.scrollTo(0, 0); })}
+          {path("직접 고르기", "필요한 시험을 이미 알고 있다면 항목을 바로 고릅니다. 패키지로 한 번에 채울 수도 있습니다.", "바로 작성", false, () => { setPhase("wizard"); window.scrollTo(0, 0); })}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── 제안 받기 ── */
+  if (phase === "advisor") {
+    return (
+      <Advisor
+        onManual={() => { setPhase("wizard"); window.scrollTo(0, 0); }}
+        onApply={(patch) => {
+          const next: Values = { ...values, ...patch };
+          setValues(next);
+          setError("");
+          setQ(Q_SUBSTANCE);
+          saveDraft({ q: Q_SUBSTANCE, values: next as Record<string, string | string[] | boolean> });
+          setPhase("wizard");
+          window.scrollTo(0, 0);
+        }}
+      />
+    );
+  }
+
   /* ── 요약 ── */
   if (phase === "summary") {
     const checks = requestChecks(values);
@@ -176,6 +225,15 @@ export function NewRequest({ contact }: { contact: Contact }) {
             </ul>
             <span style={{ display: "block", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>안내일 뿐이며 그대로 제출해도 됩니다.</span>
           </div>
+        )}
+        {Array.isArray(values.advisorAsk) && values.advisorAsk.length > 0 && (
+          <details className="note note--tint" style={{ marginBottom: 12, display: "block" }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>기관에 설명을 요청하는 항목 {values.advisorAsk.length}개가 함께 전달됩니다</summary>
+            <ul style={{ margin: "8px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+              {values.advisorAsk.map((c) => <li key={c}>{c}</li>)}
+            </ul>
+            <span style={{ display: "block", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>기관마다 방식이 다른 부분입니다. 기관의 설명은 비교표에 나란히 표시됩니다.</span>
+          </details>
         )}
         <div className="stack" style={{ gap: 12 }}>
           <div className="card" style={{ padding: "6px 18px" }}>
