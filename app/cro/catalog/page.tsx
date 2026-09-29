@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function CroCatalogPage() {
   const s = await requireSession("cro");
   const org = s.org;
-  if (!org) return <PendingOrg org={null} />;
+  if (!org) return <PendingOrg org={null} pendingOrg={s.pendingOrg} />;
   const [rows, presets] = await Promise.all([loadCatalog(org.id), loadOrgPresets(org.id)]);
   const items = catalogItems();
   const filled = new Set(rows.map((r) => r.item_key)).size;

@@ -38,6 +38,9 @@ export async function GET(req: Request) {
   const today = todaySeoul();
   const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, errors: [] as string[] };
 
+  // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
+  await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
+
   // 0) 빠진 배포 보충: 승인된 기관 중 열린 요청을 아직 받지 못한 곳
   try {
     out.distributed = (await distributeOpenRfqs()).invites;

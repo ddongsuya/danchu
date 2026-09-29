@@ -34,22 +34,30 @@ npm install
 cp .env.example .env.local   # 키 입력
 npm run dev                  # http://localhost:3000
 npm run typecheck
+npm test                     # Vitest (lib 순수 함수)
 ```
+CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 
 ## Supabase 설정 (1회)
-1. SQL Editor에서 순서대로 실행: `supabase/schema.sql` → `supabase/schema_cro.sql` → `supabase/schema_accounts.sql`
+1. SQL Editor에서 순서대로 실행: `supabase/schema.sql` → `schema_cro.sql` → `schema_accounts.sql` → `schema_catalog.sql` → `schema_catalog_variants.sql` → `schema_membership.sql`
 2. Storage에 비공개 버킷 `rfq-files`, `cro-files`가 있는지 확인 (스키마가 만들지만 없으면 직접 생성)
 3. Authentication → Providers → Email: 켜 둔다. **Confirm email 켜짐** 유지 (가입 확인은 우리가 보내는 메일 링크로 처리)
+   - Authentication → Sign In / Providers → **"Allow new users to sign up" 끄기**. 가입은 서버가 `auth.admin.createUser`로만 만든다. 켜 두면 anon 키로 직접 가입해 프로필을 만들 수 있다 (역할·기관은 어차피 서버만 적지만, 불필요한 계정이 생긴다)
 4. Project Settings → API에서 `URL`, `anon`, `service_role` 키 → 환경변수
 
 인증 메일(가입 확인·로그인 링크·비밀번호 재설정)은 Supabase SMTP가 아니라 **Resend로 보낸다**
 (`auth.admin.generateLink` → `/auth/confirm`). Supabase 무료 SMTP의 시간당 발송 한도를 타지 않는다.
 
 ### 운영자 계정
-`ADMIN_EMAIL`에 적은 주소로 가입하면 첫 로그인 때 자동으로 운영자가 된다. 또는 SQL:
+운영자 권한은 DB의 `profiles.role`로만 정한다. 가입한 뒤 SQL로 지정하거나, 이미 운영자인 계정이 `/admin/users`에서 바꾼다:
 ```sql
 update public.profiles set role = 'admin' where lower(email) = 'ops@example.com';
 ```
+`ADMIN_EMAIL`은 운영자 알림 메일 수신 주소일 뿐 권한과 무관하다.
+
+### CRO 담당자 합류
+같은 이름의 기관으로 CRO 가입 신청이 오면 계정은 만들되 기관에 연결하지 않는다 (`profiles.pending_org_id`).
+운영자가 `/admin/cros/[id]`의 "담당자 합류 신청"에서 연결해야 그 기관의 요청서를 볼 수 있다.
 
 ## 환경변수
 `.env.example` 참고. Vercel → Settings → Environment Variables에 넣고 Redeploy.
@@ -68,7 +76,8 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | `/api/auth/*` | signup, signup-cro, login, magic, forgot, reset, logout, me |
 
 파일을 서버로 보내지 않는 이유: Vercel 함수 요청 본문 한도가 4.5MB라서 20MB 첨부를 받을 수 없다.
-접수 API 남용 방어: 숨은 허니팟 칸(`website`) + IP당 10분 5건 속도 제한(인스턴스 단위).
+접수 API는 로그인 필수이며 의뢰자 이메일은 항상 계정 이메일이다. 남용 방어: 숨은 허니팟 칸(`website`) + 공유 속도 제한(`rate_limit_hit` DB 함수, `lib/rate-limit.ts`). 인증 메일·문의 API도 같은 제한을 쓴다.
+배포·기관 메일·접수 확인 메일은 응답 뒤(`after()`)에 보낸다.
 
 ## 폼 스키마 수정
 `lib/rfq-schema.ts`의 `CONTACT` / `WIZ` / `STEP2` / `DETAILS` / `CATS`만 고치면 화면·검증·메일·CRO 회신 행이 함께 바뀐다.

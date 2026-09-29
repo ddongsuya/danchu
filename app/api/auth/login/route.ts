@@ -3,6 +3,7 @@ import { createSessionClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { EMAIL_RE, authErrorKo, safeNext } from "@/lib/auth-links";
 import { homeOf, type Role } from "@/lib/auth";
+import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,7 @@ export async function POST(req: Request) {
   const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
   const password = typeof b.password === "string" ? b.password : "";
   if (!EMAIL_RE.test(email) || !password) return NextResponse.json({ error: "이메일과 비밀번호를 입력해 주세요." }, { status: 400 });
+  if ((await rateLimited("login:email", email, 10, 15 * 60)) || (await rateLimited("login:ip", clientIp(req), 30, 15 * 60))) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
 
   const sb = await createSessionClient();
   const admin = getSupabaseAdmin();

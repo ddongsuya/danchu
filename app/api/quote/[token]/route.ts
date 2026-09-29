@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { QuoteRow } from "@/lib/quote-items";
 import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib/cro-data";
@@ -29,6 +29,7 @@ function blocked(got: Loaded): string {
   if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
   if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
   if (got.closed) return "의뢰자가 이미 CRO를 선택해 이 요청의 회신이 닫혔습니다.";
+  if (got.declined) return "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.";
   return "";
 }
 
@@ -142,11 +143,34 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     header.pdf_size = pdf.size;
   }
 
-  const { data: q, error: e1 } = await sb.from("cro_quotes").upsert(header, { onConflict: "invite_id" }).select("id").single();
-  if (e1 || !q) {
-    console.error("cro_quotes upsert", e1);
-    return { error: "저장에 실패했습니다.", status: 500 };
+  let quoteId: string;
+  if (submit) {
+    const { data: q, error: e1 } = await sb.from("cro_quotes").upsert(header, { onConflict: "invite_id" }).select("id").single();
+    if (e1 || !q) {
+      console.error("cro_quotes upsert", e1);
+      return { error: "저장에 실패했습니다.", status: 500 };
+    }
+    quoteId = q.id as string;
+  } else if (got.draft) {
+    // 초안 저장: 제출본은 절대 덮지 않는다 (자동 저장이 제출 뒤에 도착하는 경합 방어)
+    const { data: q, error: e1 } = await sb.from("cro_quotes").update(header).eq("invite_id", got.inviteId).neq("status", "submitted").select("id").maybeSingle();
+    if (e1) {
+      console.error("cro_quotes draft update", e1);
+      return { error: "저장에 실패했습니다.", status: 500 };
+    }
+    if (!q) return { ok: true, skipped: true };
+    quoteId = q.id as string;
+  } else {
+    const { data: q, error: e1 } = await sb.from("cro_quotes").insert(header).select("id").single();
+    if (e1 || !q) {
+      // 같은 초대에 이미 행이 생겼다면(동시 제출) 초안 저장은 건너뛴다
+      if (e1?.code === "23505") return { ok: true, skipped: true };
+      console.error("cro_quotes insert", e1);
+      return { error: "저장에 실패했습니다.", status: 500 };
+    }
+    quoteId = q.id as string;
   }
+  const q = { id: quoteId };
 
   const rowsBySeq = new Map(got.rfq.rows.map((r) => [r.seq, r]));
   const itemRows = items.map((it) => {
@@ -170,8 +194,10 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     return { error: "항목 저장에 실패했습니다.", status: 500 };
   }
   if (submit && got.croOrgId) {
-    // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (실패해도 제출은 성공)
-    learnFromSubmission(got.croOrgId, itemRows.map((r) => ({ category: r.category, name: r.name, avail: r.avail, amount: r.amount, weeks: r.weeks, unit: r.unit, unitPrice: r.unit_price, design: r.design as Record<string, unknown> }))).catch((e) => console.error("learn", e));
+    // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (응답 뒤에 실행, 실패해도 제출은 성공)
+    const orgId = got.croOrgId;
+    const learned = itemRows.map((r) => ({ category: r.category, name: r.name, avail: r.avail, amount: r.amount, weeks: r.weeks, unit: r.unit, unitPrice: r.unit_price, design: r.design as Record<string, unknown> }));
+    after(() => learnFromSubmission(orgId, learned).catch((e) => console.error("learn", e)));
   }
 
   await sb.from("rfq_invites").update({ status: submit ? "submitted" : "draft" }).eq("id", got.inviteId);
@@ -208,7 +234,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
   if (got.draft?.status === "submitted") return NextResponse.json({ ok: true, skipped: true }); // 제출본은 자동 저장으로 덮지 않는다
   const r = await upsert(got, parsed, false, await actor(got));
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, skipped: !!r.skipped });
 }
 
 /** POST — 제출 (JSON: { items, note, common, pdf? }). 전 항목 답변 + 공통 필수 + PDF 필수. */

@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     console.error("[auth/confirm] verifyOtp 실패", { type, status: error?.status, code: error?.code, message: error?.message, hasUser: !!data?.user });
     return fail("expired");
   }
-  console.info("[auth/confirm] ok", { type, user: data.user.id, email: data.user.email, confirmed: !!data.user.email_confirmed_at });
+  console.info("[auth/confirm] ok", { type, user: data.user.id, confirmed: !!data.user.email_confirmed_at });
 
   if (type === "recovery") return NextResponse.redirect(new URL("/reset-password", url.origin), 303);
 

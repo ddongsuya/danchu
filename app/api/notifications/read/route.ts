@@ -11,7 +11,10 @@ export async function POST(req: Request) {
   const sb = getSupabaseAdmin()!;
   const b = (await req.json().catch(() => ({}))) as { id?: unknown };
   let q = sb.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", s.userId).is("read_at", null);
-  if (typeof b.id === "string") q = q.eq("id", b.id);
+  if (typeof b.id === "string") {
+    if (!/^[0-9a-f-]{36}$/.test(b.id)) return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
+    q = q.eq("id", b.id);
+  }
   const { error } = await q;
   if (error) return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 500 });
   return NextResponse.json({ ok: true });
