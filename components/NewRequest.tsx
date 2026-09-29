@@ -136,10 +136,14 @@ export function NewRequest({ contact }: { contact: Contact }) {
       if (!res.ok || !data.rfqNo) throw new Error(data.error || "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       let failed = 0;
       const tickets = data.uploads ?? [];
+      const done: string[] = [];
       await Promise.all(files.map(async (f, i) => {
         const t = tickets[i];
         if (!t || t.name !== f.name || !(await uploadToSigned(t, f))) failed++;
+        else done.push(t.path);
       }));
+      // 올라간 파일을 서버가 확인해 "업로드 완료"로 표시한다 (실패해도 접수는 유효, 내려받을 때 다시 확인한다)
+      if (done.length) await fetch(`/api/rfq/${data.rfqNo}/files/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paths: done }) }).catch(() => null);
       clearDraft();
       const qs = new URLSearchParams({ no: data.rfqNo });
       if (files.length && failed) qs.set("upfail", String(failed));

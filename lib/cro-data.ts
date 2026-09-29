@@ -2,7 +2,7 @@
  * CRO 회신 화면 타입.
  * 데이터는 rfq_invites / cro_quotes 에서 읽는다 (lib/quote-load.ts).
  */
-import type { QuoteRow } from "./quote-items";
+import type { QuoteLineDef } from "./quote-items";
 
 export type RfqView = {
   no: string;
@@ -13,7 +13,7 @@ export type RfqView = {
   urgent: boolean;
   confid: string;
   overview: [string, string][];
-  rows: QuoteRow[];
+  rows: QuoteLineDef[];
   common: [string, string][];
   /** 의뢰자가 제안 받기에서 답한 상황 */
   situation: string[];

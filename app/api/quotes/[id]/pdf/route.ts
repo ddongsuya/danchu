@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { QuoteRow, RfqRow } from "@/lib/data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,10 +16,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const { data: q } = await sb.from("cro_quotes").select("*").eq("id", id).maybeSingle();
-  if (!q || !(q as QuoteRow).pdf_path) return NextResponse.json({ error: "PDF가 없습니다." }, { status: 404 });
-  const quote = q as QuoteRow;
+  if (!q || !q.pdf_path) return NextResponse.json({ error: "PDF가 없습니다." }, { status: 404 });
+  const quote = q;
   const { data: r } = await sb.from("rfq_requests").select("*").eq("id", quote.rfq_id).maybeSingle();
-  const rfq = r as RfqRow | null;
+  const rfq = r;
 
   const s = await sessionOrNull();
   const token = new URL(req.url).searchParams.get("token") || "";
