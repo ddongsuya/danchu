@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const TITLE = "단추 · 비임상 시험 견적, 근거부터 비교표까지";
+const TITLE = "단추 · 비임상 시험의 시작, 단추를 채우다.";
 const DESC =
-  "개발 단계와 임상 계획을 답하면 공개 가이드라인에 근거해 필요한 시험을 제안합니다. 요청서 하나로 여러 기관이 같은 양식으로 회신합니다.";
+  "필요한 시험부터 기관별 견적 비교까지. 한 번의 요청으로 여러 비임상 CRO의 수행 범위, 금액과 일정을 비교하세요.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://danchu.kr"),
@@ -17,10 +17,10 @@ export const metadata: Metadata = {
     siteName: "단추 Danchu",
     locale: "ko_KR",
     type: "website",
-    // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og.png · scripts/gen-images.js로 생성)
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "단추, 비임상 시험 견적을 같은 양식으로" }],
+    // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og-workspace-v2.png · scripts/gen-images.js로 생성)
+    images: [{ url: "/og-workspace-v2.png", width: 1200, height: 630, alt: "단추 · 비임상 시험의 시작, 단추를 채우다." }],
   },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og.png"] },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og-workspace-v2.png"] },
   robots: { index: true, follow: true },
   other: { "color-scheme": "light dark" },
   manifest: "/manifest.webmanifest",
