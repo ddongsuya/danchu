@@ -29,7 +29,7 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
           <h1>{rfq.substance}</h1>
           <p>
             {rfq.client}
-            {rfq.masked && " · CDA 체결 전 마스킹"}
+            {rfq.masked && " · CDA 체결 확인 전 비공개"}
           </p>
           <div style={{ marginTop: 10 }}>
             <StatusPill tone={state.tone}>{state.label}</StatusPill>
@@ -46,7 +46,7 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <Lock />
           <span>
-            기밀 등급 <b style={{ fontWeight: 600 }}>CDA 필요</b>. 단추 표준 CDA에 서명하면 회사명과 첨부 자료가 열립니다.{" "}
+            기밀 등급 <b style={{ fontWeight: 600 }}>CDA 필요</b>. 요청에 맞는 CDA를 양측이 체결하고 운영자가 확인한 뒤 회사명과 첨부 자료가 공개됩니다.{" "}
             <a href={`mailto:hello@danchu.kr?subject=${encodeURIComponent(`[${rfq.no}] CDA 서명 요청`)}`}>CDA 서명 요청 →</a>
           </span>
         </div>

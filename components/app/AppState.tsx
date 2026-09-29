@@ -71,32 +71,29 @@ export function useApp(): Ctx {
   return c;
 }
 
-/* ── 위자드 임시 저장 ────────────────────────────────
-   문항 단위로 즉시 저장하고, 재진입 시 마지막 문항으로 돌아간다. */
-
-const DRAFT = "danchu.app.rfqDraft";
-export type Draft = { q: number; values: Record<string, string | string[] | boolean> };
-
-export function loadDraft(): Draft | null {
-  if (typeof window === "undefined") return null;
+/* Account-scoped local drafts. Files are deliberately metadata only. */
+export type Draft = {
+  version: 2; q: number; phase: "edit" | "review"; updatedAt: string;
+  values: Record<string, string | string[] | boolean | undefined>;
+  files: { name: string; size: number }[];
+  pendingNo?: string;
+};
+const draftKey = (userId: string) => `danchu.rfqDraft.v2.${userId}`;
+export function loadDraft(userId: string): Draft | null {
   try {
-    const raw = localStorage.getItem(DRAFT);
-    return raw ? (JSON.parse(raw) as Draft) : null;
-  } catch {
-    return null;
-  }
+    // Legacy drafts have no owner and must never transfer to another account.
+    localStorage.removeItem("danchu.app.rfqDraft");
+    const d = JSON.parse(localStorage.getItem(draftKey(userId)) || "null");
+    if (!d || d.version !== 2 || !Number.isInteger(d.q) || d.q < 0 || d.q > 3 || !d.values || typeof d.values !== "object" || Array.isArray(d.values)) return null;
+    if (!Object.values(d.values).every((v) => typeof v === "string" || typeof v === "boolean" || (Array.isArray(v) && v.every((x) => typeof x === "string")))) return null;
+    return { ...d, files: Array.isArray(d.files) ? d.files.filter((f: { name?: unknown; size?: unknown }) => typeof f?.name === "string" && typeof f?.size === "number") : [], pendingNo: /^DC-\d{4}-\d{4,}$/.test(d.pendingNo || "") ? d.pendingNo : undefined };
+  } catch { return null; }
 }
-export function saveDraft(d: Draft) {
-  try {
-    localStorage.setItem(DRAFT, JSON.stringify(d));
-  } catch {
-    /* 무시 */
-  }
+export function saveDraft(userId: string, d: Draft): boolean {
+  try { localStorage.setItem(draftKey(userId), JSON.stringify(d)); return true; }
+  catch { return false; }
 }
-export function clearDraft() {
-  try {
-    localStorage.removeItem(DRAFT);
-  } catch {
-    /* 무시 */
-  }
+export function clearDraft(userId: string): boolean {
+  try { localStorage.removeItem(draftKey(userId)); return true; }
+  catch { return false; }
 }

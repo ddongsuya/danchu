@@ -1,3 +1,4 @@
+import { notificationRecipients } from "./mail-preferences";
 import { getSupabaseAdmin } from "./supabase";
 import { sendMail, mailWrap, esc } from "./mail";
 
@@ -24,6 +25,8 @@ export async function notifyUsers(
     if (error) console.error("notifications insert", error);
   }
   if (email && email.to.length) {
+    const to = await notificationRecipients(email.to);
+    if (!to.length) return;
     const link = n.href ? `${siteUrl()}${n.href}` : siteUrl();
     const html =
       email.html ??
@@ -31,7 +34,7 @@ export async function notifyUsers(
         <h2 style="margin:0 0 12px;font-size:20px">${esc(n.title)}</h2>
         ${n.body ? `<p style="white-space:pre-wrap">${esc(n.body)}</p>` : ""}
         <p style="margin-top:20px"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">단추에서 보기</a></p>`);
-    await sendMail({ to: email.to, subject: email.subject ?? `[단추] ${n.title}`, html, replyTo: email.replyTo }).catch((e) => console.error("notify mail", e));
+    await sendMail({ to, subject: email.subject ?? `[단추] ${n.title}`, html, replyTo: email.replyTo }).catch((e) => console.error("notify mail", e));
   }
 }
 

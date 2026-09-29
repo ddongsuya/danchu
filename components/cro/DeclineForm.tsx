@@ -37,7 +37,7 @@ export function DeclineForm({ token, backHref, afterHref }: { token: string; bac
             }
           }}
         >
-          {busy ? "처리 중…" : "회신하지 않음으로 처리"}
+          {busy ? "처리 중…" : "견적 참여하지 않기"}
         </button>
         <Link href={backHref} className="b2">돌아가기</Link>
       </div>

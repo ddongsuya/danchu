@@ -46,8 +46,8 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
   );
   return (
     <div style={{ borderTop: "1px dashed var(--cline)", paddingTop: 10 }}>
-      <button type="button" onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 8, fontSize: 12.5, color: "var(--muted)", textAlign: "left", background: "none", border: 0, padding: 0 }}>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (표준 설계를 적어 두면 비교표에 표시됩니다)"}</span>
+      <button type="button" onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--muted)", textAlign: "left", background: "none", border: 0, padding: 0 }}>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (등록한 기본 조건를 적어 두면 비교표에 표시됩니다)"}</span>
         <span style={{ flex: "none", color: "var(--brand)", fontWeight: 600 }}>{open ? "접기" : "수정"}</span>
       </button>
       {open && (
@@ -88,7 +88,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
       )}
       {explain.length > 0 && (
         <details style={{ marginTop: 10 }}>
-          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>기관마다 다른 부분 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>{filledExp} / {explain.length} · 비교표에 나란히 표시됩니다</span></summary>
+          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>시험 설계와 비용 조건 <span style={{ fontWeight: 400, color: "var(--muted)" }}>{filledExp} / {explain.length} · 비교표에 나란히 표시됩니다</span></summary>
           <div className="stack" style={{ gap: 8, marginTop: 8 }}>
             {explain.map((f) => (
               <div key={f.id} className="fld" style={{ gap: 4 }}>
@@ -117,7 +117,7 @@ type Loaded = {
 };
 
 /**
- * 견적 회신 폼 — 항목별 3칸(+사유) · 공통 조건 · 전달 사항 · 정본 PDF.
+ * 견적 회신 폼 — 항목별 3칸(+사유) · 공통 조건 · 전달 사항 · 견적서 원본(PDF).
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
 export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: string; backHref: string; doneHref: string; orgCerts?: string[] }) {
@@ -131,6 +131,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const revision = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const timer = useRef<number>(0);
   const saveAbort = useRef<AbortController | null>(null);
@@ -156,8 +158,19 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const readOnly = !!(data?.expired || data?.locked || data?.closed || data?.declined);
   const isSubmitted = data?.draft?.status === "submitted";
 
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => { if (dirty || pdf) { e.preventDefault(); e.returnValue = ""; } };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, pdf]);
+  const leave = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if ((dirty || pdf) && !window.confirm("아직 저장·제출하지 않은 변경사항 또는 첨부가 있습니다. 이 화면을 나갈까요?")) e.preventDefault();
+  };
   const queueSave = (nextItems: ReplyItem[], nextNote: string, nextCommon: ReplyCommon) => {
-    if (readOnly || isSubmitted) return;
+    if (readOnly) return;
+    setDirty(true);
+    const current = ++revision.current;
+    if (isSubmitted) return;
     setSaved("saving");
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(async () => {
@@ -172,8 +185,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       })
         .then((r) => r.ok)
         .catch(() => (ac.signal.aborted ? null : false));
-      if (ok === null) return; // 제출로 취소됨
+      if (ok === null || current !== revision.current) return; // 제출로 취소됨
       setSaved(ok ? "saved" : "failed");
+      if (ok) setDirty(false);
     }, 800);
   };
 
@@ -182,10 +196,10 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     const next = items.map((it) => {
       if (it.seq !== seq) return it;
       const n = { ...it, ...patch };
-      // 손댄 칸은 확인한 것으로 본다. 출처는 수정 시 '직접 입력'
+      // Edited values change the source; review checks require explicit confirmation.
       if ("amount" in patch || "weeks" in patch || "unitPrice" in patch || "sampleCount" in patch || "design" in patch) {
         n.source = "manual";
-        n.checks = [];
+        // Only the explicit review action clears outstanding condition checks.
       }
       if (n.unit === "per_sample" && n.unitPrice && n.sampleCount) n.amount = String(Number(n.unitPrice) * Number(n.sampleCount));
       return n;
@@ -206,7 +220,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     if (!f) return setPdf(null);
     if (f.size > MAX_PDF) return setError("PDF는 20MB 이하만 첨부할 수 있습니다.");
     if (f.type && f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return setError("PDF 파일만 첨부할 수 있습니다.");
-    setPdf(f);
+    setPdf(f); setDirty(true);
   };
 
   if (error && !data) {
@@ -236,7 +250,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     : filled < items.length
       ? `항목 ${items.length - filled}개 남음`
       : allNo
-        ? "전 항목 불가 — 회신하지 않음으로 처리"
+        ? "전 항목 불가 — 견적 참여하지 않기"
         : pending
           ? `확인 필요 ${pending}건 남음`
         : !commonOk
@@ -248,6 +262,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
               : "견적 제출";
 
   const submit = async () => {
+    if (busy || !canSubmit) return;
     setBusy(true);
     setError("");
     // 제출본이 자동 저장에 덮이지 않도록 대기 중·진행 중인 초안 저장을 멈춘다
@@ -265,6 +280,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       const res = await fetch(`/api/quote/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items, note, common, pdf: pdfRef }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(d.error || "제출에 실패했습니다.");
+      setDirty(false); setPdf(null);
       router.push(`${doneHref}${doneHref.includes("?") ? "&" : "?"}t=${total}&w=${maxW}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "제출에 실패했습니다.");
@@ -272,28 +288,30 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     }
   };
 
-  const savedLabel = saved === "saving" ? "저장 중…" : saved === "saved" ? (isSubmitted ? "제출본" : "초안 저장됨") : saved === "failed" ? "저장 실패" : "";
+  const savedLabel = isSubmitted && dirty ? "수정 내용 미제출" : saved === "saving" ? "저장 중…" : saved === "saved" ? (isSubmitted ? "제출본" : "초안 저장됨") : saved === "failed" ? "저장 실패" : "";
 
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <Link href={backHref} className="crumb" style={{ margin: 0 }}>
+        <Link href={backHref} onClick={leave} className="crumb" style={{ margin: 0 }}>
           <Caret size={14} /> 요청서
         </Link>
-        <span style={{ fontSize: 12, fontWeight: 600, color: saved === "saved" ? "var(--ok)" : saved === "failed" ? "var(--err)" : "var(--muted)" }}>{readOnly ? "" : savedLabel}</span>
+        <span role="status" style={{ fontSize: 12, fontWeight: 600, color: saved === "saved" ? "var(--ok)" : saved === "failed" ? "var(--err)" : "var(--muted)" }}>{readOnly ? "" : savedLabel}</span>
       </div>
+      {saved === "failed" && !readOnly && !isSubmitted && <div className="note note--err"><span>초안을 저장하지 못했습니다. 화면을 닫기 전에 다시 저장해 주세요.</span><button className="b2" type="button" onClick={() => queueSave(items, note, common)}>초안 다시 저장</button></div>}
+      {pdf && <p className="fld__help">첨부파일은 견적 제출 시 업로드됩니다. 화면을 닫으면 다시 선택해야 합니다.</p>}
       <div className="ph">
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>견적 회신 · {rfq.no} · {filled} / {items.length} 항목 완료</p>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p>행은 요청서에서 자동 생성됩니다. 금액은 VAT 별도, 리드타임은 동물 입고일 ~ 최종보고서(안) 발행일 기준(주). 시험물질·표준품은 의뢰자 제공이 원칙입니다.</p>
+          <p>요청된 시험별로 수행 가능 여부와 견적을 입력하세요. 금액은 VAT 별도입니다. 예상 소요기간은 동물 입고부터 보고서 초안 발행까지 주 단위로 적어 주세요.</p>
         </div>
       </div>
 
       {data.draft?.prefilled && !readOnly && (
         <div className="note" style={{ marginBottom: 16 }}>
           <b>카탈로그로 초안을 채웠습니다.</b>{" "}
-          {pending ? `요청 조건이 표준 설계와 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
+          {pending ? `요청 조건이 등록한 기본 조건와 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
           <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
         </div>
       )}
@@ -310,7 +328,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "의뢰자가 CRO 선택을 마쳐 회신이 닫혔습니다." : data.declined ? "회신하지 않음으로 처리된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "의뢰자가 CRO 선택을 마쳐 회신이 닫혔습니다." : data.declined ? "견적 참여하지 않기된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 
@@ -324,7 +342,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             const checks = it.checks ?? [];
             const src = it.source === "catalog" ? "카탈로그" : it.source === "learned" ? "최근 회신" : "";
             return (
-              <div key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, borderColor: checks.length ? "var(--warn, #C98A1B)" : undefined }}>
+              <div id={`reply-item-${r.seq}`} tabIndex={-1} key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, borderColor: checks.length ? "var(--warn, #C98A1B)" : undefined }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.name}</span>
@@ -341,42 +359,42 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                   </span>
                 </div>
                 {checks.length > 0 && !readOnly && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
-                    <span>요청 조건이 표준 설계와 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 그대로 맞으면 확인을 누르세요.</span>
-                    <button type="button" className="b2 bsm" style={{ flex: "none" }} onClick={() => confirmChecks(r.seq)}>그대로 확인</button>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
+                    <span>요청 조건이 등록한 기본 조건와 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
+                    <button type="button" className="b2 bsm" style={{ flex: "none" }} disabled={busy} onClick={() => confirmChecks(r.seq)}>현재 금액과 기간으로 회신</button>
                   </div>
                 )}
-                <div className="seg seg--full" role="radiogroup" aria-label="수행 가능 여부">
+                <div className="seg seg--full" role="group" aria-label={`${r.name} 수행 가능 여부`}>
                   {AVAILS.map((a) => (
-                    <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} disabled={readOnly} onClick={() => update(r.seq, { avail: a })}>{a}</button>
+                    <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} disabled={readOnly || busy} onClick={() => update(r.seq, { avail: a })}>{a}</button>
                   ))}
                 </div>
                 {perSample && !no && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)", gap: 8 }}>
                     <div className="numin">
-                      <input type="text" inputMode="numeric" placeholder="검체당 단가" style={{ paddingRight: 70 }} disabled={readOnly} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
+                      <input type="text" inputMode="numeric" placeholder="검체당 단가" style={{ paddingRight: 70 }} disabled={readOnly || busy} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
                       <span>원/검체</span>
                     </div>
                     <div className="numin">
-                      <input type="text" inputMode="numeric" placeholder="검체 수" disabled={readOnly} value={it.sampleCount ?? ""} onChange={(e) => update(r.seq, { sampleCount: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })} aria-label={`${r.name} 검체 수`} />
+                      <input type="text" inputMode="numeric" placeholder="검체 수" disabled={readOnly || busy} value={it.sampleCount ?? ""} onChange={(e) => update(r.seq, { sampleCount: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })} aria-label={`${r.name} 검체 수`} />
                       <span>건</span>
                     </div>
                   </div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: 8 }}>
                   <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder={perSample ? "총액 (단가×검체 수)" : "금액"} disabled={no || readOnly || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
+                    <input type="text" inputMode="numeric" placeholder={perSample ? "총액 (단가×검체 수)" : "금액"} disabled={no || readOnly || busy || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
                     <span>원</span>
                   </div>
                   <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder="리드타임" disabled={no || readOnly} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 리드타임`} />
+                    <input type="text" inputMode="numeric" placeholder="예상 소요기간" disabled={no || readOnly || busy} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 예상 소요기간`} />
                     <span>주</span>
                   </div>
                 </div>
-                {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly} onChange={(d) => update(r.seq, { design: d })} />}
-                {!no && r.category === EFFICACY_CAT && <EfficacyCosts value={it.design ?? {}} disabled={readOnly} onChange={(d, total) => update(r.seq, total ? { design: d, amount: total } : { design: d })} />}
+                {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly || busy} onChange={(d) => update(r.seq, { design: d })} />}
+                {!no && r.category === EFFICACY_CAT && <EfficacyCosts value={it.design ?? {}} disabled={readOnly || busy} onChange={(d, total) => update(r.seq, total ? { design: d, amount: total } : { design: d })} />}
                 {needReason && (
-                  <input className="inp" style={{ height: 44, fontSize: 14 }} placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
+                  <input className="inp" style={{ height: 44, fontSize: 14 }} placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly || busy} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
                 )}
               </div>
             );
@@ -389,26 +407,26 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             <div className="grid2">
               <div className="fld">
                 <label className="fld__lab" htmlFor="valid">견적 유효기간 <span style={{ fontWeight: 400, color: "var(--muted)" }}>(비우면 제출일 +30일)</span></label>
-                <input id="valid" className="inp" type="date" disabled={readOnly} value={common.validUntil} onChange={(e) => updCommon({ validUntil: e.target.value })} />
+                <input id="valid" className="inp" type="date" disabled={readOnly || busy} value={common.validUntil} onChange={(e) => updCommon({ validUntil: e.target.value })} />
               </div>
               <div className="fld">
                 <label className="fld__lab" htmlFor="start">전체 착수 가능일<span className="req">*</span></label>
-                <input id="start" className="inp" type="date" disabled={readOnly} value={common.startDate} onChange={(e) => updCommon({ startDate: e.target.value })} />
+                <input id="start" className="inp" type="date" disabled={readOnly || busy} value={common.startDate} onChange={(e) => updCommon({ startDate: e.target.value })} />
               </div>
               <div className="fld">
                 <label className="fld__lab" htmlFor="pay">결제 조건 (선급 · 중도 · 잔금 %)</label>
-                <input id="pay" className="inp" placeholder="예: 30 · 40 · 30" disabled={readOnly} value={common.payTerms} onChange={(e) => updCommon({ payTerms: e.target.value.slice(0, 60) })} />
+                <input id="pay" className="inp" placeholder="예: 30 · 40 · 30" disabled={readOnly || busy} value={common.payTerms} onChange={(e) => updCommon({ payTerms: e.target.value.slice(0, 60) })} />
               </div>
               <div className="fld">
                 <label className="fld__lab" htmlFor="qty">시험물질 필요량</label>
-                <input id="qty" className="inp" placeholder="예: 원료 40 g + 예비 10 g" disabled={readOnly} value={common.substanceQty} onChange={(e) => updCommon({ substanceQty: e.target.value.slice(0, 120) })} />
+                <input id="qty" className="inp" placeholder="예: 원료 40 g + 예비 10 g" disabled={readOnly || busy} value={common.substanceQty} onChange={(e) => updCommon({ substanceQty: e.target.value.slice(0, 120) })} />
               </div>
             </div>
             <div className="fld">
               <span className="fld__lab">보고서 언어</span>
               <div className="chips">
                 {REPORT_LANGS.map((l) => (
-                  <button key={l} type="button" className="chip" aria-pressed={common.reportLang === l} disabled={readOnly} onClick={() => updCommon({ reportLang: l })}>{l}</button>
+                  <button key={l} type="button" className="chip" aria-pressed={common.reportLang === l} disabled={readOnly || busy} onClick={() => updCommon({ reportLang: l })}>{l}</button>
                 ))}
               </div>
             </div>
@@ -419,7 +437,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 {INCL_KEYS.map((k) => {
                   const on = common.includes.includes(k);
                   return (
-                    <button key={k} type="button" className="chip" aria-pressed={on} disabled={readOnly} onClick={() => updCommon({ includes: on ? common.includes.filter((x) => x !== k) : [...common.includes, k] })}>{k}</button>
+                    <button key={k} type="button" className="chip" aria-pressed={on} disabled={readOnly || busy} onClick={() => updCommon({ includes: on ? common.includes.filter((x) => x !== k) : [...common.includes, k] })}>{k}</button>
                   );
                 })}
               </div>
@@ -432,7 +450,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             )}
             <div className="fld">
               <label className="fld__lab" htmlFor="note">제외 항목 · 별도 옵션 · 의뢰자 전달 사항</label>
-              <textarea id="note" className="ta" rows={4} disabled={readOnly} value={note} onChange={(e) => { setNote(e.target.value); queueSave(items, e.target.value, common); }} placeholder="예: 영문 보고서 별도 +8,000,000원, 시험물질 보관 비용 미포함, 조직병리 판독 +18,000,000원" />
+              <textarea id="note" className="ta" rows={4} disabled={readOnly || busy} value={note} onChange={(e) => { setNote(e.target.value); queueSave(items, e.target.value, common); }} placeholder="예: 영문 보고서 별도 +8,000,000원, 시험물질 보관 비용 미포함, 조직병리 판독 +18,000,000원" />
             </div>
           </div>
 
@@ -440,12 +458,12 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => pickPdf(e.target.files?.[0] ?? null)} />
             <button
               type="button"
-              disabled={readOnly}
+              disabled={readOnly || busy}
               onClick={() => fileRef.current?.click()}
               style={{ width: "100%", border: `1px dashed ${pdf || pdfName ? "var(--brand)" : "var(--dash)"}`, background: pdf || pdfName ? "var(--tint)" : "var(--wh)", borderRadius: 12, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 14, color: "var(--muted)", textAlign: "left" }}
             >
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {pdf ? pdf.name : pdfName || <>정식 견적서 PDF (정본)<span className="req">*</span></>}
+                {pdf ? pdf.name : pdfName || <>정식 견적서 PDF (원본)<span className="req">*</span></>}
               </span>
               <span style={{ color: "var(--brand)", fontWeight: 600, flex: "none" }}>{readOnly ? "" : pdf || pdfName ? "교체" : "첨부"}</span>
             </button>
@@ -454,11 +472,13 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
           {error && <p className="note note--err" role="alert">{error}</p>}
 
-          <div className="card card--pad stack" style={{ gap: 12, position: "sticky", bottom: "calc(72px + var(--bot))" }}>
+          <div className="card card--pad stack" style={{ gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {maxW ? `병렬 수행 ${maxW}주` : "기간 미입력"}</span>
               <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "—"}</span>
             </div>
+            {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
+            {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">견적 참여하지 않기</Link>}
             <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
               {busy ? "제출 중…" : blockedLabel}
             </button>

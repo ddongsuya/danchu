@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { quoteSelectable } from "@/lib/quote-policy";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
@@ -23,8 +25,8 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
       </>
     );
   }
+  if (!quoteSelectable(q)) return <div className="note note--warn">정식 견적서와 유효기간을 확인한 뒤 기관을 선택해 주세요. <Link href={`/app/r/${no}/q/${quoteId}`}>견적 상세로 돌아가기</Link></div>;
   const others = d.quotes.filter((x) => x.status === "submitted" && x.id !== q.id);
-  const min = Math.min(...d.quotes.filter((x) => x.status === "submitted").map((x) => x.total_amount ?? 0).filter((t) => t > 0));
 
   return (
     <>
@@ -42,7 +44,6 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
         croName={q.cro_name}
         summary={[
           ["총 견적액", won(q.total_amount ?? 0)],
-          ["최저가 대비", (q.total_amount ?? 0) === min ? "최저가" : `+${won((q.total_amount ?? 0) - min)}`],
           ["착수 · 기간", `${md(q.start_date)} · ${q.total_weeks ? `${q.total_weeks}주` : "—"}`],
           ["유효기간", md(q.valid_until)],
         ]}

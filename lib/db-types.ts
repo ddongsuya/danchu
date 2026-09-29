@@ -90,8 +90,10 @@ export type Database = {
           cro_org_id: string | null;
           declined_at: string | null;
           decline_reason: string | null;
+          cda_signed_at: string | null;
+          cda_reference: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference">;
         Update: Partial<Database["public"]["Tables"]["rfq_invites"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_invites_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -257,8 +259,9 @@ export type Database = {
           created_at: string;
           updated_at: string;
           pending_org_id: string | null;
+          email_notifications: boolean;
         };
-        Insert: Ins<Database["public"]["Tables"]["profiles"]["Row"], "role" | "name" | "company" | "dept" | "phone" | "org_type" | "cro_org_id" | "created_at" | "updated_at" | "pending_org_id">;
+        Insert: Ins<Database["public"]["Tables"]["profiles"]["Row"], "role" | "name" | "company" | "dept" | "phone" | "org_type" | "cro_org_id" | "created_at" | "updated_at" | "pending_org_id" | "email_notifications">;
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
         Relationships: [
           { foreignKeyName: "profiles_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },

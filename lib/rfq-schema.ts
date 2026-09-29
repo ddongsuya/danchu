@@ -143,7 +143,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "의뢰 개요",
     q: "의뢰 목적이 무엇인가요?",
-    sub: "허가자료 제출용이면 GLP 시험이 필요해 견적이 달라집니다.",
+    sub: "자료 제출 목적과 제출처에 따라 필요한 시험 조건이 달라집니다.",
     fields: [{ id: "purpose", type: "radio", required: true, options: ["허가자료 제출용", "자체 연구용", "기타"] }],
   },
   {
@@ -212,7 +212,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "일정·예산",
     q: "견적 회신은 언제까지 필요하세요?",
-    sub: "비워 두면 접수일 기준 7영업일로 안내합니다.",
+    sub: "비워 두면 접수일에서 평일 기준 7일 뒤로 정합니다. 공휴일은 별도로 반영하지 않습니다.",
     fields: [{ id: "replyBy", type: "date" }],
   },
   {
@@ -235,7 +235,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "일정·예산",
     q: "기밀 등급을 선택해 주세요",
-    sub: "CDA 필요를 선택하면 비밀유지계약을 체결한 CRO에만 전달합니다.",
+    sub: "CDA를 선택하면 회사명과 첨부파일은 기관별 체결 확인 후 공개합니다.",
     fields: [
       { id: "confid", type: "radio", required: true, options: ["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"] },
     ],
@@ -243,7 +243,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "시험 항목",
     q: "필요한 시험 항목을 모두 선택해 주세요",
-    sub: "잘 모르면 다음 질문에서 상황을 적어 주세요. 세부 조건은 나중에 입력합니다.",
+    sub: "하나 이상 선택하세요. 선택이 어렵다면 시험 선택 도움받기를 이용하세요.",
     fields: [{ id: "categories", type: "chips", required: true, options: [...CATS] }],
   },
   {
@@ -260,7 +260,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "마지막 단계",
     q: "동의가 필요합니다",
-    sub: "동의 후 바로 제출하거나, 상세 조건을 더 입력할 수 있습니다.",
+    sub: "요청 내용의 전달 범위를 확인한 뒤 동의해 주세요.",
     fields: [
       {
         id: "agreePrivacy",
@@ -351,7 +351,7 @@ export const STEP2: Group[] = [
         type: "file",
         label: "파일 첨부 (COA, 시험물질 자료 등)",
         placeholder: "PDF, 이미지, 문서 · 파일당 20MB 이하",
-        help: "COA는 시험 개시 전 필수 자료입니다. 지금 첨부하면 견적 정확도가 올라갑니다.",
+        help: "알고 있는 자료를 첨부하세요. 파일은 임시 저장되지 않아, 화면을 닫으면 다시 선택해야 합니다.",
       },
     ],
   },
@@ -687,7 +687,7 @@ export const TOTAL_STEPS = CONTACT.length + WIZ.length;
 
 export function filled(values: Values, id: string): boolean {
   const v = values[id];
-  return Array.isArray(v) ? v.length > 0 : !!v;
+  return Array.isArray(v) ? v.length > 0 : typeof v === "string" ? v.trim().length > 0 : v === true;
 }
 
 /** 서버 제출 전 필수 검증 — 첫 누락 항목의 안내 문구 반환 */
@@ -695,6 +695,9 @@ export function validateRequired(values: Values): string {
   for (const f of CONTACT) {
     if (f.required && !filled(values, f.id)) return `필수 항목을 확인해 주세요: ${f.label}`;
   }
+  if (!["3곳", "5곳", "전체"].includes(String(values.croCount))) return "요청할 기관 수를 선택해 주세요.";
+  if (!["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"].includes(String(values.confid))) return "정보 공개 방식을 선택해 주세요.";
+  if (Array.isArray(values.categories) && values.categories.some((c) => !CATS.includes(c as Cat))) return "시험 항목을 다시 선택해 주세요.";
   const email = values.email;
   if (typeof email === "string" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return "이메일 형식을 확인해 주세요.";

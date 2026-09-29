@@ -381,3 +381,9 @@
   .request-empty h3 { font-size: 17px; }
   .request-help { justify-content: flex-start; }
 }
+
+/* Long forms must shrink within their grid track on narrow screens. */
+.pt .grid2 { grid-template-columns: minmax(0, 1fr); }
+.pt .grid2 > *, .pt .numin, .pt .stack { min-width: 0; }
+.pt .numin input { min-width: 0; }
+@media (min-width: 640px) { .pt .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -30,5 +30,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
       confirmed++;
     }
   }
-  return NextResponse.json({ confirmed });
+  const { data: verified } = await sb.from("rfq_files").select("storage_path, uploaded_at").eq("rfq_id", rfq.id).in("storage_path", paths);
+  const complete = verified?.length === new Set(paths).size && verified.every((f) => !!f.uploaded_at);
+  return NextResponse.json({ confirmed, complete });
 }

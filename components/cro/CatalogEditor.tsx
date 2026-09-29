@@ -96,7 +96,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
       addVariant(it, { species: pi.species ?? [], route: pi.route ?? null, method: pi.method ?? null, note: pi.note ?? null, source: "manual" });
       made++;
     }
-    setMsg((m) => ({ ...m, __preset: { ok: true, text: made ? `${p.name}: 조합 ${made}개를 만들었습니다. 각 분류에서 설계·리드타임·단가를 채우고 저장하세요.` : `${p.name}: 이미 모든 조합이 있습니다.` } }));
+    setMsg((m) => ({ ...m, __preset: { ok: true, text: made ? `${p.name}: 조합 ${made}개를 만들었습니다. 각 분류에서 설계·예상 소요기간·단가를 채우고 저장하세요.` : `${p.name}: 이미 모든 조합이 있습니다.` } }));
   };
 
   const totalVariants = rows.length;
@@ -303,7 +303,7 @@ function VariantEditor({ row, cat, onChange, onDuplicate, onRemove }: { row: Cat
             {row.available ? srcPill : <span className="pill pill--sf">수행하지 않음</span>}
           </div>
           <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
-            {row.available ? (design || "표준 설계 미입력") : ""}
+            {row.available ? (design || "기본 조건 미입력") : ""}
             {row.available && row.weeks ? ` · ${row.weeks}주` : ""}
             {row.available && row.price_min != null ? ` · ${perSample ? `검체당 ${row.price_min.toLocaleString("ko-KR")}원` : won(row.price_min) + (row.price_max ? ` ~ ${won(row.price_max)}` : "")}` : ""}
           </div>
@@ -364,7 +364,7 @@ function VariantEditor({ row, cat, onChange, onDuplicate, onRemove }: { row: Cat
             <Num id={`${k}-ps`} label="군당 마릿수 (암/수 각)" value={row.per_sex} onChange={(v) => onChange({ per_sex: v })} unit="마리" placeholder="5" max={200} />
             <Num id={`${k}-rw`} label="회복 기간" value={row.recovery_weeks} onChange={(v) => onChange({ recovery_weeks: v })} unit="주" placeholder="없음" max={52} />
             <Num id={`${k}-rp`} label="회복 추가 마릿수 (암/수 각)" value={row.recovery_per_sex} onChange={(v) => onChange({ recovery_per_sex: v })} unit="마리" placeholder="대조·최고용량군에" max={100} />
-            <Num id={`${k}-wk`} label="리드타임" value={row.weeks} onChange={(v) => onChange({ weeks: v })} unit="주" placeholder="동물 입고~보고서(안)" max={200} />
+            <Num id={`${k}-wk`} label="예상 소요기간" value={row.weeks} onChange={(v) => onChange({ weeks: v })} unit="주" placeholder="동물 입고~보고서(안)" max={200} />
           </div>
           <div className="grid2">
             <div className="fld">

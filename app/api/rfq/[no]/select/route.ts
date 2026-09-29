@@ -1,3 +1,4 @@
+import { quoteSelectable } from "@/lib/quote-policy";
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -24,6 +25,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (!quoteId) return NextResponse.json({ error: "선택할 수 없는 견적입니다." }, { status: 400 });
   const sb = getSupabaseAdmin()!;
 
+  const { data: candidate } = await sb.from("cro_quotes").select("auto, pdf_path, start_date, valid_until").eq("id", quoteId).eq("rfq_id", rfq.id).eq("status", "submitted").maybeSingle();
+  if (!candidate || !quoteSelectable(candidate)) return NextResponse.json({ error: "정식 견적서와 유효기간을 확인한 뒤 기관을 선택해 주세요." }, { status: 409 });
   // award 삽입과 요청 상태 갱신을 한 트랜잭션으로 (동시 선택은 DB 가 한 건만 받는다)
   const sel = await selectQuote(rfq.id, quoteId, s.userId);
   if (!sel.ok) {
@@ -72,7 +75,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   }
 
   await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-  await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name}을 선택했습니다`, body: "CRO 담당자가 영업일 1일 내 연락합니다. 계약은 직접 진행합니다.", href: `/app/r/${rfq.rfq_no}` });
+  await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name}을 선택했습니다`, body: "선택한 기관에 연락처를 전달했습니다. 계약은 기관과 직접 진행합니다.", href: `/app/r/${rfq.rfq_no}` });
 
   return NextResponse.json({ ok: true, awardId: award.id });
 }
