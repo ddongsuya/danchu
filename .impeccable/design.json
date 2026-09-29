@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "name": "Danchu Research Workspace",
+  "source": "app/globals.css",
+  "mode": "code-led",
+  "colors": {
+    "primary": "#246457",
+    "background": "#fcfdfb",
+    "surface": "#f3f5f2",
+    "text": "#202b28",
+    "darkPrimary": "#92cfb7"
+  },
+  "radii": {
+    "small": "8px",
+    "medium": "12px",
+    "large": "16px"
+  },
+  "typeface": "Pretendard Variable",
+  "motion": {
+    "press": "160ms",
+    "drawer": "220ms",
+    "reducedMotion": true
+  },
+  "breakpoints": {
+    "mobile": 599,
+    "publicStack": 899,
+    "portalSidebar": 960
+  },
+  "zIndex": {
+    "nav": 20,
+    "overlay": 40,
+    "modal": 50,
+    "toast": 60
+  }
+}
