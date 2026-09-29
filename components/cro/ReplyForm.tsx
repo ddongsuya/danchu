@@ -133,6 +133,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const timer = useRef<number>(0);
+  const saveAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch(`/api/quote/${token}`)
@@ -149,6 +150,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했습니다."));
   }, [token]);
 
+  // 화면을 떠날 때 대기 중인 자동 저장을 정리한다
+  useEffect(() => () => { window.clearTimeout(timer.current); saveAbort.current?.abort(); }, []);
+
   const readOnly = !!(data?.expired || data?.locked || data?.closed || data?.declined);
   const isSubmitted = data?.draft?.status === "submitted";
 
@@ -157,13 +161,18 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     setSaved("saving");
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(async () => {
+      saveAbort.current?.abort();
+      const ac = new AbortController();
+      saveAbort.current = ac;
       const ok = await fetch(`/api/quote/${token}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: nextItems, note: nextNote, common: nextCommon }),
+        signal: ac.signal,
       })
         .then((r) => r.ok)
-        .catch(() => false);
+        .catch(() => (ac.signal.aborted ? null : false));
+      if (ok === null) return; // 제출로 취소됨
       setSaved(ok ? "saved" : "failed");
     }, 800);
   };
@@ -241,6 +250,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const submit = async () => {
     setBusy(true);
     setError("");
+    // 제출본이 자동 저장에 덮이지 않도록 대기 중·진행 중인 초안 저장을 멈춘다
+    window.clearTimeout(timer.current);
+    saveAbort.current?.abort();
     try {
       let pdfRef: { path: string; name: string; size: number } | undefined;
       if (pdf) {

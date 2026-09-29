@@ -47,7 +47,7 @@ create table if not exists public.profiles (
 create index if not exists profiles_email_idx on public.profiles (lower(email));
 create index if not exists profiles_cro_org_idx on public.profiles (cro_org_id);
 
--- 가입 시 프로필 자동 생성 (메타데이터: role, name, company, dept, phone, org_type, cro_org_id)
+-- 가입 시 프로필 자동 생성. (schema_membership.sql 에서 metadata 의 role · cro_org_id 를 더 이상 읽지 않도록 교체된다)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -165,5 +165,5 @@ alter table public.profiles      enable row level security;
 alter table public.rfq_events    enable row level security;
 alter table public.notifications enable row level security;
 
--- 운영자 지정: 가입한 뒤 아래를 실행 (또는 ADMIN_EMAIL 환경변수와 같은 이메일로 가입하면 서버가 자동 지정)
+-- 운영자 지정: 가입한 뒤 아래를 실행 (ADMIN_EMAIL 은 알림 수신 주소일 뿐 자동 승격은 없다)
 -- update public.profiles set role = 'admin' where lower(email) = 'ops@example.com';

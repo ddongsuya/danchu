@@ -1,9 +1,17 @@
 import Link from "next/link";
 import type { CroOrg } from "@/lib/auth";
 
-/** 기관이 승인되기 전에 보이는 안내 */
-export function PendingOrg({ org }: { org: CroOrg | null }) {
+/** 기관이 승인되기 전, 또는 기존 기관 합류 승인 전에 보이는 안내 */
+export function PendingOrg({ org, pendingOrg }: { org: CroOrg | null; pendingOrg?: CroOrg | null }) {
   if (!org) {
+    if (pendingOrg) {
+      return (
+        <div className="empty">
+          <b>{pendingOrg.name} 담당자 합류를 기다리고 있습니다</b>
+          운영자가 담당자 정보를 확인한 뒤 기관에 연결합니다. 연결되면 알림과 메일로 알려 드립니다. 급하면 hello@danchu.kr로 문의해 주세요.
+        </div>
+      );
+    }
     return (
       <div className="empty">
         <b>소속 기관이 없습니다</b>

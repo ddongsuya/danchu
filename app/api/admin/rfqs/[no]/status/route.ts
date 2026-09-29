@@ -42,6 +42,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (status === "reopen") {
     const next = rfq.selected_quote_id ? "selected" : rfq.compared_at ? "compared" : rfq.distributed_at ? "distributed" : "received";
     await sb.from("rfq_requests").update({ status: next, closed_at: null }).eq("id", rfq.id);
+    if (rfq.status === "cancelled") {
+      // 취소 때 만료시킨 초대를 되살린다 (회신하지 않음 처리한 기관은 그대로 둔다)
+      const { data: drafts } = await sb.from("cro_quotes").select("invite_id").eq("rfq_id", rfq.id);
+      const withDraft = new Set((drafts ?? []).map((d) => d.invite_id as string));
+      const { data: exp } = await sb.from("rfq_invites").select("id").eq("rfq_id", rfq.id).eq("status", "expired").is("declined_at", null);
+      for (const i of exp ?? []) await sb.from("rfq_invites").update({ status: withDraft.has(i.id) ? "draft" : "sent" }).eq("id", i.id);
+    }
     await logEvent(rfq.id, "note", "다시 열기", `상태 ${next}`, s.userId);
     return NextResponse.json({ ok: true, message: "다시 열었습니다." });
   }

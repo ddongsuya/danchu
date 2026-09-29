@@ -12,6 +12,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const got = await loadQuote(token);
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 회신은 취소할 수 없습니다. 단추에 문의해 주세요." }, { status: 400 });
+  if (got.declined) return NextResponse.json({ ok: true, already: true });
+  if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
+  if (got.closed) return NextResponse.json({ error: "이 요청의 회신은 이미 닫혔습니다." }, { status: 403 });
   const b = (await req.json().catch(() => ({}))) as { reason?: unknown };
   const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 500) : "";
   const sb = getSupabaseAdmin()!;

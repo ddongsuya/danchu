@@ -233,9 +233,17 @@ export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq
   return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null }));
 }
 
-export async function listOrgMembers(orgId: string) {
+export type MemberRow = { id: string; name: string | null; email: string; phone: string | null; created_at: string };
+
+export async function listOrgMembers(orgId: string): Promise<MemberRow[]> {
   const { data } = await sb().from("profiles").select("id, name, email, phone, created_at").eq("cro_org_id", orgId).order("created_at");
-  return (data ?? []) as { id: string; name: string | null; email: string; phone: string | null; created_at: string }[];
+  return (data ?? []) as MemberRow[];
+}
+
+/** 이 기관에 담당자로 합류를 신청했지만 아직 연결되지 않은 계정 */
+export async function listPendingMembers(orgId: string): Promise<MemberRow[]> {
+  const { data } = await sb().from("profiles").select("id, name, email, phone, created_at").eq("pending_org_id", orgId).is("cro_org_id", null).order("created_at");
+  return (data ?? []) as MemberRow[];
 }
 
 /* ── 운영자 ── */
@@ -288,8 +296,8 @@ export async function listAllAwards() {
 }
 
 export async function listProfiles() {
-  const { data } = await sb().from("profiles").select("id, email, role, name, company, cro_org_id, created_at").order("created_at", { ascending: false }).limit(500);
-  return (data ?? []) as { id: string; email: string; role: string; name: string | null; company: string | null; cro_org_id: string | null; created_at: string }[];
+  const { data } = await sb().from("profiles").select("id, email, role, name, company, cro_org_id, pending_org_id, created_at").order("created_at", { ascending: false }).limit(500);
+  return (data ?? []) as { id: string; email: string; role: string; name: string | null; company: string | null; cro_org_id: string | null; pending_org_id: string | null; created_at: string }[];
 }
 
 export async function countBy() {

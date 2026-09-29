@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx next build
+        env:
+          # 빌드는 환경변수 없이도 돈다 (런타임에 미설정이면 안내 화면). 있으면 그대로 쓴다.
+          NEXT_PUBLIC_SITE_URL: https://danchu.kr

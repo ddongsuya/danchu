@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendSupportMail } from "@/lib/mail";
+import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
   const text = typeof b.text === "string" ? b.text.trim().slice(0, 4000) : "";
 
   if (!EMAIL.test(email)) return NextResponse.json({ error: "답변 받을 이메일을 확인해 주세요." }, { status: 400 });
+  if ((await rateLimited("support:ip", clientIp(req), 5, 10 * 60)) || (await rateLimited("support:email", email, 5, 60 * 60))) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   if (!text) return NextResponse.json({ error: "문의 내용을 입력해 주세요." }, { status: 400 });
 
   const sent = await sendSupportMail({ email, type, rfqNo, text }).catch((e) => {

@@ -2,7 +2,6 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listInvitesForOrg, type InviteWithQuote } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { InviteList } from "@/components/cro/InviteList";
-import { distributeOpenRfqs } from "@/lib/distribute";
 
 export const dynamic = "force-dynamic";
 
@@ -17,18 +16,11 @@ export default async function CroInbox() {
             <h1>받은 요청</h1>
           </div>
         </div>
-        <PendingOrg org={org} />
+        <PendingOrg org={org} pendingOrg={s.pendingOrg} />
       </>
     );
   }
-  // 참여한 즉시 유효한 요청이 보이도록, 목록을 읽기 전에 아직 받지 못한 요청을 채운다
-  if (dbReady()) {
-    try {
-      await distributeOpenRfqs(org.id);
-    } catch (e) {
-      console.error("sync invites", e);
-    }
-  }
+  // 빠진 배포는 승인·분야 변경 시점과 매일 크론(distributeOpenRfqs)이 채운다. 읽기 화면에서는 쓰지 않는다.
   const list: InviteWithQuote[] = dbReady() ? await listInvitesForOrg(org.id) : [];
   const fresh = list.filter((i) => i.status === "sent" && new Date(i.expires_at).getTime() > Date.now()).length;
   return (

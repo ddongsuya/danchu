@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type U = { id: string; email: string; role: string; name: string | null; company: string | null; cro_org_id: string | null; created_at: string };
+type U = { id: string; email: string; role: string; name: string | null; company: string | null; cro_org_id: string | null; pending_org_id?: string | null; created_at: string };
 
 export function UserRow({ user, orgs, self }: { user: U; orgs: { id: string; name: string }[]; self: boolean }) {
   const router = useRouter();
@@ -12,12 +12,14 @@ export function UserRow({ user, orgs, self }: { user: U; orgs: { id: string; nam
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const dirty = role !== user.role || org !== (user.cro_org_id ?? "");
+  const pendingName = user.pending_org_id && !user.cro_org_id ? orgs.find((o) => o.id === user.pending_org_id)?.name : "";
 
   return (
     <tr>
       <td>
         <div style={{ fontWeight: 600 }}>{user.name || "—"}{self && <span className="pill pill--tint" style={{ marginLeft: 6 }}>나</span>}</div>
         <div style={{ fontSize: 12, color: "var(--muted)" }}>{user.email}</div>
+        {pendingName && <div style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600 }}>합류 신청: {pendingName}</div>}
       </td>
       <td style={{ fontSize: 13 }}>{user.company || "—"}</td>
       <td>

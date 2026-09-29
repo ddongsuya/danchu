@@ -3,6 +3,7 @@
 /** 187000000 → "1억 8,700만 원" */
 export function won(n: number): string {
   if (!n) return "0원";
+  if (n < 1e4) return `${n.toLocaleString("ko-KR")}원`; // 만 원 미만은 반올림하지 않는다
   const e = Math.floor(n / 1e8);
   const m = Math.round((n % 1e8) / 1e4);
   return (e ? `${e}억 ` : "") + (m ? `${m.toLocaleString("ko-KR")}만 원` : e ? "" : `${n.toLocaleString("ko-KR")}원`);

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function CroQuotes() {
   const s = await requireSession("cro");
   const org = s.org;
-  if (!org || org.status !== "approved") return <PendingOrg org={org} />;
+  if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   const list = (dbReady() ? await listInvitesForOrg(org.id) : []).filter((i) => i.quote && i.status === "submitted");
 
   return (
