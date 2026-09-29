@@ -13,7 +13,7 @@ export default function Faq() {
   return (
     <div className="site">
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="ph">
           <div className="wrap ph__grid">
             <span className="ph__k">자주 묻는 질문</span>
