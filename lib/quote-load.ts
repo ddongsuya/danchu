@@ -1,3 +1,4 @@
+import { confidentialAccess } from "./request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import { quoteRowsFromPayload } from "./quote-items";
 import { EMPTY_COMMON, type ReplyCommon, type ReplyDraft, type ReplyItem, type RfqView } from "./cro-data";
@@ -26,8 +27,8 @@ export type Loaded = {
 };
 
 /** 기밀 등급이 CDA 필요이고 아직 체결 전이면 의뢰자명을 가린다 */
-function maskClient(company: string, orgType: string | null, confid: string | null): { client: string; masked: boolean } {
-  if (confid && confid.startsWith("CDA")) return { client: `${orgType || "의뢰기관"} (마스킹)`, masked: true };
+function maskClient(company: string, orgType: string | null, confid: string | null, signedAt?: string | null): { client: string; masked: boolean } {
+  if (!confidentialAccess(confid, signedAt)) return { client: `${orgType || "의뢰기관"} (마스킹)`, masked: true };
   return { client: company, masked: false };
 }
 
@@ -47,7 +48,7 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
   const s = (k: string) => (typeof p[k] === "string" ? (p[k] as string) : "");
   const a = (k: string) => (Array.isArray(p[k]) ? (p[k] as string[]) : []);
   const sa = (k: string) => a(k).join(" · ") || s(k);
-  const { client, masked } = maskClient(r.company, r.org_type, r.confidentiality);
+  const { client, masked } = maskClient(r.company, r.org_type, r.confidentiality, inv.cda_signed_at);
   const dd = ddayOf(inv.reply_by);
 
   const overview: [string, string][] = [
@@ -145,6 +146,7 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
       .sort((x, y) => x.seq - y.seq)
       .map((it) => ({
         seq: it.seq,
+        checks: Array.isArray(it.design?.reviewChecks) ? it.design.reviewChecks.filter((x): x is string => typeof x === "string") : [],
         avail: (it.avail ?? "") as ReplyItem["avail"],
         amount: it.amount != null ? String(it.amount) : "",
         weeks: it.weeks != null ? String(it.weeks) : "",

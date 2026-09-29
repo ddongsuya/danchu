@@ -1,3 +1,5 @@
+import { notificationRecipients } from "./mail-preferences";
+import { needsCda, remainingInvites } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
 import type { TablesUpdate } from "./db-types";
@@ -19,7 +21,7 @@ type Org = { id: string; name: string; contact_email: string | null; categories:
 export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: string[] }> {
   const sb = getSupabaseAdmin();
   if (!sb) return { orgs: [], skipped: [] };
-  const { data } = await sb.from("cro_orgs").select("id, name, contact_email, categories, glp_certs").eq("status", "approved");
+  const { data } = await sb.from("cro_orgs").select("id, name, contact_email, categories, glp_certs").eq("status", "approved").order("id");
   const all = (data ?? []) as Org[];
   const cats = rfq.categories;
   const candidates = all.filter((o) => (o.categories ?? []).some((c) => cats.includes(c)));
@@ -50,7 +52,7 @@ export function defaultReplyBy(rfq: RfqRow): string {
   if (rfq.reply_by) return rfq.reply_by;
   const p = rfq.payload;
   if (typeof p.replyBy === "string" && /^\d{4}-\d{2}-\d{2}$/.test(p.replyBy)) return p.replyBy;
-  return addBusinessDays(nowSeoul(), 7).toLocaleDateString("sv-SE");
+  return addBusinessDays(new Date(new Date(rfq.created_at).toLocaleString("en-US", { timeZone: "Asia/Seoul" })), 7).toLocaleDateString("sv-SE");
 }
 
 /**
@@ -62,14 +64,17 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   if (!sb || !orgs.length) return res;
 
-  const { data: existing } = await sb.from("rfq_invites").select("cro_org_id").eq("rfq_id", rfq.id);
+  const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id").eq("rfq_id", rfq.id);
+  if (existingError) throw new Error("기존 배포 현황을 확인하지 못했습니다.");
+  const capacity = remainingInvites(rfq.cro_count, existing?.length ?? 0);
   const already = new Set((existing ?? []).map((e) => e.cro_org_id));
   const expiresAt = new Date(`${replyBy}T23:59:59+09:00`);
   expiresAt.setDate(expiresAt.getDate() + 7);
-  const masked = (rfq.confidentiality || "").startsWith("CDA");
+  const masked = needsCda(rfq.confidentiality);
 
   for (const o of orgs) {
     if (already.has(o.id)) continue;
+    if (res.sent >= capacity) { res.skipped.push(o.name); continue; }
     const { data: members } = await sb.from("profiles").select("id, email").eq("cro_org_id", o.id);
     const memberIds = (members ?? []).map((m) => m.id as string);
     const memberMails = (members ?? []).map((m) => m.email as string);
@@ -85,9 +90,11 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
       .select("id, token")
       .single();
     if (error || !inv) {
+      res.skipped.push(o.name);
       console.error("invite insert", o.name, error);
       continue;
     }
+    already.add(o.id);
     res.sent++;
     res.names.push(o.name);
 
@@ -95,13 +102,14 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     const portal = `${siteUrl()}/cro/r/${inv.id}`;
     const html = mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청서가 도착했습니다 · ${esc(rfq.rfq_no)}</h2>
-      <p><b>${esc(masked ? `${rfq.org_type || "의뢰기관"} (CDA 체결 전 마스킹)` : rfq.company)}</b> · 시험물질 ${esc(rfq.substance)}<br>
+      <p><b>${esc(masked ? `${rfq.org_type || "의뢰기관"} (CDA 체결 확인 전 비공개)` : rfq.company)}</b> · 시험물질 ${esc(rfq.substance)}<br>
       시험 항목: ${esc(rfq.categories.join(", "))}<br>
       의뢰 목적: ${esc(rfq.purpose || "—")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}</p>
       <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b> · 링크는 기한 +7일까지 열립니다.</p>
       <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">요청서 보고 회신하기</a></p>
       <p style="font-size:13px;color:#6F6A63">카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다. 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.</p>`);
-    if (to.length && (await sendMail({ to, subject: `[단추] 견적 요청 ${rfq.rfq_no} · ${rfq.substance} · 회신 기한 ${replyBy}`, html }))) res.mailed++;
+    const mailTo = await notificationRecipients(to);
+    if (mailTo.length && (await sendMail({ to: mailTo, subject: `[단추] 견적 요청 ${rfq.rfq_no} · ${rfq.substance} · 회신 기한 ${replyBy}`, html }))) res.mailed++;
     await notifyUsers(memberIds, { kind: "배포", title: `새 견적 요청 · ${rfq.rfq_no} ${rfq.substance}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy}`, href: `/cro/r/${inv.id}` });
   }
 

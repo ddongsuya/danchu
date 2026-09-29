@@ -1,3 +1,4 @@
+import { needsCda, confidentialAccess } from "@/lib/request-policy";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listInvitesForOrg, type InviteWithQuote } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
@@ -35,7 +36,7 @@ export default async function CroInbox() {
         id: i.id,
         no: i.rfq_no,
         substance: i.rfq?.substance ?? "",
-        client: (i.rfq?.confidentiality || "").startsWith("CDA") ? `${i.rfq?.org_type || "의뢰기관"} (마스킹)` : i.rfq?.company ?? "",
+        client: !confidentialAccess(i.rfq?.confidentiality, i.cda_signed_at) ? `${i.rfq?.org_type || "의뢰기관"} (회사명 비공개)` : i.rfq?.company ?? "",
         purpose: [i.rfq?.purpose, Array.isArray(i.rfq?.payload?.authority) ? (i.rfq!.payload.authority as string[]).join(" · ") : ""].filter(Boolean).join(" · "),
         tags: i.rfq?.categories ?? [],
         replyBy: i.reply_by,

@@ -1,3 +1,5 @@
+import { AttachmentRetry } from "@/components/app/AttachmentRetry";
+import { needsCda, confidentialAccess } from "@/lib/request-policy";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
@@ -23,7 +25,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const chips = [
     ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
     rfq.cro_count ? `CRO ${rfq.cro_count}` : "",
-    rfq.confidentiality?.startsWith("CDA") ? "CDA 필요" : "",
+    needsCda(rfq.confidentiality) ? "CDA 필요" : "",
   ].filter(Boolean);
 
   // 진행 이력: 상태 단계 + 이벤트 시각
@@ -53,7 +55,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             ))}
           </div>
         </div>
-        <div className="ph__actions">
+        <div className="ph__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b2">이 요청 문의하기</Link>
           {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1">견적 {submitted}건 비교</Link>}
         </div>
       </div>
@@ -92,7 +94,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               <span>{rfq.reply_by ? `회신 기한 ${md(rfq.reply_by)}` : ""}</span>
             </div>
             {d.invites.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 배포 전입니다. 요청서를 정리해 영업일 1일 내 참여 CRO에 배포합니다.</p>
+              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 전달된 기관이 없습니다. 시험 분야가 맞는 기관을 확인하고 있습니다.</p>
             ) : (
               <div className="stack" style={{ gap: 8 }}>
                 {d.invites.map((i) => (
@@ -107,7 +109,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               </div>
             )}
             {submitted > 0 && !rfq.compared_at && (
-              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>비교표는 회신 기한이 지난 뒤 단추가 검수해 공개합니다. 공개되면 알림을 보냅니다.</p>
+              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>회신 기한이 지난 뒤 비교표가 공개됩니다. 공개되면 앱 안의 알림으로 알려 드립니다.</p>
             )}
           </div>
 
@@ -117,7 +119,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               <span>
                 {d.award.contract_reported_at
                   ? `계약 체결 보고 · ${d.award.contract_date ? ymd(d.award.contract_date) : ""}`
-                  : "CRO 담당자가 영업일 1일 내 연락합니다. 계약은 CRO와 직접 진행합니다."}
+                  : "선택한 기관에 연락처를 전달했습니다. 계약은 기관과 직접 진행합니다."}
               </span>
             </div>
           )}
@@ -153,6 +155,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             )}
           </div>
 
+          {!["closed", "cancelled"].includes(rfq.status) && <div className="card card--pad"><AttachmentRetry no={rfq.rfq_no} /></div>}
           <details className="card" style={{ padding: "0 18px" }}>
             <summary style={{ padding: "14px 0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>입력한 전체 항목 보기</summary>
             <div className="card--rows" style={{ padding: "0 0 8px" }}>

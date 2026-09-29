@@ -1,3 +1,7 @@
+import { NewRequest } from "@/components/NewRequest";
+import { CompareBoard } from "@/components/CompareBoard";
+import { UX_COLS, UX_ROWS } from "./ux-fixtures";
+import { ReplyForm } from "@/components/cro/ReplyForm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,7 +23,7 @@ const REQUESTS: RequestListItem[] = [
 ];
 
 /** Isolated visual fixtures. No auth bypass, DB reads, or mutations. Off by default. */
-export default async function DesignPreview({ searchParams }: { searchParams: Promise<{ role?: string; empty?: string }> }) {
+export default async function DesignPreview({ searchParams }: { searchParams: Promise<{ role?: string; empty?: string; view?: string }> }) {
   if (process.env.DANCHU_DESIGN_PREVIEW !== "1") notFound();
   const params = await searchParams;
   const role: Role = params.role === "cro" || params.role === "admin" ? params.role : "requester";
@@ -32,8 +36,8 @@ export default async function DesignPreview({ searchParams }: { searchParams: Pr
     { href: "/design-preview?role=admin", label: "접수 현황", icon: "list" }, { href: "/admin/cros", label: "기관 관리", icon: "cros" }, { href: "/admin/awards", label: "계약 현황", icon: "award" }, { href: "/admin/users", label: "사용자 관리", icon: "user" },
   ];
   return <AppState><Shell session={session} nav={nav}>
-    <div className="preview-banner"><b>디자인 검토용 예시 데이터</b><p>실제 요청·기관·실적이 아닙니다. 업무 링크는 기존 인증 화면으로 연결됩니다.</p><nav aria-label="디자인 검토 화면"><Link href="/design-preview">의뢰자 화면</Link><Link href="/design-preview?empty=1">빈 목록</Link><Link href="/design-preview?role=cro">CRO 공통 UI</Link><Link href="/design-preview?role=admin">운영자 공통 UI</Link><Link href="/">랜딩</Link></nav></div>
-    {role === "requester" ? <RequestOverview name="디자인 검토" list={params.empty === "1" ? [] : REQUESTS} /> : <>
+    <div className="preview-banner"><b>디자인 검토용 예시 데이터</b><p>실제 요청·기관·실적이 아닙니다. 업무 링크는 기존 인증 화면으로 연결됩니다.</p><nav aria-label="디자인 검토 화면"><Link href="/design-preview">의뢰자 화면</Link><Link href="/design-preview?empty=1">빈 목록</Link><Link href="/design-preview?role=cro">CRO 공통 UI</Link><Link href="/design-preview?role=admin">운영자 공통 UI</Link><Link href="/design-preview?view=request">요청서 개선</Link><Link href="/design-preview?view=compare">견적 비교 개선</Link><Link href="/design-preview?view=reply">회신 개선</Link><Link href="/">랜딩</Link></nav></div>
+    {params.view === "request" ? <NewRequest userId="design-preview" preview contact={{ company: "예시 의뢰사", name: "검토 담당자", email: "preview@example.invalid", dept: "", phone: "", orgType: "" }} /> : params.view === "compare" ? <CompareBoard no="DEMO-001" cols={UX_COLS} rows={UX_ROWS} canSelect={false} /> : params.view === "reply" ? <ReplyForm token="design-preview-no-live-token" backHref="/design-preview?role=cro" doneHref="/design-preview?role=cro" /> : role === "requester" ? <RequestOverview name="디자인 검토" list={params.empty === "1" ? [] : REQUESTS} /> : <>
       <div className="ph"><div><h1>{role === "cro" ? "CRO" : "운영자"} 공통 UI</h1><p>실제 업무 화면에서 사용하는 공통 셸·폼·표·상태 스타일입니다.</p></div></div>
       <div className="card card--pad"><div className="ph"><div><h2>요청 정보 예시</h2><p>표시 예시이며 저장하거나 제출하지 않습니다.</p></div><span className="pill pill--tint">확인 필요</span></div><div className="grid2"><label className="fld"><span className="fld__lab">시험물질명</span><input className="inp" defaultValue="예시 물질 A" /></label><label className="fld"><span className="fld__lab">시험 분야</span><select className="sel" defaultValue="일반독성"><option>일반독성</option><option>유전독성</option><option>안전성약리</option></select></label></div><div className="tbl-wrap" style={{ marginTop: 24 }}><table className="tbl"><thead><tr><th>시험 항목</th><th>수행 여부</th><th>진행 상태</th></tr></thead><tbody><tr><td>반복투여 독성</td><td>가능</td><td><span className="pill pill--tint">회신 작성 중</span></td></tr><tr><td>생체시료분석</td><td>조건부 가능</td><td><span className="pill pill--warn">조건 확인 필요</span></td></tr></tbody></table></div><div className="ph__actions" style={{ marginTop: 24 }}><button className="b1" disabled>검토용 · 제출 불가</button><Link className="b2" href="/design-preview">의뢰자 화면 보기</Link></div></div>
     </>}

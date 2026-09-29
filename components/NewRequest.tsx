@@ -1,436 +1,788 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { WIZ, STEP2, DETAILS, DEFAULT_VALUES, filled, validateRequired, type Cat, type Values } from "@/lib/rfq-schema";
+import {
+  WIZ,
+  STEP2,
+  DETAILS,
+  DEFAULT_VALUES,
+  filled,
+  validateRequired,
+  labelMap,
+  type Cat,
+  type Field,
+  type Values,
+} from "@/lib/rfq-schema";
 import { RfqField } from "@/components/RfqField";
-import { Chevron } from "@/components/Chevron";
-import { Caret, Lock } from "@/components/app/ui";
-import { clearDraft, loadDraft, saveDraft } from "@/components/app/AppState";
-import { uploadToSigned, type UploadTicket } from "@/lib/upload";
-import { PRESETS, presetItems, type Preset } from "@/lib/presets";
-import { DesignHints } from "@/components/guide/DesignHints";
-import { PACKAGE_WHY, requestChecks } from "@/lib/design-guide";
 import { Advisor } from "@/components/Advisor";
+import {
+  clearDraft,
+  loadDraft,
+  saveDraft,
+  type Draft,
+} from "@/components/app/AppState";
+import { retryAttachment } from "@/components/app/AttachmentRetry";
+import { PRESETS, presetItems } from "@/lib/presets";
+import { DesignHints } from "@/components/guide/DesignHints";
+import { requestChecks } from "@/lib/design-guide";
+import { needsCda } from "@/lib/request-policy";
+import "./request.css";
 
-type Contact = { company: string; name: string; dept: string; email: string; phone: string; orgType: string };
-type Phase = "start" | "advisor" | "wizard" | "detail" | "summary";
-/** 시험물질명 문항 — 제안을 적용한 뒤 여기서 이어 간다 */
-const Q_SUBSTANCE = WIZ.findIndex((s) => s.fields[0]?.id === "substance");
-
-/** 요약 화면 행 — [라벨, 값 키, 문항 번호, 필수] */
-const ROWS: [string, string, number, boolean][] = [
-  ["의뢰 목적", "purpose", 0, true],
-  ["개발 분야", "devField", 1, false],
-  ["제출처", "authority", 2, false],
-  ["시험물질", "substance", 3, true],
-  ["착수 시기", "start", 4, false],
-  ["회신 희망일", "replyBy", 5, false],
-  ["예산", "budget", 6, false],
-  ["CRO 수", "croCount", 7, true],
-  ["기밀 등급", "confid", 8, true],
-  ["시험 항목", "categories", 9, true],
-  ["추가 내용", "notes", 10, false],
+type Contact = {
+  company: string;
+  name: string;
+  dept: string;
+  email: string;
+  phone: string;
+  orgType: string;
+};
+type FileMeta = { name: string; size: number };
+const STEPS = [
+  "시험과 물질",
+  "일정과 요청 조건",
+  "자료와 정보 공개",
+  "확인하고 보내기",
 ];
+const FIELD_LABELS: Record<string, string> = {
+  purpose: "의뢰 목적",
+  devField: "개발 분야",
+  authority: "자료 제출처",
+  substance: "시험물질명 또는 코드명",
+  start: "희망 착수 시기",
+  replyBy: "견적 회신 희망일",
+  budget: "예산 범위",
+  croCount: "요청할 기관 수",
+  confid: "정보 공개 방식",
+  categories: "시험 항목",
+  notes: "추가 설명",
+};
+const sameFile = (a: FileMeta, b: FileMeta) =>
+  a.name === b.name && a.size === b.size;
+const initial = (): Values => ({ ...DEFAULT_VALUES });
 
-/**
- * 로그인 사용자용 견적 요청 위자드.
- * 담당자 정보는 계정에서 채우고, 위자드(12) → 상세 조건(선택) → 요약 → 제출.
- * 문항 단위로 이 기기에 임시 저장한다.
- */
-export function NewRequest({ contact }: { contact: Contact }) {
+export function NewRequest({
+  contact,
+  userId,
+  preview = false,
+}: {
+  contact: Contact;
+  userId: string;
+  preview?: boolean;
+}) {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>("wizard");
-  const [q, setQ] = useState(0);
-  const [values, setValues] = useState<Values>({ ...DEFAULT_VALUES, agreePrivacy: true, agreeTerms: true });
+  const [phase, setPhase] = useState<"start" | "advisor" | "edit">("start");
+  const [step, setStep] = useState(0);
+  const [values, setValues] = useState<Values>(initial);
   const [files, setFiles] = useState<File[]>([]);
+  const [missingFiles, setMissingFiles] = useState<FileMeta[]>([]);
+  const [resume, setResume] = useState<Draft | null>(null);
   const [ready, setReady] = useState(false);
+  const [saveState, setSaveState] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [pendingNo, setPendingNo] = useState<string>();
+  const [preset, setPreset] = useState("");
+  const [undo, setUndo] = useState<Values | null>(null);
+  const [editingReview, setEditingReview] = useState(false);
+  const title = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    const d = loadDraft();
-    if (d) {
-      setValues((v) => ({ ...v, ...d.values }));
-      setQ(Math.min(d.q, WIZ.length - 1));
-    } else if (!new URLSearchParams(window.location.search).get("preset")) {
-      setPhase("start"); // 새 요청: 제안 받기와 직접 고르기 중 선택
-    }
+    setResume(loadDraft(userId));
     setReady(true);
-  }, []);
-
-  // 가이드 페이지의 "이 구성으로 견적 요청" (/app/new?preset=키) — 준비된 뒤 한 번만 적용
+  }, [userId]);
   useEffect(() => {
-    if (!ready) return;
-    const key = new URLSearchParams(window.location.search).get("preset");
-    const p = key && PRESETS.find((x) => x.key === key);
-    if (p && values.presetKey !== p.key) applyPreset(p);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready]);
-
-  const set = (id: string, v: string | string[] | boolean) => {
-    const next = { ...values, [id]: v };
-    setValues(next);
-    setError("");
-    saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
-  };
-
-  /** 패키지 프리셋 → 시험 항목·세부 항목·동물종·시험법을 한 번에 채운다 (이미 고른 것에 더한다) */
-  const applyPreset = (p: Preset) => {
-    const next: Values = { ...values };
-    const add = (key: string, vals: string[]) => {
-      const cur = Array.isArray(next[key]) ? (next[key] as string[]) : [];
-      next[key] = [...new Set([...cur, ...vals])];
+    if (!ready || phase !== "edit") return;
+    const ok = saveDraft(userId, {
+      version: 2,
+      q: step,
+      phase: step === 3 ? "review" : "edit",
+      values,
+      files: [
+        ...missingFiles,
+        ...files.map(({ name, size }) => ({ name, size })),
+      ],
+      pendingNo,
+      updatedAt: new Date().toISOString(),
+    });
+    setSaveState(
+      ok
+        ? "이 브라우저에 임시 저장됨"
+        : "임시 저장하지 못했습니다. 이 화면을 닫지 말고 다시 시도해 주세요.",
+    );
+  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo]);
+  useEffect(() => {
+    if (phase === "edit") title.current?.focus();
+  }, [phase, step]);
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (busy || saveState.startsWith("임시 저장하지")) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
     };
-    for (const pi of presetItems(p)) {
-      add("categories", [pi.category]);
-      const f = DETAILS[pi.category as Cat]?.find((x) => x.id === "items" || x.id === "segment");
-      if (f && pi.item !== pi.category) add(`${pi.category}.${f.id}`, [pi.item]);
-      if (pi.requestSpecies?.length) add(`${pi.category}.species`, pi.requestSpecies);
-      if (pi.method && DETAILS[pi.category as Cat]?.some((x) => x.id === "method")) add(`${pi.category}.method`, [pi.method.replace(/\(관찰 14일\)/, "").trim()]);
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [busy, saveState]);
+  const set = (id: string, value: string | string[] | boolean) => {
+    setValues((old) => ({ ...old, [id]: value }));
+    setError("");
+  };
+  const cats = (
+    Array.isArray(values.categories) ? values.categories : []
+  ) as Cat[];
+  const go = (n: number) => {
+    setStep(n);
+    setError("");
+    window.scrollTo(0, 0);
+  };
+  const editSection = (n: number) => {
+    setEditingReview(true);
+    go(n);
+  };
+  const applyPreset = (key: string, replace = false) => {
+    const p = PRESETS.find((x) => x.key === key);
+    if (!p) return;
+    if (
+      replace &&
+      cats.length &&
+      !window.confirm(
+        "시험 항목과 항목별 상세 조건을 이 구성으로 바꿀까요? 일정·물질·첨부는 유지됩니다.",
+      )
+    )
+      return;
+    setUndo(values);
+    const next = { ...values };
+    if (replace) {
+      next.categories = [];
+      Object.keys(next)
+        .filter((k) => k.includes("."))
+        .forEach((k) => delete next[k]);
+    }
+    const add = (k: string, a: string[]) => {
+      next[k] = [
+        ...new Set([
+          ...(Array.isArray(next[k]) ? (next[k] as string[]) : []),
+          ...a,
+        ]),
+      ];
+    };
+    for (const it of presetItems(p)) {
+      add("categories", [it.category]);
+      const f = DETAILS[it.category as Cat]?.find(
+        (x) => x.id === "items" || x.id === "segment",
+      );
+      if (f && it.item !== it.category)
+        add(`${it.category}.${f.id}`, [it.item]);
+      if (it.requestSpecies?.length)
+        add(`${it.category}.species`, it.requestSpecies);
+      if (
+        it.method &&
+        DETAILS[it.category as Cat]?.some((x) => x.id === "method")
+      )
+        add(`${it.category}.method`, [
+          it.method.replace(/\(관찰 14일\)/, "").trim(),
+        ]);
     }
     next.presetKey = p.key;
     setValues(next);
     setError("");
-    saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
   };
-  /** 여러 칸을 한 번에 채운다 (표준 설계로 채우기) */
-  const setMany = (patch: Record<string, string | string[]>) => {
-    const next = { ...values, ...patch };
-    setValues(next);
-    setError("");
-    saveDraft({ q, values: next as Record<string, string | string[] | boolean> });
+  const start = () => {
+    setValues(initial());
+    setFiles([]);
+    setMissingFiles([]);
+    setPendingNo(undefined);
+    setResume(null);
+    setPhase("edit");
+    go(0);
+    const key = new URLSearchParams(window.location.search).get("preset");
+    if (key) {
+      setPreset(key);
+      applyPreset(key);
+    }
   };
-  const go = (n: number) => {
-    setQ(n);
-    saveDraft({ q: n, values: values as Record<string, string | string[] | boolean> });
-    window.scrollTo(0, 0);
-  };
-
-  const step = WIZ[q];
-  const stepOk = step.fields.every((f) => !f.required || filled(values, f.id));
-  const last = q === WIZ.length - 1;
-  const required = step.fields.some((f) => f.required);
-  const anyFilled = step.fields.some((f) => filled(values, f.id));
-  const nextLabel = last ? "요약 확인" : required || anyFilled ? "다음" : "건너뛰기";
-  const cats = (Array.isArray(values.categories) ? values.categories : []) as Cat[];
-  const details = cats.filter((c) => DETAILS[c]);
+  const field = (f: Field, id = f.id) => (
+    <RfqField
+      key={id}
+      id={id}
+      field={{ ...f, label: f.label || FIELD_LABELS[f.id] || f.id }}
+      values={values}
+      onChange={set}
+      files={files}
+      onFiles={(next) => {
+        setFiles(next);
+        setMissingFiles((old) =>
+          old.filter((m) => !next.some((f) => sameFile(m, f))),
+        );
+      }}
+    />
+  );
+  const baseFields = (ids: string[]) =>
+    ids.map((id) => {
+      const wiz = WIZ.find((w) => w.fields.some((f) => f.id === id))!;
+      const f = wiz.fields.find((f) => f.id === id)!;
+      return field({ ...f, help: f.help || wiz.sub });
+    });
   const contactOk = !!(contact.company && contact.name && contact.email);
-  const submittedStep = STEP2.some((g) => g.fields.some((f) => filled(values, f.id))) || details.some((c) => DETAILS[c].some((f) => filled(values, `${c}.${f.id}`))) ? 2 : 1;
-
+  const checks = requestChecks(values);
   const submit = async () => {
-    const payload: Values = { ...contact, ...values, submittedStep: String(submittedStep), source: "app" };
-    const err = validateRequired(payload);
-    if (err) return setError(err);
-    if (!contactOk) return setError("프로필의 회사·기관명과 성명을 먼저 채워 주세요.");
+    if (busy || preview) return;
+    const payload = {
+      ...contact,
+      ...values,
+      source: "app",
+      submittedStep: "2",
+    };
+    const invalid = validateRequired(payload);
+    if (invalid) {
+      const missing = WIZ.flatMap((w) => w.fields).find(
+        (f) => f.required && !filled(values, f.id),
+      );
+      if (missing)
+        setStep(
+          ["purpose", "categories", "substance"].includes(missing.id)
+            ? 0
+            : missing.id === "croCount"
+              ? 1
+              : missing.id === "confid"
+                ? 2
+                : 3,
+        );
+      setError(invalid);
+      return;
+    }
+    if (missingFiles.length) {
+      setError("저장된 첨부파일을 다시 선택하거나 목록에서 제외해 주세요.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      const res = await fetch("/api/rfq", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload, files: files.map((f) => ({ name: f.name, size: f.size, type: f.type })) }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { rfqNo?: string; error?: string; uploads?: UploadTicket[] };
-      if (!res.ok || !data.rfqNo) throw new Error(data.error || "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-      let failed = 0;
-      const tickets = data.uploads ?? [];
-      const done: string[] = [];
-      await Promise.all(files.map(async (f, i) => {
-        const t = tickets[i];
-        if (!t || t.name !== f.name || !(await uploadToSigned(t, f))) failed++;
-        else done.push(t.path);
-      }));
-      // 올라간 파일을 서버가 확인해 "업로드 완료"로 표시한다 (실패해도 접수는 유효, 내려받을 때 다시 확인한다)
-      if (done.length) await fetch(`/api/rfq/${data.rfqNo}/files/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paths: done }) }).catch(() => null);
-      clearDraft();
-      const qs = new URLSearchParams({ no: data.rfqNo });
-      if (files.length && failed) qs.set("upfail", String(failed));
-      router.push(`/app/new/done?${qs}`);
+      let no = pendingNo;
+      if (!no) {
+        const r = await fetch("/api/rfq", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload, files: [] }),
+        });
+        const d = await r.json();
+        if (!r.ok || !d.rfqNo)
+          throw new Error(
+            d.error || "접수하지 못했습니다. 다시 시도해 주세요.",
+          );
+        no = d.rfqNo as string;
+        setPendingNo(no);
+        saveDraft(userId, {
+          version: 2,
+          q: 3,
+          phase: "review",
+          values,
+          files: files.map(({ name, size }) => ({ name, size })),
+          pendingNo: no,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      const failed: string[] = [];
+      for (const f of files) {
+        try {
+          if (!(await retryAttachment(no, f))) failed.push(f.name);
+        } catch {
+          failed.push(f.name);
+        }
+      }
+      if (failed.length)
+        throw new Error(
+          `요청 ${no}는 접수됐습니다. 업로드 실패: ${failed.join(", ")}. 아래 버튼으로 파일만 다시 올릴 수 있습니다.`,
+        );
+      clearDraft(userId);
+      router.push(`/app/new/done?no=${encodeURIComponent(no)}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "처리하지 못했습니다. 다시 시도해 주세요.",
+      );
+    } finally {
       setBusy(false);
     }
   };
-
-  if (!ready) return null;
-
-  /* ── 시작: 두 가지 길 ── */
-  if (phase === "start") {
-    const path = (title: string, desc: string, cta: string, primary: boolean, onClick: () => void) => (
-      <button type="button" onClick={onClick} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 6, textAlign: "left", borderColor: primary ? "var(--brand)" : undefined }}>
-        <b style={{ fontSize: 17, color: "var(--ink)" }}>{title}</b>
-        <span style={{ fontSize: 14, color: "var(--body)", lineHeight: 1.55 }}>{desc}</span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)", marginTop: 6 }}>{cta} →</span>
-      </button>
-    );
+  if (!ready) return <p role="status">작성 중인 요청을 확인하고 있습니다.</p>;
+  if (phase === "advisor")
     return (
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <Link href="/app" className="crumb">닫기</Link>
-        <div className="ph">
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>새 견적 요청</p>
-            <h1>어떻게 시작할까요?</h1>
-          </div>
-        </div>
-        <div className="stack" style={{ gap: 12 }}>
-          {path("상황을 말하고 제안 받기", "개발 단계와 임상 계획, 이미 가진 자료를 답하면 필요한 시험을 가이드라인 근거와 함께 제안합니다. 의약품, 건강기능식품, 화장품, 의료기기, 화학물질·농약을 지원합니다.", "질문 12개 안팎 · 3분", true, () => { setPhase("advisor"); window.scrollTo(0, 0); })}
-          {path("직접 고르기", "필요한 시험을 이미 알고 있다면 항목을 바로 고릅니다. 패키지로 한 번에 채울 수도 있습니다.", "바로 작성", false, () => { setPhase("wizard"); window.scrollTo(0, 0); })}
-        </div>
+      <div className="request">
+        <p className="fld__help">
+          시험 찾기의 답변은 화면을 닫으면 사라집니다. 선택한 시험을 요청서에
+          담으면 임시 저장됩니다.
+        </p>
+        <Advisor
+          onManual={() => {
+            setPhase("edit");
+            go(0);
+          }}
+          onApply={(patch) => {
+            setValues((old) => ({ ...old, ...patch }));
+            setPhase("edit");
+            go(0);
+          }}
+        />
       </div>
     );
-  }
-
-  /* ── 제안 받기 ── */
-  if (phase === "advisor") {
+  if (phase === "start")
     return (
-      <Advisor
-        onManual={() => { setPhase("wizard"); window.scrollTo(0, 0); }}
-        onApply={(patch) => {
-          const next: Values = { ...values, ...patch };
-          setValues(next);
-          setError("");
-          setQ(Q_SUBSTANCE);
-          saveDraft({ q: Q_SUBSTANCE, values: next as Record<string, string | string[] | boolean> });
-          setPhase("wizard");
-          window.scrollTo(0, 0);
-        }}
-      />
-    );
-  }
-
-  /* ── 요약 ── */
-  if (phase === "summary") {
-    const checks = requestChecks(values);
-    const show = (key: string) => {
-      const v = values[key];
-      if (Array.isArray(v)) return v.length ? v.join(", ") : "";
-      return typeof v === "string" ? v : "";
-    };
-    return (
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0 }} onClick={() => setPhase(submittedStep === 2 ? "detail" : "wizard")}>
-          <Caret size={14} /> 이전
-        </button>
-        <div className="ph">
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>마지막 확인</p>
-            <h1>이 내용으로 CRO {String(values.croCount ?? "3곳")}에 전달합니다</h1>
-            <p>항목을 누르면 해당 질문으로 돌아가 수정할 수 있어요.</p>
-          </div>
-        </div>
-
-        {checks.length > 0 && (
-          <div className="note note--tint" style={{ marginBottom: 12 }}>
-            <b style={{ display: "block", marginBottom: 6 }}>제출 전에 확인해 보세요</b>
-            <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
-              {checks.map((c) => <li key={c}>{c}</li>)}
-            </ul>
-            <span style={{ display: "block", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>안내일 뿐이며 그대로 제출해도 됩니다.</span>
-          </div>
-        )}
-        {Array.isArray(values.advisorAsk) && values.advisorAsk.length > 0 && (
-          <details className="note note--tint" style={{ marginBottom: 12, display: "block" }}>
-            <summary style={{ cursor: "pointer", fontWeight: 600 }}>기관에 설명을 요청하는 항목 {values.advisorAsk.length}개가 함께 전달됩니다</summary>
-            <ul style={{ margin: "8px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
-              {values.advisorAsk.map((c) => <li key={c}>{c}</li>)}
-            </ul>
-            <span style={{ display: "block", marginTop: 6, fontSize: 12, color: "var(--muted)" }}>기관마다 방식이 다른 부분입니다. 기관의 설명은 비교표에 나란히 표시됩니다.</span>
-          </details>
-        )}
-        <div className="stack" style={{ gap: 12 }}>
-          <div className="card" style={{ padding: "6px 18px" }}>
-            <div style={{ padding: "12px 0 8px", fontSize: 13, fontWeight: 600, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
-              <span>담당자 (계정 정보)</span>
-              <Link href="/app/profile">수정</Link>
+      <div className="request">
+        <Link className="crumb" href="/app">
+          내 견적 요청
+        </Link>
+        <h1>새 견적 요청</h1>
+        <p className="request__lead">
+          필요한 시험을 선택하고, 알고 있는 조건만 입력하세요.
+        </p>
+        {resume && (
+          <section className="request__resume">
+            <h2>작성 중인 요청이 있습니다</h2>
+            <p>
+              {String(resume.values.substance || "시험물질명 미입력")} ·{" "}
+              {STEPS[resume.q]}
+            </p>
+            <p className="fld__help">
+              이 브라우저에 저장된 내용입니다. 첨부파일은 다시 선택해야 합니다.
+            </p>
+            <div className="request__actions">
+              <button
+                className="b1"
+                onClick={() => {
+                  setValues(resume.values);
+                  setStep(resume.q);
+                  setPendingNo(resume.pendingNo);
+                  setMissingFiles(resume.files);
+                  setPhase("edit");
+                }}
+              >
+                이어서 작성
+              </button>
+              <button
+                className="b2"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "저장된 초안을 지우고 새로 작성할까요? 이미 접수된 요청은 삭제되지 않습니다.",
+                    )
+                  ) {
+                    clearDraft(userId);
+                    start();
+                  }
+                }}
+              >
+                새로 작성
+              </button>
             </div>
-            {[["회사", contact.company], ["담당자", [contact.name, contact.dept].filter(Boolean).join(" · ")], ["이메일", contact.email], ["휴대전화", contact.phone]]
-              .filter(([, v]) => v)
-              .map(([k, v]) => (
-                <div key={k} className="kv" style={{ borderTop: "1px solid var(--track)" }}>
-                  <span className="kv__k">{k}</span>
-                  <span className="kv__v">{v}</span>
-                </div>
-              ))}
-            {!contactOk && <p className="note note--err" style={{ margin: "8px 0 12px" }}>프로필에 회사·기관명과 성명이 없습니다. 먼저 채워 주세요.</p>}
-          </div>
-
-          <div className="card" style={{ padding: "6px 18px" }}>
-            <div style={{ padding: "12px 0 8px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>의뢰 내용</div>
-            {ROWS.map(([label, key, idx, req]) => {
-              const v = show(key);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => { setPhase("wizard"); go(idx); }}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, width: "100%", padding: "11px 0", border: 0, borderTop: "1px solid var(--track)", background: "none", textAlign: "left", fontSize: 15, color: "var(--ink)" }}
-                >
-                  <span style={{ color: "var(--muted)", flex: "none", width: 96 }}>{label}</span>
-                  <span style={{ fontWeight: v ? 600 : 400, textAlign: "right", color: v ? "var(--ink)" : req ? "var(--err)" : "var(--ph)" }}>{v || (req ? "미입력" : "건너뜀")}</span>
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              onClick={() => { setPhase("detail"); window.scrollTo(0, 0); }}
-              style={{ display: "flex", justifyContent: "space-between", gap: 12, width: "100%", padding: "11px 0", border: 0, borderTop: "1px solid var(--track)", background: "none", textAlign: "left", fontSize: 15, color: "var(--ink)" }}
-            >
-              <span style={{ color: "var(--muted)", flex: "none", width: 96 }}>상세 조건</span>
-              <span style={{ fontWeight: 600, color: submittedStep === 2 ? "var(--ink)" : "var(--brand)" }}>{submittedStep === 2 ? `입력함 · 첨부 ${files.length}개` : "입력하기 (선택)"}</span>
+          </section>
+        )}
+        {!resume && (
+          <div className="request__paths">
+            <button onClick={() => setPhase("advisor")}>
+              <b>필요한 시험 찾기</b>
+              <span>
+                개발 상황을 답하면 가이드라인 근거와 함께 시험을 제안합니다.
+              </span>
+            </button>
+            <button onClick={start}>
+              <b>시험 항목 직접 선택</b>
+              <span>필요한 시험을 알고 있다면 바로 요청서를 작성하세요.</span>
             </button>
           </div>
-
-          <div className="note note--tint">
-            <Lock />
-            <span>
-              기밀 등급 <b style={{ fontWeight: 600 }}>{String(values.confid ?? "일반")}</b>
-              {String(values.confid ?? "").startsWith("CDA") ? " — 비밀유지계약을 체결한 CRO에만 요청서가 전달되고, 회사명은 체결 전까지 마스킹됩니다." : " — 요청서는 견적 목적으로 참여 CRO에만 전달됩니다."}
-            </span>
-          </div>
-
-          {error && <p className="note note--err" role="alert">{error}</p>}
-          <button type="button" className="b1 blg" onClick={submit} disabled={busy || !contactOk}>
-            {busy ? "접수 중…" : "제출"}
-          </button>
-        </div>
+        )}
       </div>
     );
-  }
-
-  /* ── 상세 조건 (선택) ── */
-  if (phase === "detail") {
-    return (
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0 }} onClick={() => { setPhase("wizard"); go(WIZ.length - 1); }}>
-          <Caret size={14} /> 이전
-        </button>
-        <div className="ph">
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>상세 조건 (선택)</p>
-            <h1>알고 있는 조건만 입력하세요</h1>
-            <p>비워 두면 기관이 자신의 설계로 견적하고 그 내용을 회신에 설명합니다. 앞에서 고른 시험 항목의 세부 조건은 아래에 있습니다.</p>
-          </div>
+  const labels = labelMap();
+  return (
+    <div className="request">
+      <div className="request__top">
+        <Link className="crumb" href="/app">
+          닫기
+        </Link>
+        <span role="status" className="fld__help">
+          {saveState}
+        </span>
+      </div>
+      <nav className="request__steps" aria-label="견적 요청 작성 단계">
+        {STEPS.map((s, i) => (
+          <button
+            type="button"
+            key={s}
+            aria-current={step === i ? "step" : undefined}
+            disabled={busy || (!!pendingNo && i !== 3)}
+            onClick={() => go(i)}
+          >
+            <span>{i + 1}</span>
+            {s}
+          </button>
+        ))}
+      </nav>
+      <h1 ref={title} tabIndex={-1}>
+        {STEPS[step]}
+      </h1>
+      <p className="request__lead">
+        {step === 0
+          ? "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
+          : step === 1
+            ? "미정인 조건은 비워 둘 수 있습니다."
+            : step === 2
+              ? "요청 내용이 공개되는 범위를 확인하세요."
+              : "입력한 내용과 첨부 상태를 확인한 뒤 요청을 보내세요."}
+      </p>
+      {pendingNo && (
+        <div className="note note--tint">
+          요청 {pendingNo}는 이미 접수됐습니다. 첨부파일만 다시 올립니다.{" "}
+          <Link href={`/app/r/${pendingNo}`}>접수된 요청 보기</Link>
         </div>
-        <div className="stack" style={{ gap: 14 }}>
-          {STEP2.map((g) => (
-            <section key={g.title} className="dcard">
-              <div>
-                <h2>{g.title}</h2>
-                {g.desc && <p className="dcard__desc">{g.desc}</p>}
+      )}
+      <fieldset disabled={busy || !!pendingNo} className="request__fieldset">
+        {step === 0 && (
+          <>
+            <section className="request__section">
+              <div className="request__section-head">
+                <h2>시험 항목</h2>
+                <button
+                  type="button"
+                  className="btxt"
+                  onClick={() => setPhase("advisor")}
+                >
+                  시험 선택 도움받기
+                </button>
               </div>
-              <div className="dcard__fields">
-                {g.fields.map((f) => (
-                  <RfqField key={f.id} field={f} id={f.id} values={values} onChange={set} files={files} onFiles={setFiles} />
-                ))}
+              {baseFields(["categories"])}
+              <details className="request__details">
+                <summary>시험 구성으로 한 번에 선택</summary>
+                <label className="fld">
+                  <span>시험 구성</span>
+                  <select
+                    className="sel"
+                    value={preset}
+                    onChange={(e) => setPreset(e.target.value)}
+                  >
+                    <option value="">구성 선택</option>
+                    {PRESETS.map((p) => (
+                      <option key={p.key} value={p.key}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="fld__help">
+                  {PRESETS.find((p) => p.key === preset)?.desc}
+                </p>
+                <div className="request__actions">
+                  <button
+                    type="button"
+                    className="b2"
+                    disabled={!preset}
+                    onClick={() => applyPreset(preset)}
+                  >
+                    현재 선택에 추가
+                  </button>
+                  <button
+                    type="button"
+                    className="b2"
+                    disabled={!preset}
+                    onClick={() => applyPreset(preset, true)}
+                  >
+                    이 구성으로 바꾸기
+                  </button>
+                  {undo && (
+                    <button
+                      className="btxt"
+                      type="button"
+                      onClick={() => {
+                        setValues(undo);
+                        setUndo(null);
+                      }}
+                    >
+                      구성 적용 되돌리기
+                    </button>
+                  )}
+                </div>
+              </details>
+            </section>
+            <section className="request__section">
+              <h2>물질과 의뢰 목적</h2>
+              <div className="request__fields">
+                {baseFields(["substance", "purpose", "devField", "authority"])}
               </div>
             </section>
-          ))}
-          {details.length === 0 && <div className="dempty">선택한 시험 항목이 없어 세부 조건이 없습니다.</div>}
-          {details.map((cat) => (
-            <details key={cat} open className="acc">
-              <summary>
-                <span>{cat}</span>
-                <Chevron />
-              </summary>
-              <div className="acc__fields">
-                {cat === "일반독성" && <DesignHints values={values} onFill={setMany} />}
-                {DETAILS[cat].map((f) => (
-                  <RfqField key={f.id} field={f} id={`${cat}.${f.id}`} values={values} onChange={set} />
-                ))}
-              </div>
-            </details>
-          ))}
-          <div className="cta">
-            <button type="button" className="b1 blg bfull" onClick={() => { setPhase("summary"); window.scrollTo(0, 0); }}>요약 확인</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── 위자드 ── */
-  return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <Link href="/app" className="crumb" style={{ margin: 0 }}>닫기</Link>
-        <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{q + 1} / {WIZ.length}</span>
-      </div>
-      <div style={{ height: 3, background: "var(--track)", borderRadius: 2, marginBottom: 20 }}>
-        <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, width: `${(q / WIZ.length) * 100}%`, transition: "width .3s ease" }} />
-      </div>
-
-      {q > 0 && (
-        <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0 }} onClick={() => go(q - 1)}>
-          <Caret size={14} /> 이전
-        </button>
-      )}
-      <div className="ph" style={{ marginBottom: 16 }}>
-        <div>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>{step.eyebrow}</p>
-          <h1 style={{ textWrap: "balance" }}>{step.q}</h1>
-          {step.sub && <p>{step.sub}</p>}
-        </div>
-      </div>
-
-      <div key={q} className="rise-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {step.fields[0]?.id === "categories" && (
-          <div className="dcard" style={{ gap: 8 }}>
-            <div>
-              <h2 style={{ fontSize: 15 }}>패키지로 시작하기 <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 13 }}>(선택)</span></h2>
-              <p className="dcard__desc">개발 분야에 맞는 시험 세트를 한 번에 고릅니다. 고른 뒤 항목을 빼거나 더할 수 있습니다.</p>
-            </div>
-            <div className="chips">
-              {PRESETS.map((p) => (
-                <button key={p.key} type="button" className="chip" aria-pressed={values.presetKey === p.key} onClick={() => applyPreset(p)} title={p.desc}>{p.name}</button>
+            {cats
+              .filter((c) => DETAILS[c])
+              .map((c) => (
+                <details className="request__details" key={c}>
+                  <summary>
+                    {c} 상세 조건 <span>선택 입력</span>
+                  </summary>
+                  <div className="request__fields">
+                    {c === "일반독성" && (
+                      <DesignHints
+                        values={values}
+                        onFill={(patch) =>
+                          setValues((old) => ({ ...old, ...patch }))
+                        }
+                      />
+                    )}
+                    {DETAILS[c].map((f) => field(f, `${c}.${f.id}`))}
+                  </div>
+                </details>
               ))}
+            {STEP2.map((g) => (
+              <details className="request__details" key={g.title}>
+                <summary>
+                  {g.title} <span>선택 입력</span>
+                </summary>
+                <p className="fld__help">
+                  비워 둔 조건은 기관이 회신에서 제안합니다.
+                </p>
+                <div className="request__fields">
+                  {g.fields
+                    .filter((f) => f.type !== "file")
+                    .map((f) => field(f))}
+                </div>
+              </details>
+            ))}
+          </>
+        )}
+        {step === 1 && (
+          <section className="request__section request__fields">
+            {baseFields(["start", "replyBy", "budget", "croCount"])}
+            <p className="fld__help">
+              승인된 기관 중 시험 분야가 맞는 곳에 순차적으로 전달합니다. 기관이
+              부족하면 선택한 수보다 적게 전달될 수 있습니다.
+            </p>
+          </section>
+        )}
+        {step === 2 && (
+          <section className="request__section request__fields">
+            {baseFields(["confid"])}
+            <div className="note note--tint">
+              {needsCda(values.confid)
+                ? "초대받은 기관에는 시험 개요를 먼저 전달합니다. 회사명과 첨부파일은 해당 기관의 CDA 체결을 운영자가 확인한 뒤 공개합니다. 비공개 정보는 물질명·추가 설명에 적지 마세요."
+                : "요청 내용과 첨부는 견적에 참여하는 기관에 전달됩니다. 담당자 연락처는 기관 선정 후 공개됩니다."}
             </div>
-            {typeof values.presetKey === "string" && values.presetKey && (
-              <p style={{ fontSize: 13, color: "var(--ok)", margin: 0 }}>{PRESETS.find((p) => p.key === values.presetKey)?.name} 항목을 넣었습니다. 세부 항목과 동물종은 상세 조건 단계에서 확인할 수 있습니다.</p>
-            )}
-            {(() => {
-              const why = PACKAGE_WHY.find((w) => w.presetKey === values.presetKey);
-              if (!why) return null;
+            {STEP2.flatMap((g) => g.fields)
+              .filter((f) => f.type === "file")
+              .map((f) => field(f))}
+            {baseFields(["notes"])}
+          </section>
+        )}
+        {step === 3 && (
+          <>
+            <section className="request__section">
+              <h2>담당자</h2>
+              <p>
+                {contact.company} · {contact.name}
+              </p>
+              <p>{contact.email}</p>
+              <Link href="/app/profile">담당자 정보 수정</Link>
+              {!contactOk && (
+                <p role="alert">
+                  회사·기관명과 성명을 프로필에서 입력해 주세요.
+                </p>
+              )}
+            </section>
+            {[0, 1, 2].map((section) => {
+              const ids =
+                section === 0
+                  ? [
+                      "categories",
+                      "substance",
+                      "purpose",
+                      "devField",
+                      "authority",
+                    ]
+                  : section === 1
+                    ? ["start", "replyBy", "budget", "croCount"]
+                    : ["confid", "notes"];
               return (
-                <details className="hints" style={{ marginTop: 4 }}>
-                  <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>왜 이 시험들인가요</summary>
-                  <p style={{ fontSize: 13, margin: "8px 0 6px", color: "var(--body)" }}>{why.headline}</p>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: "flex", flexDirection: "column", gap: 6, color: "var(--body)" }}>
-                    {why.blocks.map((b) => (
-                      <li key={b.t}><b style={{ color: "var(--ink)" }}>{b.t}</b> — {b.why}</li>
+                <section className="request__section" key={section}>
+                  <div className="request__section-head">
+                    <h2>{STEPS[section]}</h2>
+                    <button
+                      className="btxt"
+                      type="button"
+                      onClick={() => editSection(section)}
+                    >
+                      수정
+                    </button>
+                  </div>
+                  <dl className="request__summary">
+                    {ids.map((id) => (
+                      <div key={id}>
+                        <dt>{FIELD_LABELS[id]}</dt>
+                        <dd>
+                          {Array.isArray(values[id])
+                            ? (values[id] as string[]).join(", ") || "미선택"
+                            : String(values[id] || "입력하지 않음")}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+              );
+            })}
+            <details className="request__details">
+              <summary>입력한 상세 조건 확인</summary>
+              <dl className="request__summary">
+                {Object.entries(values)
+                  .filter(
+                    ([id, v]) =>
+                      !FIELD_LABELS[id] &&
+                      !id.startsWith("agree") &&
+                      !id.startsWith("advisor") &&
+                      id !== "presetKey" &&
+                      filled(values, id) &&
+                      labels[id],
+                  )
+                  .map(([id, v]) => (
+                    <div key={id}>
+                      <dt>{labels[id]}</dt>
+                      <dd>{Array.isArray(v) ? v.join(", ") : String(v)}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </details>
+            {Array.isArray(values.advisorAsk) &&
+              values.advisorAsk.length > 0 && (
+                <details className="request__details">
+                  <summary>
+                    기관에 확인할 사항 {values.advisorAsk.length}개
+                  </summary>
+                  <ul>
+                    {values.advisorAsk.map((a) => (
+                      <li key={a}>{a}</li>
                     ))}
                   </ul>
-                  <p style={{ fontSize: 12, color: "var(--muted)", margin: "8px 0 0" }}>근거 · {why.basis.join(" · ")}</p>
                 </details>
-              );
-            })()}
-          </div>
+              )}
+            <section className="request__section">
+              <h2>첨부파일 {files.length + missingFiles.length}개</h2>
+              {files.length ? (
+                <ul>
+                  {files.map((f) => (
+                    <li key={`${f.name}-${f.size}`}>{f.name} · 선택됨</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="fld__help">선택된 파일이 없습니다.</p>
+              )}
+              <button
+                type="button"
+                className="btxt"
+                onClick={() => editSection(2)}
+              >
+                첨부 수정
+              </button>
+            </section>
+            {checks.length > 0 && (
+              <details className="request__details">
+                <summary>보내기 전에 확인할 사항</summary>
+                <ul>
+                  {checks.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                <p className="fld__help">
+                  참고 안내입니다. 입력한 내용으로 요청할 수 있습니다.
+                </p>
+              </details>
+            )}
+            <section className="request__section request__fields">
+              {WIZ[WIZ.length - 1].fields.map((f) => field(f))}
+            </section>
+          </>
         )}
-        {step.fields.map((f, i) => (
-          <RfqField
-            key={f.id}
-            field={f}
-            id={f.id}
-            values={values}
-            onChange={set}
-            big
-            autoFocus={i === 0 && ["text", "email", "tel", "date"].includes(f.type)}
-            onEnter={() => stepOk && (last ? setPhase("summary") : go(q + 1))}
-          />
-        ))}
-        {last && (
-          <p style={{ fontSize: 13, color: "var(--muted)" }}>
-            <Link href="/terms" target="_blank">이용약관</Link> · <Link href="/privacy" target="_blank">개인정보처리방침</Link> 전문 보기
+      </fieldset>
+      {missingFiles.length > 0 && (
+        <section className="note note--warn request__missing">
+          <b>다시 선택해야 하는 첨부파일</b>
+          <p>
+            파일 내용은 브라우저에 저장하지 않습니다. 같은 파일을 선택하거나
+            요청에서 제외해 주세요.
           </p>
+          {missingFiles.map((f) => (
+            <div key={`${f.name}-${f.size}`}>
+              <span>{f.name}</span>
+              <button
+                type="button"
+                className="btxt"
+                disabled={busy}
+                onClick={() =>
+                  setMissingFiles((old) => old.filter((x) => x !== f))
+                }
+              >
+                제외
+              </button>
+            </div>
+          ))}
+          <label>
+            파일 다시 선택
+            <input
+              type="file"
+              multiple
+              disabled={busy}
+              onChange={(e) => {
+                const selected = Array.from(e.target.files || []);
+                const matching = selected.filter((f) =>
+                  missingFiles.some((m) => sameFile(f, m)),
+                );
+                setFiles((old) => [
+                  ...old.filter((f) => !matching.some((m) => sameFile(f, m))),
+                  ...matching,
+                ]);
+                setMissingFiles((old) =>
+                  old.filter((m) => !matching.some((f) => sameFile(m, f))),
+                );
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </section>
+      )}
+      {error && (
+        <p className="note note--err" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="request__footer">
+        {step > 0 && !pendingNo && (
+          <button className="b2" disabled={busy} onClick={() => go(step - 1)}>
+            이전
+          </button>
         )}
-      </div>
-
-      <div className="cta">
-        <button type="button" className="b1 blg bfull" disabled={!stepOk} onClick={() => (last ? setPhase("summary") : go(q + 1))}>
-          {nextLabel}
-        </button>
-        <p className="cta__note">자동 저장됨 · 언제든 닫고 이어서 작성할 수 있어요</p>
+        {step < 3 ? (
+          <button
+            className="b1"
+            disabled={busy}
+            onClick={() => {
+              if (editingReview) {
+                setEditingReview(false);
+                go(3);
+              } else go(step + 1);
+            }}
+          >
+            {editingReview ? "수정 완료" : `다음: ${STEPS[step + 1]}`}
+          </button>
+        ) : (
+          <button
+            className="b1"
+            disabled={busy || !contactOk || preview}
+            onClick={submit}
+          >
+            {preview
+              ? "검토용 화면 · 제출 불가"
+              : busy
+                ? "접수·첨부 처리 중…"
+                : pendingNo
+                  ? "첨부파일 다시 올리기"
+                  : "견적 요청 보내기"}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { quoteSelectable } from "@/lib/quote-policy";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
@@ -24,9 +25,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const { data: org } = q.cro_org_id ? await sb.from("cro_orgs").select("glp_certs, aaalac, website, intro").eq("id", q.cro_org_id).maybeSingle() : { data: null };
   const certs = (org?.glp_certs ?? []) as string[];
   const cov = glpCoverage(Array.isArray(rfq.payload.authority) ? (rfq.payload.authority as string[]) : [], certs);
-  const min = Math.min(...d.quotes.filter((x) => x.status === "submitted").map((x) => x.total_amount ?? 0).filter((t) => t > 0));
-  const diff = (q.total_amount ?? 0) - min;
-  const selectable = !rfq.selected_quote_id && !!rfq.compared_at;
+  const selectable = !rfq.selected_quote_id && !!rfq.compared_at && quoteSelectable(q);
 
   return (
     <>
@@ -35,16 +34,18 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
         <div>
           <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{rfq.rfq_no} · 제출 {ymd(q.submitted_at)}</span>
           <h1>{q.cro_name}</h1>
+          {q.auto && <p className="note note--warn">기관 확인 전 예비 견적입니다. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
+          {!quoteSelectable(q) && <Link href={`/app/support?rfq=${rfq.rfq_no}`}>정식 견적·유효기간 확인 요청</Link>}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)", letterSpacing: ".04em" }}>총 견적액 · VAT 별도</div>
               <div className="tnum" style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15 }}>{won(q.total_amount ?? 0)}</div>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: diff === 0 ? "var(--ok)" : "var(--muted)" }}>{diff === 0 ? "최저가" : `최저가 대비 +${won(diff)}`}</span>
+
           </div>
         </div>
         <div className="ph__actions">
-          {q.pdf_path && <a href={`/api/quotes/${q.id}/pdf`} className="b2">정본 PDF</a>}
+          {q.pdf_path && <a href={`/api/quotes/${q.id}/pdf`} className="b2">견적서 원본(PDF)</a>}
           {selectable && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select`} className="b1">이 CRO 선택</Link>}
           {rfq.selected_quote_id === q.id && <span className="pill pill--ok">선택한 CRO</span>}
         </div>
@@ -104,7 +105,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <div className="card card--rows">
             {[
               ["GLP 인증", certs.join(" · ") || "—"],
-              ["제출처 대응", cov.ok ? "대응 가능 ✓" : `대응 불가 · ${cov.missing.join(", ")} 미보유`],
+              ["제출처 대응", cov.ok ? "대응 가능 ✓" : `등록 정보 확인 필요 · ${cov.missing.join(", ")} 미보유`],
               ["AAALAC", org?.aaalac == null ? "—" : org.aaalac ? "인증" : "없음"],
               ["착수 가능일", md(q.start_date)],
               ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (병렬 수행 기준)` : "—"],

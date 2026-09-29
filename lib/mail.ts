@@ -1,3 +1,4 @@
+import { needsCda, confidentialAccess } from "@/lib/request-policy";
 import { Resend } from "resend";
 import { labelMap, type Values } from "./rfq-schema";
 import { addBusinessDays, formatKo, nowSeoul } from "./dates";
@@ -79,16 +80,13 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
   const resend = new Resend(key);
 
   const now = nowSeoul();
-  const d1 = formatKo(addBusinessDays(now, 1));
-  const d2 = formatKo(addBusinessDays(now, 5));
-  const d3 = formatKo(addBusinessDays(now, 7));
   const to = String(values.email || "");
   const name = String(values.name || "");
   const company = String(values.company || "");
   const cats = Array.isArray(values.categories) ? values.categories.join(", ") : "";
-  const cda = typeof values.confid === "string" && values.confid.startsWith("CDA");
+  const cda = needsCda(values.confid);
   const shareNote = cda
-    ? "입력 내용은 비밀유지계약(CDA)을 체결한 참여 CRO에만 전달됩니다."
+    ? "시험 개요는 초대받은 기관에 전달하고, 회사명과 첨부는 기관별 CDA 체결 확인 후 공개합니다."
     : "입력 내용은 견적 목적으로 참여 CRO에만 전달됩니다.";
 
   const requesterHtml = wrap(`
@@ -100,9 +98,9 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     </div>
     <h3 style="font-size:16px;margin:0 0 8px">다음 단계</h3>
     <ol style="padding-left:20px;margin:0 0 20px">
-      <li>참여 CRO에 배포 — ${d1}${cda ? " · CDA 체결 후 전달" : ""}</li>
-      <li>CRO 견적 회신 — ${d2}까지 · 같은 양식으로 회신</li>
-      <li>비교표 발송 — ${d3} 예정 · 이메일로 발송</li>
+      <li>시험 분야가 맞는 기관에 요청 전달. 실제 전달 수는 앱에서 확인할 수 있습니다.</li>
+      <li>견적 회신 기한: ${esc(String(values.replyBy || "앱에서 확인"))}</li>
+      <li>기한 이후 회신이 있으면 비교표 공개. 앱 안의 알림으로 안내합니다.</li>
     </ol>
     <p style="font-size:14px;color:#6F6A63">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
     <p style="font-size:14px;color:#6F6A63">의뢰자 무료 · ${shareNote}</p>`);

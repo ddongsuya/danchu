@@ -5,7 +5,8 @@ import { SupportForm } from "@/components/SupportForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function Support() {
+export default async function Support({ searchParams }: { searchParams: Promise<{ rfq?: string }> }) {
+  const { rfq } = await searchParams;
   const s = await requireSession();
   const reqs = dbReady() && s.profile.role === "requester" ? await listRequestsForUser(s.userId, s.email) : [];
   return (
@@ -14,10 +15,10 @@ export default async function Support() {
       <div className="ph">
         <div>
           <h1>무엇을 도와드릴까요?</h1>
-          <p>영업일 기준 1일 내 이메일로 답변합니다. 요청 건과 관련되면 번호를 선택해 주세요.</p>
+          <p>문의 내용을 확인하고 이메일로 답변합니다. 관련 요청이 있으면 함께 선택해 주세요.</p>
         </div>
       </div>
-      <SupportForm email={s.email} requests={reqs.map((r) => ({ no: r.rfq_no, substance: r.substance }))} />
+      <SupportForm initialRfq={rfq} email={s.email} requests={reqs.map((r) => ({ no: r.rfq_no, substance: r.substance }))} />
     </>
   );
 }

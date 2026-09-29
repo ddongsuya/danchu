@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendRfqMails } from "@/lib/mail";
 import { validateRequired, type Values } from "@/lib/rfq-schema";
-import { nowSeoul } from "@/lib/dates";
+import { addBusinessDays, nowSeoul } from "@/lib/dates";
 import { safeName, type UploadTicket } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
@@ -61,6 +61,11 @@ export async function POST(req: Request) {
   values.email = sess.email;
   values.source = "app";
 
+  const today = nowSeoul().toLocaleDateString("sv-SE");
+  if (values.replyBy) {
+    const date = String(values.replyBy);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date || date < today) return NextResponse.json({ error: "회신 희망일은 오늘 이후의 날짜로 입력해 주세요." }, { status: 400 });
+  } else values.replyBy = addBusinessDays(nowSeoul(), 7).toLocaleDateString("sv-SE");
   const err = validateRequired(values);
   if (err) return NextResponse.json({ error: err }, { status: 400 });
   if (files.length > MAX_FILES) return NextResponse.json({ error: `첨부는 최대 ${MAX_FILES}개까지 가능합니다.` }, { status: 400 });
@@ -130,7 +135,7 @@ export async function POST(req: Request) {
 
       const cats = Array.isArray(values.categories) ? (values.categories as string[]).join(" · ") : "";
       await logEvent(rfqId, "received", "접수", `${cats}${files.length ? ` · 첨부 ${files.length}건` : ""}`, userId);
-      await notifyUsers([userId], { kind: "접수", title: `${rfqNo} 접수되었습니다`, body: "요청서를 정리해 영업일 1일 내 참여 CRO에 배포합니다.", href: `/app/r/${rfqNo}` });
+      await notifyUsers([userId], { kind: "접수", title: `${rfqNo} 접수되었습니다`, body: "시험 분야가 맞는 기관을 확인해 요청을 전달합니다. 실제 전달 현황은 앱에서 확인할 수 있습니다.", href: `/app/r/${rfqNo}` });
     } catch (e) {
       console.error("supabase", e);
       return NextResponse.json({ error: "접수 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });

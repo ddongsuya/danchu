@@ -1,0 +1,66 @@
+import type { CompareCol, CompareRowDef } from "@/components/CompareBoard";
+export const UX_ROWS: CompareRowDef[] = [
+  { seq: 1, name: "반복투여 4주", category: "일반독성" },
+  { seq: 2, name: "복귀돌연변이", category: "유전독성" },
+];
+/** Explicitly synthetic data, used only behind DANCHU_DESIGN_PREVIEW=1. */
+export const UX_COLS: CompareCol[] = [
+  {
+    id: "preview-a",
+    name: "예시 기관 A",
+    total: 12000000,
+    weeks: 8,
+    start: "2026-11-01",
+    valid: "2026-11-30",
+    pay: "선급 30%, 잔금 70%",
+    includes: ["임상병리", "조직병리(검경 포함)"],
+    note: "영문 보고서 별도",
+    glpOk: true,
+    glpMissing: [],
+    glp: ["식약처(KGLP)"],
+    unavailable: [],
+    conditional: 0,
+    items: [
+      {
+        seq: 1,
+        avail: "가능",
+        amount: 10000000,
+        weeks: 8,
+        design: "설계 예시 · 회복군 별도 협의",
+      },
+      { seq: 2, avail: "가능", amount: 2000000, weeks: 4 },
+    ],
+    hasPdf: true,
+    selected: false,
+    auto: false,
+  },
+  {
+    id: "preview-b",
+    name: "예시 기관 B",
+    total: 9000000,
+    weeks: 7,
+    start: null,
+    valid: null,
+    pay: null,
+    includes: [],
+    note: "반복투여 시험만 수행",
+    glpOk: false,
+    glpMissing: ["식약처(KGLP)"],
+    glp: [],
+    unavailable: ["복귀돌연변이"],
+    conditional: 1,
+    items: [
+      {
+        seq: 1,
+        avail: "조건부 가능",
+        amount: 9000000,
+        weeks: 7,
+        note: "시험물질 입고 일정 확인 필요",
+      },
+      { seq: 2, avail: "불가", amount: null, weeks: null },
+    ],
+    hasPdf: false,
+    selected: false,
+    auto: true,
+  },
+];

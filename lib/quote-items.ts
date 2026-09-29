@@ -67,5 +67,5 @@ export function glpCoverage(authorities: string[], certs: string[]): { ok: boole
     "OECD 국가": "OECD GLP",
   };
   const missing = authorities.map((a) => need[a]).filter((c): c is string => !!c && !certs.includes(c));
-  return { ok: missing.length === 0, missing: [...new Set(missing)] };
+  return { ok: authorities.length > 0 && authorities.every((a) => !!need[a]) && missing.length === 0, missing: [...new Set(missing)] };
 }

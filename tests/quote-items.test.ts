@@ -38,7 +38,8 @@ describe("glpCoverage — 제출처 vs 보유 인증", () => {
   it("EMA·PMDA 는 OECD GLP 로 대응, 중복은 하나로", () => {
     expect(glpCoverage(["EMA", "PMDA(일본)"], [])).toEqual({ ok: false, missing: ["OECD GLP"] });
   });
-  it("모르는 제출처는 요구 없음", () => {
-    expect(glpCoverage(["기타"], []).ok).toBe(true);
+  it("모르는 제출처는 대응 가능으로 단정하지 않음", () => {
+    expect(glpCoverage(["기타"], []).ok).toBe(false);
+    expect(glpCoverage([], []).ok).toBe(false);
   });
 });
