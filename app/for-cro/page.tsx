@@ -41,7 +41,7 @@ export default function ForCro() {
   return (
     <div className="site">
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="ph">
           <div className="wrap ph__grid">
             <span className="ph__k">기관 참여 안내</span>
