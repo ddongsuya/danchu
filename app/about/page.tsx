@@ -118,7 +118,7 @@ export default function About() {
           <div className="wrap doc__grid">
             <div className="doc__aside"><h2>지금 할 수 있는 것</h2></div>
             <div className="doc__body">
-              <p>제안 받기는 합성의약품을 지원합니다. 다른 유형은 시험 항목을 직접 고르거나 패키지로 시작합니다. 효력시험 구조, 질의응답과 재견적, 회사 단위 계정, 계약 이후의 시험 진행 관리는 아직 없습니다.</p>
+              <p>제안 받기는 합성의약품, 바이오의약품, 세포·유전자치료제, 건강기능식품, 화장품, 의료기기, 화학물질·농약을 지원합니다. 제안 규칙은 초안이며 실무 검토 전입니다. 효력시험 구조, 질의응답과 재견적, 회사 단위 계정, 계약 이후의 시험 진행 관리는 아직 없습니다.</p>
               <div className="hero__cta">
                 <RfqLink className="b b--fill">요청서 작성</RfqLink>
                 <Link href="/for-cro" className="b b--line">기관 참여 안내</Link>

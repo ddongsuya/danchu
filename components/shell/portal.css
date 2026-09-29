@@ -8,7 +8,7 @@
   --tint: var(--brand-tint); --bline: var(--brand-line);
   --ink2: var(--ink-2); --ph: var(--placeholder);
   --iline: var(--input-line); --cline: var(--card-line);
-  --sf: var(--surface); --wh: var(--white); --onbrand: var(--on-brand);
+  --sf: var(--surface); --surface2: var(--track); --wh: var(--white); --onbrand: var(--on-brand);
   --err-bg: var(--error-bg); --err: var(--error-fg); --ok: var(--ok-fg); --warn: var(--warn-fg);
   --top: env(safe-area-inset-top, 0px); --bot: env(safe-area-inset-bottom, 0px);
   --side: 232px;

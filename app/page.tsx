@@ -255,7 +255,7 @@ export default function Home() {
               <ul className="fields">
                 {CATS.map((c, i) => <li key={c}><i>{String(i + 1).padStart(2, "0")}</i>{c}</li>)}
               </ul>
-              <p className="small muted">제안 받기는 지금 합성의약품을 지원합니다. 바이오의약품, 건강기능식품, 화장품, 의료기기, 화학물질은 항목을 직접 고르거나 패키지로 시작할 수 있습니다.</p>
+              <p className="small muted">제안 받기는 합성의약품, 바이오의약품, 세포·유전자치료제, 건강기능식품, 화장품, 의료기기, 화학물질·농약을 지원합니다. 제안 규칙은 초안이며 실무 검토 전입니다. 항목을 직접 고르거나 패키지로 시작할 수도 있습니다.</p>
             </div>
           </div>
         </section>
