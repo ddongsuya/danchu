@@ -38,7 +38,7 @@ export default function About() {
   return (
     <div className="site">
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="ph">
           <div className="wrap ph__grid">
             <span className="ph__k">서비스 소개</span>
