@@ -579,7 +579,7 @@ export function NewRequest({
                 {contact.company} · {contact.name}
               </p>
               <p>{contact.email}</p>
-              <Link href="/app/profile">담당자 정보 수정</Link>
+              {preview ? <p>체험 화면에서는 예시 담당자 정보가 표시됩니다.</p> : <Link href="/app/profile">담당자 정보 수정</Link>}
               {!contactOk && (
                 <p role="alert">
                   회사·기관명과 성명을 프로필에서 입력해 주세요.
