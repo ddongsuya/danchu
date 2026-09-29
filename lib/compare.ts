@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
+import type { TablesUpdate } from "./db-types";
 import { logEvent, notifyUsers } from "./notify";
 
 /**
@@ -13,7 +14,7 @@ export async function publishCompare(rfq: RfqRow, actorId: string | null, auto =
   if (!count) return { ok: false, count: 0, message: "제출된 회신이 없습니다." };
 
   const first = !rfq.compared_at;
-  const patch: Record<string, unknown> = { compared_at: new Date().toISOString() };
+  const patch: TablesUpdate<"rfq_requests"> = { compared_at: new Date().toISOString() };
   if (["received", "distributed", "quoted"].includes(rfq.status)) patch.status = "compared";
   await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
   await logEvent(rfq.id, "compared", `${first ? "비교표 공개" : "비교표 재공개"} · ${count}건${auto ? " (기한 후 자동)" : ""}`, undefined, actorId, { auto });

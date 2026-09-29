@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { getRfqByNo, ownsRfq, type InviteRow, type QuoteRow } from "@/lib/data";
+import { getRfqByNo, ownsRfq, type QuoteRow } from "@/lib/data";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { won } from "@/lib/format";
+import { SELECT_QUOTE_ERRORS, selectQuote } from "@/lib/rpc";
 
 export const runtime = "nodejs";
 
@@ -17,28 +18,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
-  if (!rfq.compared_at) return NextResponse.json({ error: "비교표가 공개된 뒤에 선택할 수 있습니다." }, { status: 400 });
-  if (rfq.selected_quote_id) return NextResponse.json({ error: "이미 CRO를 선택했습니다." }, { status: 409 });
 
   const b = (await req.json().catch(() => ({}))) as { quoteId?: unknown };
-  const quoteId = typeof b.quoteId === "string" ? b.quoteId : "";
+  const quoteId = typeof b.quoteId === "string" && /^[0-9a-f-]{36}$/.test(b.quoteId) ? b.quoteId : "";
+  if (!quoteId) return NextResponse.json({ error: "선택할 수 없는 견적입니다." }, { status: 400 });
   const sb = getSupabaseAdmin()!;
-  const { data: q } = await sb.from("cro_quotes").select("*").eq("id", quoteId).eq("rfq_id", rfq.id).eq("status", "submitted").maybeSingle();
-  if (!q) return NextResponse.json({ error: "선택할 수 없는 견적입니다." }, { status: 400 });
-  const quote = q as QuoteRow;
-  const { data: inv } = await sb.from("rfq_invites").select("*").eq("id", quote.invite_id).maybeSingle();
-  const invite = inv as InviteRow | null;
 
-  const { data: award, error } = await sb
-    .from("rfq_awards")
-    .insert({ rfq_id: rfq.id, quote_id: quote.id, invite_id: quote.invite_id, cro_org_id: quote.cro_org_id, cro_name: quote.cro_name, selected_by: s.userId })
-    .select("id")
-    .single();
-  if (error || !award) {
-    console.error("award insert", error);
-    return NextResponse.json({ error: "선택을 저장하지 못했습니다." }, { status: 500 });
+  // award 삽입과 요청 상태 갱신을 한 트랜잭션으로 (동시 선택은 DB 가 한 건만 받는다)
+  const sel = await selectQuote(rfq.id, quoteId, s.userId);
+  if (!sel.ok) {
+    const e = SELECT_QUOTE_ERRORS[sel.code];
+    return NextResponse.json({ error: e?.message ?? "선택을 저장하지 못했습니다." }, { status: e?.status ?? 500 });
   }
-  await sb.from("rfq_requests").update({ status: "selected", selected_quote_id: quote.id }).eq("id", rfq.id);
+  const award = { id: sel.award_id };
+  const { data: q } = await sb.from("cro_quotes").select("*").eq("id", quoteId).maybeSingle();
+  const quote = (q ?? { id: quoteId, invite_id: sel.invite_id, cro_org_id: sel.cro_org_id, cro_name: sel.cro_name, total_amount: null }) as Pick<QuoteRow, "id" | "invite_id" | "cro_org_id" | "cro_name" | "total_amount">;
+  const { data: inv } = await sb.from("rfq_invites").select("*").eq("id", quote.invite_id).maybeSingle();
+  const invite = inv;
   await logEvent(rfq.id, "selected", `${quote.cro_name} 선택`, `총 ${won(quote.total_amount ?? 0)} · 의뢰자 연락처가 CRO에 전달되었습니다.`, s.userId, { quoteId: quote.id });
 
   // 선택된 CRO: 연락처 공개

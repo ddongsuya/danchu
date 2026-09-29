@@ -7,7 +7,6 @@ import { safeName, type UploadTicket } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { autoDistribute } from "@/lib/distribute";
-import type { RfqRow } from "@/lib/data";
 import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -146,7 +145,7 @@ export async function POST(req: Request) {
         await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${no} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${no}` });
         const { data: full } = await supabase.from("rfq_requests").select("*").eq("id", rfqId).single();
         if (full) {
-          const r = await autoDistribute(full as RfqRow);
+          const r = await autoDistribute(full);
           if (!r.matched) {
             await notifyUsers(await adminUserIds(), { kind: "배포", title: `${no} 자동 배포 대상 없음`, body: "분야가 맞는 승인 기관이 없습니다. 수동 배포가 필요합니다.", href: `/admin/r/${no}` }, { to: adminEmails() });
           } else if (r.skipped.length) {

@@ -27,6 +27,8 @@ Next.js(App Router) + Supabase(DB·Auth·Storage) + Resend · Vercel 배포 · �
 ## 데이터 접근 원칙
 모든 표는 RLS로 잠겨 있고 정책이 없다. 브라우저의 anon 키는 세션 쿠키 처리에만 쓰인다.
 데이터는 서버가 세션 사용자를 확인한 뒤 service role로 읽고 쓴다 (`lib/auth.ts` → `lib/data.ts`).
+표·함수 타입은 `lib/db-types.ts` 에 있고 클라이언트가 이 타입으로 묶여 있어 컬럼 오타와 잘못된 insert 값은 `npm run typecheck` 에서 잡힌다.
+CRO 선택·회신 저장·계약 보고처럼 여러 표를 함께 고치는 전이는 Postgres 함수(`select_quote`, `save_quote`, `report_contract`, `lib/rpc.ts`)가 한 트랜잭션으로 처리한다.
 
 ## 로컬 실행
 ```bash
@@ -39,7 +41,7 @@ npm test                     # Vitest (lib 순수 함수)
 CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 
 ## Supabase 설정 (1회)
-1. SQL Editor에서 순서대로 실행: `supabase/schema.sql` → `schema_cro.sql` → `schema_accounts.sql` → `schema_catalog.sql` → `schema_catalog_variants.sql` → `schema_membership.sql`
+1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0007_atomic_transitions.sql`). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
 2. Storage에 비공개 버킷 `rfq-files`, `cro-files`가 있는지 확인 (스키마가 만들지만 없으면 직접 생성)
 3. Authentication → Providers → Email: 켜 둔다. **Confirm email 켜짐** 유지 (가입 확인은 우리가 보내는 메일 링크로 처리)
    - Authentication → Sign In / Providers → **"Allow new users to sign up" 끄기**. 가입은 서버가 `auth.admin.createUser`로만 만든다. 켜 두면 anon 키로 직접 가입해 프로필을 만들 수 있다 (역할·기관은 어차피 서버만 적지만, 불필요한 계정이 생긴다)

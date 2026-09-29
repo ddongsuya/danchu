@@ -4,7 +4,8 @@ import { CATS, type Values } from "./rfq-schema";
  * RFQ payload → CRO 회신 표의 행.
  * CRO는 항목을 정의하지 않는다. 의뢰자가 고른 대분류와 세부 시험 종류에서 행이 자동 생성된다.
  */
-export type QuoteRow = { seq: number; category: string; name: string; cond: string };
+/** 회신 표의 한 행 정의 (요청서에서 파생). DB 의 cro_quotes 행(lib/data.ts QuoteRow)과는 다른 것이다 */
+export type QuoteLineDef = { seq: number; category: string; name: string; cond: string };
 
 const YN_LABEL: Record<string, string> = {
   tk: "TK 병행",
@@ -36,9 +37,9 @@ function condOf(payload: Values, cat: string): string {
   return parts.join(" · ");
 }
 
-export function quoteRowsFromPayload(payload: Values): QuoteRow[] {
+export function quoteRowsFromPayload(payload: Values): QuoteLineDef[] {
   const cats = Array.isArray(payload.categories) ? payload.categories : [];
-  const rows: QuoteRow[] = [];
+  const rows: QuoteLineDef[] = [];
   for (const cat of cats) {
     if (!(CATS as readonly string[]).includes(cat)) continue;
     const cond = condOf(payload, cat);

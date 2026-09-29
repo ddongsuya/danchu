@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
+import type { TablesUpdate } from "./db-types";
 import { logEvent, notifyUsers, siteUrl } from "./notify";
 import { mailWrap, esc, sendMail } from "./mail";
 import { addBusinessDays, nowSeoul } from "./dates";
@@ -105,7 +106,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   }
 
   if (res.sent) {
-    const patch: Record<string, unknown> = { reply_by: rfq.reply_by || replyBy };
+    const patch: TablesUpdate<"rfq_requests"> = { reply_by: rfq.reply_by || replyBy };
     if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
     await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
     await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}`, actorId, { orgIds: orgs.map((o) => o.id), auto });
@@ -143,7 +144,7 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   const { data } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
   // 아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 살린다 (기관이 없어 기다리던 요청)
   const fresh = new Date(Date.now() - 30 * 864e5).toISOString();
-  let list = ((data ?? []) as RfqRow[]).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
+  let list = (data ?? []).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
   if (orgId) {
     // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
     const { data: org } = await sb.from("cro_orgs").select("status, categories").eq("id", orgId).maybeSingle();

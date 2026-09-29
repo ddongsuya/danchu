@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { FileRow, RfqRow } from "@/lib/data";
+import { storageHas } from "@/lib/upload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,10 +18,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 
   const { data: f } = await sb.from("rfq_files").select("*").eq("id", id).maybeSingle();
   if (!f) return NextResponse.json({ error: "파일이 없습니다." }, { status: 404 });
-  const file = f as FileRow;
+  const file = f;
   const { data: r } = await sb.from("rfq_requests").select("*").eq("id", file.rfq_id).maybeSingle();
   if (!r) return NextResponse.json({ error: "요청이 없습니다." }, { status: 404 });
-  const rfq = r as RfqRow;
+  const rfq = r;
 
   const s = await sessionOrNull();
   const token = new URL(req.url).searchParams.get("token") || "";
@@ -40,6 +40,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   }
   if (!allowed) return NextResponse.json({ error: "열람 권한이 없습니다." }, { status: 403 });
 
+  if (!file.uploaded_at) {
+    // 접수 직후 확인 API 를 못 탄 파일: 저장소에 있으면 지금 확인 표시, 없으면 아직 안 올라온 것
+    const ok = await storageHas(sb, "rfq-files", file.storage_path);
+    if (!ok) return NextResponse.json({ error: "아직 업로드되지 않은 파일입니다. 의뢰자가 다시 첨부해야 합니다." }, { status: 404 });
+    await sb.from("rfq_files").update({ uploaded_at: new Date().toISOString() }).eq("id", file.id);
+  }
   const { data: signed, error } = await sb.storage.from("rfq-files").createSignedUrl(file.storage_path, 300, { download: file.file_name });
   if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했습니다." }, { status: 500 });
   return NextResponse.redirect(signed.signedUrl, 302);

@@ -6,7 +6,7 @@
  * 한 항목 아래 조합은 여러 개일 수 있다 (예: 단회투여독성 → 랫드·경구·TG 423 / 비글·정맥·용량증량법).
  */
 import { CATS, DETAILS, type Cat, type Field, type Values } from "./rfq-schema";
-import type { QuoteRow } from "./quote-items";
+import type { QuoteLineDef } from "./quote-items";
 import { EFFICACY_CAT, costLines, modelsOf } from "./efficacy";
 
 export type Glp = "GLP" | "Non-GLP" | "both";
@@ -295,7 +295,7 @@ function modelMatch(req: string[], m: string | null): boolean | null {
 }
 
 /** 요청 조건과 가장 가까운 조합을 고른다. 없으면 undefined */
-export function pickVariant(variants: CatalogRow[], row: QuoteRow, payload: Values): { row: CatalogRow; mismatch: string[] } | undefined {
+export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: Values): { row: CatalogRow; mismatch: string[] } | undefined {
   if (!variants.length) return undefined;
   const c = row.category;
   const reqSpecies = asList(condOf(payload, c, "species"));
@@ -321,7 +321,7 @@ export function pickVariant(variants: CatalogRow[], row: QuoteRow, payload: Valu
 }
 
 /** 요청서의 행 + 고른 조합 → 초안 한 행 */
-export function prefillRow(row: QuoteRow, picked: { row: CatalogRow; mismatch: string[] } | undefined, payload: Values): Prefill {
+export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatch: string[] } | undefined, payload: Values): Prefill {
   const base: Prefill = { avail: "", amount: "", weeks: "", reason: "", source: "manual", checks: [], design: {}, unit: "total", unitPrice: "" };
   if (!picked) return base;
   const cat = picked.row;
@@ -356,7 +356,7 @@ export function prefillRow(row: QuoteRow, picked: { row: CatalogRow; mismatch: s
 }
 
 /** 요청서의 행 → 카탈로그 항목 키 (행 이름이 세부 항목명 또는 대분류명) */
-export function rowKey(row: QuoteRow): string {
+export function rowKey(row: QuoteLineDef): string {
   return itemKey(row.category, row.name === row.category ? row.category : row.name);
 }
 

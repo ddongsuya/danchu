@@ -1,12 +1,13 @@
 import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { QuoteRow } from "@/lib/quote-items";
+import type { QuoteLineDef } from "@/lib/quote-items";
 import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib/cro-data";
 import { loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
+import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,7 @@ function cleanDesign(d: Record<string, unknown>): Record<string, unknown> {
 }
 
 /** 항목 3칸 + 공통 조건 + 전달 사항 파싱 · 검증 */
-function parseBody(raw: unknown, rows: QuoteRow[]): Parsed | string {
+function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   const b = (raw ?? {}) as { items?: unknown; note?: unknown; common?: unknown; pdf?: unknown };
   const items = Array.isArray(b.items) ? (b.items as ReplyItem[]) : [];
   if (items.length !== rows.length) return "항목 수가 요청서와 다릅니다.";
@@ -110,12 +111,7 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const weeks = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
 
-  const header: Record<string, unknown> = {
-    invite_id: got.inviteId,
-    rfq_id: got.rfqId,
-    rfq_no: got.rfq.no,
-    cro_name: got.croName,
-    cro_org_id: got.croOrgId,
+  const header: QuoteHeader = {
     total_amount: total || null,
     total_weeks: weeks || null,
     vat: "별도",
@@ -127,9 +123,6 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     report_lang: common.reportLang || null,
     includes: common.includes,
     note,
-    status: submit ? "submitted" : "draft",
-    submitted_at: submit ? new Date().toISOString() : null,
-    submitted_by: submit ? actorId : null,
   };
 
   if (pdf) {
@@ -143,40 +136,11 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     header.pdf_size = pdf.size;
   }
 
-  let quoteId: string;
-  if (submit) {
-    const { data: q, error: e1 } = await sb.from("cro_quotes").upsert(header, { onConflict: "invite_id" }).select("id").single();
-    if (e1 || !q) {
-      console.error("cro_quotes upsert", e1);
-      return { error: "저장에 실패했습니다.", status: 500 };
-    }
-    quoteId = q.id as string;
-  } else if (got.draft) {
-    // 초안 저장: 제출본은 절대 덮지 않는다 (자동 저장이 제출 뒤에 도착하는 경합 방어)
-    const { data: q, error: e1 } = await sb.from("cro_quotes").update(header).eq("invite_id", got.inviteId).neq("status", "submitted").select("id").maybeSingle();
-    if (e1) {
-      console.error("cro_quotes draft update", e1);
-      return { error: "저장에 실패했습니다.", status: 500 };
-    }
-    if (!q) return { ok: true, skipped: true };
-    quoteId = q.id as string;
-  } else {
-    const { data: q, error: e1 } = await sb.from("cro_quotes").insert(header).select("id").single();
-    if (e1 || !q) {
-      // 같은 초대에 이미 행이 생겼다면(동시 제출) 초안 저장은 건너뛴다
-      if (e1?.code === "23505") return { ok: true, skipped: true };
-      console.error("cro_quotes insert", e1);
-      return { error: "저장에 실패했습니다.", status: 500 };
-    }
-    quoteId = q.id as string;
-  }
-  const q = { id: quoteId };
-
   const rowsBySeq = new Map(got.rfq.rows.map((r) => [r.seq, r]));
-  const itemRows = items.map((it) => {
+  const itemRows: QuoteItemInput[] = items.map((it) => {
     const r = rowsBySeq.get(it.seq)!;
     return {
-      quote_id: q.id, seq: it.seq, category: r.category, name: r.name, cond: r.cond,
+      seq: it.seq, category: r.category, name: r.name, cond: r.cond,
       avail: it.avail || null,
       amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null,
       weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null,
@@ -188,30 +152,29 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
       sample_count: it.unit === "per_sample" && it.sampleCount ? Number(it.sampleCount) : null,
     };
   });
-  const { error: e2 } = await sb.from("cro_quote_items").upsert(itemRows, { onConflict: "quote_id,seq" });
-  if (e2) {
-    console.error("cro_quote_items upsert", e2);
-    return { error: "항목 저장에 실패했습니다.", status: 500 };
-  }
+
+  // 헤더 + 항목 + 초대 상태 + 요청 상태를 한 트랜잭션으로. 초안 저장은 제출본을 절대 덮지 않는다.
+  const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
+  if (!r.ok) return { error: "저장에 실패했습니다.", status: 500 };
+  if (r.skipped) return { ok: true, skipped: true };
+
   if (submit && got.croOrgId) {
     // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (응답 뒤에 실행, 실패해도 제출은 성공)
     const orgId = got.croOrgId;
-    const learned = itemRows.map((r) => ({ category: r.category, name: r.name, avail: r.avail, amount: r.amount, weeks: r.weeks, unit: r.unit, unitPrice: r.unit_price, design: r.design as Record<string, unknown> }));
+    const learned = itemRows.map((x) => ({ category: x.category, name: x.name, avail: x.avail, amount: x.amount, weeks: x.weeks, unit: x.unit, unitPrice: x.unit_price, design: x.design }));
     after(() => learnFromSubmission(orgId, learned).catch((e) => console.error("learn", e)));
   }
 
-  await sb.from("rfq_invites").update({ status: submit ? "submitted" : "draft" }).eq("id", got.inviteId);
   if (submit) {
-    const { data: r } = await sb.from("rfq_requests").select("status, user_id, company").eq("id", got.rfqId).maybeSingle();
-    if (r && ["received", "distributed"].includes(r.status)) await sb.from("rfq_requests").update({ status: "quoted" }).eq("id", got.rfqId);
-    const first = !got.draft || got.draft.status !== "submitted";
-    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: q.id });
-    const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", got.rfqId);
-    const { count: done } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", got.rfqId).eq("status", "submitted");
-    if (r?.user_id) {
-      await notifyUsers([r.user_id], { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done ?? 0}/${count ?? 0}곳 회신 · 비교표는 회신 기한 후 공개됩니다.`, href: `/app/r/${got.rfq.no}` });
+    const first = r.first ?? true;
+    const done = r.submitted_invites ?? 0;
+    const count = r.total_invites ?? 0;
+    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id });
+    const { data: rq } = await sb.from("rfq_requests").select("user_id").eq("id", got.rfqId).maybeSingle();
+    if (rq?.user_id) {
+      await notifyUsers([rq.user_id], { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done}/${count}곳 회신 · 비교표는 회신 기한 후 공개됩니다.`, href: `/app/r/${got.rfq.no}` });
     }
-    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done ?? 0}/${count ?? 0} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
+    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
   }
   return { ok: true, total, weeks };
 }

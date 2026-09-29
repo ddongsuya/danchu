@@ -21,6 +21,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // 세션 쿠키가 없는 공개 페이지·API 요청은 Auth 서버를 부르지 않는다 (랜딩 LCP, Auth 호출 한도)
+  const hasSession = req.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+  if (!hasSession && !needsAuth) return NextResponse.next();
+
   let res = NextResponse.next({ request: req });
   const sb = createServerClient(url, anon, {
     cookies: {

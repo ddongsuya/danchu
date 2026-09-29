@@ -146,6 +146,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                 {d.files.map((f) => (
                   <a key={f.id} href={`/api/files/${f.id}`} style={{ fontSize: 14 }}>
                     {f.file_name} <span style={{ color: "var(--muted)" }}>· {(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span>
+                    {!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}
                   </a>
                 ))}
               </div>
