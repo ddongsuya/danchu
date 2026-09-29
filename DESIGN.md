@@ -1,35 +1,86 @@
-# 단추 시각 언어 (2026-09 리디자인)
+---
+name: Danchu Research Workspace
+description: 비임상 시험의 요청과 견적 비교를 위한 차분한 연구 워크스페이스
+colors:
+  primary: "#246457"
+  primary-deep: "#194e43"
+  primary-tint: "#edf4f0"
+  background: "#fcfdfb"
+  surface: "#f3f5f2"
+  text: "#202b28"
+  secondary: "#66716c"
+  border: "#dfe5e0"
+  dark-primary: "#92cfb7"
+  dark-background: "#1c2520"
+  dark-surface: "#131b17"
+typography:
+  display:
+    fontFamily: "Pretendard Variable"
+    fontSize: "clamp(36px, 4.05vw, 56px)"
+    fontWeight: 600
+    lineHeight: 1.27
+    letterSpacing: "-0.04em"
+  body:
+    fontFamily: "Pretendard Variable"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.7
+rounded:
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
+  pill: "999px"
+spacing:
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  xl: "32px"
+components:
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.background}"
+    rounded: "{rounded.md}"
+    height: "44px"
+  button-primary-hover:
+    backgroundColor: "{colors.primary-deep}"
+---
 
-> 화면을 만들거나 고칠 때 이 문서와 `app/globals.css`의 토큰이 기준이다. CLAUDE.md의 규칙보다 구체적인 것만 적는다.
+## Overview
 
-## Design Read
+랜딩은 Persuade, 안내는 Read, 포털은 Operate. 연구를 시작하는 사람에게는 간결한 출발점을, 업무 중인 사람에게는 명확한 상태와 다음 행동을 제공한다. 제품 사실과 중립 원칙은 PRODUCT.md를 따른다. 스타일은 일반 CSS이며 Tailwind를 추가하지 않는다.
 
-- 공개 사이트는 **가이드라인 문서처럼 읽히는 사이트**다. 사용자는 의뢰자(개발 담당자)와 기관(견적 담당자)이며 둘을 같은 무게로 대한다. 톤은 정확하고 조용하다. 모드는 랜딩 Persuade, 소개·FAQ·가이드 Read, 로그인 후 화면 Operate.
-- 설득은 주장 대신 **제품이 실제로 하는 일**로 한다. 랜딩 첫 화면에서 `lib/advisor.ts`를 그대로 돌려 필요한 시험과 근거 조항을 보여 준다. 비교표·요청서·회신 양식은 코드에 있는 실제 항목으로 구성한다.
+## Colors
 
-## 토큰
+모든 색의 실제 정의는 `app/globals.css`. 밝은 연구 환경을 위한 그린 그레이 바탕과 짙은 녹색 강조를 사용한다. 공개·인증·포털·토큰 회신은 같은 토큰을 공유한다. 다크 모드는 `data-theme`의 CSS 변수로만 바꾼다. 성공·경고·오류 색은 의미가 있는 상태에 한해 사용한다. 꼬리말도 같은 테마를 유지한다.
 
-- 중립: 차가운 슬레이트 계열 (`--ink` `--body` `--muted` `--card-line` `--surface` `--white`). 순수 검정·흰색 없음.
-- 강조색 1개: 잉크 블루 `--brand` (라이트 #2a55a5 · 다크 #8fb3f0). 링크, 근거 조항, 주 버튼, 선택 상태에만 쓴다. 큰 면을 채우지 않는다.
-- 반전 면은 꼬리말 하나뿐 (`--inverse-*`). 페이지 중간에서 테마를 뒤집지 않는다.
-- 모서리: `--r-sm` 3px · `--r-md` 6px · `--r-lg` 8px · `--r-pill`. 공개 사이트와 포털이 같은 값을 쓴다.
-- 서체: Pretendard Variable(셀프호스트) 하나. 조항 번호, 요청 번호, 금액 같은 코드성 문자열은 `--font-mono`(시스템 모노)와 `tabular-nums`.
-- 모션: `--ease-out` 등장, `--ease-in-out` 이동. UI 전환 ≤ 240ms. 누를 수 있는 것은 `:active { scale(0.97) }`.
+## Typography
 
-## 공개 사이트 레이아웃
+기존 셀프호스트 Pretendard Variable을 유지한다. 한글은 keep-all, 긴 사용자 입력은 overflow-wrap으로 보호한다. 큰 제목은 56px 이내, -0.04em보다 좁게 하지 않는다. 포털 제목은 29px, 행 제목은 16px, 보조 정보는 12~14px. 요청 번호·금액·기간은 tabular-nums를 사용한다.
 
-- 컨테이너 `.wrap` 80rem, 좌우 24px(모바일 16px).
-- 본문 섹션은 `.doc`: 넓은 화면에서 왼쪽 220px 여백 열에 섹션 제목이 sticky로 붙고, 오른쪽에 내용이 온다. 문서의 난외 제목 구조. 960px 아래에서는 위아래로 쌓인다.
-- 카드 대신 가는 선(`border-top`, `divide`)과 여백으로 나눈다. 같은 크기 카드 3개 나열 금지.
-- 헤더 64px 한 줄. 꼬리말은 반전 면.
+## Layout
 
-## 페이지당 모션 순간 하나
+공개 사이트는 최대 78rem, 기본 좌우 24px, 휴대전화 22px. 첫 화면은 설명과 사진의 두 열이며 899px 이하에서 한 열이 된다. 시험 분야는 필터와 펼침 목록, 안내는 선으로 구분한 순서, 비교 설명은 항목표로 구성한다. 기존 상세 설명은 `/how-it-works`로 보존한다.
 
-- 랜딩: 첫 화면의 제안 미리보기. 답을 바꾸면 시험 목록이 30ms 간격으로 다시 나타난다. 그 외 스크롤 등장 효과는 쓰지 않는다.
-- 가이드: 기간 계산기의 결과 값 전환.
+포털은 960px 이상에서 244px 사이드바와 72px 상단 바. 그 아래에서는 상단 바와 하단 탭을 쓴다. 요청 목록은 넓은 화면에서 정렬된 열, 좁은 화면에서는 두 열로 정보를 재배치한다. 가로로 긴 업무 표는 표 컨테이너 안에서만 스크롤한다.
 
-## 쓰지 않는 것
+## Elevation & Depth
 
-- 눈썹 라벨, 섹션 번호, 가짜 앱 화면, 기관 로고 자리, 고객 사례, 이용 실적 수치.
-- "표준 설계", "추천", "최적", 혁신적·최고 같은 수식.
-- 화면 문자열의 `—` `–`.
+테두리 또는 표면색으로 그룹을 구분한다. 광고성 부유 카드나 그림자 중첩을 쓰지 않는다. 실험실 이미지는 생성한 브랜드 분위기 자료이며 특정 기관의 사진이나 시험 수행 증거가 아니다. `public/images/lab-glassware.prompt.txt`에 출처를 기록한다.
+
+## Shapes
+
+8px는 작은 입력·상태, 12px는 버튼·알림, 16px는 큰 표면과 이미지에 사용한다. pill은 필터와 짧은 태그에 한한다. 네 구멍의 단추 마크를 공개와 포털에서 공통으로 사용한다. 아이콘은 Phosphor regular; 기존 양식의 SVG 아이콘은 기능을 보존한다.
+
+## Components
+
+- 기본 행동은 채운 버튼, 보조 행동은 테두리 버튼, 문서 이동은 텍스트 링크.
+- 시험 분야 필터는 aria-pressed, 상세 항목은 aria-expanded. 검색 결과 개수는 status로 안내.
+- 모바일 메뉴는 native dialog로 포커스를 가두고 Escape와 닫기 버튼을 제공한다.
+- 시험 제안은 기존 규칙을 그대로 사용한다. 네이티브 select가 상태 변경 때 재마운트되지 않도록 컴포넌트를 바깥에 정의한다.
+- 포털 목록은 검색·상태 필터·비어 있음·일치 결과 없음 상태를 제공한다.
+- 키보드 focus-visible을 유지하고 축소 모션 설정을 존중한다. 반복 업무는 불필요한 진입 애니메이션을 쓰지 않는다.
+- `/design-preview`는 `DANCHU_DESIGN_PREVIEW=1`에서만 보이는 합성 데이터 검토 화면. 기존 인증이나 데이터 접근 규칙을 바꾸지 않는다.
+
+## Do's and Don'ts
+
+제품에 있는 기능만 약속한다. 의뢰자·기관을 함께 고려한다. 기관의 순위나 기준을 임의로 정하지 않는다. 상세 견적 정보는 필요할 때 찾게 하고, 첫 화면에는 핵심 행동을 둔다. 가짜 기관·실적·인증·가격을 만들지 않는다. 카드 3개를 반복하는 장식적 구조, 그라데이션 글자, 자동 스크롤 효과, 명암 반전 섹션을 피한다. `main`은 운영 브랜치이며 이 디자인은 별도 브랜치에서 검토한다.

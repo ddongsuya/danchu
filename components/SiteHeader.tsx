@@ -7,6 +7,7 @@ import { SiteNav } from "@/components/SiteNav";
 export function SiteHeader() {
   return (
     <header className="hd">
+      <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <div className="wrap hd__in">
         <div className="hd__left">
           <Logo />
@@ -14,7 +15,7 @@ export function SiteHeader() {
         </div>
         <div className="hd__right">
           <HeaderAuth className="hd__login" />
-          <RfqLink className="b b--fill b--sm hd__cta">요청서 작성</RfqLink>
+          <RfqLink className="b b--fill b--sm hd__cta">견적 요청하기</RfqLink>
         </div>
       </div>
     </header>

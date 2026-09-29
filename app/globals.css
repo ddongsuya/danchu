@@ -1,28 +1,28 @@
 /* ─────────────────────────────────────────────────────────────
    단추(Danchu) 디자인 토큰. 공개 사이트와 로그인 후 화면이 함께 쓴다.
-   원칙: 중립 회색 1계열(차가운 슬레이트) + 강조색 1개(잉크 블루). 라이트·다크는 CSS 변수로만 바꾼다.
-   모서리는 작게 하나로(문서 느낌): --r-sm 3px · --r-md 6px · --r-lg 8px · pill.
+   원칙: 중립 회색 1계열(그린 그레이) + 강조색 1개(딥 그린). 라이트·다크는 CSS 변수로만 바꾼다.
+   모서리: 입력 8px, 버튼 12px, 큰 표면 16px. pill은 상태와 필터 전용.
    ───────────────────────────────────────────────────────────── */
 :root {
-  --brand: #2a55a5;
-  --brand-dark: #1f4285;
-  --brand-tint: #ecf1fa;
-  --brand-line: #c3d2ee;
+  --brand: #246457;
+  --brand-dark: #194e43;
+  --brand-tint: #edf4f0;
+  --brand-line: #ccded5;
 
-  --ink: #15171b;
-  --body: #33373e;
-  --ink-2: #4f545c;
-  --muted: #666c76;
-  --placeholder: #7d838d;
+  --ink: #202b28;
+  --body: #3d4945;
+  --ink-2: #52605a;
+  --muted: #66716c;
+  --placeholder: #69746e;
 
-  --input-line: #cfd3d9;
-  --card-line: #e3e6ea;
-  --dash: #c3c8cf;
-  --track: #eceef1;
+  --input-line: #c5cec8;
+  --card-line: #dfe5e0;
+  --dash: #bdc8c0;
+  --track: #e9eeea;
 
-  --surface: #f5f6f7;
-  --white: #fdfdfc;
-  --dark-body: #ccd0d6;
+  --surface: #f3f5f2;
+  --white: #fcfdfb;
+  --dark-body: #cbd6cf;
 
   --error-bg: #fbeeec;
   --error-fg: #9a3b2e;
@@ -30,17 +30,17 @@
   --ok-fg: #2b6a3c;
   --warn-bg: #fff3d9;
   --warn-fg: #7a5410;
-  --on-brand: #fdfdfc;
+  --on-brand: #fcfdfb;
 
   /* 반전 면(꼬리말 등): 라이트에서는 잉크 위 밝은 글자, 다크에서는 한 단계 아래 표면 */
-  --inverse-surface: #15171b;
+  --inverse-surface: #202b28;
   --inverse-ink: #f3f4f5;
   --inverse-body: #b6bac2;
   --inverse-muted: #8d929b;
 
-  --r-sm: 3px;
-  --r-md: 6px;
-  --r-lg: 8px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
   --r-pill: 999px;
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -60,25 +60,25 @@
 }
 
 :root[data-theme="dark"] {
-  --brand: #8fb3f0;
-  --brand-dark: #a9c4f5;
-  --brand-tint: #1b2434;
-  --brand-line: #2d3f5e;
+  --brand: #92cfb7;
+  --brand-dark: #b6dfcd;
+  --brand-tint: #213a30;
+  --brand-line: #35594a;
 
-  --ink: #f2f3f5;
-  --body: #ccd0d6;
-  --ink-2: #b0b5bd;
-  --muted: #979da7;
-  --placeholder: #838994;
+  --ink: #eef3ef;
+  --body: #cbd6cf;
+  --ink-2: #b1c0b6;
+  --muted: #a0b2a6;
+  --placeholder: #9aaba0;
 
-  --input-line: #3a3d43;
-  --card-line: #2b2e34;
-  --dash: #474b52;
-  --track: #24272c;
+  --input-line: #45554a;
+  --card-line: #334138;
+  --dash: #536359;
+  --track: #2a362e;
 
-  --surface: #131417;
-  --white: #1a1b1f;
-  --dark-body: #ccd0d6;
+  --surface: #131b17;
+  --white: #1c2520;
+  --dark-body: #cbd6cf;
 
   --error-bg: #3a2320;
   --error-fg: #f0a597;
@@ -86,10 +86,10 @@
   --ok-fg: #8fd39d;
   --warn-bg: #3a2e12;
   --warn-fg: #e8c46e;
-  --on-brand: #0f1a2e;
+  --on-brand: #142b21;
 
   --inverse-surface: #0e0f11;
-  --inverse-ink: #f2f3f5;
+  --inverse-ink: #eef3ef;
   --inverse-body: #9aa0a9;
   --inverse-muted: #7c828b;
 
@@ -277,3 +277,17 @@ input, textarea { caret-color: var(--brand); }
   .legal__table-wrap::after { content: "← 좌우로 밀어서 보기"; display: block; font-size: 12px; color: var(--muted); padding: 6px 2px 0; }
 }
 
+
+/* Shared identity and accessible utility styles. */
+.wordmark { display: inline-flex; align-items: center; gap: 10px; font-size: 23px; font-weight: 750; color: var(--ink); letter-spacing: -.035em; white-space: nowrap; }
+.wordmark:hover { color: var(--ink); }
+.wordmark small { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .01em; margin-left: 2px; }
+.brand-mark { flex: none; display: inline-grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 8px; background: var(--brand); border-radius: 10px; vertical-align: middle; }
+.brand-mark i { background: var(--on-brand); border-radius: 50%; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.skip-link { position: fixed; top: 8px; left: 16px; z-index: var(--z-toast); padding: 10px 16px; border-radius: var(--r-md); color: var(--on-brand); background: var(--brand); transform: translateY(-160%); }
+.skip-link:focus { transform: none; }
+button:disabled { cursor: not-allowed; }
+button:active:not(:disabled) { transform: scale(.98); }
+button:focus-visible:active, a:focus-visible:active { transform: none; }
+[id] { scroll-margin-top: 94px; }

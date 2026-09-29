@@ -17,7 +17,7 @@ export default function Guide() {
   return (
     <div className="site">
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="ph">
           <div className="wrap ph__grid">
             <span className="ph__k">가이드 · 의약품</span>

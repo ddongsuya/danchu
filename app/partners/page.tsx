@@ -12,7 +12,7 @@ export default function Partners() {
   return (
     <div className="site">
       <SiteHeader />
-      <main>
+      <main id="main-content">
         <section className="ph">
           <div className="wrap ph__grid">
             <span className="ph__k">협력기관</span>

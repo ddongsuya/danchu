@@ -1,0 +1,118 @@
+{
+  "results": [
+    {
+      "name": "home-desktop",
+      "status": 200,
+      "title": "단추 · 비임상 시험 견적, 근거부터 비교표까지",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "home-mobile",
+      "status": 200,
+      "title": "단추 · 비임상 시험 견적, 근거부터 비교표까지",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    },
+    {
+      "name": "login-desktop",
+      "status": 200,
+      "title": "로그인 — 단추",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "login-mobile",
+      "status": 200,
+      "title": "로그인 — 단추",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    },
+    {
+      "name": "workspace-desktop",
+      "status": 200,
+      "title": "단추 디자인 검토",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "workspace-mobile",
+      "status": 200,
+      "title": "단추 디자인 검토",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    },
+    {
+      "name": "workspace-empty",
+      "status": 200,
+      "title": "단추 디자인 검토",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "cro-desktop",
+      "status": 200,
+      "title": "단추 디자인 검토",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "admin-mobile",
+      "status": 200,
+      "title": "단추 디자인 검토",
+      "width": 390,
+      "scroll": 390,
+      "overflow": [
+        "tbl",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "home-dark",
+      "status": 200,
+      "title": "단추 · 비임상 시험 견적, 근거부터 비교표까지",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "workspace-dark",
+      "status": 200,
+      "title": "단추 디자인 검토",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "guide-mobile",
+      "status": 200,
+      "title": "비임상 시험 가이드 · 의약품 · 단추",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    },
+    {
+      "name": "details-mobile",
+      "status": 200,
+      "title": "단추 · 비임상 시험 견적, 근거부터 비교표까지",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    }
+  ],
+  "errors": []
+}

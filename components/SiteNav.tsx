@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/lib/use-me";
 import { REQUEST_HREF, SIGNUP_HREF } from "@/components/RfqLink";
 
 export const SITE_LINKS: [string, string][] = [
   ["/about", "서비스 소개"],
+  ["/guide", "시험 가이드"],
   ["/for-cro", "기관 참여"],
   ["/faq", "자주 묻는 질문"],
 ];
@@ -19,16 +20,22 @@ export function SiteNav() {
   const pathname = usePathname();
   const { me, loading } = useMe();
   const [open, setOpen] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     if (!open) return;
+    const surface = dialog.current;
+    surface?.showModal();
     document.documentElement.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     const onResize = () => innerWidth >= 900 && setOpen(false);
     addEventListener("keydown", onKey);
     addEventListener("resize", onResize);
     return () => {
+      surface?.close();
+      trigger.current?.focus();
       document.documentElement.style.overflow = "";
       removeEventListener("keydown", onKey);
       removeEventListener("resize", onResize);
@@ -48,12 +55,12 @@ export function SiteNav() {
         ))}
       </nav>
 
-      <button type="button" className="burger" aria-label="메뉴 열기" aria-expanded={open} onClick={() => setOpen(true)}>
+      <button type="button" className="burger" ref={trigger} aria-label="메뉴 열기" aria-expanded={open} onClick={() => setOpen(true)}>
         <i /><i /><i />
       </button>
 
       {open && (
-        <div className="sheet" role="dialog" aria-modal="true" aria-label="메뉴">
+        <dialog className="sheet" ref={dialog} aria-label="메뉴" onCancel={() => setOpen(false)}>
           <div className="sheet__bg" onClick={() => setOpen(false)} />
           <div className="sheet__panel">
             <div className="sheet__top">
@@ -69,7 +76,7 @@ export function SiteNav() {
               ))}
             </nav>
             <div className="sheet__foot">
-              <Link href={requestHref} className="b b--fill b--lg">요청서 작성</Link>
+              <Link href={requestHref} className="b b--fill b--lg">견적 요청하기</Link>
               <Link href={me ? me.to : "/login"} className="b b--line b--lg">{me ? PORTAL[me.role] : "로그인"}</Link>
               <div className="sheet__sub">
                 <Link href="/privacy">개인정보처리방침</Link>
@@ -78,7 +85,7 @@ export function SiteNav() {
               </div>
             </div>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

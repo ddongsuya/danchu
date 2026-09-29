@@ -24,3 +24,25 @@
 .auth__section { margin: 8px 0 0; padding-top: 18px; border-top: 1px solid var(--card-line); font-size: 15px; font-weight: 700; }
 .auth .btn--next { height: 52px; font-size: 16px; }
 .auth .chip { height: 38px; font-size: 14px; }
+
+/* Entry to the same research workspace, with the form as the focal surface. */
+.auth__main { width: 100%; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: .95fr 1.1fr; gap: 64px; padding: 70px 32px; align-items: start; }
+.auth__intro { padding-top: 50px; }
+.auth__intro h2 { font-size: 38px; letter-spacing: -.035em; line-height: 1.4; font-weight: 550; margin: 0; text-wrap: balance; }
+.auth__intro h2 strong { font-weight: 650; color: var(--brand); }
+.auth__intro > p { color: var(--muted); font-size: 17px; line-height: 1.8; margin: 20px 0 0; }
+.auth__intro ul { list-style: none; padding: 0; margin: 32px 0; display: flex; flex-direction: column; gap: 15px; }
+.auth__intro li { display: flex; align-items: center; gap: 12px; color: var(--body); font-size: 14px; }
+.auth__intro li svg { color: var(--brand); }
+.auth__intro > a { display: inline-flex; gap: 10px; align-items: center; min-height: 40px; font-size: 14px; font-weight: 600; }
+.auth__form-area { min-width: 0; width: 100%; display: flex; justify-content: center; }
+.auth__card { padding: 38px; max-width: 480px; gap: 26px; border: none; }
+.auth__card--wide { max-width: 640px; }
+.auth__tabs { border: 0; padding: 5px; gap: 4px; background: var(--surface); }
+.auth__tabs button { background: transparent; border-radius: var(--r-sm); }
+.auth__tabs button[aria-pressed="true"] { background: var(--white); color: var(--brand); }
+.auth__title { font-size: 28px; }
+.auth__sub { font-size: 14px; line-height: 1.7; }
+.auth__links { padding-top: 20px; border-top: 1px solid var(--card-line); }
+@media (max-width: 899px) { .auth__main { grid-template-columns: 1fr; max-width: 640px; padding: 36px 22px 60px; gap: 28px; } .auth__intro { display: none; } }
+@media (max-width: 560px) { .auth__card { padding: 26px 22px; } .auth__main { padding: 24px 16px 48px; } }

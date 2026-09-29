@@ -1,21 +1,9 @@
 /* ── 포털 공통 아이콘·작은 조각 ─────────────────────── */
 
-export function Mark({ size = 26, shadow = true }: { size?: number; shadow?: boolean }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 28 28"
-      aria-hidden="true"
-      style={shadow ? { filter: "drop-shadow(0 2px 6px rgba(26,25,25,.15))" } : undefined}
-    >
-      <circle cx="14" cy="14" r="13" fill="#fff" />
-      <circle cx="10" cy="10" r="1.9" fill="var(--brand)" />
-      <circle cx="18" cy="10" r="1.9" fill="var(--brand)" />
-      <circle cx="10" cy="18" r="1.9" fill="var(--brand)" />
-      <circle cx="18" cy="18" r="1.9" fill="var(--brand)" />
-    </svg>
-  );
+import { LogoMark } from "@/components/Logo";
+
+export function Mark({ size = 28 }: { size?: number; shadow?: boolean }) {
+  return <LogoMark size={size} />;
 }
 
 /** 브랜드 원 안의 체크 — 완료 화면과 옵션 선택에 공통 사용 */
