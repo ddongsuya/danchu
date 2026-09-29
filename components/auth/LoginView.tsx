@@ -71,9 +71,9 @@ function Login() {
         <p className="auth__sub">{next === "/app/new" ? "로그인하면 바로 견적 요청 화면이 열립니다." : "견적 요청 진행 상황과 비교표를 확인하세요."}</p>
       </div>
 
-      <div className="auth__tabs" role="tablist">
-        <button type="button" role="tab" aria-pressed={mode === "password"} onClick={() => setMode("password")}>비밀번호</button>
-        <button type="button" role="tab" aria-pressed={mode === "magic"} onClick={() => setMode("magic")}>이메일 링크</button>
+      <div className="auth__tabs" role="group" aria-label="로그인 방법">
+        <button type="button" aria-pressed={mode === "password"} onClick={() => setMode("password")}>비밀번호</button>
+        <button type="button" aria-pressed={mode === "magic"} onClick={() => setMode("magic")}>이메일 링크</button>
       </div>
 
       <form className="auth__form" onSubmit={submit}>
