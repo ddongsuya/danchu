@@ -135,7 +135,7 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
     await sb.from("rfq_invites").update({ opened_at: new Date().toISOString() }).eq("id", inv.id);
   }
   const { data: files } = await sb.from("rfq_files").select("id, file_name, size_bytes").eq("rfq_id", inv.rfq_id).order("created_at");
-  const rfq = rfqViewOf(r as RfqRow, inv, files ?? []);
+  const rfq = rfqViewOf(r, inv, files ?? []);
 
   const { data: q } = await sb.from("cro_quotes").select("*, cro_quote_items(*)").eq("invite_id", inv.id).maybeSingle();
   let draft: ReplyDraft | null = null;
@@ -164,15 +164,15 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
       reportLang: q.report_lang ?? "",
       includes: Array.isArray(q.includes) ? q.includes : [],
     };
-    draft = { items, note: q.note ?? "", pdfName: q.pdf_name ?? "", status: q.status, common };
+    draft = { items, note: q.note ?? "", pdfName: q.pdf_name ?? "", status: q.status === "submitted" ? "submitted" : "draft", common };
   } else if (inv.cro_org_id) {
     // 저장된 회신이 없으면 기관 카탈로그로 초안을 만든다 (저장은 CRO가 손댈 때)
-    draft = await prefillDraft(inv.cro_org_id, r as RfqRow, rfq);
+    draft = await prefillDraft(inv.cro_org_id, r, rfq);
   }
   const now = Date.now();
   const expired = !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
   const locked = draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
-  const closed = ["selected", "contracting", "closed", "cancelled"].includes((r as RfqRow).status);
+  const closed = ["selected", "contracting", "closed", "cancelled"].includes(r.status);
 
   return {
     rfq, draft, inviteId: inv.id, rfqId: inv.rfq_id, croName: inv.cro_name, croOrgId: inv.cro_org_id, token: inv.token,
@@ -187,5 +187,5 @@ export async function loadQuote(token: string): Promise<Loaded | null> {
   if (!sb) return null;
   const { data: inv } = await sb.from("rfq_invites").select("*").eq("token", token).maybeSingle();
   if (!inv) return null;
-  return loadByInvite(inv as InviteRow);
+  return loadByInvite(inv);
 }

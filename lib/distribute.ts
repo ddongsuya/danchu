@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
+import type { TablesUpdate } from "./db-types";
 import { logEvent, notifyUsers, siteUrl } from "./notify";
 import { mailWrap, esc, sendMail } from "./mail";
 import { addBusinessDays, nowSeoul } from "./dates";
@@ -105,7 +106,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   }
 
   if (res.sent) {
-    const patch: Record<string, unknown> = { reply_by: rfq.reply_by || replyBy };
+    const patch: TablesUpdate<"rfq_requests"> = { reply_by: rfq.reply_by || replyBy };
     if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
     await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
     await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}`, actorId, { orgIds: orgs.map((o) => o.id), auto });
@@ -129,21 +130,35 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
 /**
  * 새로 승인된 기관에 아직 열려 있는 요청서를 배포한다.
  * - 대상: 이미 배포되어 회신을 받는 중이고(비교표 공개 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
- *   아직 한 번도 배포하지 않은 요청은 건드리지 않는다 (배포 시작은 접수 시 자동 배포나 운영자가 정한다)
+ *   아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 포함한다 (해당 분야 기관이 없어 기다리던 요청)
  * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
  * - 이미 초대한 요청은 건너뛴다
- * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행).
+ * 기관이 참여하는 즉시 보이도록 승인할 때, 기관이 수행 분야를 바꿀 때, 기관 화면을 열 때 부른다.
+ * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행, 안전망).
  */
 export async function distributeOpenRfqs(orgId?: string, actorId: string | null = null): Promise<{ rfqs: number; invites: number }> {
   const sb = getSupabaseAdmin();
   const out = { rfqs: 0, invites: 0 };
   if (!sb) return out;
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).order("created_at");
-  for (const rfq of (data ?? []) as RfqRow[]) {
+  const { data } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
+  // 아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 살린다 (기관이 없어 기다리던 요청)
+  const fresh = new Date(Date.now() - 30 * 864e5).toISOString();
+  let list = (data ?? []).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
+  if (orgId) {
+    // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
+    const { data: org } = await sb.from("cro_orgs").select("status, categories").eq("id", orgId).maybeSingle();
+    if (!org || org.status !== "approved") return out;
+    const cats = (org.categories ?? []) as string[];
+    const { data: inv } = await sb.from("rfq_invites").select("rfq_id").eq("cro_org_id", orgId);
+    const invited = new Set((inv ?? []).map((i) => i.rfq_id as string));
+    list = list.filter((r) => !invited.has(r.id) && r.categories.some((c) => cats.includes(c)));
+  }
+  for (const rfq of list) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
-    if (!rfq.reply_by || rfq.reply_by < today) continue;
-    const replyBy = rfq.reply_by;
+    // 회신 기한: 정해져 있으면 그대로(먼저 받은 기관과 같게), 없으면 지금 기준으로 새로 잡는다
+    const replyBy = defaultReplyBy(rfq);
+    if (replyBy < today) continue;
     const { orgs } = await matchOrgs(rfq);
     const targets = orgId ? orgs.filter((o) => o.id === orgId) : orgs;
     if (!targets.length) continue;

@@ -136,7 +136,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
             <div className="card card--rows">
               <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>첨부</div>
               {d.files.map((f) => (
-                <div key={f.id} className="kv"><a href={`/api/files/${f.id}`}>{f.file_name}</a><span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span></div>
+                <div key={f.id} className="kv"><a href={`/api/files/${f.id}`}>{f.file_name}{!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}</a><span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span></div>
               ))}
             </div>
           )}

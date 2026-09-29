@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { CATS } from "@/lib/rfq-schema";
+import { distributeOpenRfqs } from "@/lib/distribute";
 
 export const runtime = "nodejs";
 
@@ -38,5 +39,11 @@ export async function POST(req: Request) {
     })
     .eq("id", s.profile.cro_org_id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  // 수행 분야가 바뀌었으면 새로 맞는 요청을 바로 받는다
+  try {
+    await distributeOpenRfqs(s.profile.cro_org_id, s.userId);
+  } catch (e) {
+    console.error("sync invites", e);
+  }
   return NextResponse.json({ ok: true });
 }

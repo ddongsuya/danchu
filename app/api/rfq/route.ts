@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendRfqMails } from "@/lib/mail";
 import { validateRequired, type Values } from "@/lib/rfq-schema";
@@ -7,7 +7,7 @@ import { safeName, type UploadTicket } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { autoDistribute } from "@/lib/distribute";
-import type { RfqRow } from "@/lib/data";
+import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,36 +15,24 @@ export const dynamic = "force-dynamic";
 const MAX_FILE = 20 * 1024 * 1024;
 const MAX_FILES = 10;
 
-/* ── 남용 방어 ──
-   - 허니팟: 화면에 보이지 않는 `website` 칸이 채워져 있으면 봇으로 보고 저장·발송 없이 성공처럼 응답
-   - 속도 제한: IP당 10분에 5건 (서버리스 인스턴스 단위라 완전하지는 않지만 메일 폭탄은 막는다) */
-const WINDOW_MS = 10 * 60 * 1000;
-const LIMIT = 5;
-const hits = new Map<string, number[]>();
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const arr = (hits.get(ip) || []).filter((t) => now - t < WINDOW_MS);
-  arr.push(now);
-  hits.set(ip, arr);
-  if (hits.size > 5000) hits.clear();
-  return arr.length > LIMIT;
-}
-
 type FileMeta = { name: string; size: number; type: string };
 
 /**
- * POST /api/rfq  (JSON: { payload: Values, files?: FileMeta[] })
+ * POST /api/rfq  (JSON: { payload: Values, files?: FileMeta[] })  — 로그인 필수
  *
- * 1) 1단계 필수 검증 + 허니팟·속도 제한
+ * 1) 세션 확인 + 속도 제한(공유 카운터) + 허니팟 + 1단계 필수 검증
  * 2) Supabase: 채번(next_rfq_no) → rfq_requests insert → 첨부마다 서명 업로드 URL 발급 + rfq_files insert
  *    - 파일 본문은 브라우저가 서명 URL로 직접 올린다
- *    - 환경변수 미설정 시: 임시 번호(DC-YYYY-9xxx)로 응답하고 서버 로그에 기록 (데모/로컬용)
- * 3) Resend: 의뢰자 확인 메일 + 운영자 알림 (키 없으면 건너뜀)
+ *    - 의뢰자 이메일은 항상 계정 이메일이다 (본문 값은 쓰지 않는다)
+ * 3) 응답 뒤(after): 운영자 알림, 자동 배포(기관 초대·메일), 접수 확인 메일
+ *    - 배포와 메일은 응답을 기다리게 하지 않는다. 기관 수가 늘어도 접수 응답은 일정하다
  */
 export async function POST(req: Request) {
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
-  if (rateLimited(ip || "unknown")) {
-    return NextResponse.json({ error: "요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요." }, { status: 429 });
+  const sess = await sessionOrNull();
+  if (!sess) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const ip = clientIp(req);
+  if ((await rateLimited("rfq:user", sess.userId, 5, 10 * 60)) || (await rateLimited("rfq:ip", ip, 10, 10 * 60))) {
+    return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   }
 
   let values: Values;
@@ -65,9 +53,13 @@ export async function POST(req: Request) {
   // 허니팟 — 사람은 볼 수 없는 칸
   if (typeof values.website === "string" && values.website.trim()) {
     console.warn("[danchu] honeypot", ip);
-    return NextResponse.json({ rfqNo: `DC-${year}-0000`, persisted: false, mail: { requester: false, admin: false }, uploads: [] });
+    return NextResponse.json({ rfqNo: `DC-${year}-0000`, persisted: false, uploads: [] });
   }
   delete values.website;
+
+  // 의뢰자 연락처는 계정 기준으로 고정한다
+  values.email = sess.email;
+  values.source = "app";
 
   const err = validateRequired(values);
   if (err) return NextResponse.json({ error: err }, { status: 400 });
@@ -82,19 +74,11 @@ export async function POST(req: Request) {
   let rfqNo: string;
   let persisted = false;
   const uploads: UploadTicket[] = [];
-
-  // 로그인 사용자면 계정에 연결. 앱에서 온 요청은 이메일을 계정 이메일로 고정한다.
-  const sess = await sessionOrNull();
-  if (sess && values.source === "app") values.email = sess.email;
-  let userId: string | null = sess?.userId ?? null;
+  const userId = sess.userId;
 
   if (supabase) {
+    let rfqId: string;
     try {
-      if (!userId) {
-        // 로그인 없이 접수했지만 같은 이메일의 계정이 있으면 연결
-        const { data: prof } = await supabase.from("profiles").select("id").ilike("email", str("email")).maybeSingle();
-        userId = (prof?.id as string) ?? null;
-      }
       const { data: no, error: e1 } = await supabase.rpc("next_rfq_no", { p_year: year });
       if (e1 || !no) throw e1 || new Error("채번 실패");
       rfqNo = String(no);
@@ -106,7 +90,7 @@ export async function POST(req: Request) {
           submitted_step: String(values.submittedStep) === "2" ? 2 : 1,
           company: str("company"),
           contact_name: str("name"),
-          email: str("email"),
+          email: sess.email,
           phone: nul("phone"),
           org_type: nul("orgType"),
           purpose: nul("purpose"),
@@ -119,11 +103,12 @@ export async function POST(req: Request) {
           payload: values,
           user_id: userId,
           user_agent: req.headers.get("user-agent"),
-          ip: /^[0-9a-fA-F.:]+$/.test(ip) ? ip : null,
+          ip: ip !== "unknown" ? ip : null,
         })
         .select("id")
         .single();
       if (e2 || !row) throw e2 || new Error("저장 실패");
+      rfqId = row.id as string;
 
       for (const f of files) {
         const path = `${rfqNo}/${Date.now()}-${safeName(f.name)}`;
@@ -133,7 +118,7 @@ export async function POST(req: Request) {
           continue;
         }
         await supabase.from("rfq_files").insert({
-          rfq_id: row.id,
+          rfq_id: rfqId,
           storage_path: path,
           file_name: f.name,
           size_bytes: f.size,
@@ -144,40 +129,43 @@ export async function POST(req: Request) {
       persisted = true;
 
       const cats = Array.isArray(values.categories) ? (values.categories as string[]).join(" · ") : "";
-      await logEvent(row.id, "received", "접수", `${cats}${files.length ? ` · 첨부 ${files.length}건` : ""}`, userId);
-      await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${rfqNo} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${rfqNo}` });
-      if (userId) await notifyUsers([userId], { kind: "접수", title: `${rfqNo} 접수되었습니다`, body: "요청서를 정리해 영업일 1일 내 참여 CRO에 배포합니다.", href: `/app/r/${rfqNo}` });
+      await logEvent(rfqId, "received", "접수", `${cats}${files.length ? ` · 첨부 ${files.length}건` : ""}`, userId);
+      await notifyUsers([userId], { kind: "접수", title: `${rfqNo} 접수되었습니다`, body: "요청서를 정리해 영업일 1일 내 참여 CRO에 배포합니다.", href: `/app/r/${rfqNo}` });
+    } catch (e) {
+      console.error("supabase", e);
+      return NextResponse.json({ error: "접수 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+    }
 
-      // 접수 즉시 자동 배포: 분야가 맞는 승인 기관 전부. 맞는 기관이 없으면 운영자가 수동 배포한다.
+    // 응답 뒤: 운영자 알림 → 자동 배포(분야가 맞는 승인 기관 전부) → 접수 확인 메일
+    const no = rfqNo;
+    const fileNames = files.map((f) => f.name);
+    after(async () => {
+      const cats = Array.isArray(values.categories) ? (values.categories as string[]).join(" · ") : "";
       try {
-        const { data: full } = await supabase.from("rfq_requests").select("*").eq("id", row.id).single();
+        await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${no} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${no}` });
+        const { data: full } = await supabase.from("rfq_requests").select("*").eq("id", rfqId).single();
         if (full) {
-          const r = await autoDistribute(full as RfqRow);
+          const r = await autoDistribute(full);
           if (!r.matched) {
-            await notifyUsers(await adminUserIds(), { kind: "배포", title: `${rfqNo} 자동 배포 대상 없음`, body: "분야가 맞는 승인 기관이 없습니다. 수동 배포가 필요합니다.", href: `/admin/r/${rfqNo}` }, { to: adminEmails() });
+            await notifyUsers(await adminUserIds(), { kind: "배포", title: `${no} 자동 배포 대상 없음`, body: "분야가 맞는 승인 기관이 없습니다. 수동 배포가 필요합니다.", href: `/admin/r/${no}` }, { to: adminEmails() });
           } else if (r.skipped.length) {
-            await logEvent(row.id, "distributed", `배포 제외 ${r.skipped.length}곳`, r.skipped.join(", "), null, { skipped: r.skipped });
+            await logEvent(rfqId, "distributed", `배포 제외 ${r.skipped.length}곳`, r.skipped.join(", "), null, { skipped: r.skipped });
           }
         }
       } catch (e) {
         console.error("auto distribute", e);
       }
-    } catch (e) {
-      console.error("supabase", e);
-      return NextResponse.json({ error: "접수 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });
-    }
+      try {
+        await sendRfqMails({ rfqNo: no, values, fileNames });
+      } catch (e) {
+        console.error("mail", e);
+      }
+    });
   } else {
     // 환경변수 미설정: 임시 번호 발급 (9000번대) + 로그
     rfqNo = `DC-${year}-9${String(Date.now() % 1000).padStart(3, "0")}`;
     console.warn("[danchu] SUPABASE 미설정 — 임시 접수", rfqNo, JSON.stringify(values));
   }
 
-  let mail = { requester: false, admin: false };
-  try {
-    mail = await sendRfqMails({ rfqNo, values, fileNames: files.map((f) => f.name) });
-  } catch (e) {
-    console.error("mail", e);
-  }
-
-  return NextResponse.json({ rfqNo, persisted, mail, uploads });
+  return NextResponse.json({ rfqNo, persisted, uploads });
 }

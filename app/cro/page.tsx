@@ -16,10 +16,11 @@ export default async function CroInbox() {
             <h1>받은 요청</h1>
           </div>
         </div>
-        <PendingOrg org={org} />
+        <PendingOrg org={org} pendingOrg={s.pendingOrg} />
       </>
     );
   }
+  // 빠진 배포는 승인·분야 변경 시점과 매일 크론(distributeOpenRfqs)이 채운다. 읽기 화면에서는 쓰지 않는다.
   const list: InviteWithQuote[] = dbReady() ? await listInvitesForOrg(org.id) : [];
   const fresh = list.filter((i) => i.status === "sent" && new Date(i.expires_at).getTime() > Date.now()).length;
   return (

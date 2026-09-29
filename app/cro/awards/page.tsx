@@ -15,7 +15,7 @@ const NEXT = [
 export default async function CroAwards() {
   const s = await requireSession("cro");
   const org = s.org;
-  if (!org || org.status !== "approved") return <PendingOrg org={org} />;
+  if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   const list = dbReady() ? await listAwardsForOrg(org.id) : [];
 
   return (

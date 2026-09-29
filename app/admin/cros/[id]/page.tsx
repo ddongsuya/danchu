@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
-import { getCroOrg, listInvitesForOrg, listOrgMembers } from "@/lib/data";
+import { getCroOrg, listInvitesForOrg, listOrgMembers, listPendingMembers } from "@/lib/data";
 import { Crumb } from "@/components/app/ui";
 import { OrgApproval } from "@/components/admin/OrgApproval";
+import { JoinRequests } from "@/components/admin/JoinRequests";
 import { ymd, won } from "@/lib/format";
 import { INVITE_LABEL } from "@/lib/status";
 
@@ -15,7 +16,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const org = await getCroOrg(id);
   if (!org) notFound();
-  const [members, invites] = await Promise.all([listOrgMembers(org.id), listInvitesForOrg(org.id)]);
+  const [members, pendingMembers, invites] = await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id), listInvitesForOrg(org.id)]);
   const st = ST[org.status];
 
   return (
@@ -47,6 +48,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
           </div>
         </div>
         <div className="stack">
+          <JoinRequests orgId={org.id} members={pendingMembers} />
           <div className="card card--rows">
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>담당자 계정 {members.length}</div>
             {members.length === 0 && <p style={{ padding: "8px 0 12px", fontSize: 13, color: "var(--muted)" }}>연결된 계정이 없습니다. 사용자 탭에서 이 기관에 연결할 수 있습니다.</p>}

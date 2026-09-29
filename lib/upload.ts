@@ -30,3 +30,12 @@ export function safeName(name: string): string {
   const base = (dot > 0 ? name.slice(0, dot) : name).replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
   return (base || "file") + (ext ? `.${ext}` : "");
 }
+
+/** 서버 전용: 비공개 버킷에 객체가 실제로 있는지 (서명 업로드가 끝났는지) */
+export async function storageHas(sb: { storage: { from: (b: string) => { list: (dir: string, o: { search: string; limit: number }) => Promise<{ data: { name: string }[] | null; error: unknown }> } } }, bucket: string, path: string): Promise<boolean> {
+  const i = path.lastIndexOf("/");
+  const dir = i > 0 ? path.slice(0, i) : "";
+  const name = i > 0 ? path.slice(i + 1) : path;
+  const { data, error } = await sb.storage.from(bucket).list(dir, { search: name, limit: 20 });
+  return !error && !!data?.some((o) => o.name === name);
+}

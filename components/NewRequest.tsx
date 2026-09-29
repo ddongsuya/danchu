@@ -136,10 +136,14 @@ export function NewRequest({ contact }: { contact: Contact }) {
       if (!res.ok || !data.rfqNo) throw new Error(data.error || "접수에 실패했습니다. 잠시 후 다시 시도해 주세요.");
       let failed = 0;
       const tickets = data.uploads ?? [];
+      const done: string[] = [];
       await Promise.all(files.map(async (f, i) => {
         const t = tickets[i];
         if (!t || t.name !== f.name || !(await uploadToSigned(t, f))) failed++;
+        else done.push(t.path);
       }));
+      // 올라간 파일을 서버가 확인해 "업로드 완료"로 표시한다 (실패해도 접수는 유효, 내려받을 때 다시 확인한다)
+      if (done.length) await fetch(`/api/rfq/${data.rfqNo}/files/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paths: done }) }).catch(() => null);
       clearDraft();
       const qs = new URLSearchParams({ no: data.rfqNo });
       if (files.length && failed) qs.set("upfail", String(failed));
@@ -171,7 +175,7 @@ export function NewRequest({ contact }: { contact: Contact }) {
           </div>
         </div>
         <div className="stack" style={{ gap: 12 }}>
-          {path("상황을 말하고 제안 받기", "개발 단계와 임상 계획, 이미 가진 자료를 답하면 필요한 시험을 가이드라인 근거와 함께 제안합니다. 지금은 합성의약품을 지원합니다.", "질문 12개 안팎 · 3분", true, () => { setPhase("advisor"); window.scrollTo(0, 0); })}
+          {path("상황을 말하고 제안 받기", "개발 단계와 임상 계획, 이미 가진 자료를 답하면 필요한 시험을 가이드라인 근거와 함께 제안합니다. 의약품, 건강기능식품, 화장품, 의료기기, 화학물질·농약을 지원합니다.", "질문 12개 안팎 · 3분", true, () => { setPhase("advisor"); window.scrollTo(0, 0); })}
           {path("직접 고르기", "필요한 시험을 이미 알고 있다면 항목을 바로 고릅니다. 패키지로 한 번에 채울 수도 있습니다.", "바로 작성", false, () => { setPhase("wizard"); window.scrollTo(0, 0); })}
         </div>
       </div>

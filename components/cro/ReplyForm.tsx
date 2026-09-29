@@ -9,6 +9,8 @@ import { won } from "@/lib/format";
 import { uploadToSigned } from "@/lib/upload";
 import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
 import type { Cat } from "@/lib/rfq-schema";
+import { EfficacyCosts } from "@/components/cro/EfficacyCosts";
+import { EFFICACY_CAT } from "@/lib/efficacy";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
 const MAX_PDF = 20 * 1024 * 1024;
@@ -78,7 +80,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
               <input className="inp" style={{ height: 40, fontSize: 13 }} placeholder="예: 1일 1회 · 4주" disabled={disabled} value={dstr(value, "dosing")} onChange={(e) => onChange({ ...value, dosing: e.target.value.slice(0, 120) })} />
             </div>
             <div className="fld" style={{ gap: 4 }}>
-              <label className="fld__lab" style={{ fontSize: 12 }}>시험법·가이드라인</label>
+              <label className="fld__lab" style={{ fontSize: 12 }}>{category === EFFICACY_CAT ? "질환 모델" : "시험법·가이드라인"}</label>
               <input className="inp" style={{ height: 40, fontSize: 13 }} placeholder="예: OECD TG 423 급성독성등급법" disabled={disabled} value={dstr(value, "method")} onChange={(e) => onChange({ ...value, method: e.target.value.slice(0, 120) })} />
             </div>
           </div>
@@ -131,6 +133,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const timer = useRef<number>(0);
+  const saveAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch(`/api/quote/${token}`)
@@ -147,6 +150,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했습니다."));
   }, [token]);
 
+  // 화면을 떠날 때 대기 중인 자동 저장을 정리한다
+  useEffect(() => () => { window.clearTimeout(timer.current); saveAbort.current?.abort(); }, []);
+
   const readOnly = !!(data?.expired || data?.locked || data?.closed || data?.declined);
   const isSubmitted = data?.draft?.status === "submitted";
 
@@ -155,13 +161,18 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     setSaved("saving");
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(async () => {
+      saveAbort.current?.abort();
+      const ac = new AbortController();
+      saveAbort.current = ac;
       const ok = await fetch(`/api/quote/${token}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: nextItems, note: nextNote, common: nextCommon }),
+        signal: ac.signal,
       })
         .then((r) => r.ok)
-        .catch(() => false);
+        .catch(() => (ac.signal.aborted ? null : false));
+      if (ok === null) return; // 제출로 취소됨
       setSaved(ok ? "saved" : "failed");
     }, 800);
   };
@@ -239,6 +250,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const submit = async () => {
     setBusy(true);
     setError("");
+    // 제출본이 자동 저장에 덮이지 않도록 대기 중·진행 중인 초안 저장을 멈춘다
+    window.clearTimeout(timer.current);
+    saveAbort.current?.abort();
     try {
       let pdfRef: { path: string; name: string; size: number } | undefined;
       if (pdf) {
@@ -360,6 +374,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                   </div>
                 </div>
                 {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly} onChange={(d) => update(r.seq, { design: d })} />}
+                {!no && r.category === EFFICACY_CAT && <EfficacyCosts value={it.design ?? {}} disabled={readOnly} onChange={(d, total) => update(r.seq, total ? { design: d, amount: total } : { design: d })} />}
                 {needReason && (
                   <input className="inp" style={{ height: 44, fontSize: 14 }} placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
                 )}

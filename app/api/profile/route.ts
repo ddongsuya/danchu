@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import type { TablesUpdate } from "@/lib/db-types";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
   if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const v = (k: string, max = 120) => (typeof b[k] === "string" ? (b[k] as string).trim().slice(0, max) || null : undefined);
-  const patch: Record<string, string | null> = {};
+  const patch: TablesUpdate<"profiles"> = {};
   for (const [k, col] of [["name", "name"], ["company", "company"], ["dept", "dept"], ["phone", "phone"], ["orgType", "org_type"]] as const) {
     const x = v(k, k === "phone" ? 40 : 120);
     if (x !== undefined) patch[col] = x;

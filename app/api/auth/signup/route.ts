@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { EMAIL_RE, authErrorKo, safeNext, sendLoginLink } from "@/lib/auth-links";
+import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
   const company = s("company");
 
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "이메일 형식을 확인해 주세요." }, { status: 400 });
+  if ((await rateLimited("signup:ip", clientIp(req), 5, 60 * 60)) || (await rateLimited("signup:email", email, 3, 60 * 60))) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   // 비밀번호는 선택 — 비우면 이메일 링크로만 로그인한다 (나중에 재설정 흐름으로 정할 수 있다)
   if (password && password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
   if (!name || !company) return NextResponse.json({ error: "담당자 성명과 회사·기관명을 입력해 주세요." }, { status: 400 });
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
     email,
     ...(password ? { password } : {}),
     email_confirm: false,
-    user_metadata: { role: "requester", name, company, dept: s("dept"), phone: s("phone", 40), org_type: s("orgType") },
+    user_metadata: { name, company, dept: s("dept"), phone: s("phone", 40), org_type: s("orgType") },
   });
   if (error) {
     const msg = authErrorKo(error.message);

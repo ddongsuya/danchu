@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { InviteRow, RfqRow } from "@/lib/data";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { publishCompare } from "@/lib/compare";
 import { distributeOpenRfqs } from "@/lib/distribute";
 import { loadByInvite } from "@/lib/quote-load";
 import { todaySeoul } from "@/lib/format";
 import { won } from "@/lib/format";
+import { saveQuote, type QuoteItemInput } from "@/lib/rpc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +38,9 @@ export async function GET(req: Request) {
   const today = todaySeoul();
   const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, errors: [] as string[] };
 
+  // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
+  await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
+
   // 0) 빠진 배포 보충: 승인된 기관 중 열린 요청을 아직 받지 못한 곳
   try {
     out.distributed = (await distributeOpenRfqs()).invites;
@@ -48,7 +51,7 @@ export async function GET(req: Request) {
   // 1) 리마인더
   for (const [kind, day] of [["d2", addDays(today, 2)], ["d0", today]] as const) {
     const { data: invites } = await sb.from("rfq_invites").select("*").eq("reply_by", day).in("status", ["sent", "draft"]);
-    for (const inv of (invites ?? []) as InviteRow[]) {
+    for (const inv of invites ?? []) {
       const { data: done } = await sb.from("invite_reminders").select("invite_id").eq("invite_id", inv.id).eq("kind", kind).maybeSingle();
       if (done) continue;
       const { data: rfq } = await sb.from("rfq_requests").select("substance, status").eq("id", inv.rfq_id).maybeSingle();
@@ -75,7 +78,7 @@ export async function GET(req: Request) {
   const autoIds = (autoOrgs ?? []).map((o) => o.id as string);
   if (autoIds.length) {
     const { data: invites } = await sb.from("rfq_invites").select("*").eq("reply_by", today).in("status", ["sent", "draft"]).in("cro_org_id", autoIds);
-    for (const inv of (invites ?? []) as InviteRow[]) {
+    for (const inv of invites ?? []) {
       try {
         const got = await loadByInvite(inv);
         if (!got || got.closed || got.expired) continue;
@@ -86,23 +89,15 @@ export async function GET(req: Request) {
         const total = d.items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
         const weeks = Math.max(0, ...d.items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
         const valid = d.common.validUntil || addDays(today, 30);
-        const { data: q, error } = await sb
-          .from("cro_quotes")
-          .upsert({ invite_id: inv.id, rfq_id: inv.rfq_id, rfq_no: inv.rfq_no, cro_name: inv.cro_name, cro_org_id: inv.cro_org_id, total_amount: total || null, total_weeks: weeks || null, vat: "별도", valid_until: valid, start_date: d.common.startDate || null, includes: d.common.includes, note: d.note, status: "submitted", submitted_at: new Date().toISOString(), auto: true }, { onConflict: "invite_id" })
-          .select("id")
-          .single();
-        if (error || !q) throw error || new Error("upsert");
         const rows = got.rfq.rows;
-        await sb.from("cro_quote_items").upsert(
-          d.items.map((it) => {
-            const r = rows.find((x) => x.seq === it.seq)!;
-            return { quote_id: q.id, seq: it.seq, category: r.category, name: r.name, cond: r.cond, avail: it.avail || null, amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null, weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null, reason: it.reason || null, design: it.design ?? {}, source: it.source ?? "catalog", unit: it.unit ?? "total", unit_price: it.unitPrice ? Number(it.unitPrice) : null, sample_count: it.sampleCount ? Number(it.sampleCount) : null };
-          }),
-          { onConflict: "quote_id,seq" },
-        );
-        await sb.from("rfq_invites").update({ status: "submitted" }).eq("id", inv.id);
-        const { data: r } = await sb.from("rfq_requests").select("status, user_id").eq("id", inv.rfq_id).maybeSingle();
-        if (r && ["received", "distributed"].includes(r.status)) await sb.from("rfq_requests").update({ status: "quoted" }).eq("id", inv.rfq_id);
+        const items: QuoteItemInput[] = d.items.map((it) => {
+          const r = rows.find((x) => x.seq === it.seq)!;
+          return { seq: it.seq, category: r.category, name: r.name, cond: r.cond, avail: it.avail || null, amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null, weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null, reason: it.reason || null, design: it.design ?? {}, source: it.source ?? "catalog", unit: it.unit ?? "total", unit_price: it.unitPrice ? Number(it.unitPrice) : null, sample_count: it.sampleCount ? Number(it.sampleCount) : null };
+        });
+        const saved = await saveQuote(inv.id, { total_amount: total || null, total_weeks: weeks || null, vat: "별도", valid_until: valid, auto: true, start_date: d.common.startDate || null, pay_terms: null, substance_qty: null, report_lang: null, includes: d.common.includes, note: d.note }, items, true, null);
+        if (!saved.ok) throw new Error(`save_quote ${saved.code}`);
+        const q = { id: saved.quote_id };
+        const { data: r } = await sb.from("rfq_requests").select("user_id").eq("id", inv.rfq_id).maybeSingle();
         await logEvent(inv.rfq_id, "quote_submitted", `${inv.cro_name} 예비 견적 자동 제출`, `총 ${won(total)} · ${weeks}주`, null, { quoteId: q.id, auto: true });
         if (r?.user_id) await notifyUsers([r.user_id], { kind: "견적", title: `예비 견적이 도착했습니다 · ${inv.rfq_no}`, body: `${inv.cro_name} · 카탈로그 기준 자동 회신`, href: `/app/r/${inv.rfq_no}` });
         out.autoSubmitted++;
@@ -115,7 +110,7 @@ export async function GET(req: Request) {
 
   // 3) 기한 후 비교표 자동 공개
   const { data: rfqs } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).is("compared_at", null).lt("reply_by", today);
-  for (const rfq of (rfqs ?? []) as RfqRow[]) {
+  for (const rfq of rfqs ?? []) {
     const r = await publishCompare(rfq, null, true);
     if (r.ok) {
       out.compared++;

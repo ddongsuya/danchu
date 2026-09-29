@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "./supabase";
+import type { TablesInsert, TablesUpdate } from "./db-types";
 import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type Glp } from "./catalog";
 
 function fromDb(r: Record<string, unknown>): CatalogRow {
@@ -47,7 +48,7 @@ const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0
 const arr = (v: unknown, allow?: readonly string[]) => (Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string" && (!allow || allow.includes(x))).slice(0, 30) : []);
 
 /** 클라이언트 행 → DB 행 (입력값은 여기서만 정리한다). 항목이 스키마에 없으면 null */
-function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string; item: string }>, sort: number): Record<string, unknown> | null {
+function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string; item: string }>, sort: number): TablesInsert<"cro_catalog"> | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const it = valid.get(String(r.item_key));
@@ -68,9 +69,9 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
   return {
     org_id: orgId, item_key: String(r.item_key), category: it.category, item: it.item,
     available: r.available !== false,
-    glp: ["GLP", "Non-GLP", "both"].includes(String(r.glp)) ? r.glp : "both",
+    glp: ["GLP", "Non-GLP", "both"].includes(String(r.glp)) ? String(r.glp) : "both",
     species: arr(r.species, SPECIES),
-    route: ROUTES.includes(String(r.route)) ? r.route : str(r.route, 60),
+    route: ROUTES.includes(String(r.route)) ? String(r.route) : str(r.route, 60),
     method: str(r.method, 120),
     groups_ctrl: int(r.groups_ctrl, 20), groups_test: int(r.groups_test, 20), per_sex: int(r.per_sex, 200),
     recovery_weeks: int(r.recovery_weeks, 52), recovery_per_sex: int(r.recovery_per_sex, 100),
@@ -101,8 +102,8 @@ export async function upsertCatalog(orgId: string, rows: unknown[], removed: unk
     if (error) return { saved: 0, rows: [], error: "삭제하지 못했습니다." };
   }
 
-  const updates: Record<string, unknown>[] = [];
-  const inserts: Record<string, unknown>[] = [];
+  const updates: (TablesInsert<"cro_catalog"> & { id: string })[] = [];
+  const inserts: TablesInsert<"cro_catalog">[] = [];
   const perItem = new Map<string, number>();
   for (const raw of rows) {
     const key = raw && typeof raw === "object" ? String((raw as { item_key?: unknown }).item_key) : "";
@@ -145,8 +146,8 @@ export async function learnFromSubmission(
   const valid = new Map(catalogItems().map((it) => [it.key, it]));
   const existing = await catalogMap(orgId);
   const now = new Date().toISOString();
-  const updates: Record<string, unknown>[] = [];
-  const inserts: Record<string, unknown>[] = [];
+  const updates: (TablesUpdate<"cro_catalog"> & { id: string })[] = [];
+  const inserts: TablesInsert<"cro_catalog">[] = [];
   for (const it of items) {
     if (it.avail === "불가" || it.avail === "") continue;
     const key = itemKey(it.category, it.name === it.category ? it.category : it.name);
@@ -165,7 +166,7 @@ export async function learnFromSubmission(
       rows.find((r) => same(species, r.species)) ??
       (rows.length === 1 ? rows[0] : undefined);
     if (match) {
-      const patch: Record<string, unknown> = { id: match.id, last_amount: learned ?? null, last_weeks: it.weeks ?? null, last_quoted_at: now };
+      const patch: TablesUpdate<"cro_catalog"> & { id: string } = { id: match.id, last_amount: learned ?? null, last_weeks: it.weeks ?? null, last_quoted_at: now };
       if (match.source !== "manual") {
         patch.source = "learned";
         if (!match.weeks && it.weeks) patch.weeks = it.weeks;
@@ -179,8 +180,8 @@ export async function learnFromSubmission(
         org_id: orgId, item_key: key, category: def.category, item: def.item,
         available: true, source: "learned",
         species, route, method,
-        groups_ctrl: d.groups_ctrl ?? null, groups_test: d.groups_test ?? null, per_sex: d.per_sex ?? null,
-        recovery_weeks: d.recovery_weeks ?? null, recovery_per_sex: d.recovery_per_sex ?? null, dosing: d.dosing ?? null,
+        groups_ctrl: int(d.groups_ctrl, 20), groups_test: int(d.groups_test, 20), per_sex: int(d.per_sex, 200),
+        recovery_weeks: int(d.recovery_weeks, 52), recovery_per_sex: int(d.recovery_per_sex, 100), dosing: str(d.dosing, 120),
         weeks: it.weeks ?? null, unit: it.unit === "per_sample" ? "per_sample" : "total",
         last_amount: learned ?? null, last_weeks: it.weeks ?? null, last_quoted_at: now, sort: rows.length,
       });
@@ -188,7 +189,7 @@ export async function learnFromSubmission(
   }
   for (const u of updates) {
     const { id, ...patch } = u;
-    const { error } = await sb.from("cro_catalog").update(patch).eq("id", id as string).eq("org_id", orgId);
+    const { error } = await sb.from("cro_catalog").update(patch).eq("id", id).eq("org_id", orgId);
     if (error) console.error("cro_catalog learn update", error);
   }
   if (inserts.length) {

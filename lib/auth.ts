@@ -15,6 +15,8 @@ export type Profile = {
   phone: string | null;
   org_type: string | null;
   cro_org_id: string | null;
+  /** 기존 기관에 담당자로 합류 신청한 상태 (운영자가 연결하기 전) */
+  pending_org_id?: string | null;
 };
 
 export type CroOrg = {
@@ -38,7 +40,7 @@ export type CroOrg = {
   auto_reply?: boolean;
 };
 
-export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null };
+export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null; /** 합류 신청 중인 기관 */ pendingOrg: CroOrg | null };
 
 /** 역할별 홈 */
 export function homeOf(role: Role): string {
@@ -76,11 +78,15 @@ export const getSession = cache(async (): Promise<Session | null> => {
   // (ADMIN_EMAIL 은 알림 메일 수신 주소로만 쓴다. 운영자 지정은 운영자 콘솔이나 SQL 로 한다)
 
   let org: CroOrg | null = null;
+  let pendingOrg: CroOrg | null = null;
   if (profile.cro_org_id) {
     const { data: o } = await admin.from("cro_orgs").select("*").eq("id", profile.cro_org_id).maybeSingle();
     org = (o as CroOrg | null) ?? null;
+  } else if (profile.pending_org_id) {
+    const { data: o } = await admin.from("cro_orgs").select("*").eq("id", profile.pending_org_id).maybeSingle();
+    pendingOrg = (o as CroOrg | null) ?? null;
   }
-  return { userId: user.id, email: user.email, profile: profile as Profile, org };
+  return { userId: user.id, email: user.email, profile: profile as Profile, org, pendingOrg };
 });
 
 /**
