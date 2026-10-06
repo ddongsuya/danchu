@@ -286,7 +286,7 @@ export function CompareBoard({
                           <b className="tnum">
                             {it.amount == null
                               ? "미입력"
-                              : `${comma(it.amount)}원`}
+                              : comma(it.amount)}
                           </b>
                           <p>
                             {it.weeks ? `${it.weeks}주` : "기간 미입력"}
