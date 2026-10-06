@@ -6,7 +6,7 @@ import { ymd } from "@/lib/format";
 
 type M = { id: string; name: string | null; email: string; phone: string | null; created_at: string };
 
-/** 기관 상세 — 담당자 합류 신청을 연결하거나 거절한다 */
+/** 기관 상세 - 담당자 합류 신청을 연결하거나 거절한다 */
 export function JoinRequests({ orgId, members }: { orgId: string; members: M[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
@@ -36,7 +36,7 @@ export function JoinRequests({ orgId, members }: { orgId: string; members: M[] }
       {members.map((m) => (
         <div key={m.id} className="kv" style={{ gap: 10 }}>
           <span>
-            <b style={{ fontWeight: 600 }}>{m.name || "—"}</b>
+            <b style={{ fontWeight: 600 }}>{m.name || "-"}</b>
             <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""} · 신청 {ymd(m.created_at)}</span>
           </span>
           <span style={{ display: "inline-flex", gap: 6, flex: "none" }}>

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Mark } from "@/components/app/ui";
 import "@/components/shell/portal.css";
 
-export const metadata: Metadata = { title: "단추 — 견적 회신", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "단추 · 견적 회신", robots: { index: false, follow: false } };
 
-/** 토큰 링크로 들어온 CRO용 골격 — 로그인 없이, 메뉴 없이 */
+/** 토큰 링크로 들어온 CRO용 골격 - 로그인 없이, 메뉴 없이 */
 export default function TokenLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="pt">

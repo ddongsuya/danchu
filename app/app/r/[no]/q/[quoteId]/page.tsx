@@ -66,11 +66,11 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{it.cond || it.category}</div>
                   </div>
                   <span className="tnum" style={{ fontSize: 15, fontWeight: 700, whiteSpace: "nowrap", color: it.avail === "불가" ? "var(--ph)" : undefined }}>
-                    {it.avail === "불가" ? "불가" : it.amount != null ? comma(it.amount) : "—"}
+                    {it.avail === "불가" ? "불가" : it.amount != null ? comma(it.amount) : "-"}
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span className={`pill ${it.avail === "가능" ? "pill--ok" : it.avail === "조건부 가능" ? "pill--warn" : "pill--sf"}`}>{it.avail || "—"}</span>
+                  <span className={`pill ${it.avail === "가능" ? "pill--ok" : it.avail === "조건부 가능" ? "pill--warn" : "pill--sf"}`}>{it.avail || "-"}</span>
                   {it.weeks ? <span className="pill pill--sf">{it.weeks}주</span> : null}
                   {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{it.reason}</span>}
                 </div>
@@ -104,15 +104,15 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
 
           <div className="card card--rows">
             {[
-              ["GLP 인증", certs.join(" · ") || "—"],
+              ["GLP 인증", certs.join(" · ") || "-"],
               ["제출처 대응", cov.ok ? "대응 가능 ✓" : `등록 정보 확인 필요 · ${cov.missing.join(", ")} 미보유`],
-              ["AAALAC", org?.aaalac == null ? "—" : org.aaalac ? "인증" : "없음"],
+              ["AAALAC", org?.aaalac == null ? "-" : org.aaalac ? "인증" : "없음"],
               ["착수 가능일", md(q.start_date)],
-              ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (병렬 수행 기준)` : "—"],
-              ["결제 조건", q.pay_terms ? `${q.pay_terms} (%)` : "—"],
+              ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (병렬 수행 기준)` : "-"],
+              ["결제 조건", q.pay_terms ? `${q.pay_terms} (%)` : "-"],
               ["견적 유효기간", md(q.valid_until)],
-              ["보고서 언어", q.report_lang || "—"],
-              ["시험물질 필요량", q.substance_qty || "—"],
+              ["보고서 언어", q.report_lang || "-"],
+              ["시험물질 필요량", q.substance_qty || "-"],
             ].map(([k, v]) => (
               <div key={k} className="kv">
                 <span className="kv__k">{k}</span>

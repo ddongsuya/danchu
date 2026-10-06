@@ -6,7 +6,7 @@ export function Mark({ size = 28 }: { size?: number; shadow?: boolean }) {
   return <LogoMark size={size} />;
 }
 
-/** 브랜드 원 안의 체크 — 완료 화면과 옵션 선택에 공통 사용 */
+/** 브랜드 원 안의 체크 - 완료 화면과 옵션 선택에 공통 사용 */
 export function CheckDisc({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
@@ -51,7 +51,7 @@ export function StatusPill({ tone, children }: { tone: "sf" | "tint" | "ok" | "e
 export function Bar({ pct, err = false }: { pct: number; err?: boolean }) {
   return (
     <div className="bar">
-      <i className={err ? "bar--err" : ""} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+      <i className={err ? "bar--err" : ""} style={{ transform: `scaleX(${Math.max(0, Math.min(100, pct)) / 100})` }} />
     </div>
   );
 }

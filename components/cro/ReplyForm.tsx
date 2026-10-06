@@ -20,7 +20,7 @@ const dnum = (d: Design, k: string) => (typeof d[k] === "number" ? String(d[k]) 
 const dstr = (d: Design, k: string) => (typeof d[k] === "string" ? (d[k] as string) : "");
 const dspecies = (d: Design) => (Array.isArray(d.species) ? (d.species as string[]) : []);
 
-/** 항목별 설계 요약 — 접힌 상태에서는 한 줄, 펼치면 칸별 수정 */
+/** 항목별 설계 요약 - 접힌 상태에서는 한 줄, 펼치면 칸별 수정 */
 function DesignEditor({ value, category, disabled, onChange }: { value: Design; category: string; disabled: boolean; onChange: (d: Design) => void }) {
   const [open, setOpen] = useState(false);
   const explain = EXPLAIN_FIELDS[category as Cat] ?? [];
@@ -117,7 +117,7 @@ type Loaded = {
 };
 
 /**
- * 견적 회신 폼 — 항목별 3칸(+사유) · 공통 조건 · 전달 사항 · 견적서 원본(PDF).
+ * 견적 회신 폼 - 항목별 3칸(+사유) · 공통 조건 · 전달 사항 · 견적서 원본(PDF).
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
 export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: string; backHref: string; doneHref: string; orgCerts?: string[] }) {
@@ -250,7 +250,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     : filled < items.length
       ? `항목 ${items.length - filled}개 남음`
       : allNo
-        ? "전 항목 불가 — 견적 참여하지 않기"
+        ? "전 항목 불가 - 견적 참여하지 않기"
         : pending
           ? `확인 필요 ${pending}건 남음`
         : !commonOk
@@ -475,7 +475,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
           <div className="card card--pad stack" style={{ gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {maxW ? `병렬 수행 ${maxW}주` : "기간 미입력"}</span>
-              <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "—"}</span>
+              <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "-"}</span>
             </div>
             {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
             {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">견적 참여하지 않기</Link>}

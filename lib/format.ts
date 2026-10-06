@@ -1,4 +1,4 @@
-/** 표기 헬퍼 — 금액·날짜 */
+/** 표기 헬퍼 - 금액·날짜 */
 
 /** 187000000 → "1억 8,700만 원" */
 export function won(n: number): string {
@@ -14,20 +14,20 @@ export function comma(n: number): string {
 
 /** "2026-10-12" → "10월 12일" */
 export function md(s: string | null | undefined): string {
-  if (!s) return "—";
+  if (!s) return "-";
   const [, m, d] = s.slice(0, 10).split("-");
   return `${+m}월 ${+d}일`;
 }
 /** ISO → "2026.09.08" */
 export function ymd(s: string | null | undefined): string {
-  if (!s) return "—";
+  if (!s) return "-";
   const d = new Date(s);
   if (isNaN(d.getTime())) return s.slice(0, 10);
   return d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).replace(/\. /g, ".").replace(/\.$/, "");
 }
 /** ISO → "9월 8일 14:05" */
 export function mdhm(s: string | null | undefined): string {
-  if (!s) return "—";
+  if (!s) return "-";
   const d = new Date(s);
   if (isNaN(d.getTime())) return s;
   return d.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });

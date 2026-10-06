@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalLayout } from "@/components/LegalLayout";
 
 export const metadata: Metadata = {
-  title: "이용약관 — 단추",
+  title: "이용약관 · 단추",
   description: "단추(Danchu) 견적 중개 서비스의 이용 조건, 회사와 이용자의 권리·의무, 책임의 범위를 정합니다.",
 };
 

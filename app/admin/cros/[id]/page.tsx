@@ -38,7 +38,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
               ["GLP 인증", org.glp_certs.join(" · ")], ["AAALAC", org.aaalac == null ? null : org.aaalac ? "인증" : "없음"], ["기타 인증", org.other_certs],
               ["수행 분야", org.categories.join(" · ")],
             ].map(([k, v]) => (
-              <div key={String(k)} className="kv"><span className="kv__k">{k}</span><span className="kv__v" style={{ fontWeight: 500 }}>{v || "—"}</span></div>
+              <div key={String(k)} className="kv"><span className="kv__k">{k}</span><span className="kv__v" style={{ fontWeight: 500 }}>{v || "-"}</span></div>
             ))}
             {org.intro && <div className="kv" style={{ flexDirection: "column", gap: 4 }}><span className="kv__k">소개</span><span style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{org.intro}</span></div>}
           </div>
@@ -54,7 +54,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
             {members.length === 0 && <p style={{ padding: "8px 0 12px", fontSize: 13, color: "var(--muted)" }}>연결된 계정이 없습니다. 사용자 탭에서 이 기관에 연결할 수 있습니다.</p>}
             {members.map((m) => (
               <div key={m.id} className="kv">
-                <span><b style={{ fontWeight: 600 }}>{m.name || "—"}</b><span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""}</span></span>
+                <span><b style={{ fontWeight: 600 }}>{m.name || "-"}</b><span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""}</span></span>
                 <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{ymd(m.created_at)}</span>
               </div>
             ))}

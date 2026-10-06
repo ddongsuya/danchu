@@ -2,7 +2,7 @@
 .advisor__top .crumb { background:none; border:0; padding:0; margin:0; }
 .advisor__top .tnum { font-size:12px; color:var(--muted); text-align:right; }
 .advisor__progress { height:3px; background:var(--track); border-radius:3px; margin-bottom:24px; overflow:hidden; }
-.advisor__progress > div { height:100%; background:var(--brand); transition:width .2s ease; }
+.advisor__progress > div { height:100%; width:100%; background:var(--brand); transform-origin:left; transition:transform 200ms var(--ease-out); }
 .advisor__answers { display:flex; flex-direction:column; margin-bottom:18px; }
 .advisor__answer { display:flex; justify-content:space-between; align-items:center; gap:16px; border-bottom:1px solid var(--bline); padding:12px 0; }
 .advisor__answer > div { min-width:0; display:flex; flex-direction:column; gap:4px; }

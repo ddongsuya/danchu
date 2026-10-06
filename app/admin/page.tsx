@@ -82,8 +82,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.categories.join(" · ")}{needsCda(r.confidentiality) ? " · CDA" : ""}</div>
                   </td>
                   <td><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status)}</StatusPill></td>
-                  <td className="tnum">{r.invites ? `${r.submitted}/${r.invites}` : "—"}</td>
-                  <td className="tnum">{r.reply_by ? md(r.reply_by) : "—"}</td>
+                  <td className="tnum">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
+                  <td className="tnum">{r.reply_by ? md(r.reply_by) : "-"}</td>
                   <td className="tnum">{ymd(r.created_at)}</td>
                 </tr>
               ))}

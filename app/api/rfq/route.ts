@@ -18,7 +18,7 @@ const MAX_FILES = 10;
 type FileMeta = { name: string; size: number; type: string };
 
 /**
- * POST /api/rfq  (JSON: { payload: Values, files?: FileMeta[] })  — 로그인 필수
+ * POST /api/rfq  (JSON: { payload: Values, files?: FileMeta[] })  - 로그인 필수
  *
  * 1) 세션 확인 + 속도 제한(공유 카운터) + 허니팟 + 1단계 필수 검증
  * 2) Supabase: 채번(next_rfq_no) → rfq_requests insert → 첨부마다 서명 업로드 URL 발급 + rfq_files insert
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
   const year = nowSeoul().getFullYear();
 
-  // 허니팟 — 사람은 볼 수 없는 칸
+  // 허니팟 - 사람은 볼 수 없는 칸
   if (typeof values.website === "string" && values.website.trim()) {
     console.warn("[danchu] honeypot", ip);
     return NextResponse.json({ rfqNo: `DC-${year}-0000`, persisted: false, uploads: [] });
@@ -169,7 +169,7 @@ export async function POST(req: Request) {
   } else {
     // 환경변수 미설정: 임시 번호 발급 (9000번대) + 로그
     rfqNo = `DC-${year}-9${String(Date.now() % 1000).padStart(3, "0")}`;
-    console.warn("[danchu] SUPABASE 미설정 — 임시 접수", rfqNo, JSON.stringify(values));
+    console.warn("[danchu] SUPABASE 미설정 - 임시 접수", rfqNo, JSON.stringify(values));
   }
 
   return NextResponse.json({ rfqNo, persisted, uploads });

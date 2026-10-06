@@ -17,11 +17,11 @@ export function UserRow({ user, orgs, self }: { user: U; orgs: { id: string; nam
   return (
     <tr>
       <td>
-        <div style={{ fontWeight: 600 }}>{user.name || "—"}{self && <span className="pill pill--tint" style={{ marginLeft: 6 }}>나</span>}</div>
+        <div style={{ fontWeight: 600 }}>{user.name || "-"}{self && <span className="pill pill--tint" style={{ marginLeft: 6 }}>나</span>}</div>
         <div style={{ fontSize: 12, color: "var(--muted)" }}>{user.email}</div>
         {pendingName && <div style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600 }}>합류 신청: {pendingName}</div>}
       </td>
-      <td style={{ fontSize: 13 }}>{user.company || "—"}</td>
+      <td style={{ fontSize: 13 }}>{user.company || "-"}</td>
       <td>
         <select className="sel" style={{ height: 36, fontSize: 13, width: 120 }} value={role} disabled={self} onChange={(e) => setRole(e.target.value)}>
           <option value="requester">의뢰자</option>
@@ -31,7 +31,7 @@ export function UserRow({ user, orgs, self }: { user: U; orgs: { id: string; nam
       </td>
       <td>
         <select className="sel" style={{ height: 36, fontSize: 13, minWidth: 160 }} value={org} onChange={(e) => setOrg(e.target.value)} disabled={role !== "cro"}>
-          <option value="">— 없음 —</option>
+          <option value="">없음</option>
           {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </td>

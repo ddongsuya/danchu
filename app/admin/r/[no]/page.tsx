@@ -35,7 +35,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
         <div>
           <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{rfq.rfq_no} · 접수 {ymd(rfq.created_at)}</span>
           <h1>{rfq.substance} · {rfq.company}</h1>
-          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "—"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "—"}</p>
+          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "-"}</p>
           <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status)}</StatusPill>
             {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
@@ -89,8 +89,8 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                             <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{INVITE_LABEL[i.status] ?? i.status}</span>
                             {i.decline_reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{i.decline_reason}</div>}
                           </td>
-                          <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "—"}</td>
-                          <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "—"}주` : "—"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
+                          <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
+                          <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
                           <td><a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}>회신 링크</a></td>
                         </tr>
                       );
@@ -118,7 +118,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
         <div className="stack" style={{ gap: 16 }}>
           <div className="card card--rows">
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>의뢰자</div>
-            {[["회사", rfq.company], ["담당자", `${rfq.contact_name}${p.dept ? ` · ${p.dept}` : ""}`], ["이메일", rfq.email], ["전화", rfq.phone ?? "—"], ["기관 유형", rfq.org_type ?? "—"], ["계정", rfq.user_id ? "연결됨" : "미가입"]].map(([k, v]) => (
+            {[["회사", rfq.company], ["담당자", `${rfq.contact_name}${p.dept ? ` · ${p.dept}` : ""}`], ["이메일", rfq.email], ["전화", rfq.phone ?? "-"], ["기관 유형", rfq.org_type ?? "-"], ["계정", rfq.user_id ? "연결됨" : "미가입"]].map(([k, v]) => (
               <div key={k} className="kv"><span className="kv__k">{k}</span><span className="kv__v">{v}</span></div>
             ))}
           </div>

@@ -21,7 +21,7 @@ describe("won — 금액 한글 표기", () => {
 describe("md / dday", () => {
   it("YYYY-MM-DD → M월 D일", () => {
     expect(md("2026-10-05")).toBe("10월 5일");
-    expect(md(null)).toBe("—");
+    expect(md(null)).toBe("-");
   });
   it("지난 날짜는 '기한 지남'", () => {
     expect(dday("2000-01-01").label).toBe("기한 지남");

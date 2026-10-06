@@ -44,7 +44,7 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
         croName={q.cro_name}
         summary={[
           ["총 견적액", won(q.total_amount ?? 0)],
-          ["착수 · 기간", `${md(q.start_date)} · ${q.total_weeks ? `${q.total_weeks}주` : "—"}`],
+          ["착수 · 기간", `${md(q.start_date)} · ${q.total_weeks ? `${q.total_weeks}주` : "-"}`],
           ["유효기간", md(q.valid_until)],
         ]}
         others={others.map((o) => ({ name: o.cro_name, total: won(o.total_amount ?? 0) }))}

@@ -14,7 +14,7 @@ export function esc(s: string) {
 export async function sendMail(m: { to: string | string[]; subject: string; html: string; replyTo?: string }): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    console.warn("[danchu] RESEND 미설정 — 메일 미발송:", m.subject, m.to);
+    console.warn("[danchu] RESEND 미설정 - 메일 미발송:", m.subject, m.to);
     return false;
   }
   const resend = new Resend(key);
@@ -26,7 +26,7 @@ export async function sendMail(m: { to: string | string[]; subject: string; html
 const BTN = (href: string, label: string) =>
   `<a href="${esc(href)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">${esc(label)}</a>`;
 
-/** 인증 메일 — 가입 확인·로그인 링크·비밀번호 재설정 */
+/** 인증 메일 - 가입 확인·로그인 링크·비밀번호 재설정 */
 export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: string, link: string): Promise<boolean> {
   const t = {
     signup: { subject: "[단추] 이메일 확인으로 가입을 완료하세요", h: "가입을 완료하세요", p: "아래 버튼을 누르면 이메일이 확인되고 바로 로그인됩니다. 링크는 1시간 동안 유효합니다.", b: "이메일 확인하고 시작" },
@@ -117,7 +117,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     const r = await resend.emails.send({
       from: FROM,
       to,
-      subject: `[단추] 견적 요청 접수 — ${rfqNo}`,
+      subject: `[단추] 견적 요청 접수 - ${rfqNo}`,
       html: requesterHtml,
     });
     results.requester = !r.error;
@@ -128,7 +128,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
       from: FROM,
       to: ADMIN,
       replyTo: to || undefined,
-      subject: `[단추] 새 RFQ ${rfqNo} — ${company} (${cats})`,
+      subject: `[단추] 새 RFQ ${rfqNo} - ${company} (${cats})`,
       html: adminHtml,
     });
     results.admin = !r.error;

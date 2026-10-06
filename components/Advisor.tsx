@@ -181,7 +181,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
               {sec("나중 단계에 필요한 시험", "지금 요청서에는 넣지 않았습니다.")}
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--body)" }}>
                 {advice.later.map((l) => (
-                  <li key={l.label}><b style={{ color: "var(--ink)", fontWeight: 600 }}>{l.label}</b> — {l.when}<span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>근거 · {l.basis}</span></li>
+                  <li key={l.label}><b style={{ color: "var(--ink)", fontWeight: 600 }}>{l.label}</b>: {l.when}<span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>근거 · {l.basis}</span></li>
                 ))}
               </ul>
             </section>
@@ -211,7 +211,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
       <button type="button" className="crumb" onClick={onManual}><Caret size={14} /> 직접 고르기</button>
       <span className="tnum">{STEP_TITLES[current.step - 1]} · {index + 1} / {qs.length}</span>
     </div>
-    <div className="advisor__progress" aria-hidden="true"><div style={{ width: `${done.filter((id) => qs.some((q) => q.id === id)).length / qs.length * 100}%` }} /></div>
+    <div className="advisor__progress" aria-hidden="true"><div style={{ transform: `scaleX(${done.filter((id) => qs.some((q) => q.id === id)).length / qs.length})` }} /></div>
     <div className="ph"><div><h1>필요한 시험 찾기</h1><p>한 질문씩 답해 주세요. 이전 답변은 언제든 수정할 수 있습니다.</p></div></div>
     {summary(previous)}
     <section key={current.id} className="dcard advisor__question" role="group" aria-labelledby="advisor-question">

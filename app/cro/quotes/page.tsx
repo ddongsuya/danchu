@@ -56,7 +56,7 @@ export default async function CroQuotes() {
                       <div className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{i.rfq_no} · {(i.rfq?.categories ?? []).join(" · ")}</div>
                     </td>
                     <td className="tnum" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
-                    <td className="tnum">{q.total_weeks ? `${q.total_weeks}주` : "—"}</td>
+                    <td className="tnum">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
                     <td className="tnum">{ymd(q.submitted_at)}</td>
                     <td className="tnum">{i.reply_by}{dd.n >= 0 ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>{dd.label}</span> : null}</td>
                     <td><span className="pill pill--tint">{result}</span></td>
