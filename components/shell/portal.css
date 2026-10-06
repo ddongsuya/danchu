@@ -186,7 +186,7 @@
 .tag { font-size: 12px; padding: 3px 9px; border-radius: var(--r-pill); background: var(--sf); color: var(--body); border: 1px solid var(--cline); }
 
 .bar { flex: 1; height: 4px; background: var(--track); border-radius: var(--r-sm); overflow: hidden; }
-.bar > i { display: block; height: 4px; background: var(--brand); border-radius: var(--r-sm); transition: width .3s ease; }
+.bar > i { display: block; height: 4px; width: 100%; background: var(--brand); border-radius: var(--r-sm); transform-origin: left; transition: transform 240ms var(--ease-out); }
 .bar > i.bar--err { background: var(--err); }
 
 .seg { display: inline-flex; border: 1px solid var(--iline); border-radius: var(--r-md); overflow: hidden; height: 38px; background: var(--wh); }

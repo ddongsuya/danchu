@@ -16,7 +16,7 @@ export type Loaded = {
   croName: string;
   croOrgId: string | null;
   token: string;
-  /** 링크 만료 (expires_at 경과) — 열람만 가능, 저장·제출 불가 */
+  /** 링크 만료 (expires_at 경과) - 열람만 가능, 저장·제출 불가 */
   expired: boolean;
   /** 제출 후 회신 기한(reply_by, 서울 자정)이 지나 수정 불가 */
   locked: boolean;
@@ -52,13 +52,13 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
   const dd = ddayOf(inv.reply_by);
 
   const overview: [string, string][] = [
-    ["의뢰 목적", s("purpose") || "—"],
-    ["개발 분야", s("devField") || "—"],
-    ["제출처", a("authority").join(" · ") || "—"],
+    ["의뢰 목적", s("purpose") || "-"],
+    ["개발 분야", s("devField") || "-"],
+    ["제출처", a("authority").join(" · ") || "-"],
     ["기밀 등급", r.confidentiality || "일반"],
-    ["희망 착수", s("start") || "—"],
+    ["희망 착수", s("start") || "-"],
     ["회신 기한", `${inv.reply_by} (${dd.label.replace("회신 ", "")})`],
-    ["CRO 수", r.cro_count || "—"],
+    ["CRO 수", r.cro_count || "-"],
   ];
   const common: [string, string][] = (
     [
@@ -81,7 +81,7 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
       ["다지점시험", s("multisite")],
       ["추가 내용", s("notes")],
     ] as [string, string][]
-  ).filter(([, v]) => v && v !== "—");
+  ).filter(([, v]) => v && v !== "-");
 
   return {
     no: r.rfq_no,

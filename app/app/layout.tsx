@@ -5,7 +5,7 @@ import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
 
 export const metadata: Metadata = {
-  title: "단추 — 내 견적 요청",
+  title: "단추 · 내 견적 요청",
   description: "비임상 시험 견적을 요청하고 도착한 견적을 비교합니다.",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추" },
   robots: { index: false, follow: false },

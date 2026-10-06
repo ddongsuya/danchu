@@ -29,8 +29,8 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.contact_name} · {o.contact_email}</div>
               </td>
               <td><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
-              <td style={{ fontSize: 12 }}>{o.glp_certs.join(" · ") || "—"}</td>
-              <td style={{ fontSize: 12 }}>{o.categories.join(" · ") || "—"}</td>
+              <td style={{ fontSize: 12 }}>{o.glp_certs.join(" · ") || "-"}</td>
+              <td style={{ fontSize: 12 }}>{o.categories.join(" · ") || "-"}</td>
               <td className="tnum">{o.members}</td>
               <td className="tnum">{ymd(o.created_at)}</td>
               <td style={{ whiteSpace: "nowrap" }}>

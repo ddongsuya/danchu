@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalLayout, LegalTable } from "@/components/LegalLayout";
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 — 단추",
+  title: "개인정보처리방침 · 단추",
   description: "단추(Danchu)가 수집하는 개인정보 항목, 이용 목적, 참여 CRO 제공, 보유기간, 정보주체의 권리를 안내합니다.",
 };
 

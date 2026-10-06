@@ -51,7 +51,7 @@ export default async function CroOrgPage() {
             {members.map((m) => (
               <div key={m.id} className="kv">
                 <span>
-                  <b style={{ fontWeight: 600 }}>{m.name || "—"}</b>
+                  <b style={{ fontWeight: 600 }}>{m.name || "-"}</b>
                   <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""}</span>
                 </span>
                 <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{ymd(m.created_at)}</span>
