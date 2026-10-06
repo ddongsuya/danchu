@@ -1,42 +1,88 @@
 "use client";
-
+import { useEffect, useState } from "react";
 import { useApp } from "@/components/app/AppState";
-
-function Toggle({ on, onFlip, label }: { on: boolean; onFlip: () => void; label: string }) {
-  return (
-    <button type="button" className="tgl" aria-pressed={on} aria-label={label} onClick={onFlip}>
-      <span />
-    </button>
-  );
-}
-
-/** 화면 설정 — 값은 이 기기에만 저장된다 */
 export function ThemeSettings() {
-  const { dark, theme, toggleDark, push, mail, setFlag } = useApp();
+  const { theme, setTheme } = useApp();
+  const [mail, setMail] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const load = async () => {
+    try {
+      const r = await fetch("/api/settings");
+      if (!r.ok) throw new Error("알림 설정을 불러오지 못했습니다.");
+      const d = await r.json();
+      setMail(d.email);
+      setMessage("");
+    } catch {
+      setMessage("알림 설정을 불러오지 못했습니다.");
+    }
+  };
+  useEffect(() => {
+    void load();
+  }, []);
+  const update = async () => {
+    if (mail === null || busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: !mail }),
+      });
+      if (!r.ok) throw new Error();
+      setMail(!mail);
+      setMessage("알림 설정을 저장했습니다.");
+    } catch {
+      setMessage("저장하지 못했습니다. 다시 눌러 시도해 주세요.");
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
-    <div className="card card--rows">
-      <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>설정</div>
-      <div className="kv" style={{ alignItems: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span>다크 모드</span>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>{theme === "system" ? `기기 설정을 따름 · 지금 ${dark ? "어두움" : "밝음"}` : dark ? "항상 어둡게" : "항상 밝게"}</span>
+    <section className="card card--pad stack" aria-label="화면과 알림 설정">
+      <h2 style={{ fontSize: 16 }}>화면과 알림</h2>
+      <label className="fld">
+        <span className="fld__lab">화면 테마</span>
+        <select
+          className="sel"
+          value={theme}
+          onChange={(e) => setTheme(e.target.value as typeof theme)}
+        >
+          <option value="system">기기 설정 따르기</option>
+          <option value="light">밝게</option>
+          <option value="dark">어둡게</option>
+        </select>
+      </label>
+      <div className="kv">
+        <div>
+          <b>진행 상황 이메일</b>
+          <p className="fld__help">
+            견적 도착과 진행 상황을 메일로 받습니다. 앱 안의 알림, 접수 확인,
+            로그인 메일은 계속 받을 수 있습니다.
+          </p>
         </div>
-        <Toggle on={dark} onFlip={toggleDark} label="다크 모드" />
+        <button
+          type="button"
+          className="tgl"
+          aria-label="진행 상황 이메일"
+          aria-pressed={mail ?? false}
+          disabled={mail === null || busy}
+          onClick={update}
+        >
+          <span />
+        </button>
       </div>
-      <div className="kv" style={{ alignItems: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span>이메일 알림</span>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>견적 도착 · 비교표 · 계약 진행</span>
-        </div>
-        <Toggle on={mail} onFlip={() => setFlag("mail", !mail)} label="이메일 알림" />
-      </div>
-      <div className="kv" style={{ alignItems: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span>푸시 알림</span>
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>앱 설치 후 사용할 수 있습니다</span>
-        </div>
-        <Toggle on={push} onFlip={() => setFlag("push", !push)} label="푸시 알림" />
-      </div>
-    </div>
+      {mail === null && (
+        <button className="b2" onClick={load}>
+          알림 설정 다시 불러오기
+        </button>
+      )}
+      {message && (
+        <p role="status" className="fld__help">
+          {message}
+        </p>
+      )}
+    </section>
   );
 }

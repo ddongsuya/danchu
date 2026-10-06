@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Caret } from "@/components/app/ui";
 import { ADVISOR_DISCLAIMER, advise, toRequestValues, visibleQuestions, type Answers, type Question } from "@/lib/advisor";
 import type { Values } from "@/lib/rfq-schema";
+import "./advisor.css";
 
 const STEP_TITLES = ["무엇을, 어느 단계에", "임상 계획", "이미 가진 자료"];
 
@@ -14,33 +15,62 @@ const answered = (a: Answers, q: Question) => {
 
 /**
  * 상황을 묻고 시험 구성을 제안한다.
- * 질문 3단계 → 제안 화면. 제안은 미리 체크된 선택일 뿐이며 의뢰자가 빼거나 더한다.
+ * 한 질문씩 답변 → 제안 화면. 이전 답변은 접어두고 수정할 수 있다.
  */
 export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; onManual: () => void }) {
   const [a, setA] = useState<Answers>({});
   const [step, setStep] = useState(1);
+  const [activeId, setActiveId] = useState("product");
+  const [done, setDone] = useState<string[]>([]);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const mounted = useRef(false);
   const [off, setOff] = useState<Set<string>>(new Set());
   const [on, setOn] = useState<Set<string>>(new Set());
 
-  const qs = visibleQuestions(a);
+  const qs = visibleQuestions(a).sort((x, y) => x.step - y.step);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    heading.current?.focus({ preventScroll: true });
+    heading.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [activeId, step]);
   const advice = useMemo(() => (step === 4 ? advise(a) : null), [step, a]);
 
+  const ordered = (answers: Answers) => visibleQuestions(answers).sort((x, y) => x.step - y.step);
+  const clean = (answers: Answers) => {
+    const next = { ...answers };
+    // Remove answers whose conditions no longer apply, including dependent branches.
+    let removed = true;
+    while (removed) {
+      removed = false;
+      const visible = new Set(ordered(next).map((q) => q.id));
+      for (const id of Object.keys(next)) if (!visible.has(id)) { delete next[id]; removed = true; }
+    }
+    return next;
+  };
+  const advance = (answers: Answers, id: string) => {
+    const visible = ordered(answers);
+    const completed = [...new Set([...done, id])].filter((key) => visible.some((q) => q.id === key));
+    setDone(completed);
+    const next = visible.find((q) => !completed.includes(q.id));
+    if (next) { setActiveId(next.id); setStep(1); }
+    else setStep(4);
+  };
   const pick = (q: Question, o: string) => {
-    if (!q.multi) return setA({ ...a, [q.id]: o });
     const cur = Array.isArray(a[q.id]) ? (a[q.id] as string[]) : [];
-    // "없음"은 다른 선택과 함께 둘 수 없다
-    const next = o === "없음" ? (cur.includes(o) ? [] : [o]) : cur.includes(o) ? cur.filter((x) => x !== o) : [...cur.filter((x) => x !== "없음"), o];
-    setA({ ...a, [q.id]: next });
+    const value = !q.multi ? o : o === "없음" ? (cur.includes(o) ? [] : [o]) : cur.includes(o) ? cur.filter((x) => x !== o) : [...cur.filter((x) => x !== "없음"), o];
+    const next = clean({ ...a, [q.id]: value });
+    setA(next);
+    setOff(new Set()); setOn(new Set());
+    if (!q.multi) advance(next, q.id);
   };
-  /** 질문이 없는 단계는 건너뛴다 (제품 유형에 따라 단계가 비는 경우) */
-  const move = (n: number) => {
-    const dir = n >= step ? 1 : -1;
-    let to = n;
-    while (to >= 1 && to <= 3 && !qs.some((q) => q.step === to)) to += dir;
-    if (to < 1) to = 1;
-    setStep(to);
-    window.scrollTo(0, 0);
-  };
+  const edit = (id: string) => { setActiveId(id); setStep(1); };
+  const move = (_n: number) => edit(qs[0].id);
+  const summary = (questions: Question[]) => <div className="advisor__answers" aria-label="이전 답변">
+    {questions.map((q) => <div className="advisor__answer" key={q.id}>
+      <div><span>{q.q}</span><b>{Array.isArray(a[q.id]) ? (a[q.id] as string[]).join(" · ") : a[q.id] || "건너뜀"}</b></div>
+      <button className="btxt" type="button" onClick={() => edit(q.id)} aria-label={`${q.q} 수정`}>수정</button>
+    </div>)}
+  </div>;
 
   /* ── 제안 화면 ── */
   if (step === 4 && advice) {
@@ -73,11 +103,12 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
         <div className="ph">
           <div>
             <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>제안</p>
-            <h1 style={{ textWrap: "balance" }}>답하신 상황에 필요한 시험입니다</h1>
+            <h1 ref={heading} tabIndex={-1} style={{ textWrap: "balance", scrollMarginTop: 24 }}>답하신 상황에 필요한 시험입니다</h1>
             <p>가이드라인 근거와 함께 보여드립니다. 체크를 풀어 빼거나, 다음 단계에서 더할 수 있습니다.</p>
           </div>
         </div>
 
+        <details className="advisor__review"><summary>답변 확인 · 수정</summary>{summary(qs)}</details>
         <div className="stack" style={{ gap: 14 }}>
           <section className="dcard">
             {sec(`필요한 시험 ${selected.size}`, "체크된 항목이 요청서에 들어갑니다.")}
@@ -169,51 +200,33 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
     );
   }
 
-  /* ── 질문 ── */
-  const cur = qs.filter((q) => q.step === step);
-  const ok = cur.every((q) => !q.required || answered(a, q));
-  return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0, margin: 0 }} onClick={() => (step === 1 ? onManual() : move(step - 1))}>
-          <Caret size={14} /> {step === 1 ? "직접 고르기" : "이전"}
-        </button>
-        <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{step} / 3</span>
-      </div>
-      <div style={{ height: 3, background: "var(--track)", borderRadius: 2, marginBottom: 20 }}>
-        <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, width: `${((step - 1) / 3) * 100}%`, transition: "width .3s ease" }} />
-      </div>
-      <div className="ph" style={{ marginBottom: 16 }}>
-        <div>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>상황 확인</p>
-          <h1>{STEP_TITLES[step - 1]}</h1>
-          <p>모르는 것은 미정으로 두세요. 답에 따라 필요한 시험을 근거와 함께 제안합니다.</p>
-        </div>
-      </div>
-
-      <div key={step} className="rise-in stack" style={{ gap: 14 }}>
-        {cur.map((q) => {
-          const v = a[q.id];
-          const sel = (o: string) => (Array.isArray(v) ? v.includes(o) : v === o);
-          return (
-            <section key={q.id} className="dcard" role="group" aria-label={q.q}>
-              <div>
-                <h2 style={{ fontSize: 15.5 }}>{q.q}{!q.required && <span style={{ fontWeight: 400, color: "var(--muted)", fontSize: 13 }}> (선택)</span>}</h2>
-                {q.sub && <p className="dcard__desc">{q.sub}</p>}
-              </div>
-              <div className="chips">
-                {q.options.map((o) => (
-                  <button key={o} type="button" className="chip" aria-pressed={sel(o)} onClick={() => pick(q, o)}>{o}</button>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-
-      <div className="cta">
-        <button type="button" className="b1 blg bfull" disabled={!ok} onClick={() => move(step + 1)}>{step === 3 ? "제안 보기" : "다음"}</button>
-      </div>
+  /* One current question; completed answers remain compact and editable. */
+  const current = qs.find((q) => q.id === activeId) ?? qs.find((q) => !done.includes(q.id)) ?? qs[0];
+  const index = qs.findIndex((q) => q.id === current.id);
+  const previous = qs.filter((q) => done.includes(q.id) && q.id !== current.id);
+  const value = a[current.id];
+  const selected = (o: string) => Array.isArray(value) ? value.includes(o) : value === o;
+  return <div className="advisor" style={{ maxWidth: 640, margin: "0 auto" }}>
+    <div className="advisor__top">
+      <button type="button" className="crumb" onClick={onManual}><Caret size={14} /> 직접 고르기</button>
+      <span className="tnum">{STEP_TITLES[current.step - 1]} · {index + 1} / {qs.length}</span>
     </div>
-  );
+    <div className="advisor__progress" aria-hidden="true"><div style={{ width: `${done.filter((id) => qs.some((q) => q.id === id)).length / qs.length * 100}%` }} /></div>
+    <div className="ph"><div><h1>필요한 시험 찾기</h1><p>한 질문씩 답해 주세요. 이전 답변은 언제든 수정할 수 있습니다.</p></div></div>
+    {summary(previous)}
+    <section key={current.id} className="dcard advisor__question" role="group" aria-labelledby="advisor-question">
+      <div>
+        <p className="advisor__eyebrow">{current.multi ? "복수 선택" : "하나 선택"}{!current.required && " · 선택 질문"}</p>
+        <h2 id="advisor-question" ref={heading} tabIndex={-1}>{current.q}</h2>
+        {current.sub && <p className="dcard__desc">{current.sub}</p>}
+      </div>
+      <div className="chips">{current.options.map((o) => <button key={o} type="button" className="chip" aria-pressed={selected(o)} onClick={() => pick(current, o)}>{o}</button>)}</div>
+      {(current.multi || !current.required) && <div className="advisor__actions">
+        {!current.required && <button className="b2" type="button" onClick={() => { const next = clean({ ...a, [current.id]: undefined }); setA(next); setOff(new Set()); setOn(new Set()); advance(next, current.id); }}>건너뛰기</button>}
+        {current.multi && <button className="b1" type="button" disabled={current.required && !answered(a, current)} onClick={() => advance(a, current.id)}>다음</button>}
+      </div>}
+    </section>
+    {index > 0 && <button type="button" className="btxt advisor__back" onClick={() => edit(qs[index - 1].id)}><Caret size={14} /> 이전 질문</button>}
+    <p className="advisor__hint">{current.multi ? "여러 답을 고른 뒤 ‘다음’을 눌러 주세요." : "답을 선택하면 다음 질문으로 이동합니다."}</p>
+  </div>;
 }

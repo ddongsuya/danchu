@@ -8,6 +8,7 @@ export default async function NewRequestPage() {
   const p = s.profile;
   return (
     <NewRequest
+      userId={s.userId}
       contact={{
         company: p.company ?? "",
         name: p.name ?? "",

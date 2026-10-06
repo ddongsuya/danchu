@@ -21,7 +21,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
         <Crumb href={`/app/r/${rfq.rfq_no}`} label={rfq.rfq_no} />
         <div className="empty">
           <b>비교표가 아직 공개되지 않았습니다</b>
-          회신 기한이 지나면 단추가 회신 내용을 검수한 뒤 공개합니다. 공개되면 알림과 이메일로 알려 드립니다.
+          회신 기한이 지난 뒤 도착한 견적을 비교할 수 있습니다. 공개되면 앱 안의 알림으로 알려 드립니다.
         </div>
       </>
     );
@@ -54,7 +54,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: i.design && typeof i.design.note === "string" ? i.design.note : undefined, explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · ") || undefined, explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,

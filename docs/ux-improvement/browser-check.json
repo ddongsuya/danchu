@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "name": "request-studies",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "request-privacy",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "request-summary",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "compare",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "reply",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "signup",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "login",
+      "width": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "name": "request-studies",
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "name": "request-privacy",
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "name": "request-summary",
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "name": "compare",
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "name": "reply",
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "name": "signup",
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "name": "login",
+      "width": 390,
+      "scrollWidth": 390
+    }
+  ],
+  "checks": [
+    {
+      "width": 1440,
+      "draftRestore": true,
+      "fileReselect": true,
+      "summaryEditReturn": true
+    },
+    {
+      "width": 1440,
+      "reviewCheckRetained": true,
+      "autosaveRetry": true,
+      "declineLink": true
+    },
+    {
+      "width": 390,
+      "draftRestore": true,
+      "fileReselect": true,
+      "summaryEditReturn": true
+    },
+    {
+      "width": 390,
+      "reviewCheckRetained": true,
+      "autosaveRetry": true,
+      "declineLink": true
+    }
+  ],
+  "errors": [],
+  "writes": [
+    {
+      "width": 1440,
+      "method": "PUT",
+      "mocked": true
+    },
+    {
+      "width": 1440,
+      "method": "PUT",
+      "mocked": true
+    },
+    {
+      "width": 390,
+      "method": "PUT",
+      "mocked": true
+    },
+    {
+      "width": 390,
+      "method": "PUT",
+      "mocked": true
+    }
+  ],
+  "cleanup": "browser closed, server SIGTERM"
+}

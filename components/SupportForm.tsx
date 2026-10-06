@@ -5,8 +5,8 @@ import { Caret, CheckDisc } from "@/components/app/ui";
 
 const TYPES = ["견적 문의", "일정", "CDA·기밀", "계약", "계정", "기타"];
 
-export function SupportForm({ email: initialEmail, requests }: { email: string; requests: { no: string; substance: string }[] }) {
-  const [rfq, setRfq] = useState("");
+export function SupportForm({ email: initialEmail, requests, initialRfq }: { email: string; initialRfq?: string; requests: { no: string; substance: string }[] }) {
+  const [rfq, setRfq] = useState(requests.some((r) => r.no === initialRfq) ? initialRfq! : "");
   const [type, setType] = useState("견적 문의");
   const [text, setText] = useState("");
   const [email, setEmail] = useState(initialEmail);
@@ -35,7 +35,7 @@ export function SupportForm({ email: initialEmail, requests }: { email: string; 
       <div className="card rise-in" style={{ padding: "36px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
         <CheckDisc size={56} />
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>문의를 보냈습니다</h2>
-        <p style={{ fontSize: 15, color: "var(--body)" }}>영업일 1일 내 {email}로 답변합니다.</p>
+        <p style={{ fontSize: 15, color: "var(--body)" }}>내용을 확인한 뒤 {email}로 답변하겠습니다.</p>
         <button type="button" className="btxt" onClick={() => { setSent(false); setText(""); }}>새 문의 작성</button>
       </div>
     );

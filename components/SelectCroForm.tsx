@@ -41,7 +41,7 @@ export function SelectCroForm({
       <div className="card rise-in" style={{ padding: "36px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
         <CheckDisc size={64} />
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>{croName}을 선택했습니다</h2>
-        <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 360 }}>CRO 담당자가 영업일 1일 내 연락합니다. 계약 진행 상태는 요청 상세에서 확인할 수 있어요.</p>
+        <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 360 }}>선택한 기관에 연락처를 전달했습니다. 기관과 직접 계약을 진행하고 요청 상세에서 진행 상황을 확인하세요.</p>
         <Link href={`/app/r/${no}`} className="b1" style={{ marginTop: 8 }}>진행 상태 보기</Link>
       </div>
     );
@@ -82,7 +82,7 @@ export function SelectCroForm({
         <span className="chkcard__box">
           <CheckMark />
         </span>
-        <span>정본 PDF 견적서를 확인했고, 선택한 CRO에 회사명과 담당자 연락처가 공개되는 것에 동의합니다.</span>
+        <span>견적서 원본(PDF) 견적서를 확인했고, 선택한 CRO에 회사명과 담당자 연락처가 공개되는 것에 동의합니다.</span>
       </button>
 
       {error && <p className="note note--err" role="alert">{error}</p>}

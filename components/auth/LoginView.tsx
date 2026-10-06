@@ -23,7 +23,7 @@ function Login() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "";
-  const [mode, setMode] = useState<"password" | "magic">("password");
+  const [mode, setMode] = useState<"password" | "magic">("magic");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);

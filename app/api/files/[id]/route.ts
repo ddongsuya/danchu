@@ -1,3 +1,4 @@
+import { confidentialAccess } from "@/lib/request-policy";
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -29,14 +30,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (s) {
     if (s.profile.role === "admin") allowed = true;
     else if (rfq.user_id === s.userId || rfq.email.toLowerCase() === s.email.toLowerCase()) allowed = true;
-    else if (s.profile.role === "cro" && s.profile.cro_org_id && !(rfq.confidentiality || "").startsWith("CDA")) {
-      const { data: inv } = await sb.from("rfq_invites").select("id").eq("rfq_id", rfq.id).eq("cro_org_id", s.profile.cro_org_id).maybeSingle();
-      allowed = !!inv;
+    else if (s.profile.role === "cro" && s.profile.cro_org_id) {
+      const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status").eq("rfq_id", rfq.id).eq("cro_org_id", s.profile.cro_org_id).maybeSingle();
+      allowed = !!inv && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
     }
   }
-  if (!allowed && token && !(rfq.confidentiality || "").startsWith("CDA")) {
-    const { data: inv } = await sb.from("rfq_invites").select("id").eq("rfq_id", rfq.id).eq("token", token).maybeSingle();
-    allowed = !!inv;
+  if (!allowed && token) {
+    const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status").eq("rfq_id", rfq.id).eq("token", token).maybeSingle();
+    allowed = !!inv && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
   }
   if (!allowed) return NextResponse.json({ error: "열람 권한이 없습니다." }, { status: 403 });
 

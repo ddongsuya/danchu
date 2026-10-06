@@ -20,7 +20,15 @@ export type CompareCol = {
   glp: string[];
   unavailable: string[];
   conditional: number;
-  items: { seq: number; avail: string; amount: number | null; weeks: number | null; design?: string; note?: string; explain?: [string, string][] }[];
+  items: {
+    seq: number;
+    avail: string;
+    amount: number | null;
+    weeks: number | null;
+    design?: string;
+    note?: string;
+    explain?: [string, string][];
+  }[];
   hasPdf: boolean;
   selected: boolean;
   /** 카탈로그 기준 자동 제출된 예비 견적 */
@@ -28,188 +36,273 @@ export type CompareCol = {
 };
 export type CompareRowDef = { seq: number; name: string; category: string };
 
-type SortKey = "total" | "weeks" | "start";
+type SortKey = "default" | "total" | "weeks" | "start";
 const SORTS: [SortKey, string][] = [
-  ["total", "총액"],
-  ["weeks", "기간"],
-  ["start", "착수일"],
+  ["default", "기본 순서"],
+  ["total", "금액 낮은 순"],
+  ["weeks", "기간 짧은 순"],
+  ["start", "착수 빠른 순"],
 ];
 
-/**
- * 비교표 — 열 = CRO. 1) 요약 행 2) 항목별 금액.
- * 넓은 화면은 표, 좁은 화면은 가로 스크롤 카드.
- */
-export function CompareBoard({ no, cols, rows, canSelect }: { no: string; cols: CompareCol[]; rows: CompareRowDef[]; canSelect: boolean }) {
-  const [sortBy, setSortBy] = useState<SortKey>("total");
+export function CompareBoard({
+  no,
+  cols,
+  rows,
+  canSelect,
+}: {
+  no: string;
+  cols: CompareCol[];
+  rows: CompareRowDef[];
+  canSelect: boolean;
+}) {
+  const [sortBy, setSortBy] = useState<SortKey>("default");
+  const [shown, setShown] = useState(cols.map((c) => c.id));
   const sorted = useMemo(
     () =>
-      [...cols].sort((a, b) =>
-        sortBy === "total" ? a.total - b.total : sortBy === "weeks" ? a.weeks - b.weeks : (a.start ?? "9999").localeCompare(b.start ?? "9999"),
-      ),
-    [cols, sortBy],
-  );
-  const min = Math.min(...cols.map((c) => c.total).filter((t) => t > 0));
-  const minByRow = new Map<number, number>();
-  for (const r of rows) {
-    const vals = cols.map((c) => c.items.find((i) => i.seq === r.seq)?.amount ?? null).filter((v): v is number => v != null && v > 0);
-    if (vals.length) minByRow.set(r.seq, Math.min(...vals));
-  }
-
-  const summaryRows: { label: string; render: (c: CompareCol) => React.ReactNode }[] = [
-    {
-      label: "총액",
-      render: (c) => (
-        <div>
-          <div className="tnum" style={{ fontSize: 18, fontWeight: 700 }}>{won(c.total)}</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: c.total === min ? "var(--ok)" : "var(--muted)" }}>{c.total === min ? "최저가" : `최저가 대비 +${won(c.total - min)}`}</div>
-        </div>
-      ),
-    },
-    {
-      label: "수행 범위",
-      render: (c) =>
-        c.unavailable.length ? (
-          <span style={{ color: "var(--err)" }}>일부 불가 · {c.unavailable.join(", ")}</span>
-        ) : c.conditional ? (
-          <span style={{ color: "var(--warn)" }}>전체 가능 · 조건부 {c.conditional}건</span>
-        ) : (
-          <span style={{ color: "var(--ok)", fontWeight: 600 }}>전체 가능</span>
+      [...cols]
+        .filter((c) => shown.includes(c.id))
+        .sort((a, b) =>
+          sortBy === "default"
+            ? 0
+            : sortBy === "total"
+              ? (a.total || Infinity) - (b.total || Infinity)
+              : sortBy === "weeks"
+                ? (a.weeks || Infinity) - (b.weeks || Infinity)
+                : (a.start || "9999").localeCompare(b.start || "9999"),
         ),
-    },
-    { label: "착수 가능일", render: (c) => <span className="tnum">{md(c.start)}</span> },
-    { label: "총 소요기간", render: (c) => <span className="tnum">{c.weeks ? `${c.weeks}주` : "—"}</span> },
-    {
-      label: "기본 포함",
-      render: (c) => (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
-          {INCL_KEYS.map((k) => {
-            const yes = c.includes.includes(k);
-            return (
-              <span key={k} style={{ fontSize: 12, color: yes ? "var(--body)" : "var(--ph)", textDecoration: yes ? "none" : "line-through", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: yes ? "var(--brand)" : "var(--dash)", display: "inline-block" }} />
-                {k}
-              </span>
-            );
-          })}
-        </div>
-      ),
-    },
-    { label: "제외·별도", render: (c) => <span style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{c.note || "—"}</span> },
-    {
-      label: "GLP 대응",
-      render: (c) => (
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: c.glpOk ? "var(--ok)" : "var(--err)" }}>{c.glpOk ? "제출처 대응 ✓" : `대응 불가 · ${c.glpMissing.join(", ")} 미보유`}</div>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>{c.glp.join(" · ") || "인증 정보 없음"}</div>
-        </div>
-      ),
-    },
-    { label: "결제 조건", render: (c) => <span className="tnum">{c.pay ? `${c.pay} (%)` : "—"}</span> },
-    {
-      label: "유효기간",
-      render: (c) => (
-        <span className="tnum" style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-          {md(c.valid)}
-          {c.valid && <span className="pill pill--tint" style={{ fontSize: 11 }}>{dday(c.valid).label}</span>}
-        </span>
-      ),
-    },
-    {
-      label: "정본 PDF",
-      render: (c) => (c.hasPdf ? <a href={`/api/quotes/${c.id}/pdf`}>열기</a> : <span style={{ color: "var(--muted)" }}>—</span>),
-    },
-  ];
-
+    [cols, shown, sortBy],
+  );
+  const summary: { label: string; cell: (c: CompareCol) => React.ReactNode }[] =
+    [
+      {
+        label: "수행 범위",
+        cell: (c) => (
+          <span>
+            {c.unavailable.length
+              ? `일부 불가: ${c.unavailable.join(", ")}`
+              : "전체 수행 가능"}
+            {c.conditional ? ` · 조건부 ${c.conditional}건` : ""}
+          </span>
+        ),
+      },
+      {
+        label: "견적 구분",
+        cell: (c) => (c.auto ? "기관 확인 전 예비 견적" : "기관 제출 견적"),
+      },
+      {
+        label: "회신 금액 합계",
+        cell: (c) => (
+          <>
+            <b className="tnum">{c.total ? won(c.total) : "미입력"}</b>
+            <p className="fld__help">
+              {c.unavailable.length ? "수행 가능 항목만 합산" : "VAT 별도"}
+            </p>
+          </>
+        ),
+      },
+      {
+        label: "제외·별도 비용",
+        cell: (c) => (
+          <span style={{ whiteSpace: "pre-wrap" }}>
+            {c.note || "기관 기재 없음"}
+          </span>
+        ),
+      },
+      {
+        label: "기본 포함",
+        cell: (c) => (
+          <ul style={{ margin: 0, paddingLeft: 16 }}>
+            {INCL_KEYS.map((k) => (
+              <li key={k}>
+                {k}: {c.includes.includes(k) ? "포함" : "미포함·확인 필요"}
+              </li>
+            ))}
+          </ul>
+        ),
+      },
+      {
+        label: "착수 가능일",
+        cell: (c) => (c.start ? md(c.start) : "기관 확인 필요"),
+      },
+      {
+        label: "예상 소요기간",
+        cell: (c) => (c.weeks ? `${c.weeks}주 (병렬 수행 기준)` : "미입력"),
+      },
+      {
+        label: "등록된 GLP 정보",
+        cell: (c) => (
+          <>
+            {c.glp.join(" · ") || "등록 정보 없음"}
+            <p className="fld__help">
+              {c.glpOk
+                ? "선택한 제출처에 해당하는 등록 정보가 있습니다. 적용 범위는 기관에 확인하세요."
+                : c.glpMissing.length
+                  ? `등록 정보 확인 필요: ${c.glpMissing.join(", ")}`
+                  : "제출처를 지정한 뒤 기관에 적용 범위를 확인하세요."}
+            </p>
+          </>
+        ),
+      },
+      { label: "결제 조건", cell: (c) => c.pay || "기관 기재 없음" },
+      {
+        label: "견적 유효기간",
+        cell: (c) =>
+          c.valid
+            ? `${md(c.valid)} · ${dday(c.valid).label}`
+            : "기관 확인 필요",
+      },
+      {
+        label: "견적서 원본",
+        cell: (c) =>
+          c.hasPdf ? (
+            <a href={`/api/quotes/${c.id}/pdf`}>PDF 열기</a>
+          ) : (
+            "미첨부"
+          ),
+      },
+    ];
   return (
-    <div className="stack" style={{ gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "var(--muted)" }}>정렬</span>
-        <div className="seg">
-          {SORTS.map(([k, label]) => (
-            <button key={k} type="button" aria-pressed={sortBy === k} onClick={() => setSortBy(k)}>{label}</button>
+    <div className="stack" style={{ gap: 20 }}>
+      <p className="note note--tint">
+        수행 범위와 포함 비용이 다르면 합계만으로 비교하기 어렵습니다. 조건을
+        먼저 확인하세요. 예비 견적은 기관 확인 후 정식 견적서를 받아야 선택할 수
+        있습니다.
+      </p>
+      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <legend style={{ marginBottom: 10 }}>비교할 기관</legend>
+        <div className="chips">
+          {cols.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              className="chip"
+              aria-pressed={shown.includes(c.id)}
+              disabled={shown.length === 1 && shown.includes(c.id)}
+              onClick={() =>
+                setShown(
+                  shown.includes(c.id)
+                    ? shown.filter((id) => id !== c.id)
+                    : [...shown, c.id],
+                )
+              }
+            >
+              {c.name}
+            </button>
           ))}
         </div>
-      </div>
-
-      <div className="card tbl-wrap">
-        <table className="tbl tbl--sticky" style={{ minWidth: 140 + sorted.length * 240 }}>
+        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+          <button
+            className="btxt"
+            onClick={() => setShown(cols.slice(0, 2).map((c) => c.id))}
+          >
+            두 기관만 보기
+          </button>
+          <button
+            className="btxt"
+            onClick={() => setShown(cols.map((c) => c.id))}
+          >
+            전체 보기
+          </button>
+        </div>
+      </fieldset>
+      <label className="fld" style={{ maxWidth: 250 }}>
+        <span className="fld__lab">표시 순서</span>
+        <select
+          className="sel"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortKey)}
+        >
+          {SORTS.map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="fld__help">
+        표를 좌우로 움직여 기관별 조건을 비교하세요. 위 요약과 아래 시험별
+        금액은 같은 열에 표시됩니다.
+      </p>
+      <div
+        className="card tbl-wrap"
+        tabIndex={0}
+        role="region"
+        aria-label="기관별 견적 비교표"
+      >
+        <table
+          className="tbl tbl--sticky"
+          style={{ minWidth: 150 + sorted.length * 240 }}
+        >
+          <caption style={{ textAlign: "left", padding: 12 }}>
+            기관이 회신한 조건과 금액 · VAT 별도
+          </caption>
           <thead>
             <tr>
-              <th style={{ width: 120 }}>요약</th>
-              {sorted.map((c, i) => (
-                <th key={c.id} style={{ minWidth: 220, background: c.selected ? "var(--tint)" : undefined }}>
-                  <div style={{ fontSize: 15, color: "var(--ink)", fontWeight: 700 }}>{c.name}</div>
-                  <div style={{ fontSize: 12, fontWeight: 500 }}>
-                    {i + 1}위 · {SORTS.find(([k]) => k === sortBy)![1]} 기준{c.selected ? " · 선택함" : ""}{c.auto ? " · 예비 견적" : ""}
+              <th scope="col">비교 항목</th>
+              {sorted.map((c) => (
+                <th scope="col" key={c.id}>
+                  <div>{c.name}</div>
+                  {c.selected && <span>선택한 기관</span>}
+                  <div>
+                    <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
+                      견적 상세 보기
+                    </Link>
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {summaryRows.map((r) => (
+            {summary.map((r) => (
               <tr key={r.label}>
-                <td style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>{r.label}</td>
+                <th scope="row">{r.label}</th>
                 {sorted.map((c) => (
-                  <td key={c.id} style={{ background: c.selected ? "var(--tint)" : undefined }}>{r.render(c)}</td>
+                  <td key={c.id}>{r.cell(c)}</td>
                 ))}
               </tr>
             ))}
-            {canSelect && (
-              <tr>
-                <td />
-                {sorted.map((c) => (
-                  <td key={c.id}>
-                    <Link href={`/app/r/${no}/q/${c.id}`} className="b2 bsm">상세 보기</Link>
-                  </td>
-                ))}
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="sec-title" style={{ margin: "8px 0 0" }}>
-        <h2>항목별 금액</h2>
-        <span>각 행 최저가 강조 · 불가 항목은 회색</span>
-      </div>
-      <div className="card tbl-wrap">
-        <table className="tbl tbl--sticky" style={{ minWidth: 200 + sorted.length * 180 }}>
-          <thead>
             <tr>
-              <th style={{ width: 200 }}>시험 항목</th>
-              {sorted.map((c) => (
-                <th key={c.id}>{c.name}</th>
-              ))}
+              <th scope="row">시험별 금액</th>
+              <td colSpan={sorted.length}>
+                시험 설계와 조건부 사유를 함께 확인하세요.
+              </td>
             </tr>
-          </thead>
-          <tbody>
             {rows.map((r) => (
               <tr key={r.seq}>
-                <td>
-                  <div style={{ fontWeight: 600 }}>{r.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.category}</div>
-                </td>
+                <th scope="row">
+                  {r.name}
+                  <div className="fld__help">{r.category}</div>
+                </th>
                 {sorted.map((c) => {
                   const it = c.items.find((i) => i.seq === r.seq);
-                  const no_ = !it || it.avail === "불가";
-                  const best = it?.amount != null && it.amount === minByRow.get(r.seq);
                   return (
-                    <td key={c.id} className="tnum" style={{ color: no_ ? "var(--ph)" : undefined }}>
-                      {no_ ? (
-                        "불가"
+                    <td key={c.id}>
+                      {!it ? (
+                        "회신 없음"
+                      ) : it.avail === "불가" ? (
+                        <span>수행 불가{it.note ? ` · ${it.note}` : ""}</span>
                       ) : (
                         <>
-                          <div style={{ fontWeight: best ? 700 : 500, color: best ? "var(--brand)" : undefined }}>{it!.amount != null ? comma(it!.amount) : "—"}</div>
-                          <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                            {it!.weeks ? `${it!.weeks}주` : ""}
-                            {it!.avail === "조건부 가능" ? " · 조건부" : ""}
-                          </div>
-                          {it!.design && <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "normal", maxWidth: 220 }}>{it!.design}</div>}
-                          {it!.explain?.map(([k, v]) => (
-                            <div key={k} style={{ fontSize: 11, color: "var(--body)", whiteSpace: "normal", maxWidth: 220, marginTop: 3 }}><span style={{ color: "var(--muted)" }}>{k}</span><br />{v}</div>
+                          <b className="tnum">
+                            {it.amount == null
+                              ? "미입력"
+                              : comma(it.amount)}
+                          </b>
+                          <p>
+                            {it.weeks ? `${it.weeks}주` : "기간 미입력"}
+                            {it.avail === "조건부 가능" ? " · 조건부 가능" : ""}
+                          </p>
+                          {it.design && <p>{it.design}</p>}
+                          {it.explain?.map(([k, v]) => (
+                            <p key={k}>
+                              <b>{k}</b>
+                              <br />
+                              {v}
+                            </p>
                           ))}
-                          {it!.note && <div style={{ fontSize: 11, color: "var(--body)", whiteSpace: "pre-wrap", maxWidth: 220, marginTop: 3 }}>기관 설명 · {it!.note}</div>}
+                          {it.note && (
+                            <p style={{ whiteSpace: "pre-wrap" }}>{it.note}</p>
+                          )}
                         </>
                       )}
                     </td>
@@ -217,16 +310,22 @@ export function CompareBoard({ no, cols, rows, canSelect }: { no: string; cols: 
                 })}
               </tr>
             ))}
-            <tr>
-              <td style={{ fontWeight: 700 }}>합계</td>
-              {sorted.map((c) => (
-                <td key={c.id} className="tnum" style={{ fontWeight: 700 }}>{comma(c.total)}</td>
-              ))}
-            </tr>
           </tbody>
         </table>
       </div>
-      <p className="cta__note">정본은 CRO가 첨부한 PDF 견적서입니다. 비교표와 PDF가 다르면 PDF가 우선합니다.</p>
+      <p className="fld__help">
+        견적서 원본과 표의 내용이 다르면 기관에 확인해 주세요.
+        {canSelect
+          ? " 기관 선정은 견적 상세에서 진행합니다."
+          : " 선정 후에도 상세 내용을 열람할 수 있습니다."}
+      </p>
+      <Link
+        href={`/app/support?rfq=${no}`}
+        className="b2"
+        style={{ alignSelf: "flex-start" }}
+      >
+        견적 내용 문의하기
+      </Link>
     </div>
   );
 }

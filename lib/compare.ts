@@ -21,7 +21,7 @@ export async function publishCompare(rfq: RfqRow, actorId: string | null, auto =
 
   await notifyUsers(
     rfq.user_id ? [rfq.user_id] : [],
-    { kind: "비교", title: `비교표가 도착했습니다 · ${rfq.rfq_no}`, body: `${count}곳 회신 · 총액 오름차순으로 정리했습니다. 정본 PDF와 함께 확인하세요.`, href: `/app/r/${rfq.rfq_no}/compare` },
+    { kind: "비교", title: `비교표가 도착했습니다 · ${rfq.rfq_no}`, body: `${count}곳 회신 · 수행 범위와 포함 비용을 견적서 원본과 함께 확인하세요.`, href: `/app/r/${rfq.rfq_no}/compare` },
     { to: [rfq.email], subject: `[단추] ${rfq.rfq_no} 견적 비교표 도착 · ${count}곳 회신` },
   );
   return { ok: true, count, message: `비교표를 공개하고 의뢰자에게 알렸습니다 (${count}건).` };

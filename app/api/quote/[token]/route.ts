@@ -83,7 +83,8 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
     it.unitPrice = typeof it.unitPrice === "string" && /^\d{1,13}$/.test(it.unitPrice) ? it.unitPrice : "";
     it.sampleCount = typeof it.sampleCount === "string" && /^\d{1,6}$/.test(it.sampleCount) ? it.sampleCount : "";
     if (it.unit === "per_sample" && it.unitPrice && it.sampleCount) it.amount = String(Number(it.unitPrice) * Number(it.sampleCount));
-    delete it.checks; // 확인 필요 표시는 저장하지 않는다 (CRO가 저장하는 순간 확인한 것으로 본다)
+    it.checks = Array.isArray(it.checks) ? it.checks.filter((x): x is string => typeof x === "string").slice(0, 30).map((x) => x.slice(0, 200)) : [];
+    it.design.reviewChecks = it.checks;
   }
   const c = (b.common && typeof b.common === "object" ? b.common : {}) as Partial<ReplyCommon>;
   const s = (v: unknown, max = 120) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -211,6 +212,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
 
+  if (parsed.items.some((it) => it.checks?.length)) return NextResponse.json({ error: "요청 조건이 다른 항목을 확인한 뒤 제출해 주세요." }, { status: 400 });
   const incomplete = parsed.items.some((it) => !(it.avail === "불가" || (it.avail && it.amount && it.weeks)));
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });

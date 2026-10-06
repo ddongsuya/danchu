@@ -1,3 +1,5 @@
+import { needsCda } from "@/lib/request-policy";
+import { CdaPanel } from "@/components/admin/CdaPanel";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
@@ -101,6 +103,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
 
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>진행 관리</h2>
+            {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites} />}
             <AdminActions
               no={rfq.rfq_no}
               status={rfq.status}

@@ -62,7 +62,7 @@ export default async function CroOrgPage() {
           <ThemeSettings />
           <div className="card card--rows">
             <Link href="/cro/catalog" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>역량 카탈로그 <span style={{ fontSize: 12, color: "var(--muted)" }}>· 항목별 표준 설계·리드타임·참고 단가</span></span>
+              <span>역량 카탈로그 <span style={{ fontSize: 12, color: "var(--muted)" }}>· 항목별 기본 조건·예상 소요기간·참고 단가</span></span>
               <span style={{ color: "var(--dash)" }}>›</span>
             </Link>
             <Link href="/cro/awards" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>

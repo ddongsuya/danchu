@@ -46,7 +46,7 @@ export function RfqField({
   const asList = big && ["radio", "segmented", "select", "chips"].includes(field.type);
 
   const keyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && e.currentTarget.tagName !== "TEXTAREA") {
+    if (onEnter && e.key === "Enter" && !e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229 && e.currentTarget.tagName !== "TEXTAREA") {
       e.preventDefault();
       (e.currentTarget as HTMLElement).blur();
       onEnter?.();
@@ -79,6 +79,9 @@ export function RfqField({
         <input
           id={id}
           name={id}
+          aria-label={field.label || id}
+          aria-required={field.required || undefined}
+          aria-describedby={field.help ? `${id}-help` : undefined}
           type={field.type}
           className={`input${big ? " input--big" : ""}`}
           value={str}
@@ -95,6 +98,8 @@ export function RfqField({
         <textarea
           id={id}
           name={id}
+          aria-label={field.label || id}
+          aria-describedby={field.help ? `${id}-help` : undefined}
           className={`textarea${big ? " textarea--big" : ""}`}
           rows={5}
           value={str}
@@ -126,7 +131,7 @@ export function RfqField({
 
       {/* 위자드: 큰 옵션 카드 */}
       {asList && (
-        <div className="opts" role="group" aria-label={field.label || undefined}>
+        <div className="opts" role="group" aria-label={field.label || id}>
           {field.options?.map((o) => {
             const on = multi ? arr.includes(o) : str === o;
             return (
@@ -149,7 +154,7 @@ export function RfqField({
       )}
 
       {field.type === "radio" && !asList && (
-        <div className="radios" role="radiogroup" aria-label={field.label || undefined}>
+        <div className="radios" role="radiogroup" aria-label={field.label || id}>
           {field.options?.map((o) => (
             <label key={o}>
               <input type="radio" name={id} value={o} checked={str === o} onChange={() => onChange(id, o)} />
@@ -160,7 +165,7 @@ export function RfqField({
       )}
 
       {field.type === "segmented" && !asList && (
-        <div className="segmented" role="group" aria-label={field.label || undefined}>
+        <div className="segmented" role="group" aria-label={field.label || id}>
           {field.options?.map((o) => (
             <button key={o} type="button" aria-pressed={str === o} onClick={() => onChange(id, o)}>
               {o}
@@ -170,7 +175,7 @@ export function RfqField({
       )}
 
       {field.type === "chips" && !asList && (
-        <div className="chipset" role="group" aria-label={field.label || undefined}>
+        <div className="chipset" role="group" aria-label={field.label || id}>
           {field.options?.map((o) => {
             const on = arr.includes(o);
             return (
@@ -190,7 +195,7 @@ export function RfqField({
 
       {field.type === "file" && <FileDrop id={id} placeholder={field.placeholder} files={files} onFiles={onFiles} />}
 
-      {field.help && <p className="field__help">{field.help}</p>}
+      {field.help && <p className="field__help" id={`${id}-help`}>{field.help}</p>}
     </div>
   );
 }
@@ -230,11 +235,13 @@ function FileDrop({
     const incoming = Array.from(list);
     const tooBig = incoming.filter((f) => f.size > MAX_FILE_MB * 1024 * 1024);
     setWarn(tooBig.length ? `${MAX_FILE_MB}MB를 넘는 파일은 제외했습니다: ${tooBig.map((f) => f.name).join(", ")}` : "");
-    const ok = incoming.filter((f) => f.size <= MAX_FILE_MB * 1024 * 1024);
+    const ok = incoming.filter((f) => f.size > 0 && f.size <= MAX_FILE_MB * 1024 * 1024 && /\.(pdf|png|jpe?g|docx?|xlsx?|hwp)$/i.test(f.name));
+    if (ok.length !== incoming.length) setWarn("지원하지 않는 형식, 빈 파일 또는 20MB 초과 파일은 제외했습니다.");
     const merged = [...files, ...ok].filter(
       (f, i, a) => a.findIndex((x) => x.name === f.name && x.size === f.size) === i
     );
-    onFiles(merged);
+    if (merged.length > 10) setWarn("첨부는 최대 10개입니다. 초과한 파일은 제외했습니다.");
+    onFiles(merged.slice(0, 10));
   };
 
   return (
@@ -264,14 +271,15 @@ function FileDrop({
           type="file"
           multiple
           accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.hwp"
-          style={{ display: "none" }}
+          style={{ display: "block", maxWidth: "100%", marginTop: 12 }}
+          aria-label="첨부파일 선택"
           onChange={(e) => {
             add(e.target.files);
             e.target.value = "";
           }}
         />
       </label>
-      {warn && <p className="field__help" style={{ color: "var(--error-fg)" }}>{warn}</p>}
+      {warn && <p role="alert" className="field__help" style={{ color: "var(--error-fg)" }}>{warn}</p>}
       {files.length > 0 && (
         <ul className="file__list">
           {files.map((f) => (

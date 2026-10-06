@@ -1,0 +1,14 @@
+{
+  "engine": "PGlite PostgreSQL; minimal test schema, not production Supabase",
+  "results": [
+    "migration applies",
+    "3 invitation cap enforced",
+    "5 invitation cap enforced",
+    "all institutions can exceed finite cap",
+    "closed request cannot distribute",
+    "existing invitations fail closed for CDA",
+    "preliminary estimate rejected",
+    "expired quote rejected",
+    "confirmed valid quote accepted"
+  ]
+}
