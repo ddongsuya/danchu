@@ -63,7 +63,7 @@ export function StatusPill({ tone, children }: { tone: "sf" | "tint" | "ok" | "e
 export function Bar({ pct, err = false }: { pct: number; err?: boolean }) {
   return (
     <div className="bar">
-      <i className={err ? "bar--err" : ""} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+      <i className={err ? "bar--err" : ""} style={{ "--p": Math.max(0, Math.min(100, pct)) / 100 } as React.CSSProperties} />
     </div>
   );
 }

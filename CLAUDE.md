@@ -57,6 +57,8 @@
 
 ## 4. 모션 (emil 기준)
 
+- **넣기 전 관문 4개**(하나라도 실패하면 넣지 않는다): ① 빈도 ② 목적이 피드백·공간 일관성·상태 표시·급변 방지·설명 중 하나인가("보기 좋아서"는 목적이 아니다. 딜라이트는 드문 순간에만) ③ 300ms 안에 성립하는가 ④ 사용자가 읽거나 조작하는 데이터를 방해하지 않는가. 한 화면 제안은 5~7개 이하, 버린 후보와 이유도 함께 보고한다.
+- **고칠 때 순서**: 삭제 → 축소 → 이징 → 원점 → 중단 가능하게 → GPU 속성으로 → 비대칭 타이밍 → 폴리시.
 - **애니메이션 할지 먼저 판단**: 하루 100회+ 반복 동작(키보드 단축키, 커맨드 팔레트)은 애니메이션 없음. 수십 회(호버, 리스트 이동)는 최소화. 가끔(모달, 드로어, 토스트)은 표준. 첫 경험(온보딩, 축하)만 딜라이트.
 - 키보드로 시작된 동작은 절대 애니메이션하지 않는다.
 - 이징: 등장/퇴장 = ease-out, 화면 내 이동 = ease-in-out, 호버/색 = ease, 등속(마키·프로그레스) = linear. **UI에 ease-in 금지.** 커스텀 커브 사용:
@@ -122,8 +124,19 @@
 | 새 화면/섹션 만들기 | `design-taste-frontend` 규칙으로 Design Read → 빌드, 이후 `/impeccable polish` |
 | 기존 화면 점검 | `/impeccable critique <경로>` (UX) / `/impeccable audit <경로>` (a11y·perf·반응형) |
 | 밋밋함 / 과함 | `/impeccable bolder` / `/impeccable quieter` |
-| 모션 추가·리뷰 | `emil-design-eng` 기준으로 `/impeccable animate`, 리뷰는 Before/After 표 |
+| 모션 추가·리뷰 | 자리 찾기 `/find-animation-opportunities`(읽기 전용, 버린 후보 포함) → 구현 `emil-design-eng` 기준 CSS → 검토 `/review-animations`(Before/After 표, Block/Approve). Motion 라이브러리는 설치하지 않는다. CSS transition과 `@starting-style`로 한다 |
+| 브랜드·문구 점검 | `brand-sprint` 스킬 8단계. 결과는 `PRODUCT.md`의 Core Message · Not Yet · Signals to Watch에 반영 |
 | 타이포·간격만 | `/impeccable typeset`, `/impeccable layout` |
 | 출고 직전 | `/impeccable harden` → Playwright 1440/390 스크린샷 → 7절 체크 |
 | 피그마 시안 반영 | Figma MCP로 파일의 색·간격·타이포 토큰을 읽어 `tailwind.config`/`globals.css` 변수에 매핑 후 구현 |
 | 브라우저에서 변형 고르기 | `/impeccable live`, `/impeccable generate 3 variants <요소>` |
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -357,8 +357,8 @@ export function NewRequest({ contact }: { contact: Contact }) {
         <Link href="/app" className="crumb" style={{ margin: 0 }}>닫기</Link>
         <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{q + 1} / {WIZ.length}</span>
       </div>
-      <div style={{ height: 3, background: "var(--track)", borderRadius: 2, marginBottom: 20 }}>
-        <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, width: `${(q / WIZ.length) * 100}%`, transition: "width .3s ease" }} />
+      <div style={{ height: 3, background: "var(--track)", borderRadius: 2, marginBottom: 20, overflow: "hidden" }}>
+        <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, transform: `scaleX(${q / WIZ.length})`, transformOrigin: "left", transition: "transform 240ms var(--ease-in-out)" }} />
       </div>
 
       {q > 0 && (

@@ -180,8 +180,8 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
         </button>
         <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{step} / 3</span>
       </div>
-      <div style={{ height: 3, background: "var(--track)", borderRadius: 2, marginBottom: 20 }}>
-        <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, width: `${((step - 1) / 3) * 100}%`, transition: "width .3s ease" }} />
+      <div style={{ height: 3, background: "var(--track)", borderRadius: 2, marginBottom: 20, overflow: "hidden" }}>
+        <div style={{ height: 3, background: "var(--brand)", borderRadius: 2, transform: `scaleX(${(step - 1) / 3})`, transformOrigin: "left", transition: "transform 240ms var(--ease-in-out)" }} />
       </div>
       <div className="ph" style={{ marginBottom: 16 }}>
         <div>

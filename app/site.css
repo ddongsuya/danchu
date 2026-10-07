@@ -68,6 +68,7 @@
 .hero h1 { font-size: clamp(36px, 4.2vw, 58px); line-height: 1.12; letter-spacing: -0.03em; font-weight: 700; text-wrap: balance; }
 .hero__sub { font-size: 18px; line-height: 1.6; color: var(--body); max-width: 40ch; text-wrap: pretty; }
 .hero__cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.hero__alt { font-size: 14px; color: var(--muted); }
 .hero__meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--muted); margin-top: 8px; }
 @media (max-width: 1099px) { .hero__grid { grid-template-columns: 1fr; gap: 40px; } .hero h1 { max-width: none; } }
 @media (max-width: 639px) { .hero { padding: 36px 0 40px; } .hero__sub { font-size: 16.5px; } .hero__cta .b { flex: 1 1 auto; } }
@@ -221,6 +222,10 @@
 .faq details[open] summary::after { transform: rotate(45deg); }
 .faq .faq__a { padding: 0 36px 18px 0; color: var(--body); font-size: 15.5px; max-width: 66ch; }
 .faq .faq__a p + p { margin-top: 8px; }
+.faq details[open] .faq__a { animation: faq-in 200ms var(--ease-out); }
+@keyframes faq-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes faq-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .faq details[open] .faq__a { animation-name: faq-fade; } }
 @media (hover: hover) and (pointer: fine) { .faq summary:hover { color: var(--brand); } }
 
 /* 마지막 두 문 */

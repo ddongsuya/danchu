@@ -27,7 +27,7 @@ export function SiteFooter({ current }: { current?: string }) {
         </div>
         <div className="ft__legal">
           <span>
-            [상호] · 대표 [대표자명] · 사업자등록번호 [000-00-00000] · [사업장 주소] · <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
+            문의 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
           </span>
           <span>© 2026 Danchu</span>
         </div>

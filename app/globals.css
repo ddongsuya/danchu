@@ -183,7 +183,7 @@ input, textarea { caret-color: var(--brand); }
 .dcard__fields { display: flex; flex-direction: column; gap: 20px; }
 .acc { background: var(--white); border: 1px solid var(--card-line); border-radius: var(--r-lg); padding: 0 24px; }
 .acc summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; font-weight: 700; font-size: 17px; }
-.acc summary svg { flex: none; transition: transform .2s; }
+.acc summary svg { flex: none; transition: transform 200ms var(--ease-out); }
 .acc__fields { display: flex; flex-direction: column; gap: 20px; padding: 4px 0 28px; }
 .dempty { border: 1px dashed var(--dash); border-radius: var(--r-lg); padding: 28px; text-align: center; color: var(--muted); font-size: 15px; }
 .error { margin: 0; padding: 12px 16px; border-radius: var(--r-md); background: var(--error-bg); color: var(--error-fg); font-size: 14px; }

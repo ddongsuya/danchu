@@ -69,7 +69,7 @@ export function SiteNav() {
               ))}
             </nav>
             <div className="sheet__foot">
-              <Link href={requestHref} className="b b--fill b--lg">요청서 작성</Link>
+              <Link href={requestHref} className="b b--fill b--lg">견적 요청하기</Link>
               <Link href={me ? me.to : "/login"} className="b b--line b--lg">{me ? PORTAL[me.role] : "로그인"}</Link>
               <div className="sheet__sub">
                 <Link href="/privacy">개인정보처리방침</Link>

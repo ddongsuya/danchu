@@ -14,7 +14,7 @@ export function SiteHeader() {
         </div>
         <div className="hd__right">
           <HeaderAuth className="hd__login" />
-          <RfqLink className="b b--fill b--sm hd__cta">요청서 작성</RfqLink>
+          <RfqLink className="b b--fill b--sm hd__cta">견적 요청하기</RfqLink>
         </div>
       </div>
     </header>
