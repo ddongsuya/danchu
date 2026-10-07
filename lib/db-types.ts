@@ -44,10 +44,14 @@ export type Database = {
           selected_quote_id: string | null;
           closed_at: string | null;
           admin_note: string | null;
+          intent: string | null;
+          outcome: string | null;
+          outcome_note: string | null;
+          outcome_at: string | null;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
@@ -92,8 +96,11 @@ export type Database = {
           decline_reason: string | null;
           cda_signed_at: string | null;
           cda_reference: string | null;
+          source: string;
+          billable: boolean;
+          bill_excluded_reason: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference" | "source" | "billable" | "bill_excluded_reason">;
         Update: Partial<Database["public"]["Tables"]["rfq_invites"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_invites_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -212,8 +219,10 @@ export type Database = {
           selected_by: string | null;
           contract_reported_at: string | null;
           contract_note: string | null;
+          fee_basis_amount: number | null;
+          invite_source: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source">;
         Update: Partial<Database["public"]["Tables"]["rfq_awards"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_awards_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: true; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -240,6 +249,8 @@ export type Database = {
           approved_at: string | null;
           updated_at: string;
           auto_reply: boolean;
+          monthly_cap: number | null;
+          per_request_fee: number | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_orgs"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_orgs"]["Row"], "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_orgs"]["Row"]>;
@@ -346,6 +357,7 @@ export type Database = {
       select_quote: { Args: { p_rfq_id: string; p_quote_id: string; p_user: string }; Returns: Json };
       save_quote: { Args: { p_invite_id: string; p_header: Json; p_items: Json; p_submit: boolean; p_actor: string | null }; Returns: Json };
       report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string }; Returns: Json };
+      billing_summary: { Args: { p_from: string; p_to: string }; Returns: BillingSummaryRow[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -355,3 +367,22 @@ export type Database = {
 export type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
 export type TablesInsert<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"];
 export type TablesUpdate<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"];
+
+/** billing_summary() 한 행: 기간 내 기관별 전달·회신·선정 집계 */
+export type BillingSummaryRow = {
+  org_id: string;
+  org_name: string;
+  per_request_fee: number | null;
+  monthly_cap: number | null;
+  delivered: number;
+  billable: number;
+  excluded: number;
+  matched: number;
+  nominated: number;
+  manual: number;
+  replied: number;
+  declined: number;
+  unanswered: number;
+  selected: number;
+  selected_amount: number;
+};

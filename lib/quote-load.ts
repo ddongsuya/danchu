@@ -1,4 +1,4 @@
-import { confidentialAccess } from "./request-policy";
+import { confidentialAccess, identityVisible, maskedClientLabel } from "./request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import { quoteRowsFromPayload } from "./quote-items";
 import { EMPTY_COMMON, type ReplyCommon, type ReplyDraft, type ReplyItem, type RfqView } from "./cro-data";
@@ -26,10 +26,14 @@ export type Loaded = {
   closed: boolean;
 };
 
-/** 기밀 등급이 CDA 필요이고 아직 체결 전이면 의뢰자명을 가린다 */
-function maskClient(company: string, orgType: string | null, confid: string | null, signedAt?: string | null): { client: string; masked: boolean } {
-  if (!confidentialAccess(confid, signedAt)) return { client: `${orgType || "의뢰기관"} (마스킹)`, masked: true };
-  return { client: company, masked: false };
+/**
+ * 의뢰자 표시명과 공개 상태.
+ * - client/identityMasked: 회사명은 이 기관이 선정됐거나 CDA 체결이 확인될 때만 보인다 (모든 요청 공통)
+ * - masked: CDA 요청의 첨부·상세 비공개 (체결 확인 전)
+ */
+function maskClient(company: string, orgType: string | null, confid: string | null, signedAt: string | null | undefined, awarded: boolean): { client: string; masked: boolean; identityMasked: boolean } {
+  const identityMasked = !identityVisible({ awarded, signedAt });
+  return { client: identityMasked ? maskedClientLabel(orgType) : company, masked: !confidentialAccess(confid, signedAt), identityMasked };
 }
 
 /** 'YYYY-MM-DD'의 서울 기준 그날 23:59:59 */
@@ -43,16 +47,17 @@ function ddayOf(replyBy: string): { label: string; urgent: boolean } {
 }
 
 /** 요청서(RfqRow) → CRO가 보는 요약 */
-export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_name: string; size_bytes: number }[]): RfqView {
+export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_name: string; size_bytes: number }[], awarded = false): RfqView {
   const p = r.payload as Values;
   const s = (k: string) => (typeof p[k] === "string" ? (p[k] as string) : "");
   const a = (k: string) => (Array.isArray(p[k]) ? (p[k] as string[]) : []);
   const sa = (k: string) => a(k).join(" · ") || s(k);
-  const { client, masked } = maskClient(r.company, r.org_type, r.confidentiality, inv.cda_signed_at);
+  const { client, masked, identityMasked } = maskClient(r.company, r.org_type, r.confidentiality, inv.cda_signed_at, awarded);
   const dd = ddayOf(inv.reply_by);
 
   const overview: [string, string][] = [
     ["의뢰 목적", s("purpose") || "-"],
+    ["요청 성격", r.intent || s("intent") || "-"],
     ["개발 분야", s("devField") || "-"],
     ["제출처", a("authority").join(" · ") || "-"],
     ["기밀 등급", r.confidentiality || "일반"],
@@ -88,6 +93,7 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
     substance: r.substance,
     client,
     masked,
+    identityMasked,
     ddayLabel: dd.label,
     urgent: dd.urgent,
     confid: r.confidentiality || "일반",
@@ -136,9 +142,10 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
     await sb.from("rfq_invites").update({ opened_at: new Date().toISOString() }).eq("id", inv.id);
   }
   const { data: files } = await sb.from("rfq_files").select("id, file_name, size_bytes").eq("rfq_id", inv.rfq_id).order("created_at");
-  const rfq = rfqViewOf(r, inv, files ?? []);
-
   const { data: q } = await sb.from("cro_quotes").select("*, cro_quote_items(*)").eq("invite_id", inv.id).maybeSingle();
+  // 이 기관의 견적이 선정됐을 때만 회사명·연락처가 열린다
+  const awarded = !!q && !!r.selected_quote_id && r.selected_quote_id === q.id;
+  const rfq = rfqViewOf(r, inv, files ?? [], awarded);
   let draft: ReplyDraft | null = null;
   if (q) {
     type ItemRow = { seq: number; avail: string | null; amount: number | null; weeks: number | null; reason: string | null; design?: Record<string, unknown> | null; source?: string | null; unit?: string | null; unit_price?: number | null; sample_count?: number | null };

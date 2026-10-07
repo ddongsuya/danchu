@@ -8,7 +8,10 @@ export type RfqView = {
   no: string;
   substance: string;
   client: string;
+  /** CDA 요청의 첨부·상세가 체결 확인 전이라 비공개 */
   masked: boolean;
+  /** 회사명·연락처 비공개 (선정 전). 모든 요청에 적용 */
+  identityMasked: boolean;
   ddayLabel: string;
   urgent: boolean;
   confid: string;

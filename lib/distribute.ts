@@ -1,5 +1,5 @@
 import { notificationRecipients } from "./mail-preferences";
-import { needsCda, remainingInvites } from "@/lib/request-policy";
+import { maskedClientLabel, needsCda, remainingInvites, seoulMonthRange, withinMonthlyCap, type InviteSource } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
 import type { TablesUpdate } from "./db-types";
@@ -9,9 +9,12 @@ import { addBusinessDays, nowSeoul } from "./dates";
 import { quoteRowsFromPayload } from "./quote-items";
 import { rowKey } from "./catalog";
 
-export type DistributeResult = { sent: number; mailed: number; names: string[]; skipped: string[] };
+export type DistributeResult = { sent: number; mailed: number; names: string[]; skipped: string[]; /** 월 전달 한도에 걸려 제외한 기관 */ capped: string[] };
 
-type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[] };
+type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; monthly_cap?: number | null };
+
+/** 배포 대상 기관 조회에 쓰는 컬럼 (운영자 수동 배포 라우트와 같게) */
+export const ORG_COLUMNS = "id, name, contact_email, categories, glp_certs, monthly_cap";
 
 /**
  * 배포 대상 자동 선정.
@@ -21,7 +24,7 @@ type Org = { id: string; name: string; contact_email: string | null; categories:
 export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: string[] }> {
   const sb = getSupabaseAdmin();
   if (!sb) return { orgs: [], skipped: [] };
-  const { data } = await sb.from("cro_orgs").select("id, name, contact_email, categories, glp_certs").eq("status", "approved").order("id");
+  const { data } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").order("id");
   const all = (data ?? []) as Org[];
   const cats = rfq.categories;
   const candidates = all.filter((o) => (o.categories ?? []).some((c) => cats.includes(c)));
@@ -59,10 +62,19 @@ export function defaultReplyBy(rfq: RfqRow): string {
  * 기관들에 초대(회신 링크)를 만들고 메일·알림을 보낸다. 이미 초대한 기관은 건너뛴다.
  * 운영자 수동 배포와 접수 시 자동 배포가 함께 쓴다.
  */
-export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false): Promise<DistributeResult> {
+export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual"): Promise<DistributeResult> {
   const sb = getSupabaseAdmin();
-  const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
+  const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [], capped: [] };
   if (!sb || !orgs.length) return res;
+
+  // 월 전달 한도: 약정한 기관은 이번 달 전달 수가 한도에 닿으면 더 보내지 않는다 (전달 1건 = 청구 1건)
+  const cappedOrgs = orgs.filter((o) => o.monthly_cap != null && o.monthly_cap > 0);
+  const usedThisMonth = new Map<string, number>();
+  if (cappedOrgs.length) {
+    const { from, to } = seoulMonthRange();
+    const { data: monthInv } = await sb.from("rfq_invites").select("cro_org_id").in("cro_org_id", cappedOrgs.map((o) => o.id)).gte("sent_at", `${from}T00:00:00+09:00`).lt("sent_at", `${to}T00:00:00+09:00`);
+    for (const i of monthInv ?? []) if (i.cro_org_id) usedThisMonth.set(i.cro_org_id, (usedThisMonth.get(i.cro_org_id) ?? 0) + 1);
+  }
 
   const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id").eq("rfq_id", rfq.id);
   if (existingError) throw new Error("기존 배포 현황을 확인하지 못했습니다.");
@@ -75,6 +87,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   for (const o of orgs) {
     if (already.has(o.id)) continue;
     if (res.sent >= capacity) { res.skipped.push(o.name); continue; }
+    if (!withinMonthlyCap(o.monthly_cap, usedThisMonth.get(o.id) ?? 0)) { res.capped.push(o.name); continue; }
     const { data: members } = await sb.from("profiles").select("id, email").eq("cro_org_id", o.id);
     const memberIds = (members ?? []).map((m) => m.id as string);
     const memberMails = (members ?? []).map((m) => m.email as string);
@@ -86,7 +99,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     }
     const { data: inv, error } = await sb
       .from("rfq_invites")
-      .insert({ rfq_id: rfq.id, rfq_no: rfq.rfq_no, cro_name: o.name, cro_email: croEmail, cro_org_id: o.id, reply_by: replyBy, expires_at: expiresAt.toISOString() })
+      .insert({ rfq_id: rfq.id, rfq_no: rfq.rfq_no, cro_name: o.name, cro_email: croEmail, cro_org_id: o.id, reply_by: replyBy, expires_at: expiresAt.toISOString(), source })
       .select("id, token")
       .single();
     if (error || !inv) {
@@ -95,6 +108,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
       continue;
     }
     already.add(o.id);
+    usedThisMonth.set(o.id, (usedThisMonth.get(o.id) ?? 0) + 1);
     res.sent++;
     res.names.push(o.name);
 
@@ -102,9 +116,10 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     const portal = `${siteUrl()}/cro/r/${inv.id}`;
     const html = mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청서가 도착했습니다 · ${esc(rfq.rfq_no)}</h2>
-      <p><b>${esc(masked ? `${rfq.org_type || "의뢰기관"} (CDA 체결 확인 전 비공개)` : rfq.company)}</b> · 시험물질 ${esc(rfq.substance)}<br>
+      <p><b>${esc(maskedClientLabel(rfq.org_type))}</b> · 시험물질 ${esc(rfq.substance)}<br>
       시험 항목: ${esc(rfq.categories.join(", "))}<br>
-      의뢰 목적: ${esc(rfq.purpose || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}</p>
+      의뢰 목적: ${esc(rfq.purpose || "-")} · 요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${masked ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
+      <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개됩니다.</p>
       <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b> · 링크는 기한 +7일까지 열립니다.</p>
       <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">요청서 보고 회신하기</a></p>
       <p style="font-size:13px;color:#6F6A63">카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다. 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.</p>`);
@@ -117,7 +132,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     const patch: TablesUpdate<"rfq_requests"> = { reply_by: rfq.reply_by || replyBy };
     if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
     await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
-    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}`, actorId, { orgIds: orgs.map((o) => o.id), auto });
+    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped });
     const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id);
     if (rfq.user_id) {
       await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 참여 CRO ${count ?? res.sent}곳에 배포했습니다`, body: `회신 기한 ${replyBy} · 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });

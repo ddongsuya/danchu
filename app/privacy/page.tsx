@@ -111,7 +111,7 @@ export default function PrivacyPage() {
         </tbody>
       </LegalTable>
       <p>
-        이용자가 <strong>&ldquo;CDA 필요&rdquo; 또는 &ldquo;자체 CDA 사용&rdquo;</strong>을 선택한 경우, 시험 개요를 먼저 전달하고 회사명과 첨부자료는 기관별 비밀유지계약(CDA) 체결 확인 후 공개합니다. 이용자는 위 제3자 제공에 동의하지 않을 수 있으나, 이 경우 견적 중개 서비스를 이용할 수
+        회사명과 담당자 연락처는 모든 요청에서 이용자가 선정한 CRO에만 제공하며, 선정 전에는 기관 유형과 시험 조건만 전달합니다. 이용자가 <strong>&ldquo;CDA 필요&rdquo; 또는 &ldquo;자체 CDA 사용&rdquo;</strong>을 선택한 경우, 첨부자료는 기관별 비밀유지계약(CDA) 체결 확인 후 공개합니다. 이용자는 위 제3자 제공에 동의하지 않을 수 있으나, 이 경우 견적 중개 서비스를 이용할 수
         없습니다.
       </p>
 

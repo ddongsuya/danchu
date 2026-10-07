@@ -46,6 +46,7 @@ const STEPS = [
 ];
 const FIELD_LABELS: Record<string, string> = {
   purpose: "의뢰 목적",
+  intent: "요청 성격",
   devField: "개발 분야",
   authority: "자료 제출처",
   substance: "시험물질명 또는 코드명",
@@ -241,7 +242,7 @@ export function NewRequest({
       );
       if (missing)
         setStep(
-          ["purpose", "categories", "substance"].includes(missing.id)
+          ["purpose", "intent", "categories", "substance"].includes(missing.id)
             ? 0
             : missing.id === "croCount"
               ? 1
@@ -508,7 +509,7 @@ export function NewRequest({
             <section className="request__section">
               <h2>물질과 의뢰 목적</h2>
               <div className="request__fields">
-                {baseFields(["substance", "purpose", "devField", "authority"])}
+                {baseFields(["substance", "purpose", "intent", "devField", "authority"])}
               </div>
             </section>
             {cats
@@ -562,8 +563,8 @@ export function NewRequest({
             {baseFields(["confid"])}
             <div className="note note--tint">
               {needsCda(values.confid)
-                ? "초대받은 기관에는 시험 개요를 먼저 전달합니다. 회사명과 첨부파일은 해당 기관의 CDA 체결을 운영자가 확인한 뒤 공개합니다. 비공개 정보는 물질명·추가 설명에 적지 마세요."
-                : "요청 내용과 첨부는 견적에 참여하는 기관에 전달됩니다. 담당자 연락처는 기관 선정 후 공개됩니다."}
+                ? "초대받은 기관에는 시험 개요를 먼저 전달합니다. 회사명과 담당자 연락처는 선정한 기관에만, 첨부파일은 해당 기관의 CDA 체결을 운영자가 확인한 뒤 공개합니다. 비공개 정보는 물질명·추가 설명에 적지 마세요."
+                : "요청 내용과 첨부는 견적에 참여하는 기관에 전달됩니다. 회사명과 담당자 연락처는 어떤 기관에도 미리 공개되지 않고, 비교표에서 선정한 기관에만 전달됩니다."}
             </div>
             {STEP2.flatMap((g) => g.fields)
               .filter((f) => f.type === "file")
@@ -593,6 +594,7 @@ export function NewRequest({
                       "categories",
                       "substance",
                       "purpose",
+                      "intent",
                       "devField",
                       "authority",
                     ]

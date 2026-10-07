@@ -22,9 +22,9 @@ export function DistributePanel({ no, categories, defaultReplyBy, orgs }: { no: 
     setMsg(null);
     try {
       const res = await fetch(`/api/admin/rfqs/${no}/distribute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgIds: picked, replyBy }) });
-      const d = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; mailed?: number; skipped?: string[] };
+      const d = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; mailed?: number; skipped?: string[]; capped?: string[] };
       if (!res.ok) throw new Error(d.error || "배포하지 못했습니다.");
-      setMsg({ ok: true, text: `${d.sent}곳에 전달했습니다. 메일 ${d.mailed}건.${d.skipped?.length ? ` 요청 기관 수 제한 또는 연락처 문제로 ${d.skipped.length}곳은 제외했습니다.` : ""}` });
+      setMsg({ ok: true, text: `${d.sent}곳에 전달했습니다. 메일 ${d.mailed}건.${d.skipped?.length ? ` 요청 기관 수 제한 또는 연락처 문제로 ${d.skipped.length}곳은 제외했습니다.` : ""}${d.capped?.length ? ` 월 전달 한도에 닿아 ${d.capped.join(", ")}은(는) 제외했습니다.` : ""}` });
       setPicked([]);
       router.refresh();
     } catch (e) {

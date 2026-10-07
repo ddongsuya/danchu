@@ -104,6 +104,7 @@ export async function POST(req: Request) {
           budget: nul("budget"),
           cro_count: nul("croCount"),
           confidentiality: nul("confid"),
+          intent: nul("intent"),
           reply_by: /^\d{4}-\d{2}-\d{2}$/.test(str("replyBy")) ? str("replyBy") : null,
           payload: values,
           user_id: userId,
