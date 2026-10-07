@@ -127,3 +127,13 @@
 | 출고 직전 | `/impeccable harden` → Playwright 1440/390 스크린샷 → 7절 체크 |
 | 피그마 시안 반영 | Figma MCP로 파일의 색·간격·타이포 토큰을 읽어 `tailwind.config`/`globals.css` 변수에 매핑 후 구현 |
 | 브라우저에서 변형 고르기 | `/impeccable live`, `/impeccable generate 3 variants <요소>` |
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
