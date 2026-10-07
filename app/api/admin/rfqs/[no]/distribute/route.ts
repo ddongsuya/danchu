@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
-import { distributeTo } from "@/lib/distribute";
+import { distributeTo, ORG_COLUMNS } from "@/lib/distribute";
 
 export const runtime = "nodejs";
 
@@ -24,7 +24,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (!orgIds.length || !replyBy) return NextResponse.json({ error: "기관과 회신 기한을 선택해 주세요." }, { status: 400 });
 
   const sb = getSupabaseAdmin()!;
-  const { data: orgs } = await sb.from("cro_orgs").select("id, name, contact_email, categories, glp_certs").in("id", orgIds).eq("status", "approved");
-  const r = await distributeTo(rfq, orgs ?? [], replyBy, s.userId);
-  return NextResponse.json({ ok: true, sent: r.sent, mailed: r.mailed, skipped: r.skipped });
+  const { data: orgs } = await sb.from("cro_orgs").select(ORG_COLUMNS).in("id", orgIds).eq("status", "approved");
+  const r = await distributeTo(rfq, orgs ?? [], replyBy, s.userId, false, "manual");
+  return NextResponse.json({ ok: true, sent: r.sent, mailed: r.mailed, skipped: r.skipped, capped: r.capped });
 }

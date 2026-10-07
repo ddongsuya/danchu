@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
-  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, errors: [] as string[] };
+  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, errors: [] as string[] };
 
   // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
   await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
@@ -123,6 +123,18 @@ export async function GET(req: Request) {
         await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "재배포하거나 기한을 연장해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
       }
     }
+  }
+
+  // 4) 비교표 공개 14일 뒤에도 선정도 마무리도 없는 요청: 의뢰자에게 한 번 묻는다
+  //    선정 버튼을 누르지 않은 요청이 어디로 갔는지 알아야 전달 명세와 선정률이 맞는다
+  const asked = new Date(Date.now() - 14 * 864e5).toISOString();
+  const { data: idle } = await sb.from("rfq_requests").select("id, rfq_no, user_id, substance").eq("status", "compared").is("selected_quote_id", null).is("outcome", null).lt("compared_at", asked);
+  for (const rfq of idle ?? []) {
+    const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "outcome_asked").maybeSingle();
+    if (ev || !rfq.user_id) continue;
+    await notifyUsers([rfq.user_id], { kind: "비교", title: `${rfq.rfq_no} 기관을 정하셨나요?`, body: `${rfq.substance} 비교표가 공개된 지 2주가 지났습니다. 비교표에서 기관을 선정하거나, 다른 경로로 진행·보류하신 경우 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` });
+    await logEvent(rfq.id, "outcome_asked", "선정 여부 확인 요청", "비교표 공개 14일 경과", null);
+    out.outcomeAsked++;
   }
 
   return NextResponse.json({ ok: true, today, ...out });

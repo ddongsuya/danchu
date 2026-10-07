@@ -1,4 +1,5 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
+import { OutcomeForm } from "@/components/app/OutcomeForm";
 import { needsCda, confidentialAccess } from "@/lib/request-policy";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -113,6 +114,13 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             )}
           </div>
 
+          {!d.award && canCompare && !["closed", "cancelled"].includes(rfq.status) && <OutcomeForm no={rfq.rfq_no} />}
+          {!d.award && rfq.outcome && (
+            <div className="note" style={{ flexDirection: "column", gap: 4 }}>
+              <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>
+              {rfq.outcome_note && <span>{rfq.outcome_note}</span>}
+            </div>
+          )}
           {d.award && (
             <div className="note note--ok" style={{ flexDirection: "column", gap: 4 }}>
               <b>{d.award.cro_name} 선택 · {ymd(d.award.awarded_at)}</b>
@@ -128,6 +136,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>요청 내용</div>
             {[
               ["의뢰 목적", rfq.purpose],
+              ["요청 성격", rfq.intent],
               ["개발 분야", p.devField],
               ["희망 착수", p.start],
               ["예산", rfq.budget],

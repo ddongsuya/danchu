@@ -148,6 +148,12 @@ export const WIZ: WizStep[] = [
   },
   {
     eyebrow: "의뢰 개요",
+    q: "이번 요청의 성격은 무엇인가요?",
+    sub: "예산 검토나 비교 견적도 정상 요청입니다. 기관이 회신 내용을 맞추는 데 쓰이며, 전달 여부에는 영향이 없습니다.",
+    fields: [{ id: "intent", type: "radio", required: true, options: ["발주 예정", "비교 견적", "예산 검토"] }],
+  },
+  {
+    eyebrow: "의뢰 개요",
     q: "개발 분야를 선택해 주세요",
     fields: [
       {
@@ -235,7 +241,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "일정·예산",
     q: "기밀 등급을 선택해 주세요",
-    sub: "CDA를 선택하면 회사명과 첨부파일은 기관별 체결 확인 후 공개합니다.",
+    sub: "회사명과 담당자 연락처는 모든 요청에서 선정한 기관에만 공개됩니다. CDA를 선택하면 첨부파일도 기관별 체결 확인 후 공개합니다.",
     fields: [
       { id: "confid", type: "radio", required: true, options: ["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"] },
     ],
@@ -697,6 +703,7 @@ export function validateRequired(values: Values): string {
   }
   if (!["3곳", "5곳", "전체"].includes(String(values.croCount))) return "요청할 기관 수를 선택해 주세요.";
   if (!["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"].includes(String(values.confid))) return "정보 공개 방식을 선택해 주세요.";
+  if (!["발주 예정", "비교 견적", "예산 검토"].includes(String(values.intent))) return "이번 요청의 성격을 선택해 주세요.";
   if (Array.isArray(values.categories) && values.categories.some((c) => !CATS.includes(c as Cat))) return "시험 항목을 다시 선택해 주세요.";
   const email = values.email;
   if (typeof email === "string" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
