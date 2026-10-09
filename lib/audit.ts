@@ -5,7 +5,7 @@ export type AuditAction =
   | "org.approve" | "org.reject" | "org.suspend" | "org.terms"
   | "user.role" | "user.delete"
   | "invite.billing" | "invite.resend" | "invite.cancel" | "billing.close"
-  | "rfq.deadline" | "rfq.terms" | "award.contract";
+  | "rfq.deadline" | "rfq.terms" | "award.contract" | "award.fee_exempt";
 
 /**
  * 운영자 행위를 남긴다. 요청 단위 이력(rfq_events)과 달리 기관·사용자·청구처럼 요청 밖의 변경을 모은다.

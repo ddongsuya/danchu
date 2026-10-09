@@ -6,6 +6,7 @@ import { getRfqByNo, ownsRfq, type QuoteRow } from "@/lib/data";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { won } from "@/lib/format";
 import { SELECT_QUOTE_ERRORS, selectQuote } from "@/lib/rpc";
+import { findExistingClient } from "@/lib/request-policy";
 
 export const runtime = "nodejs";
 
@@ -74,7 +75,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     await notifyUsers(ids, { kind: "선정", title: `미선정 · ${rfq.rfq_no} ${rfq.substance}`, body: "의뢰자가 다른 기관을 선택했습니다. 참여해 주셔서 감사합니다.", href: "/cro/quotes" }, { to: mails });
   }
 
-  await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+  // 기관의 기존 고객 목록과 대조: 맞으면 성사수수료 면제 후보로 표시하고 운영자에게 알린다 (확정은 운영자)
+  let existing = "";
+  if (quote.cro_org_id) {
+    const { data: list } = await sb.from("cro_org_clients").select("name, business_no, last_contract_on").eq("org_id", quote.cro_org_id).limit(500);
+    const hit = findExistingClient(rfq.company, list ?? []);
+    if (hit) {
+      existing = `기존 고객 목록 일치: ${hit.name}${hit.last_contract_on ? ` (마지막 계약 ${hit.last_contract_on})` : ""}`;
+      await sb.from("rfq_awards").update({ existing_client_claim: existing, existing_client_claimed_at: new Date().toISOString() }).eq("id", award.id);
+    }
+  }
+  await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}${existing ? `\n${existing} · 성사수수료 면제 여부를 수주·계약 화면에서 정해 주세요.` : ""}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
   await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name} 선정 완료 · ${rfq.rfq_no}`, body: "선정한 기관에 연락처를 전달했습니다. 기관이 곧 연락드리며, 계약은 기관과 직접 진행합니다. 계약이 체결되면 기관이 단추에 보고하고 알림으로 알려 드립니다.", href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
 
   return NextResponse.json({ ok: true, awardId: award.id });

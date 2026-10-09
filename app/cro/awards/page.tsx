@@ -2,6 +2,9 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listAwardsForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { ContractReport } from "@/components/cro/ContractReport";
+import { ExemptClaim } from "@/components/cro/ExemptClaim";
+import { addBusinessDays } from "@/lib/dates";
+import { EXEMPT_CLAIM_BUSINESS_DAYS } from "@/lib/request-policy";
 import { ymd, won } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +20,8 @@ export default async function CroAwards() {
   const org = s.org;
   if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   const list = dbReady() ? await listAwardsForOrg(org.id) : [];
+  const nowSeoul = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const canClaim = (awardedAt: string) => nowSeoul <= addBusinessDays(new Date(new Date(awardedAt).toLocaleString("en-US", { timeZone: "Asia/Seoul" })), EXEMPT_CLAIM_BUSINESS_DAYS);
 
   return (
     <>
@@ -52,6 +57,7 @@ export default async function CroAwards() {
                 </span>
               </div>
 
+              <ExemptClaim awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} canClaim={canClaim(a.awarded_at)} />
               {!a.contract_reported_at && (
                 <div className="grid2" style={{ alignItems: "start" }}>
                   <div className="stack" style={{ gap: 10 }}>

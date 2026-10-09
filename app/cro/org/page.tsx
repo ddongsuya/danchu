@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
-import { dbReady, listOrgMembers, listPendingMembers } from "@/lib/data";
+import { dbReady, listOrgClients, listOrgMembers, listPendingMembers } from "@/lib/data";
+import { OrgClients } from "@/components/cro/OrgClients";
 import { OrgMembers } from "@/components/cro/OrgMembers";
 import { OrgForm } from "@/components/cro/OrgForm";
 import { ThemeSettings } from "@/components/ThemeSettings";
@@ -19,7 +20,7 @@ const STATUS: Record<string, [string, string]> = {
 export default async function CroOrgPage() {
   const s = await requireSession("cro");
   const org = s.org;
-  const [members, pending] = org && dbReady() ? await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id)]) : [[], []];
+  const [members, pending, clients] = org && dbReady() ? await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id), listOrgClients(org.id)]) : [[], [], []];
   const isOwner = s.profile.org_role === "owner";
   const st = STATUS[org?.status ?? "pending"];
 
@@ -55,6 +56,7 @@ export default async function CroOrgPage() {
           ) : (
             <div className="empty">소속 기관이 없습니다. hello@danchu.kr로 알려주세요.</div>
           )}
+          {org?.status === "approved" && <OrgClients clients={clients} isOwner={isOwner} />}
         </div>
         <div className="stack">
           <OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} />
