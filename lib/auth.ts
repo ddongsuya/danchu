@@ -19,6 +19,9 @@ export type Profile = {
   pending_org_id?: string | null;
   /** 기관 내 역할. owner 만 기관 정보 수정·담당자 관리 */
   org_role?: "owner" | "member";
+  /** 로그인 이메일 변경 대기 (새 주소에서 확인 전) */
+  pending_email?: string | null;
+  pending_email_expires_at?: string | null;
 };
 
 export type CroOrg = {

@@ -472,7 +472,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
           {error && <p className="note note--err" role="alert">{error}</p>}
 
-          <div className="card card--pad stack" style={{ gap: 12 }}>
+          <div className="card card--pad stack reply-submit" style={{ gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {maxW ? `병렬 수행 ${maxW}주` : "기간 미입력"}</span>
               <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "-"}</span>

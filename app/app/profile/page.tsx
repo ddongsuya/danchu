@@ -4,13 +4,23 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { ThemeSettings } from "@/components/ThemeSettings";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { CONTACT } from "@/lib/rfq-schema";
+import { EmailChangeForm } from "@/components/EmailChangeForm";
+
+const NOTICES: Record<string, { ok: boolean; text: string }> = {
+  email_changed: { ok: true, text: "로그인 이메일을 바꿨습니다. 다음부터는 새 주소로 로그인하세요." },
+  email_expired: { ok: false, text: "이메일 변경 링크가 만료되었거나 올바르지 않습니다. 아래에서 다시 요청해 주세요." },
+  email_taken: { ok: false, text: "그 주소는 이미 다른 계정에서 쓰고 있어 바꾸지 못했습니다." },
+  email_failed: { ok: false, text: "이메일을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요." },
+};
 
 export const dynamic = "force-dynamic";
 
-export default async function Profile() {
+export default async function Profile({ searchParams }: { searchParams?: Promise<{ notice?: string }> }) {
   const s = await requireSession();
   const p = s.profile;
   const base = p.role === "cro" ? "/cro" : "/app";
+  const notice = NOTICES[(await searchParams)?.notice ?? ""];
+  const pendingEmail = p.pending_email && p.pending_email_expires_at && new Date(p.pending_email_expires_at).getTime() > Date.now() ? p.pending_email : null;
   return (
     <>
       <div className="ph">
@@ -21,8 +31,13 @@ export default async function Profile() {
         <span className="pill pill--tint">{p.role === "admin" ? "운영자" : p.role === "cro" ? "CRO" : "의뢰자"}</span>
       </div>
 
+      {notice && <p className={`note ${notice.ok ? "note--tint" : "note--err"}`} role="status" style={{ marginBottom: 16 }}>{notice.text}</p>}
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">
+          <div className="card card--pad">
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>로그인 이메일</h2>
+            <EmailChangeForm current={s.email} pending={pendingEmail} />
+          </div>
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>담당자 정보</h2>
             <ProfileForm

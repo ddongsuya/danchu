@@ -31,7 +31,7 @@ export default async function CroQuotes() {
         </div>
       ) : (
         <div className="card tbl-wrap">
-          <table className="tbl">
+          <table className="tbl tbl--stack">
             <thead>
               <tr>
                 <th>요청</th>
@@ -55,12 +55,12 @@ export default async function CroQuotes() {
                       <div style={{ fontWeight: 600 }}>{i.rfq?.substance}</div>
                       <div className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{i.rfq_no} · {(i.rfq?.categories ?? []).join(" · ")}</div>
                     </td>
-                    <td className="tnum" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
-                    <td className="tnum">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
-                    <td className="tnum">{ymd(q.submitted_at)}</td>
-                    <td className="tnum">{i.reply_by}{dd.n >= 0 ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>{dd.label}</span> : null}</td>
-                    <td><span className="pill pill--tint">{result}</span></td>
-                    <td><Link href={`/cro/r/${i.id}`} className="b2 bsm">보기</Link></td>
+                    <td className="tnum" data-label="총액" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
+                    <td className="tnum" data-label="기간">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
+                    <td className="tnum" data-label="제출일">{ymd(q.submitted_at)}</td>
+                    <td className="tnum" data-label="회신 기한">{i.reply_by}{dd.n >= 0 ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>{dd.label}</span> : null}</td>
+                    <td data-label="진행"><span className="pill pill--tint">{result}</span></td>
+                    <td className="tbl__act"><Link href={`/cro/r/${i.id}`} className="b2 bsm">보기</Link></td>
                   </tr>
                 );
               })}

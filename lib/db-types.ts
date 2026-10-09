@@ -280,8 +280,11 @@ export type Database = {
           pending_org_id: string | null;
           email_notifications: boolean;
           org_role: string;
+          pending_email: string | null;
+          pending_email_hash: string | null;
+          pending_email_expires_at: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["profiles"]["Row"], "role" | "name" | "company" | "dept" | "phone" | "org_type" | "cro_org_id" | "created_at" | "updated_at" | "pending_org_id" | "email_notifications" | "org_role">;
+        Insert: Ins<Database["public"]["Tables"]["profiles"]["Row"], "role" | "name" | "company" | "dept" | "phone" | "org_type" | "cro_org_id" | "created_at" | "updated_at" | "pending_org_id" | "email_notifications" | "org_role" | "pending_email" | "pending_email_hash" | "pending_email_expires_at">;
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
         Relationships: [
           { foreignKeyName: "profiles_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },

@@ -224,6 +224,22 @@
 .tbl td { padding: 12px; border-bottom: 1px solid var(--track); vertical-align: top; }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl--sticky th:first-child, .tbl--sticky td:first-child { position: sticky; left: 0; background: var(--wh); z-index: 1; }
+/* 좁은 화면에서는 행을 카드처럼 세운다. 셀 라벨은 data-label 로 (가로 스크롤 표는 엄지로 읽기 어렵다) */
+@media (max-width: 639px) {
+  .tbl--stack { min-width: 0; }
+  .tbl--stack thead { display: none; }
+  .tbl--stack tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 14px 16px; border-bottom: 1px solid var(--track); }
+  .tbl--stack tr:last-child { border-bottom: 0; }
+  .pt .tbl--stack td { display: block; padding: 0; border: 0; }
+  .tbl--stack td:first-child { grid-column: 1 / -1; }
+  .tbl--stack td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  .tbl--stack td.tbl__act { grid-column: 1 / -1; padding-top: 4px; }
+  .tbl--stack td.tbl__act .b2 { width: 100%; }
+}
+/* 기관 회신 화면의 제출 상자: 모바일에서는 바닥에 붙어 스크롤 없이 총액·제출 버튼이 보인다 */
+@media (max-width: 959px) {
+  .reply-submit { position: sticky; bottom: 0; z-index: 5; box-shadow: 0 -8px 24px -12px rgba(20, 24, 33, 0.18); }
+}
 
 /* 타임라인 */
 .tl { display: flex; flex-direction: column; }
