@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DeleteUserButton } from "./DeleteUserButton";
 
 type U = { id: string; email: string; role: string; name: string | null; company: string | null; cro_org_id: string | null; pending_org_id?: string | null; created_at: string };
 
@@ -54,6 +55,7 @@ export function UserRow({ user, orgs, self }: { user: U; orgs: { id: string; nam
         </button>
         {err && <div style={{ fontSize: 12, color: "var(--err)" }}>{err}</div>}
       </td>
+      <td>{!self && user.role !== "admin" && <DeleteUserButton userId={user.id} email={user.email} />}</td>
     </tr>
   );
 }

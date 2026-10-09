@@ -11,6 +11,10 @@ const ERRORS: Record<string, string> = {
   config: "로그인 기능이 아직 설정되지 않았습니다. 운영자에게 문의해 주세요.",
 };
 
+const NOTICES: Record<string, string> = {
+  deleted: "탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.",
+};
+
 export function LoginView() {
   return (
     <Suspense fallback={<div className="auth__card" />}>
@@ -29,6 +33,7 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(ERRORS[sp.get("error") || ""] || "");
   const [sent, setSent] = useState(false);
+  const notice = NOTICES[sp.get("notice") || ""] || "";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +92,7 @@ function Login() {
         ) : (
           <p className="field__help" style={{ margin: 0 }}>비밀번호 없이, 이메일로 받은 링크를 눌러 로그인합니다.</p>
         )}
+        {notice && <p className="field__help" role="status" style={{ margin: 0 }}>{notice}</p>}
         <ErrorBox>{error}</ErrorBox>
         <button type="submit" className="btn--next" disabled={busy || !email || (mode === "password" && !pw)}>
           {busy ? "확인 중…" : mode === "password" ? "로그인" : "로그인 링크 받기"}

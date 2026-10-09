@@ -10,6 +10,7 @@ import { saveQuote, type QuoteItemInput } from "@/lib/rpc";
 import { captureError } from "@/lib/observe";
 import { isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
+import { runRetention } from "@/lib/retention";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
-  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, errors: [] as string[] };
+  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
 
   // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
   await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
@@ -163,6 +164,11 @@ export async function GET(req: Request) {
     await logEvent(rfq.id, "outcome_asked", "선정 여부 확인 요청", "비교표 공개 14일 경과", null);
     out.outcomeAsked++;
   }
+  });
+
+  // 5) 보존기간 정리: 접속 기록 90일, 요청서 3년, 읽은 알림 180일 (개인정보처리방침 3항)
+  await step("retention", out.errors, async () => {
+    out.retention = await runRetention(sb);
   });
 
   // 실패한 단계가 있으면 운영자에게 알린다. 응답 JSON 은 아무도 읽지 않는다

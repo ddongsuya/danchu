@@ -41,7 +41,7 @@ npm test                     # Vitest (lib 순수 함수)
 CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 
 ## Supabase 설정 (1회)
-1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0010_ops_hardening.sql`). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
+1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0011_account_deletion.sql`). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
 2. Storage에 비공개 버킷 `rfq-files`, `cro-files`가 있는지 확인 (스키마가 만들지만 없으면 직접 생성)
 3. Authentication → Providers → Email: 켜 둔다. **Confirm email 켜짐** 유지 (가입 확인은 우리가 보내는 메일 링크로 처리)
    - Authentication → Sign In / Providers → **"Allow new users to sign up" 끄기**. 가입은 서버가 `auth.admin.createUser`로만 만든다. 켜 두면 anon 키로 직접 가입해 프로필을 만들 수 있다 (역할·기관은 어차피 서버만 적지만, 불필요한 계정이 생긴다)
@@ -76,6 +76,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | 첨부 한도 | 버킷 수준에서 20MB·허용 형식만 받는다(`0010`). 서버 검사는 메타데이터만 보므로 버킷 한도가 실제 방어선이다 |
 | 백업 | Supabase Pro + PITR을 켠다. Storage 객체는 DB 백업에 포함되지 않으므로 `rfq-files`·`cro-files`를 주기적으로 외부에 복제한다. 출시 전 복구 리허설 1회 |
 | 로그 | 이메일 주소는 마스킹(`maskEmail`), 요청서·문의 본문은 로그에 남기지 않는다 |
+| 회원 탈퇴·보존기간 | 프로필 → 회원 탈퇴(`/app/profile/delete`), 운영자는 `/admin/users`의 삭제. 둘 다 `lib/account.ts`가 진행 중 요청 취소 → 요청서 익명화(미선정 첨부 삭제) → `auth.admin.deleteUser` 순으로 처리한다. 운영자 계정과 선정 후 계약 진행 중인 의뢰자는 막힌다. cron 이 매일 접속 기록 90일·요청서 3년·읽은 알림 180일 기준으로 정리한다(`lib/retention.ts`, 개인정보처리방침 3항과 같은 값) |
 | 운영 계정 | 2개 이상 두고, `ADMIN_EMAIL`에 운영자 메일을 모두 넣는다 |
 
 ## API 요약

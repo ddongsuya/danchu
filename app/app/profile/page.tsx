@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function Profile() {
   const s = await requireSession();
   const p = s.profile;
+  const base = p.role === "cro" ? "/cro" : "/app";
   return (
     <>
       <div className="ph">
@@ -46,6 +47,12 @@ export default async function Profile() {
               <span>이용약관 · 개인정보처리방침</span>
               <span style={{ color: "var(--dash)" }}>›</span>
             </Link>
+            {p.role !== "admin" && (
+              <Link href={`${base}/profile/delete`} className="kv" style={{ alignItems: "center", color: "var(--muted)" }}>
+                <span>회원 탈퇴</span>
+                <span style={{ color: "var(--dash)" }}>›</span>
+              </Link>
+            )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0" }}>
             <LogoutButton className="b2" style={{ alignSelf: "center", padding: "0 24px" }} />

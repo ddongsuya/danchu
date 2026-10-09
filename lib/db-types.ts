@@ -48,10 +48,11 @@ export type Database = {
           outcome: string | null;
           outcome_note: string | null;
           outcome_at: string | null;
+          anonymized_at: string | null;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
