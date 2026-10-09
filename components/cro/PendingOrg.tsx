@@ -15,7 +15,7 @@ export function PendingOrg({ org, pendingOrg }: { org: CroOrg | null; pendingOrg
     return (
       <div className="empty">
         <b>소속 기관이 없습니다</b>
-        계정이 기관에 연결되어 있지 않습니다. hello@danchu.kr로 알려주시면 연결해 드립니다.
+        계정이 기관에 연결되어 있지 않습니다. 합류 신청이 처리되지 않았거나 아직 신청하지 않은 상태입니다. 소속 기관명과 함께 hello@danchu.kr로 알려주시면 연결해 드립니다.
       </div>
     );
   }

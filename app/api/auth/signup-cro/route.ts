@@ -43,6 +43,10 @@ export async function POST(req: Request) {
 
   // 같은 이름의 기관이 이미 있으면 합류 신청으로 받는다 (연결은 운영자가 한다)
   const { data: existing } = await admin.from("cro_orgs").select("id, status").ilike("name", likeExact(orgName)).limit(1).maybeSingle();
+  if (existing && (existing.status === "rejected" || existing.status === "suspended")) {
+    // 반려·중지된 기관에 합류 신청을 받으면 신청자는 영원히 "대기 중"만 본다. 여기서 끝낸다
+    return NextResponse.json({ error: existing.status === "rejected" ? "이 기관은 가입 신청이 반려된 상태라 담당자 합류를 받을 수 없습니다. hello@danchu.kr로 문의해 주세요." : "이 기관은 참여가 중지되어 담당자 합류를 받을 수 없습니다. hello@danchu.kr로 문의해 주세요." }, { status: 400 });
+  }
   let orgId = existing?.id as string | undefined;
   if (!orgId) {
     const { data: org, error: oe } = await admin

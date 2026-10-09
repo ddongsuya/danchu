@@ -15,7 +15,7 @@ export function SignupCroView() {
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ joined: boolean } | null>(null);
+  const [done, setDone] = useState<{ joined: boolean; mailed: boolean } | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const toggle = (list: string[], setList: (v: string[]) => void, v: string) => setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -27,11 +27,11 @@ export function SignupCroView() {
     setBusy(true);
     setError("");
     try {
-      const d = await postJson<{ joined: boolean }>("/api/auth/signup-cro", {
+      const d = await postJson<{ joined: boolean; mailed: boolean }>("/api/auth/signup-cro", {
         email: f.email, password: f.password, name: f.name, phone: f.phone,
         org: { name: f.orgName, businessNo: f.businessNo, website: f.website, address: f.address, contactPhone: f.phone, glpCerts: glp, aaalac, otherCerts: f.otherCerts, categories: cats, intro: f.intro },
       });
-      setDone({ joined: d.joined });
+      setDone({ joined: d.joined, mailed: d.mailed });
     } catch (err) {
       setError(err instanceof Error ? err.message : "신청하지 못했습니다.");
     } finally {
@@ -42,9 +42,9 @@ export function SignupCroView() {
   if (done) {
     return (
       <div className="auth__card">
-        <Done title="가입 신청을 받았습니다">
+        <Done title={done.mailed ? "가입 신청을 받았습니다" : "신청은 받았지만 확인 메일을 보내지 못했습니다"}>
           <p>
-            <b>{f.email}</b>로 보낸 확인 메일의 버튼을 눌러 이메일을 확인해 주세요.
+            {done.mailed ? <><b>{f.email}</b>로 보낸 확인 메일의 버튼을 눌러 이메일을 확인해 주세요.</> : <>아래 버튼으로 <b>{f.email}</b>에 확인 메일을 다시 보낼 수 있습니다.</>}
           </p>
           <p className="auth__note" style={{ textAlign: "left" }}>
             {done.joined
@@ -52,6 +52,8 @@ export function SignupCroView() {
               : "운영자가 기관 정보를 확인한 뒤 승인합니다. 보통 영업일 1~2일 안에 결과를 메일로 알려 드립니다."}{" "}
             승인 전에도 로그인해서 신청 내용을 볼 수 있습니다.
           </p>
+          <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email }); setDone({ ...done, mailed: true }); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했습니다."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
+          <ErrorBox>{error}</ErrorBox>
         </Done>
       </div>
     );

@@ -37,7 +37,7 @@ export function authErrorKo(msg: string | undefined): string {
   if (m.includes("already") && m.includes("registered")) return "이미 가입된 이메일입니다. 로그인해 주세요.";
   if (m.includes("already been registered") || m.includes("duplicate")) return "이미 가입된 이메일입니다. 로그인해 주세요.";
   if (m.includes("not confirmed")) return "이메일 확인이 끝나지 않았습니다. 받은 편지함의 확인 링크를 눌러 주세요.";
-  if (m.includes("invalid login") || m.includes("invalid credentials")) return "이메일 또는 비밀번호가 맞지 않습니다.";
+  if (m.includes("invalid login") || m.includes("invalid credentials")) return "이메일 또는 비밀번호가 맞지 않습니다. 비밀번호 없이 가입했다면 '이메일 링크' 탭으로 로그인해 주세요.";
   if (m.includes("password") && m.includes("least")) return "비밀번호는 8자 이상이어야 합니다.";
   if (m.includes("rate limit") || m.includes("too many")) return "요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.";
   if (m.includes("expired") || m.includes("invalid") && m.includes("token")) return "링크가 만료되었거나 이미 사용되었습니다. 다시 요청해 주세요.";

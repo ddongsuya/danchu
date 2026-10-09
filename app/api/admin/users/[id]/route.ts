@@ -24,7 +24,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (id === s.userId && role !== "admin") return NextResponse.json({ error: "본인의 운영자 권한은 해제할 수 없습니다." }, { status: 400 });
   const sb = getSupabaseAdmin()!;
   const linkOrg = role === "cro" ? croOrgId : null;
-  const { data: before } = await sb.from("profiles").select("cro_org_id, pending_org_id").eq("id", id).maybeSingle();
+  const { data: before } = await sb.from("profiles").select("role, cro_org_id, pending_org_id").eq("id", id).maybeSingle();
+  if (before?.role === "admin" && role !== "admin") {
+    // 운영자가 0명이 되면 복구는 SQL 뿐이다
+    const { count } = await sb.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
+    if ((count ?? 0) <= 1) return NextResponse.json({ error: "마지막 운영자는 강등할 수 없습니다. 먼저 다른 운영자를 지정해 주세요." }, { status: 400 });
+  }
   const { error } = await sb.from("profiles").update({ role, cro_org_id: linkOrg, pending_org_id: null }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
 

@@ -39,8 +39,8 @@ export default async function Profile() {
               <span>문의하기</span>
               <span style={{ color: "var(--dash)" }}>›</span>
             </Link>
-            <Link href="/forgot" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>비밀번호 재설정</span>
+            <Link href="/reset-password" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
+              <span>비밀번호 설정·변경</span>
               <span style={{ color: "var(--dash)" }}>›</span>
             </Link>
             <Link href="/terms" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
