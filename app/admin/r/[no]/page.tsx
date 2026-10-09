@@ -92,7 +92,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                         <tr key={i.id}>
                           <td>
                             <div style={{ fontWeight: 600 }}>{i.cro_name}</div>
-                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{!i.mailed_at && ["sent", "draft"].includes(i.status) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
                           </td>
                           <td>
                             <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{INVITE_LABEL[i.status] ?? i.status}</span>

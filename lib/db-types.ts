@@ -101,8 +101,9 @@ export type Database = {
           source: string;
           billable: boolean;
           bill_excluded_reason: string | null;
+          mailed_at: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference" | "source" | "billable" | "bill_excluded_reason">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference" | "source" | "billable" | "bill_excluded_reason" | "mailed_at">;
         Update: Partial<Database["public"]["Tables"]["rfq_invites"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_invites_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -256,6 +257,8 @@ export type Database = {
           monthly_cap: number | null;
           per_request_fee: number | null;
           fee_rate: number | null;
+          /** 생성 컬럼: 사업자번호 숫자만. insert/update 에 넣지 않는다 */
+          business_no_norm: string | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_orgs"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_orgs"]["Row"], "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_orgs"]["Row"]>;
