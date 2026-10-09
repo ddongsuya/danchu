@@ -102,6 +102,8 @@ export const getSession = cache(async (): Promise<Session | null> => {
  */
 export async function requireSession(role?: Role, next?: string): Promise<Session> {
   const s = await getSession();
+  // 서비스 키가 없으면 로그인해도 세션이 null 로 보인다. 조용히 로그인 화면으로 돌리면 무한 루프처럼 보이므로 이유를 붙인다
+  if (!s && !getSupabaseAdmin()) redirect("/login?error=config");
   if (!s) redirect(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   if (role && s.profile.role !== role && s.profile.role !== "admin") redirect(homeOf(s.profile.role));
   return s;

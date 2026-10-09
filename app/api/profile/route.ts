@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { TablesUpdate } from "@/lib/db-types";
+import { rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,7 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const s = await sessionOrNull();
   if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (await rateLimited("profile", s.userId, 30, 600)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const v = (k: string, max = 120) => (typeof b[k] === "string" ? (b[k] as string).trim().slice(0, max) || null : undefined);
   const patch: TablesUpdate<"profiles"> = {};

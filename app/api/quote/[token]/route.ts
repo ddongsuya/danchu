@@ -6,7 +6,7 @@ import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib
 import { loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
-import { won } from "@/lib/format";
+import { todaySeoul, won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
 
@@ -226,7 +226,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });
   if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 '회신하지 않음'으로 처리해 주세요." }, { status: 400 });
+  if (parsed.items.some((it) => it.avail !== "불가" && Number(it.amount) < 1)) return NextResponse.json({ error: "가능·조건부 가능 항목의 금액은 1원 이상이어야 합니다." }, { status: 400 });
   if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
+  const today = todaySeoul();
+  if (parsed.common.startDate < today) return NextResponse.json({ error: "착수 가능일은 오늘 이후 날짜여야 합니다." }, { status: 400 });
+  if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났습니다. 날짜를 확인해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
   const r = await upsert(got, parsed, true, await actor(got), { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });

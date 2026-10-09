@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createSessionClient } from "@/lib/supabase-server";
 import { authErrorKo } from "@/lib/auth-links";
+import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 /** POST { password } — 로그인된(재설정 링크로 들어온) 사용자의 비밀번호 변경 */
 export async function POST(req: Request) {
+  if (await rateLimited("auth-reset", clientIp(req), 10, 600)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const b = (await req.json().catch(() => ({}))) as { password?: unknown };
   const password = typeof b.password === "string" ? b.password : "";
   if (password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });

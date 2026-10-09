@@ -390,7 +390,7 @@ export type Database = {
       rotate_org_invite_tokens: { Args: { p_org: string }; Returns: number };
       select_quote: { Args: { p_rfq_id: string; p_quote_id: string; p_user: string }; Returns: Json };
       save_quote: { Args: { p_invite_id: string; p_header: Json; p_items: Json; p_submit: boolean; p_actor: string | null }; Returns: Json };
-      report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string }; Returns: Json };
+      report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string; p_force?: boolean }; Returns: Json };
       billing_summary: { Args: { p_from: string; p_to: string }; Returns: BillingSummaryRow[] };
     };
     Enums: Record<string, never>;

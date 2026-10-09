@@ -9,6 +9,8 @@ import { Crumb, StatusPill } from "@/components/app/ui";
 import { DistributePanel } from "@/components/admin/DistributePanel";
 import { AdminActions } from "@/components/admin/AdminActions";
 import { DeadlineForm } from "@/components/admin/DeadlineForm";
+import { InviteActions } from "@/components/admin/InviteActions";
+import { RequestTerms } from "@/components/admin/RequestTerms";
 import { todaySeoul } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { quoteRowsFromPayload } from "@/lib/quote-items";
@@ -31,6 +33,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   const rows = quoteRowsFromPayload(p);
   const today = todaySeoul();
   const canChangeDeadline = ["received", "distributed", "quoted"].includes(rfq.status) && !rfq.compared_at;
+  const done = rfq.status === "closed" || rfq.status === "cancelled";
 
   return (
     <>
@@ -100,7 +103,10 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                           </td>
                           <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
                           <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
-                          <td><a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}>회신 링크</a></td>
+                          <td>
+                            <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}>회신 링크</a>
+                            {["sent", "draft"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} /></div>}
+                          </td>
                         </tr>
                       );
                     })}
@@ -113,6 +119,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>진행 관리</h2>
             {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites} />}
+            {!done && <div style={{ marginBottom: 12 }}><RequestTerms no={rfq.rfq_no} croCount={rfq.cro_count} confidentiality={rfq.confidentiality} /></div>}
             <AdminActions
               no={rfq.rfq_no}
               status={rfq.status}
