@@ -1,3 +1,4 @@
+import { clientIp } from "@/lib/rate-limit";
 import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { QuoteLineDef } from "@/lib/quote-items";
@@ -106,7 +107,7 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf };
 }
 
-async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string | null) {
+async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string | null, who?: { ip: string; ua: string }) {
   const sb = getSupabaseAdmin()!;
   const { items, note, common, pdf } = p;
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
@@ -156,6 +157,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
 
   // 헤더 + 항목 + 초대 상태 + 요청 상태를 한 트랜잭션으로. 초안 저장은 제출본을 절대 덮지 않는다.
   const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
+  // 토큰 제출은 행위자가 없다. 금전 구속력이 있는 제출이라 누가 보냈는지 IP·브라우저라도 남긴다
+  if (submit && r.ok && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
   if (!r.ok) return { error: "저장에 실패했습니다.", status: 500 };
   if (r.skipped) return { ok: true, skipped: true };
 
@@ -170,7 +173,7 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     const first = r.first ?? true;
     const done = r.submitted_invites ?? 0;
     const count = r.total_invites ?? 0;
-    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id });
+    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null });
     const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
     if (rq?.user_id) {
       // 메일은 첫 견적이 왔을 때와 전원이 회신했을 때만. 그 사이 도착은 앱 알림으로 충분하다
@@ -226,7 +229,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
-  const r = await upsert(got, parsed, true, await actor(got));
+  const r = await upsert(got, parsed, true, await actor(got), { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, total: r.total ?? null, weeks: r.weeks ?? null });
 }

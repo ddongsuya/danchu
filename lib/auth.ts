@@ -17,6 +17,8 @@ export type Profile = {
   cro_org_id: string | null;
   /** 기존 기관에 담당자로 합류 신청한 상태 (운영자가 연결하기 전) */
   pending_org_id?: string | null;
+  /** 기관 내 역할. owner 만 기관 정보 수정·담당자 관리 */
+  org_role?: "owner" | "member";
 };
 
 export type CroOrg = {

@@ -7,6 +7,7 @@ import { distributeOpenRfqs } from "@/lib/distribute";
 import { CATS } from "@/lib/rfq-schema";
 import { EMAIL_RE } from "@/lib/auth-links";
 import type { TablesUpdate } from "@/lib/db-types";
+import { audit, diffFields } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const sb = getSupabaseAdmin()!;
   const { error } = await sb.from("cro_orgs").update({ status: m.status, approved_at: action === "approve" ? new Date().toISOString() : org.approved_at }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  await audit({ userId: s.userId, email: s.email }, `org.${action}` as "org.approve" | "org.reject" | "org.suspend", { type: "cro_org", id, label: org.name }, { before: { status: org.status }, after: { status: m.status }, note: reason || undefined });
 
   if (action === "suspend") {
     // 중지된 기관이 토큰 링크로 계속 제출해 비교표에 오르지 않게 열린 초대를 닫는다 (한도에서도 빠진다)
@@ -95,6 +97,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const sb = getSupabaseAdmin()!;
   const { error } = await sb.from("cro_orgs").update(patch).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  const d = diffFields(org as unknown as Record<string, unknown>, patch as Record<string, unknown>);
+  if (Object.keys(d.after).length) await audit({ userId: s.userId, email: s.email }, "org.terms", { type: "cro_org", id, label: org.name }, d);
 
   let extra = "";
   if (patch.categories && org.status === "approved") {

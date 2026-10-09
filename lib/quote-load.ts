@@ -1,4 +1,4 @@
-import { confidentialAccess, identityVisible, maskedClientLabel } from "./request-policy";
+import { anonymousFileLabel, confidentialAccess, identityVisible, maskedClientLabel } from "./request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import { quoteRowsFromPayload } from "./quote-items";
 import { EMPTY_COMMON, type ReplyCommon, type ReplyDraft, type ReplyItem, type RfqView } from "./cro-data";
@@ -105,7 +105,8 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
     situation: a("advisorAnswers").filter((x) => typeof x === "string").slice(0, 20),
     ask: a("advisorAsk").filter((x) => typeof x === "string").slice(0, 30),
     attachments: masked ? (files.length ? `${files.length}건 · CDA 체결 후 열람` : "없음") : files.length ? `${files.length}건` : "없음",
-    files: masked ? [] : files.map((f) => ({ id: f.id, name: f.file_name, size: f.size_bytes })),
+    // 선정 전에는 파일명도 가린다 (파일명에 회사명이 들어 있는 경우가 많다). 다운로드 이름도 /api/files 에서 같은 규칙
+    files: masked ? [] : files.map((f, i) => ({ id: f.id, name: identityMasked ? anonymousFileLabel(i, f.file_name, f.size_bytes) : f.file_name, size: f.size_bytes })),
   };
 }
 

@@ -153,6 +153,8 @@ export type Database = {
           updated_at: string;
           cro_org_id: string | null;
           submitted_by: string | null;
+          submitted_ip: string | null;
+          submitted_ua: string | null;
           includes: string[];
           auto: boolean;
           material_by: string;
@@ -273,8 +275,9 @@ export type Database = {
           updated_at: string;
           pending_org_id: string | null;
           email_notifications: boolean;
+          org_role: string;
         };
-        Insert: Ins<Database["public"]["Tables"]["profiles"]["Row"], "role" | "name" | "company" | "dept" | "phone" | "org_type" | "cro_org_id" | "created_at" | "updated_at" | "pending_org_id" | "email_notifications">;
+        Insert: Ins<Database["public"]["Tables"]["profiles"]["Row"], "role" | "name" | "company" | "dept" | "phone" | "org_type" | "cro_org_id" | "created_at" | "updated_at" | "pending_org_id" | "email_notifications" | "org_role">;
         Update: Partial<Database["public"]["Tables"]["profiles"]["Row"]>;
         Relationships: [
           { foreignKeyName: "profiles_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
@@ -349,6 +352,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rate_limits"]["Row"]>;
         Relationships: [];
       };
+      admin_audit: {
+        Row: {
+          id: string;
+          created_at: string;
+          actor_id: string | null;
+          actor_email: string | null;
+          action: string;
+          target_type: string;
+          target_id: string | null;
+          target_label: string | null;
+          before: Record<string, unknown> | null;
+          after: Record<string, unknown> | null;
+          note: string | null;
+        };
+        Insert: Ins<Database["public"]["Tables"]["admin_audit"]["Row"], "id" | "created_at" | "actor_id" | "actor_email" | "target_id" | "target_label" | "before" | "after" | "note">;
+        Update: Partial<Database["public"]["Tables"]["admin_audit"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -356,6 +377,7 @@ export type Database = {
       claim_rfqs_by_email: { Args: { p_user: string; p_email: string }; Returns: number };
       rate_limit_hit: { Args: { p_key: string; p_limit: number; p_window_seconds: number }; Returns: boolean };
       rate_limit_cleanup: { Args: Record<string, never>; Returns: number };
+      rotate_org_invite_tokens: { Args: { p_org: string }; Returns: number };
       select_quote: { Args: { p_rfq_id: string; p_quote_id: string; p_user: string }; Returns: Json };
       save_quote: { Args: { p_invite_id: string; p_header: Json; p_items: Json; p_submit: boolean; p_actor: string | null }; Returns: Json };
       report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string }; Returns: Json };

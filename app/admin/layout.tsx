@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/billing", label: "전달 명세", icon: "doc" },
     { href: "/admin/notifications", label: "알림", icon: "bell", badge: unread },
     { href: "/admin/users", label: "사용자", icon: "user" },
+    { href: "/admin/audit", label: "운영 기록", icon: "list" },
   ];
   return (
     <AppState>

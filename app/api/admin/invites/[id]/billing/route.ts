@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { logEvent } from "@/lib/notify";
+import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -21,10 +22,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!b.billable && !reason) return NextResponse.json({ error: "제외 사유를 적어 주세요." }, { status: 400 });
 
   const sb = getSupabaseAdmin()!;
-  const { data: inv } = await sb.from("rfq_invites").select("id, rfq_id, cro_name").eq("id", id).maybeSingle();
+  const { data: inv } = await sb.from("rfq_invites").select("id, rfq_id, rfq_no, cro_name").eq("id", id).maybeSingle();
   if (!inv) return NextResponse.json({ error: "전달 기록을 찾을 수 없습니다." }, { status: 404 });
   const { error } = await sb.from("rfq_invites").update({ billable: b.billable, bill_excluded_reason: b.billable ? null : reason }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   await logEvent(inv.rfq_id, "billing", b.billable ? `${inv.cro_name} 전달 청구 복원` : `${inv.cro_name} 전달 청구 제외`, b.billable ? undefined : reason, s.userId, { inviteId: id, billable: b.billable });
+  await audit({ userId: s.userId, email: s.email }, "invite.billing", { type: "rfq_invite", id, label: `${inv.rfq_no} · ${inv.cro_name}` }, { after: { billable: b.billable }, note: reason || undefined });
   return NextResponse.json({ ok: true });
 }
