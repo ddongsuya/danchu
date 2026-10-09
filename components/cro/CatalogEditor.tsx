@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chevron } from "@/components/Chevron";
 import { RfqField } from "@/components/RfqField";
 import { CATEGORY_ORDER, EXTRA_FIELDS, INCLUDE_KEYS, OPTION_SUGGEST, PER_SAMPLE_CATS, ROUTES, SPECIES, designSummary, methodOptions, newVariant, variantLabel, type CatalogItem, type CatalogRow } from "@/lib/catalog";
@@ -22,6 +22,14 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
   const [busy, setBusy] = useState<string>("");
   const [msg, setMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
   const [openCats, setOpenCats] = useState<Set<string>>(() => new Set(orgCategories.length ? [orgCategories[0]] : []));
+
+  // 저장 안 된 분류가 있으면 탭을 닫거나 새로고침할 때 묻는다 (조합 수십 개를 잃는 사고 방지)
+  useEffect(() => {
+    if (dirty.size === 0) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   const byCat = useMemo(() => {
     const m = new Map<string, CatalogItem[]>();
