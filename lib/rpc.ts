@@ -73,7 +73,15 @@ export function saveQuote(inviteId: string, header: QuoteHeader, items: QuoteIte
 }
 
 /* ── CRO 계약 체결 보고 ── */
-export type ReportContractResult = { ok: true; rfq_id: string; rfq_no: string; user_id: string | null; substance: string };
-export function reportContract(awardId: string, date: string, amount: number, note: string) {
-  return call<ReportContractResult, "report_contract">("report_contract", { p_award_id: awardId, p_date: date, p_amount: amount, p_note: note });
+export type ReportContractResult = { ok: true; rfq_id: string; rfq_no: string; user_id: string | null; substance: string; corrected: boolean };
+/** force: 이미 보고된 계약을 정정 (운영자만) */
+export function reportContract(awardId: string, date: string, amount: number, note: string, force = false) {
+  return call<ReportContractResult, "report_contract">("report_contract", { p_award_id: awardId, p_date: date, p_amount: amount, p_note: note, p_force: force });
 }
+export const REPORT_CONTRACT_ERRORS: Record<string, { message: string; status: number }> = {
+  not_found: { message: "수주 기록이 없습니다.", status: 404 },
+  already: { message: "이미 보고한 계약입니다. 정정이 필요하면 단추(hello@danchu.kr)에 알려 주세요.", status: 409 },
+  amount: { message: "계약금액은 1원 이상이어야 합니다.", status: 400 },
+  date: { message: "체결일이 선정일보다 앞설 수 없습니다.", status: 400 },
+  future: { message: "체결일은 오늘 이전 날짜여야 합니다.", status: 400 },
+};

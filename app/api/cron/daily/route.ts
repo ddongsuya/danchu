@@ -59,7 +59,7 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
-  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, resent: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
+  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, resent: 0, contractReminded: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
 
   // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
   await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
@@ -172,6 +172,33 @@ export async function GET(req: Request) {
     await logEvent(rfq.id, "outcome_asked", "선정 여부 확인 요청", "비교표 공개 14일 경과", null);
     out.outcomeAsked++;
   }
+  });
+
+  // 4-1) 선정 뒤 계약 보고가 없는 수주: 기관에 14·30일 리마인더, 45일에는 운영자·의뢰자에게 진행 여부를 묻는다
+  //      성사수수료는 보고된 계약에만 붙으므로, 보고 누락이 곧 매출 누락이다
+  await step("contract-remind", out.errors, async () => {
+    const since = new Date(Date.now() - 14 * 864e5).toISOString();
+    const { data: awards } = await sb.from("rfq_awards").select("id, rfq_id, cro_org_id, cro_name, awarded_at").is("contract_reported_at", null).lt("awarded_at", since).order("awarded_at").limit(100);
+    for (const a of awards ?? []) {
+      const days = Math.floor((Date.now() - new Date(a.awarded_at).getTime()) / 864e5);
+      const stage = days >= 45 ? "contract_asked" : days >= 30 ? "contract_remind_30" : "contract_remind_14";
+      const { data: rfq } = await sb.from("rfq_requests").select("rfq_no, substance, user_id, email, status").eq("id", a.rfq_id).maybeSingle();
+      if (!rfq || ["closed", "cancelled"].includes(rfq.status)) continue;
+      const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", stage).maybeSingle();
+      if (ev) continue;
+      if (stage === "contract_asked") {
+        await notifyUsers(await adminUserIds(), { kind: "계약", title: `${rfq.rfq_no} 선정 45일 경과 · 계약 보고 없음`, body: `${a.cro_name} 이 계약 체결을 보고하지 않았습니다. 기관과 의뢰자에게 진행 여부를 확인해 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+        if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약이 진행되고 있나요?`, body: `${rfq.substance} · ${a.cro_name} 을 선정한 지 45일이 지났습니다. 계약이 끝났거나 진행하지 않기로 했다면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+        await logEvent(a.rfq_id, stage, "계약 진행 여부 확인 요청", "선정 45일 경과", null);
+      } else {
+        const { data: members } = a.cro_org_id ? await sb.from("profiles").select("id").eq("cro_org_id", a.cro_org_id) : { data: [] };
+        const ids = (members ?? []).map((m) => m.id as string);
+        if (!ids.length) continue;
+        await notifyUsers(ids, { kind: "계약", title: `${rfq.rfq_no} 계약 체결을 보고해 주세요`, body: `${rfq.substance} · 선정 ${days}일 경과. 계약을 맺었다면 체결일과 금액을, 진행하지 않게 되었다면 단추(hello@danchu.kr)에 알려 주세요.`, href: "/cro/awards" });
+        await logEvent(a.rfq_id, stage, "계약 보고 리마인더", `선정 ${days}일 경과`, null);
+      }
+      out.contractReminded++;
+    }
   });
 
   // 5) 보존기간 정리: 접속 기록 90일, 요청서 3년, 읽은 알림 180일 (개인정보처리방침 3항)

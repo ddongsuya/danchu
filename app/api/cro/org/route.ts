@@ -3,6 +3,7 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { CATS } from "@/lib/rfq-schema";
 import { distributeOpenRfqs } from "@/lib/distribute";
+import { rateLimited, TOO_MANY } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,7 @@ export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
   if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   if (s.profile.org_role !== "owner") return NextResponse.json({ error: "기관 정보는 기관 대표 담당자만 수정할 수 있습니다." }, { status: 403 });
+  if (await rateLimited("cro-org", s.userId, 20, 600)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const v = (k: string, max = 120) => (typeof b[k] === "string" ? (b[k] as string).trim().slice(0, max) || null : null);
   const arr = (k: string, allow: readonly string[]) => (Array.isArray(b[k]) ? (b[k] as unknown[]).filter((x): x is string => typeof x === "string" && allow.includes(x)) : []);

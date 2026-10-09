@@ -43,6 +43,6 @@ export const INVITE_LABEL: Record<string, string> = {
   sent: "미회신",
   draft: "작성 중",
   submitted: "제출",
-  declined: "회신 안 함",
+  declined: "회신하지 않음",
   expired: "만료",
 };

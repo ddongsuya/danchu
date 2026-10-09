@@ -4,8 +4,8 @@ import { captureError } from "./observe";
 export type AuditAction =
   | "org.approve" | "org.reject" | "org.suspend" | "org.terms"
   | "user.role" | "user.delete"
-  | "invite.billing" | "billing.close"
-  | "rfq.deadline";
+  | "invite.billing" | "invite.resend" | "invite.cancel" | "billing.close"
+  | "rfq.deadline" | "rfq.terms" | "award.contract";
 
 /**
  * 운영자 행위를 남긴다. 요청 단위 이력(rfq_events)과 달리 기관·사용자·청구처럼 요청 밖의 변경을 모은다.
@@ -14,7 +14,7 @@ export type AuditAction =
 export async function audit(
   actor: { userId: string; email: string },
   action: AuditAction,
-  target: { type: "cro_org" | "profile" | "rfq_invite" | "rfq_request" | "billing_period"; id: string | null; label?: string },
+  target: { type: "cro_org" | "profile" | "rfq_invite" | "rfq_request" | "rfq_award" | "billing_period"; id: string | null; label?: string },
   change?: { before?: Record<string, unknown>; after?: Record<string, unknown>; note?: string },
 ): Promise<void> {
   const sb = getSupabaseAdmin();

@@ -44,6 +44,10 @@ export function maskedClientLabel(orgType: string | null | undefined): string {
   return `${orgType || "의뢰기관"} (선정 시 공개)`;
 }
 
+/** 의뢰자가 고르는 전달 기관 수·기밀 등급 (rfq-schema 의 선택지와 같아야 한다) */
+export const CRO_COUNT_OPTIONS = ["3곳", "5곳", "전체"] as const;
+export const CONFIDENTIALITY_OPTIONS = ["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"] as const;
+
 export function invitationLimit(value: string | null | undefined): number {
   return value === "전체" ? Number.POSITIVE_INFINITY : value === "5곳" ? 5 : 3;
 }
