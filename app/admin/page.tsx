@@ -7,16 +7,20 @@ import { StatusPill } from "@/components/app/ui";
 import { md, ymd } from "@/lib/format";
 import { missingProdEnv } from "@/lib/env";
 import { sentryEnabled } from "@/lib/observe";
+import { SearchBox } from "@/components/admin/SearchBox";
+import { Pager } from "@/components/admin/Pager";
 
 export const dynamic = "force-dynamic";
 
-const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "비교표"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"]];
+const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "비교표"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"], ["cancelled", "취소"]];
 
-export default async function AdminHome({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; page?: string }> }) {
   await requireSession("admin");
-  const { status = "" } = await searchParams;
+  const { status = "", q = "", page: pageStr = "1" } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr, 10) || 1);
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
-  const [list, counts] = await Promise.all([listAllRequests(status || undefined), countBy()]);
+  const [{ list, hasMore }, counts] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy()]);
+  const href = (p: number) => `/admin?${new URLSearchParams({ ...(status ? { status } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
   const missingEnv = missingProdEnv();
   const noSentry = process.env.NODE_ENV === "production" && !sentryEnabled();
   const todo = {
@@ -56,16 +60,19 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         ))}
       </div>
 
-      <div className="seg" style={{ marginBottom: 14, flexWrap: "wrap", height: "auto" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+      <div className="seg" style={{ flexWrap: "wrap", height: "auto" }}>
         {FILTERS.map(([k, label]) => (
-          <Link key={k} href={k ? `/admin?status=${k}` : "/admin"} role="button" aria-pressed={status === k} style={{ height: 36, display: "inline-flex", alignItems: "center", padding: "0 14px", fontSize: 14, background: status === k ? "var(--ink)" : "var(--wh)", color: status === k ? "var(--wh)" : "var(--ink)", fontWeight: status === k ? 600 : 400 }}>
+          <Link key={k} href={k ? `/admin?status=${k}${q ? `&q=${encodeURIComponent(q)}` : ""}` : q ? `/admin?q=${encodeURIComponent(q)}` : "/admin"} role="button" aria-pressed={status === k} style={{ height: 36, display: "inline-flex", alignItems: "center", padding: "0 14px", fontSize: 14, background: status === k ? "var(--ink)" : "var(--wh)", color: status === k ? "var(--wh)" : "var(--ink)", fontWeight: status === k ? 600 : 400 }}>
             {label}{k ? ` ${counts.rfq[k] ?? 0}` : ""}
           </Link>
         ))}
       </div>
+      <SearchBox q={q} placeholder="번호 · 회사 · 시험물질 · 이메일" keep={{ status }} />
+      </div>
 
       {list.length === 0 ? (
-        <div className="empty"><b>요청이 없습니다</b></div>
+        <div className="empty"><b>{q ? `"${q}"에 맞는 요청이 없습니다` : "요청이 없습니다"}</b></div>
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl">
@@ -102,6 +109,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           </table>
         </div>
       )}
+      <Pager page={page} hasMore={hasMore} href={href} />
       <p style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>단계: {STAGES.map((s) => s.label).join(" → ")}</p>
     </>
   );

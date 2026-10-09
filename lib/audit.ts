@@ -4,7 +4,7 @@ import { captureError } from "./observe";
 export type AuditAction =
   | "org.approve" | "org.reject" | "org.suspend" | "org.terms"
   | "user.role" | "user.delete"
-  | "invite.billing"
+  | "invite.billing" | "billing.close"
   | "rfq.deadline";
 
 /**
@@ -14,7 +14,7 @@ export type AuditAction =
 export async function audit(
   actor: { userId: string; email: string },
   action: AuditAction,
-  target: { type: "cro_org" | "profile" | "rfq_invite" | "rfq_request"; id: string; label?: string },
+  target: { type: "cro_org" | "profile" | "rfq_invite" | "rfq_request" | "billing_period"; id: string | null; label?: string },
   change?: { before?: Record<string, unknown>; after?: Record<string, unknown>; note?: string },
 ): Promise<void> {
   const sb = getSupabaseAdmin();

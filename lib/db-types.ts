@@ -255,6 +255,7 @@ export type Database = {
           auto_reply: boolean;
           monthly_cap: number | null;
           per_request_fee: number | null;
+          fee_rate: number | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_orgs"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_orgs"]["Row"], "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_orgs"]["Row"]>;
@@ -350,6 +351,12 @@ export type Database = {
         Row: { key: string; window_start: string; count: number };
         Insert: { key: string; window_start?: string; count?: number };
         Update: Partial<Database["public"]["Tables"]["rate_limits"]["Row"]>;
+        Relationships: [];
+      };
+      billing_periods: {
+        Row: { month: string; closed_at: string; closed_by: string | null; note: string | null };
+        Insert: Ins<Database["public"]["Tables"]["billing_periods"]["Row"], "closed_at" | "closed_by" | "note">;
+        Update: Partial<Database["public"]["Tables"]["billing_periods"]["Row"]>;
         Relationships: [];
       };
       admin_audit: {

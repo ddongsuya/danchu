@@ -67,3 +67,13 @@ describe("첨부 익명 라벨", () => {
     expect(anonymousFileLabel(2, "noext", 10)).toBe("첨부 3 (파일, 1KB)");
   });
 });
+
+describe("청구 계산", () => {
+  it("월 범위와 성사수수료", async () => {
+    const { monthRangeOf, successFee } = await import("@/lib/billing");
+    expect(monthRangeOf("2026-12")).toMatchObject({ from: "2026-12-01", to: "2027-01-01", prev: "2026-11", next: "2027-01" });
+    expect(monthRangeOf("garbage").from).toMatch(/-01$/);
+    expect(successFee(50_000_000, 0.05)).toBe(2_500_000);
+    expect(successFee(50_000_000, null)).toBeNull();
+  });
+});

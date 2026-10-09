@@ -81,7 +81,8 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   const usedThisMonth = new Map<string, number>();
   if (cappedOrgs.length) {
     const { from, to } = seoulMonthRange();
-    const { data: monthInv } = await sb.from("rfq_invites").select("cro_org_id").in("cro_org_id", cappedOrgs.map((o) => o.id)).gte("sent_at", `${from}T00:00:00+09:00`).lt("sent_at", `${to}T00:00:00+09:00`);
+    // 청구에서 제외한 전달(허위·중복)은 한도에서도 뺀다
+    const { data: monthInv } = await sb.from("rfq_invites").select("cro_org_id").in("cro_org_id", cappedOrgs.map((o) => o.id)).eq("billable", true).gte("sent_at", `${from}T00:00:00+09:00`).lt("sent_at", `${to}T00:00:00+09:00`);
     for (const i of monthInv ?? []) if (i.cro_org_id) usedThisMonth.set(i.cro_org_id, (usedThisMonth.get(i.cro_org_id) ?? 0) + 1);
   }
 

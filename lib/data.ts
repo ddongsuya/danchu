@@ -93,9 +93,14 @@ export function ownsRfq(rfq: RfqRow, userId: string, email: string): boolean {
 
 /* ── 알림 ── */
 
-export async function listNotifications(userId: string, limit = 50): Promise<NotificationRow[]> {
-  const { data } = await sb().from("notifications").select("id, kind, title, body, href, read_at, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
-  return data ?? [];
+export async function listNotifications(userId: string, limit = 50, opts?: { kind?: string; page?: number }): Promise<{ list: NotificationRow[]; hasMore: boolean }> {
+  const page = Math.max(1, opts?.page ?? 1);
+  const from = (page - 1) * limit;
+  let q = sb().from("notifications").select("id, kind, title, body, href, read_at, created_at").eq("user_id", userId).order("created_at", { ascending: false }).range(from, from + limit);
+  if (opts?.kind) q = q.eq("kind", opts.kind);
+  const { data } = await q;
+  const rows = data ?? [];
+  return { list: rows.slice(0, limit), hasMore: rows.length > limit };
 }
 export async function unreadCount(userId: string): Promise<number> {
   const { count } = await sb().from("notifications").select("id", { count: "exact", head: true }).eq("user_id", userId).is("read_at", null);
@@ -159,13 +164,22 @@ export async function listPendingMembers(orgId: string): Promise<MemberRow[]> {
 
 /* ── 운영자 ── */
 
-export async function listAllRequests(status?: string): Promise<RfqSummary[]> {
+export const ADMIN_PAGE = 50;
+
+/** 운영자 요청 목록. 검색은 번호·회사·물질·이메일 부분 일치, 한 페이지 +1 로 다음 페이지 유무를 안다 */
+export async function listAllRequests(status?: string, q?: string, page = 1): Promise<{ list: RfqSummary[]; hasMore: boolean }> {
   const c = sb();
-  let q = c.from("rfq_requests").select("*").order("created_at", { ascending: false }).limit(300);
-  if (status) q = q.eq("status", status);
-  const { data: rows } = await q;
-  const list = rows ?? [];
-  if (!list.length) return [];
+  const from = (Math.max(1, page) - 1) * ADMIN_PAGE;
+  let query = c.from("rfq_requests").select("*").order("created_at", { ascending: false }).range(from, from + ADMIN_PAGE);
+  if (status) query = query.eq("status", status);
+  if (q) {
+    const term = `%${likeExact(q.trim().slice(0, 60))}%`;
+    query = query.or(`rfq_no.ilike.${orValue(term)},company.ilike.${orValue(term)},substance.ilike.${orValue(term)},email.ilike.${orValue(term)}`);
+  }
+  const { data: rows } = await query;
+  const hasMore = (rows ?? []).length > ADMIN_PAGE;
+  const list = (rows ?? []).slice(0, ADMIN_PAGE);
+  if (!list.length) return { list: [], hasMore: false };
   const { data: inv } = await c.from("rfq_invites").select("rfq_id, status").in("rfq_id", list.map((r) => r.id));
   const byRfq = new Map<string, { invites: number; submitted: number }>();
   for (const i of inv ?? []) {
@@ -174,13 +188,17 @@ export async function listAllRequests(status?: string): Promise<RfqSummary[]> {
     if (i.status === "submitted") e.submitted++;
     byRfq.set(i.rfq_id, e);
   }
-  return list.map((r) => ({ ...r, ...(byRfq.get(r.id) ?? { invites: 0, submitted: 0 }) }));
+  return { list: list.map((r) => ({ ...r, ...(byRfq.get(r.id) ?? { invites: 0, submitted: 0 }) })), hasMore };
 }
 
-export async function listCroOrgs(status?: string): Promise<(CroOrg & { members: number })[]> {
+export async function listCroOrgs(status?: string, search?: string): Promise<(CroOrg & { members: number })[]> {
   const c = sb();
-  let q = c.from("cro_orgs").select("*").order("created_at", { ascending: false });
+  let q = c.from("cro_orgs").select("*").order("created_at", { ascending: false }).limit(500);
   if (status) q = q.eq("status", status);
+  if (search) {
+    const term = `%${likeExact(search.trim().slice(0, 60))}%`;
+    q = q.or(`name.ilike.${orValue(term)},contact_email.ilike.${orValue(term)},business_no.ilike.${orValue(term)}`);
+  }
   const { data } = await q;
   const orgs = (data ?? []) as CroOrg[]; // status 문자열을 열거형으로 좁힌다
   if (!orgs.length) return [];
@@ -206,9 +224,22 @@ export async function listAllAwards() {
   return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null }));
 }
 
-export async function listProfiles() {
-  const { data } = await sb().from("profiles").select("id, email, role, name, company, cro_org_id, pending_org_id, created_at").order("created_at", { ascending: false }).limit(500);
-  return data ?? [];
+export async function listProfiles(search?: string, page = 1): Promise<{ list: { id: string; email: string; role: string; name: string | null; company: string | null; cro_org_id: string | null; pending_org_id: string | null; created_at: string }[]; hasMore: boolean }> {
+  const from = (Math.max(1, page) - 1) * ADMIN_PAGE;
+  let q = sb().from("profiles").select("id, email, role, name, company, cro_org_id, pending_org_id, created_at").order("created_at", { ascending: false }).range(from, from + ADMIN_PAGE);
+  if (search) {
+    const term = `%${likeExact(search.trim().slice(0, 60))}%`;
+    q = q.or(`email.ilike.${orValue(term)},name.ilike.${orValue(term)},company.ilike.${orValue(term)}`);
+  }
+  const { data } = await q;
+  const rows = data ?? [];
+  return { list: rows.slice(0, ADMIN_PAGE), hasMore: rows.length > ADMIN_PAGE };
+}
+
+/** 월 마감 여부 (billing_periods) */
+export async function isBillingClosed(monthFirstDay: string): Promise<boolean> {
+  const { data } = await sb().from("billing_periods").select("month").eq("month", monthFirstDay).maybeSingle();
+  return !!data;
 }
 
 export async function countBy() {
