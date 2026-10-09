@@ -14,6 +14,7 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
     name: org.name,
     perRequestFee: org.per_request_fee == null ? "" : String(org.per_request_fee),
     monthlyCap: org.monthly_cap == null ? "" : String(org.monthly_cap),
+    feeRate: org.fee_rate == null ? "" : String(Math.round(org.fee_rate * 10000) / 100),
     contactEmail: org.contact_email ?? "",
     contactPhone: org.contact_phone ?? "",
   });
@@ -32,7 +33,7 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
       const r = await fetch(`/api/admin/cros/${org.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: f.name, perRequestFee: f.perRequestFee === "" ? null : Number(f.perRequestFee), monthlyCap: f.monthlyCap === "" ? null : Number(f.monthlyCap), contactEmail: f.contactEmail, contactPhone: f.contactPhone, categories: cats, autoReply }),
+        body: JSON.stringify({ name: f.name, perRequestFee: f.perRequestFee === "" ? null : Number(f.perRequestFee), monthlyCap: f.monthlyCap === "" ? null : Number(f.monthlyCap), feeRate: f.feeRate === "" ? null : Number(f.feeRate) / 100, contactEmail: f.contactEmail, contactPhone: f.contactPhone, categories: cats, autoReply }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!r.ok) throw new Error(d.error || "저장하지 못했습니다.");
@@ -51,6 +52,7 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
         <div className="fld"><label className="fld__lab" htmlFor="t-name">기관명</label><input id="t-name" className="inp" value={f.name} onChange={set("name")} /></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-fee">전달 1건 이용료 (원)</label><input id="t-fee" className="inp tnum" inputMode="numeric" value={f.perRequestFee} onChange={set("perRequestFee")} placeholder="미정이면 비워 둠" /></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-cap">월 전달 한도 (건)</label><input id="t-cap" className="inp tnum" inputMode="numeric" value={f.monthlyCap} onChange={set("monthlyCap")} placeholder="없으면 비워 둠" /></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-rate">성사수수료율 (%)</label><input id="t-rate" className="inp tnum" inputMode="decimal" value={f.feeRate} onChange={set("feeRate")} placeholder="예: 5 · 미정이면 비워 둠" /></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-mail">대표 이메일 (배포 메일 수신)</label><input id="t-mail" className="inp" type="email" value={f.contactEmail} onChange={set("contactEmail")} /></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-phone">대표 연락처</label><input id="t-phone" className="inp" type="tel" value={f.contactPhone} onChange={set("contactPhone")} /></div>
       </div>

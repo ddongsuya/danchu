@@ -41,7 +41,7 @@ npm test                     # Vitest (lib 순수 함수)
 CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 
 ## Supabase 설정 (1회)
-1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0013_org_roles_audit.sql`). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
+1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0014_billing_close.sql`). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
 2. Storage에 비공개 버킷 `rfq-files`, `cro-files`가 있는지 확인 (스키마가 만들지만 없으면 직접 생성)
 3. Authentication → Providers → Email: 켜 둔다. **Confirm email 켜짐** 유지 (가입 확인은 우리가 보내는 메일 링크로 처리)
    - Authentication → Sign In / Providers → **"Allow new users to sign up" 끄기**. 가입은 서버가 `auth.admin.createUser`로만 만든다. 켜 두면 anon 키로 직접 가입해 프로필을 만들 수 있다 (역할·기관은 어차피 서버만 적지만, 불필요한 계정이 생긴다)
@@ -76,6 +76,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | 첨부 한도 | 버킷 수준에서 20MB·허용 형식만 받는다(`0010`). 서버 검사는 메타데이터만 보므로 버킷 한도가 실제 방어선이다 |
 | 백업 | Supabase Pro + PITR을 켠다. Storage 객체는 DB 백업에 포함되지 않으므로 `rfq-files`·`cro-files`를 주기적으로 외부에 복제한다. 출시 전 복구 리허설 1회 |
 | 로그 | 이메일 주소는 마스킹(`maskEmail`), 요청서·문의 본문은 로그에 남기지 않는다 |
+| 운영자 목록·청구 | 요청·사용자·기관 목록은 `?q=` 검색과 50건 페이지(`lib/data.ts` `ADMIN_PAGE`). 운영자 알림은 종류 필터·페이지. 새 요청·회신 안 함도 운영자 메일. 전달 명세는 `CSV 내려받기`(`/api/admin/billing/export`)와 월 마감(`billing_periods`, 마감된 달은 청구 토글 불가)·성사수수료(선정 견적 금액 × `cro_orgs.fee_rate`) |
 | 기관 내 역할 | `profiles.org_role` owner/member. 기관을 처음 만든 계정이 owner. owner 만 기관 정보 수정(`/api/cro/org`), 합류 승인·거절·내보내기(`/api/cro/org/members`). 내보내면 그 기관의 열린 회신 링크가 새로 발급된다(`rotate_org_invite_tokens`). 대표 변경은 운영자가 SQL 로 |
 | 익명화 | 선정 전 기관에는 회사명·연락처뿐 아니라 첨부 파일명도 "첨부 1 (PDF, 2.1MB)"로 보이고 다운로드 이름도 같다(`anonymousFileLabel`). 토큰 제출은 `cro_quotes.submitted_ip`·`submitted_ua` 를 남긴다 |
 | 운영 기록 | `/admin/audit`. 기관 승인·반려·중지·약정 변경, 역할·기관 연결, 계정 삭제, 청구 제외, 기한 변경을 `admin_audit`에 남긴다(`lib/audit.ts`) |

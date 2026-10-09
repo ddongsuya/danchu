@@ -80,6 +80,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     else if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 100_000_000) patch[col] = v;
     else return NextResponse.json({ error: `${key === "perRequestFee" ? "이용료" : "월 한도"}는 0 이상의 정수여야 합니다.` }, { status: 400 });
   }
+  if ("feeRate" in b) {
+    const v = b.feeRate;
+    if (v === null || v === "") patch.fee_rate = null;
+    else if (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1) patch.fee_rate = Math.round(v * 10000) / 10000;
+    else return NextResponse.json({ error: "성사수수료율은 0~100% 사이여야 합니다." }, { status: 400 });
+  }
   if (typeof b.contactEmail === "string") {
     const e = b.contactEmail.trim().toLowerCase().slice(0, 200);
     if (e && !EMAIL_RE.test(e)) return NextResponse.json({ error: "대표 이메일 형식을 확인해 주세요." }, { status: 400 });

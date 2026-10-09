@@ -1,27 +1,16 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
-import { dbReady } from "@/lib/data";
+import { dbReady, isBillingClosed } from "@/lib/data";
+import { monthRangeOf, successFee } from "@/lib/billing";
+import { BillingClose } from "@/components/admin/BillingClose";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { BillingSummaryRow } from "@/lib/db-types";
 import { won, ymd } from "@/lib/format";
-import { seoulMonthRange } from "@/lib/request-policy";
 import { BillableToggle } from "@/components/admin/BillableToggle";
 
 export const dynamic = "force-dynamic";
 
 const SOURCE_LABEL: Record<string, string> = { matched: "매칭", nominated: "지명", manual: "수동" };
-
-function monthRange(month: string | undefined): { label: string; from: string; to: string; prev: string; next: string } {
-  const cur = seoulMonthRange();
-  const m = month && /^\d{4}-\d{2}$/.test(month) ? month : cur.from.slice(0, 7);
-  const [y, mm] = m.split("-").map(Number);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const from = `${y}-${pad(mm)}-01`;
-  const to = mm === 12 ? `${y + 1}-01-01` : `${y}-${pad(mm + 1)}-01`;
-  const prev = mm === 1 ? `${y - 1}-12` : `${y}-${pad(mm - 1)}`;
-  const next = mm === 12 ? `${y + 1}-01` : `${y}-${pad(mm + 1)}`;
-  return { label: `${y}년 ${mm}월`, from, to, prev, next };
-}
 
 /**
  * 월별 전달 명세. 전달 1건 = 청구 1건이므로 이 화면이 기관 청구서의 원천이다.
@@ -31,31 +20,46 @@ function monthRange(month: string | undefined): { label: string; from: string; t
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   await requireSession("admin");
   const { month } = await searchParams;
-  const r = monthRange(month);
+  const r = monthRangeOf(month);
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
   const sb = getSupabaseAdmin()!;
 
-  const [{ data: summary, error }, { data: invites }, { data: noSelect }] = await Promise.all([
+  const [{ data: summary, error }, { data: invites }, { data: noSelect }, closed] = await Promise.all([
     sb.rpc("billing_summary", { p_from: r.from, p_to: r.to }),
-    sb.from("rfq_invites").select("id, rfq_no, cro_name, cro_org_id, sent_at, status, source, billable, bill_excluded_reason").gte("sent_at", `${r.from}T00:00:00+09:00`).lt("sent_at", `${r.to}T00:00:00+09:00`).order("sent_at", { ascending: false }).limit(500),
-    sb.from("rfq_requests").select("rfq_no, substance, outcome, outcome_note, outcome_at, compared_at").not("compared_at", "is", null).is("selected_quote_id", null).gte("compared_at", `${r.from}T00:00:00+09:00`).lt("compared_at", `${r.to}T00:00:00+09:00`).order("compared_at", { ascending: false }).limit(100),
+    sb.from("rfq_invites").select("id, rfq_no, cro_name, cro_org_id, sent_at, status, source, billable, bill_excluded_reason").gte("sent_at", `${r.from}T00:00:00+09:00`).lt("sent_at", `${r.to}T00:00:00+09:00`).order("sent_at", { ascending: false }).limit(2000),
+    sb.from("rfq_requests").select("rfq_no, substance, outcome, outcome_note, outcome_at, compared_at").not("compared_at", "is", null).is("selected_quote_id", null).gte("compared_at", `${r.from}T00:00:00+09:00`).lt("compared_at", `${r.to}T00:00:00+09:00`).order("compared_at", { ascending: false }).limit(500),
+    isBillingClosed(r.from),
   ]);
   const rows = (summary ?? []) as BillingSummaryRow[];
+  const orgIds = rows.map((x) => x.org_id);
+  const { data: rates } = orgIds.length ? await sb.from("cro_orgs").select("id, fee_rate").in("id", orgIds) : { data: [] as { id: string; fee_rate: number | null }[] };
+  const rateOf = new Map((rates ?? []).map((o) => [o.id, o.fee_rate]));
   const totalBillable = rows.reduce((a, x) => a + x.billable, 0);
-  const totalFee = rows.reduce((a, x) => a + (x.per_request_fee ?? 0) * x.billable, 0);
+  const priced = rows.filter((x) => x.per_request_fee != null);
+  const totalFee = priced.reduce((a, x) => a + (x.per_request_fee ?? 0) * x.billable, 0);
+  const unpriced = rows.length - priced.length;
+  const totalSuccess = rows.reduce((a, x) => a + (successFee(x.selected_amount, rateOf.get(x.org_id)) ?? 0), 0);
 
   return (
     <>
       <div className="ph">
         <div>
           <h1>전달 명세</h1>
-          <p>{r.label} · 청구 대상 전달 {totalBillable}건{totalFee ? ` · 약정 단가 기준 ${won(totalFee)}` : " · 기관별 단가 미설정"}</p>
+          <p>
+            {r.label} · 청구 대상 전달 {totalBillable}건
+            {priced.length ? ` · 전달 이용료 ${won(totalFee)}${unpriced ? ` (단가 미설정 ${unpriced}곳 제외)` : ""}` : " · 기관별 단가 미설정"}
+            {totalSuccess ? ` · 성사수수료 ${won(totalSuccess)}` : ""}
+            {closed ? " · 마감됨" : ""}
+          </p>
         </div>
-        <div className="ph__actions" style={{ gap: 6 }}>
+        <div className="ph__actions" style={{ gap: 6, flexWrap: "wrap" }}>
           <Link href={`/admin/billing?month=${r.prev}`} className="b2">이전 달</Link>
           <Link href={`/admin/billing?month=${r.next}`} className="b2">다음 달</Link>
+          <a href={`/api/admin/billing/export?month=${r.from.slice(0, 7)}`} className="b2">CSV 내려받기</a>
+          <BillingClose month={r.from.slice(0, 7)} closed={closed} />
         </div>
       </div>
+      {closed && <div className="note note--ok" style={{ marginBottom: 16 }}>이 달은 청구가 마감되었습니다. 청구 제외·복원은 마감을 해제해야 바꿀 수 있습니다.</div>}
 
       {error && <div className="note note--warn" style={{ marginBottom: 16 }}>집계 함수를 불러오지 못했습니다. `0009_anonymous_billing.sql` 마이그레이션이 적용됐는지 확인하세요. ({error.message})</div>}
 
@@ -66,7 +70,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         ) : (
           <table className="tbl">
             <thead>
-              <tr><th>기관</th><th className="tnum">전달</th><th className="tnum">청구</th><th className="tnum">제외</th><th>출처</th><th className="tnum">회신</th><th className="tnum">미회신</th><th className="tnum">선정</th><th className="tnum">선정 견적 합계</th><th className="tnum">약정 단가</th><th className="tnum">월 한도</th></tr>
+              <tr><th>기관</th><th className="tnum">전달</th><th className="tnum">청구</th><th className="tnum">제외</th><th>출처</th><th className="tnum">회신</th><th className="tnum">미회신</th><th className="tnum">선정</th><th className="tnum">선정 견적 합계</th><th className="tnum">약정 단가</th><th className="tnum">전달 이용료</th><th className="tnum">성사수수료</th><th className="tnum">월 한도</th></tr>
             </thead>
             <tbody>
               {rows.map((x) => (
@@ -81,6 +85,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td className="tnum">{x.selected}{x.replied ? ` (${Math.round((x.selected / x.replied) * 100)}%)` : ""}</td>
                   <td className="tnum">{x.selected_amount ? won(x.selected_amount) : "-"}</td>
                   <td className="tnum">{x.per_request_fee ? won(x.per_request_fee) : "-"}</td>
+                  <td className="tnum">{x.per_request_fee != null ? won(x.per_request_fee * x.billable) : "-"}</td>
+                  <td className="tnum">{(() => { const f = successFee(x.selected_amount, rateOf.get(x.org_id)); return f == null ? (x.selected ? "요율 미정" : "-") : won(f); })()}</td>
                   <td className="tnum">{x.monthly_cap ?? "-"}</td>
                 </tr>
               ))}
@@ -105,7 +111,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                     <td>{i.cro_name}</td>
                     <td style={{ fontSize: 12 }}>{SOURCE_LABEL[i.source] ?? i.source}</td>
                     <td style={{ fontSize: 12 }}>{i.status === "submitted" ? "제출" : i.status === "declined" ? "안 함" : "미회신"}</td>
-                    <td><BillableToggle inviteId={i.id} billable={i.billable} reason={i.bill_excluded_reason} /></td>
+                    <td><BillableToggle inviteId={i.id} billable={i.billable} reason={i.bill_excluded_reason} locked={closed} /></td>
                   </tr>
                 ))}
               </tbody>

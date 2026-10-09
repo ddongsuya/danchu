@@ -7,10 +7,16 @@ import { NotificationLink } from "@/components/NotificationLink";
 
 export const dynamic = "force-dynamic";
 
-export default async function Notifications() {
+const KINDS = ["접수", "배포", "견적", "비교", "선정", "계약", "기관", "시스템"];
+
+export default async function Notifications({ searchParams }: { searchParams: Promise<{ kind?: string; page?: string }> }) {
   const s = await requireSession();
-  const list = dbReady() ? await listNotifications(s.userId) : [];
+  const { kind = "", page: pageStr = "1" } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr, 10) || 1);
+  const { list, hasMore } = dbReady() ? await listNotifications(s.userId, 50, { kind: KINDS.includes(kind) ? kind : undefined, page }) : { list: [], hasMore: false };
   const unread = list.filter((n) => !n.read_at).length;
+  const base = s.profile.role === "admin" ? "/admin/notifications" : s.profile.role === "cro" ? "/cro/notifications" : "/app/notifications";
+  const href = (k: string, p: number) => `${base}?${new URLSearchParams({ ...(k ? { kind: k } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
 
   return (
     <>
@@ -25,6 +31,13 @@ export default async function Notifications() {
           </div>
         )}
       </div>
+      {s.profile.role === "admin" && (
+        <div className="seg" style={{ marginBottom: 14, flexWrap: "wrap", height: "auto" }}>
+          {[["", "전체"], ...KINDS.map((k) => [k, k])].map(([k, label]) => (
+            <Link key={k} href={href(k, 1)} role="button" aria-pressed={kind === k} style={{ height: 32, display: "inline-flex", alignItems: "center", padding: "0 12px", fontSize: 13, background: kind === k ? "var(--ink)" : "var(--wh)", color: kind === k ? "var(--wh)" : "var(--ink)", fontWeight: kind === k ? 600 : 400 }}>{label}</Link>
+          ))}
+        </div>
+      )}
       {list.length === 0 ? (
         <div className="empty">
           <b>알림이 없습니다</b>
@@ -61,6 +74,12 @@ export default async function Notifications() {
               <div key={n.id} className="card" style={style}>{inner}</div>
             );
           })}
+        </div>
+      )}
+      {(page > 1 || hasMore) && (
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+          {page > 1 && <Link href={href(kind, page - 1)} className="b2 bsm">이전</Link>}
+          {hasMore && <Link href={href(kind, page + 1)} className="b2 bsm">다음</Link>}
         </div>
       )}
     </>

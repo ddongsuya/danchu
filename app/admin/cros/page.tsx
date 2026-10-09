@@ -3,15 +3,16 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listCroOrgs } from "@/lib/data";
 import { ymd } from "@/lib/format";
 import { QuickApprove } from "@/components/admin/QuickApprove";
+import { SearchBox } from "@/components/admin/SearchBox";
 
 export const dynamic = "force-dynamic";
 
 const ST: Record<string, [string, string]> = { pending: ["승인 대기", "pill--warn"], approved: ["참여 중", "pill--ok"], rejected: ["반려", "pill--err"], suspended: ["중지", "pill--err"] };
 
-export default async function AdminCros({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function AdminCros({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   await requireSession("admin");
-  const { status = "" } = await searchParams;
-  const list = dbReady() ? await listCroOrgs(status || undefined) : [];
+  const { status = "", q = "" } = await searchParams;
+  const list = dbReady() ? await listCroOrgs(status || undefined, q || undefined) : [];
   const pending = list.filter((o) => o.status === "pending");
   const rest = status ? list : list.filter((o) => o.status !== "pending");
 
@@ -57,6 +58,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
           <Link href="/admin/cros" className={`b2 bsm`} aria-pressed={!status}>전체</Link>
           <Link href="/admin/cros?status=pending" className="b2 bsm" aria-pressed={status === "pending"}>승인 대기</Link>
           <Link href="/admin/cros?status=approved" className="b2 bsm" aria-pressed={status === "approved"}>참여 중</Link>
+          <SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} />
         </div>
       </div>
       {!status && pending.length > 0 && (

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { loadQuote } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
-import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -22,6 +22,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (error) return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 500 });
   const s = await sessionOrNull();
   await logEvent(got.rfqId, "declined", `${got.croName} 회신하지 않음`, reason || undefined, s?.userId ?? null);
-  await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 안 함 · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` });
+  await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 안 함 · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
   return NextResponse.json({ ok: true });
 }

@@ -150,7 +150,7 @@ export async function POST(req: Request) {
     after(async () => {
       const cats = Array.isArray(values.categories) ? (values.categories as string[]).join(" · ") : "";
       try {
-        await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${no} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${no}` });
+        await notifyUsers(await adminUserIds(), { kind: "접수", title: `새 요청 ${no} · ${str("company")}`, body: `${str("substance")} · ${cats}`, href: `/admin/r/${no}` }, { to: adminEmails() });
         const { data: full } = await supabase.from("rfq_requests").select("*").eq("id", rfqId).single();
         if (full) {
           const r = await autoDistribute(full);
