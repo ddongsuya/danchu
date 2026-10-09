@@ -11,6 +11,7 @@ import { captureError } from "@/lib/observe";
 import { autoReplyEnabled, isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
+import { daysSince, reminderStage } from "@/lib/contract-reminder";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -180,8 +181,9 @@ export async function GET(req: Request) {
     const since = new Date(Date.now() - 14 * 864e5).toISOString();
     const { data: awards } = await sb.from("rfq_awards").select("id, rfq_id, cro_org_id, cro_name, awarded_at").is("contract_reported_at", null).lt("awarded_at", since).order("awarded_at").limit(100);
     for (const a of awards ?? []) {
-      const days = Math.floor((Date.now() - new Date(a.awarded_at).getTime()) / 864e5);
-      const stage = days >= 45 ? "contract_asked" : days >= 30 ? "contract_remind_30" : "contract_remind_14";
+      const days = daysSince(a.awarded_at);
+      const stage = reminderStage(a.awarded_at);
+      if (!stage) continue;
       const { data: rfq } = await sb.from("rfq_requests").select("rfq_no, substance, user_id, email, status").eq("id", a.rfq_id).maybeSingle();
       if (!rfq || ["closed", "cancelled"].includes(rfq.status)) continue;
       const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", stage).maybeSingle();
