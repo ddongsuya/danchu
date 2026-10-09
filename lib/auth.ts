@@ -38,6 +38,9 @@ export type CroOrg = {
   approved_at: string | null;
   /** 기한까지 손대지 않은 초안을 예비 견적으로 자동 제출 */
   auto_reply?: boolean;
+  /** 약정: 월 전달 한도(null 이면 없음), 전달 1건당 이용료(원, null 이면 미정) */
+  monthly_cap?: number | null;
+  per_request_fee?: number | null;
 };
 
 export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null; /** 합류 신청 중인 기관 */ pendingOrg: CroOrg | null };

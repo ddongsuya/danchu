@@ -6,25 +6,27 @@ import { useRouter } from "next/navigation";
 type Org = { id: string; name: string; categories: string[]; glp: string[]; email: string | null; members: number; invited: boolean };
 
 /** 배포 — 승인된 CRO 중 수행 분야가 맞는 기관을 골라 초대(회신 링크 메일)를 보낸다 */
-export function DistributePanel({ no, categories, defaultReplyBy, orgs }: { no: string; categories: string[]; defaultReplyBy: string; orgs: Org[] }) {
+export function DistributePanel({ no, categories, defaultReplyBy, orgs, today, autoDistribute: initialAuto }: { no: string; categories: string[]; defaultReplyBy: string; orgs: Org[]; today: string; autoDistribute: boolean }) {
   const router = useRouter();
   const match = (o: Org) => o.categories.some((c) => categories.includes(c));
   const [picked, setPicked] = useState<string[]>(orgs.filter((o) => !o.invited && match(o)).map((o) => o.id));
   const [replyBy, setReplyBy] = useState(defaultReplyBy);
   const [showAll, setShowAll] = useState(false);
+  const [keepManual, setKeepManual] = useState(!initialAuto);
+  const past = !!replyBy && replyBy < today;
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const shown = orgs.filter((o) => showAll || match(o) || o.invited);
 
   const send = async () => {
-    if (!picked.length || !replyBy || busy) return;
+    if (!picked.length || !replyBy || busy || past) return;
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/admin/rfqs/${no}/distribute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgIds: picked, replyBy }) });
-      const d = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; mailed?: number; skipped?: string[]; capped?: string[] };
+      const res = await fetch(`/api/admin/rfqs/${no}/distribute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgIds: picked, replyBy, autoDistribute: !keepManual }) });
+      const d = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; mailed?: number; skipped?: string[]; capped?: string[]; blocked?: string };
       if (!res.ok) throw new Error(d.error || "배포하지 못했습니다.");
-      setMsg({ ok: true, text: `${d.sent}곳에 전달했습니다. 메일 ${d.mailed}건.${d.skipped?.length ? ` 요청 기관 수 제한 또는 연락처 문제로 ${d.skipped.length}곳은 제외했습니다.` : ""}${d.capped?.length ? ` 월 전달 한도에 닿아 ${d.capped.join(", ")}은(는) 제외했습니다.` : ""}` });
+      setMsg({ ok: true, text: `${d.sent}곳에 전달했습니다. 메일 ${d.mailed}건.${d.blocked ? ` ${d.blocked}` : d.skipped?.length ? ` 연락처가 없거나 한도에 걸려 ${d.skipped.length}곳은 제외했습니다.` : ""}${d.capped?.length ? ` 월 전달 한도에 닿아 ${d.capped.join(", ")}은(는) 제외했습니다.` : ""}` });
       setPicked([]);
       router.refresh();
     } catch (e) {
@@ -62,8 +64,13 @@ export function DistributePanel({ no, categories, defaultReplyBy, orgs }: { no: 
           <label className="fld__lab" htmlFor="replyBy">회신 기한</label>
           <input id="replyBy" className="inp" type="date" value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
         </div>
-        <button type="button" className="b1" disabled={!picked.length || !replyBy || busy} onClick={send}>{busy ? "배포 중…" : `${picked.length}곳에 배포`}</button>
+        <button type="button" className="b1" disabled={!picked.length || !replyBy || busy || past} onClick={send}>{busy ? "배포 중…" : `${picked.length}곳에 배포`}</button>
       </div>
+      {past && <p className="note note--warn" style={{ fontSize: 13 }}>회신 기한이 이미 지났습니다. 회신 현황의 "회신 기한 변경"으로 먼저 늘린 뒤 배포하세요.</p>}
+      <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13 }}>
+        <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} style={{ marginTop: 2 }} />
+        <span>이후 자동 보충 안 함 <span style={{ display: "block", color: "var(--muted)" }}>끄면 새로 승인되는 기관이나 매일 보충 배포가 이 요청에 기관을 더하지 않습니다. 운영자가 고른 기관만 유지됩니다.</span></span>
+      </label>
       <p className="fld__help">회신 링크는 기한 +7일까지 열립니다. 기관 대표 이메일과 담당자 계정 모두에 메일이 갑니다.</p>
       {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status">{msg.text}</p>}
     </div>
