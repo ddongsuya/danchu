@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { Tables } from "./db-types";
 import type { CroOrg } from "./auth";
+import { likeExact, orValue } from "./sql";
 
 /* ── 표 행 타입 — lib/db-types.ts 의 별칭. 컬럼이 바뀌면 그쪽을 고친다 ── */
 
@@ -31,7 +32,9 @@ export async function listRequestsForUser(userId: string, email: string): Promis
   const { data: rows } = await c
     .from("rfq_requests")
     .select("*")
-    .or(`user_id.eq.${userId},email.ilike.${email.replace(/[,()]/g, "")}`)
+    // 이메일은 대소문자만 무시하고 정확히 같아야 한다. `%`·`_` 를 이스케이프하지 않으면
+    // a_c@corp.com 계정이 abc@corp.com 의 요청을 보게 된다.
+    .or(`user_id.eq.${userId},email.ilike.${orValue(likeExact(email))}`)
     .order("created_at", { ascending: false })
     .limit(200);
   const list = rows ?? [];

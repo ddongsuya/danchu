@@ -5,6 +5,8 @@ import { countBy, dbReady, listAllRequests } from "@/lib/data";
 import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { md, ymd } from "@/lib/format";
+import { missingProdEnv } from "@/lib/env";
+import { sentryEnabled } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const { status = "" } = await searchParams;
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
   const [list, counts] = await Promise.all([listAllRequests(status || undefined), countBy()]);
+  const missingEnv = missingProdEnv();
+  const noSentry = process.env.NODE_ENV === "production" && !sentryEnabled();
   const todo = {
     receive: counts.rfq.received ?? 0,
     quoted: counts.rfq.quoted ?? 0,
@@ -24,6 +28,13 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <>
+      {(missingEnv.length > 0 || noSentry) && (
+        <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>
+          <b>운영 설정 확인</b>
+          {missingEnv.length > 0 && <div>환경변수 누락: {missingEnv.join(", ")}. 접수·메일·예약 작업이 제대로 동작하지 않습니다. Vercel → Settings → Environment Variables 에 넣고 다시 배포해 주세요.</div>}
+          {noSentry && <div>오류 모니터링(SENTRY_DSN)이 꺼져 있습니다. 서버 오류가 어디에도 기록되지 않습니다.</div>}
+        </div>
+      )}
       <div className="ph">
         <div>
           <h1>접수 현황</h1>
