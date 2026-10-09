@@ -1,5 +1,5 @@
 import { notificationRecipients } from "./mail-preferences";
-import { maskedClientLabel, needsCda, remainingInvites, seoulMonthRange, withinMonthlyCap, type InviteSource } from "@/lib/request-policy";
+import { countsTowardLimit, inviteExpiresAt, maskedClientLabel, needsCda, remainingInvites, seoulMonthRange, withinMonthlyCap, type InviteSource } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
 import type { TablesUpdate } from "./db-types";
@@ -9,7 +9,16 @@ import { addBusinessDays, nowSeoul } from "./dates";
 import { quoteRowsFromPayload } from "./quote-items";
 import { rowKey } from "./catalog";
 
-export type DistributeResult = { sent: number; mailed: number; names: string[]; skipped: string[]; /** 월 전달 한도에 걸려 제외한 기관 */ capped: string[] };
+export type DistributeResult = {
+  sent: number;
+  mailed: number;
+  names: string[];
+  skipped: string[];
+  /** 월 전달 한도에 걸려 제외한 기관 */
+  capped: string[];
+  /** DB 트리거가 막은 이유. request_not_open: 비교표 공개·선정 이후 / invitation_limit_reached: 요청 기관 수 한도 */
+  blocked?: "request_not_open" | "invitation_limit_reached";
+};
 
 type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; monthly_cap?: number | null };
 
@@ -76,12 +85,12 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     for (const i of monthInv ?? []) if (i.cro_org_id) usedThisMonth.set(i.cro_org_id, (usedThisMonth.get(i.cro_org_id) ?? 0) + 1);
   }
 
-  const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id").eq("rfq_id", rfq.id);
+  const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id, status").eq("rfq_id", rfq.id);
   if (existingError) throw new Error("기존 배포 현황을 확인하지 못했습니다.");
-  const capacity = remainingInvites(rfq.cro_count, existing?.length ?? 0);
+  // 회신하지 않음·만료 초대는 한도에서 빼고(재배포 가능), 같은 기관 재초대는 막는다
+  const capacity = remainingInvites(rfq.cro_count, (existing ?? []).filter((e) => countsTowardLimit(e.status)).length);
   const already = new Set((existing ?? []).map((e) => e.cro_org_id));
-  const expiresAt = new Date(`${replyBy}T23:59:59+09:00`);
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  const expiresAt = inviteExpiresAt(replyBy);
   const masked = needsCda(rfq.confidentiality);
 
   for (const o of orgs) {
@@ -103,6 +112,13 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
       .select("id, token")
       .single();
     if (error || !inv) {
+      const m = error?.message || "";
+      if (m.includes("request_not_open") || m.includes("invitation_limit_reached")) {
+        // 트리거가 막은 것: 이 요청에는 더 못 보낸다. 사유를 그대로 돌려주고 멈춘다
+        res.blocked = m.includes("request_not_open") ? "request_not_open" : "invitation_limit_reached";
+        res.skipped.push(o.name);
+        break;
+      }
       res.skipped.push(o.name);
       console.error("invite insert", o.name, error);
       continue;
@@ -161,7 +177,7 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
  *   아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 포함한다 (해당 분야 기관이 없어 기다리던 요청)
  * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
  * - 이미 초대한 요청은 건너뛴다
- * 기관이 참여하는 즉시 보이도록 승인할 때, 기관이 수행 분야를 바꿀 때, 기관 화면을 열 때 부른다.
+ * 기관 승인·담당자 연결·수행 분야 변경 때, 그리고 매일 cron 이 부른다. auto_distribute 가 꺼진 요청은 건너뛴다.
  * orgId 를 주지 않으면 승인된 모든 기관을 대상으로 빠진 배포를 채운다 (매일 실행, 안전망).
  */
 export async function distributeOpenRfqs(orgId?: string, actorId: string | null = null): Promise<{ rfqs: number; invites: number }> {
@@ -184,6 +200,8 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   }
   for (const rfq of list) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
+    // 운영자가 수동 배포하면서 자동 보충을 끈 요청은 건드리지 않는다
+    if (rfq.auto_distribute === false) continue;
     // 회신 기한: 정해져 있으면 그대로(먼저 받은 기관과 같게), 없으면 지금 기준으로 새로 잡는다
     const replyBy = defaultReplyBy(rfq);
     if (replyBy < today) continue;

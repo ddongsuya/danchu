@@ -34,6 +34,18 @@ export function remainingInvites(value: string | null | undefined, existing: num
   return Math.max(0, invitationLimit(value) - existing);
 }
 
+/** 초대 한도에 세는 초대인지. 회신하지 않음·만료는 자리를 비운 것이다 (DB 트리거와 같은 규칙, 0012) */
+export function countsTowardLimit(status: string): boolean {
+  return status !== "declined" && status !== "expired";
+}
+
+/** 회신 링크 만료 시각: 기한 날 자정(서울) + 7일 */
+export function inviteExpiresAt(replyBy: string): Date {
+  const d = new Date(`${replyBy}T23:59:59+09:00`);
+  d.setDate(d.getDate() + 7);
+  return d;
+}
+
 /** 전달 출처. matched: 분야 자동 매칭 · nominated: 의뢰자 지명 · manual: 운영자 수동 */
 export type InviteSource = "matched" | "nominated" | "manual";
 

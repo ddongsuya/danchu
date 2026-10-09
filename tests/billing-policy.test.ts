@@ -46,3 +46,15 @@ describe("월 전달 한도", () => {
     expect(seoulMonthRange(new Date("2026-01-31T16:00:00Z"))).toEqual({ from: "2026-02-01", to: "2026-03-01" });
   });
 });
+
+describe("초대 한도 계산", () => {
+  it("회신하지 않음·만료는 자리를 비운 것으로 본다", async () => {
+    const { countsTowardLimit, inviteExpiresAt } = await import("@/lib/request-policy");
+    expect(countsTowardLimit("sent")).toBe(true);
+    expect(countsTowardLimit("draft")).toBe(true);
+    expect(countsTowardLimit("submitted")).toBe(true);
+    expect(countsTowardLimit("declined")).toBe(false);
+    expect(countsTowardLimit("expired")).toBe(false);
+    expect(inviteExpiresAt("2026-10-20").toISOString()).toBe("2026-10-27T14:59:59.000Z");
+  });
+});

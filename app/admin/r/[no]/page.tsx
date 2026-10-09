@@ -8,6 +8,8 @@ import { INVITE_LABEL, statusLabel, statusTone } from "@/lib/status";
 import { Crumb, StatusPill } from "@/components/app/ui";
 import { DistributePanel } from "@/components/admin/DistributePanel";
 import { AdminActions } from "@/components/admin/AdminActions";
+import { DeadlineForm } from "@/components/admin/DeadlineForm";
+import { todaySeoul } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { quoteRowsFromPayload } from "@/lib/quote-items";
 import { addBusinessDays, nowSeoul } from "@/lib/dates";
@@ -27,6 +29,8 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   const defaultReplyBy = rfq.reply_by || addBusinessDays(nowSeoul(), 7).toLocaleDateString("sv-SE");
   const invitedOrgIds = new Set(d.invites.map((i) => i.cro_org_id).filter(Boolean));
   const rows = quoteRowsFromPayload(p);
+  const today = todaySeoul();
+  const canChangeDeadline = ["received", "distributed", "quoted"].includes(rfq.status) && !rfq.compared_at;
 
   return (
     <>
@@ -59,6 +63,8 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                 categories={rfq.categories}
                 defaultReplyBy={defaultReplyBy}
                 orgs={orgs.map((o) => ({ id: o.id, name: o.name, categories: o.categories, glp: o.glp_certs, email: o.contact_email, members: o.members, invited: invitedOrgIds.has(o.id) }))}
+                today={today}
+                autoDistribute={rfq.auto_distribute !== false}
               />
             )}
           </div>
@@ -66,7 +72,10 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
           <div className="card card--pad">
             <div className="sec-title" style={{ margin: "0 0 10px" }}>
               <h2>회신 현황 {submitted.length}/{d.invites.length}</h2>
-              <span>{rfq.reply_by ? `기한 ${md(rfq.reply_by)}` : ""}</span>
+              <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                {rfq.reply_by ? <span>{`기한 ${md(rfq.reply_by)}`}{rfq.reply_by < today ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>지남</span> : null}</span> : null}
+                {canChangeDeadline && <DeadlineForm no={rfq.rfq_no} current={rfq.reply_by} min={today} />}
+              </span>
             </div>
             {d.invites.length === 0 ? (
               <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 배포하지 않았습니다.</p>
