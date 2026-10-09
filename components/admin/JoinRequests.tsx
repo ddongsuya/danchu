@@ -14,13 +14,14 @@ export function JoinRequests({ orgId, members }: { orgId: string; members: M[] }
 
   const act = async (m: M, link: boolean) => {
     if (busy) return;
-    if (!window.confirm(link ? `${m.email}을(를) 이 기관 담당자로 연결할까요? 기관에 배포된 요청서를 모두 볼 수 있게 됩니다.` : "합류 신청을 거절할까요?")) return;
+    if (!window.confirm(link ? `${m.email}을(를) 이 기관 담당자로 연결할까요? 기관에 배포된 요청서를 모두 볼 수 있게 됩니다.` : "합류 신청을 거절할까요? 계정은 남고 기관 연결만 되지 않습니다.")) return;
     setBusy(m.id);
     setErr("");
     const res = await fetch(`/api/admin/users/${m.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(link ? { role: "cro", croOrgId: orgId } : { role: "requester" }),
+      // 거절해도 역할은 기관 담당자로 둔다. 의뢰자로 바꾸면 다음 로그인에 의뢰자 홈으로 들어간다
+      body: JSON.stringify(link ? { role: "cro", croOrgId: orgId } : { role: "cro", croOrgId: null }),
     });
     const d = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) setErr(d.error || "처리하지 못했습니다.");

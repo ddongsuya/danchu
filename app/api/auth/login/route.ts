@@ -25,6 +25,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: authErrorKo(error?.message) }, { status: 401 });
   }
 
+  if (!data.user.email_confirmed_at) {
+    // 대시보드의 "Confirm email" 이 꺼져 있어도 미확인 계정은 들이지 않는다
+    await sb.auth.signOut({ scope: "local" }).catch(() => null);
+    return NextResponse.json({ error: "이메일 확인이 끝나지 않았습니다. 받은 편지함의 확인 링크를 눌러 주세요." }, { status: 403 });
+  }
   const { data: p } = await admin.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
   const role = ((p?.role as Role) || "requester") as Role;
   const next = safeNext(b.next);
