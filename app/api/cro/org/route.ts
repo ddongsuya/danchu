@@ -12,6 +12,7 @@ const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "�
 export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
   if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (s.profile.org_role !== "owner") return NextResponse.json({ error: "기관 정보는 기관 대표 담당자만 수정할 수 있습니다." }, { status: 403 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const v = (k: string, max = 120) => (typeof b[k] === "string" ? (b[k] as string).trim().slice(0, max) || null : null);
   const arr = (k: string, allow: readonly string[]) => (Array.isArray(b[k]) ? (b[k] as unknown[]).filter((x): x is string => typeof x === "string" && allow.includes(x)) : []);

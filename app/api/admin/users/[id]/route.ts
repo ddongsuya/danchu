@@ -5,6 +5,7 @@ import { distributeOpenRfqs } from "@/lib/distribute";
 import { notifyUsers } from "@/lib/notify";
 import { deleteAccount } from "@/lib/account";
 import { captureError } from "@/lib/observe";
+import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -24,7 +25,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (id === s.userId && role !== "admin") return NextResponse.json({ error: "본인의 운영자 권한은 해제할 수 없습니다." }, { status: 400 });
   const sb = getSupabaseAdmin()!;
   const linkOrg = role === "cro" ? croOrgId : null;
-  const { data: before } = await sb.from("profiles").select("role, cro_org_id, pending_org_id").eq("id", id).maybeSingle();
+  const { data: before } = await sb.from("profiles").select("role, cro_org_id, pending_org_id, email").eq("id", id).maybeSingle();
   if (before?.role === "admin" && role !== "admin") {
     // 운영자가 0명이 되면 복구는 SQL 뿐이다
     const { count } = await sb.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
@@ -32,6 +33,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
   const { error } = await sb.from("profiles").update({ role, cro_org_id: linkOrg, pending_org_id: null }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  await audit({ userId: s.userId, email: s.email }, "user.role", { type: "profile", id, label: before?.email ?? id }, { before: { role: before?.role, cro_org_id: before?.cro_org_id, pending_org_id: before?.pending_org_id }, after: { role, cro_org_id: linkOrg, pending_org_id: null } });
 
   if (linkOrg && before?.cro_org_id !== linkOrg) {
     const { data: org } = await sb.from("cro_orgs").select("name").eq("id", linkOrg).maybeSingle();
@@ -60,7 +62,9 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   if (id === s.userId) return NextResponse.json({ error: "본인 계정은 여기서 삭제할 수 없습니다." }, { status: 400 });
   const sb = getSupabaseAdmin()!;
   try {
+    const { data: target } = await sb.from("profiles").select("email, role, company").eq("id", id).maybeSingle();
     const r = await deleteAccount(sb, id, { actorId: s.userId, reason: "admin" });
+    if (r.ok) await audit({ userId: s.userId, email: s.email }, "user.delete", { type: "profile", id, label: target?.email ?? id }, { before: { role: target?.role, company: target?.company }, note: `요청 ${r.anonymized}건 익명화 · 취소 ${r.cancelled}건 · 첨부 ${r.filesDeleted}개 삭제` });
     if (!r.ok) {
       if (r.code === "admin") return NextResponse.json({ error: "운영자 계정은 먼저 역할을 바꾼 뒤 삭제할 수 있습니다." }, { status: 400 });
       if (r.code === "contracting") return NextResponse.json({ error: `기관을 선정한 요청(${r.contracting?.join(", ")})을 먼저 종료 처리해 주세요.` }, { status: 409 });

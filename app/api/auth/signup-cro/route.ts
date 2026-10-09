@@ -91,7 +91,7 @@ export async function POST(req: Request) {
   // 역할·기관은 서버가 직접 적는다. 기존 기관이면 합류 신청(pending_org_id)만 남긴다.
   const { error: pe } = await admin
     .from("profiles")
-    .update({ role: "cro", cro_org_id: existing ? null : orgId, pending_org_id: existing ? orgId : null, phone: s(b, "phone", 40) || null })
+    .update({ role: "cro", cro_org_id: existing ? null : orgId, pending_org_id: existing ? orgId : null, phone: s(b, "phone", 40) || null, org_role: existing ? "member" : "owner" })
     .eq("id", created.user.id);
   if (pe) console.error("signup-cro profile update", pe);
 

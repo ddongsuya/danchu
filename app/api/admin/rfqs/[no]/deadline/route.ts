@@ -5,6 +5,7 @@ import { getRfqByNo } from "@/lib/data";
 import { logEvent, notifyUsers } from "@/lib/notify";
 import { inviteExpiresAt } from "@/lib/request-policy";
 import { todaySeoul } from "@/lib/format";
+import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   // 지난 기한의 리마인더 기록은 지워 새 기한에 D-2·당일 알림이 다시 간다
   if (ids.length) await sb.from("invite_reminders").delete().in("invite_id", ids);
 
+  await audit({ userId: s.userId, email: s.email }, "rfq.deadline", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { before: { reply_by: rfq.reply_by }, after: { reply_by: replyBy } });
   await logEvent(rfq.id, "deadline", `회신 기한 변경 · ${rfq.reply_by ?? "-"} → ${replyBy}`, ids.length ? `열린 초대 ${ids.length}건에 적용` : undefined, s.userId, { from: rfq.reply_by, to: replyBy });
 
   const orgIds = (open ?? []).map((i) => i.cro_org_id).filter((x): x is string => !!x);

@@ -138,10 +138,16 @@ export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq
   return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null }));
 }
 
-export type MemberRow = { id: string; name: string | null; email: string; phone: string | null; created_at: string };
+export type MemberRow = { id: string; name: string | null; email: string; phone: string | null; created_at: string; org_role?: string };
 
 export async function listOrgMembers(orgId: string): Promise<MemberRow[]> {
-  const { data } = await sb().from("profiles").select("id, name, email, phone, created_at").eq("cro_org_id", orgId).order("created_at");
+  const { data } = await sb().from("profiles").select("id, name, email, phone, created_at, org_role").eq("cro_org_id", orgId).order("created_at");
+  return data ?? [];
+}
+
+/** 운영 감사 로그 (최근순) */
+export async function listAudit(limit = 200) {
+  const { data } = await sb().from("admin_audit").select("*").order("created_at", { ascending: false }).limit(limit);
   return data ?? [];
 }
 

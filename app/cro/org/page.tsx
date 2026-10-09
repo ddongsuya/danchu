@@ -1,9 +1,9 @@
 import { requireSession } from "@/lib/auth";
-import { dbReady, listOrgMembers } from "@/lib/data";
+import { dbReady, listOrgMembers, listPendingMembers } from "@/lib/data";
+import { OrgMembers } from "@/components/cro/OrgMembers";
 import { OrgForm } from "@/components/cro/OrgForm";
 import { ThemeSettings } from "@/components/ThemeSettings";
 import { LogoutButton } from "@/components/shell/LogoutButton";
-import { ymd } from "@/lib/format";
 import { autoReplyEnabled } from "@/lib/env";
 import Link from "next/link";
 
@@ -19,7 +19,8 @@ const STATUS: Record<string, [string, string]> = {
 export default async function CroOrgPage() {
   const s = await requireSession("cro");
   const org = s.org;
-  const members = org && dbReady() ? await listOrgMembers(org.id) : [];
+  const [members, pending] = org && dbReady() ? await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id)]) : [[], []];
+  const isOwner = s.profile.org_role === "owner";
   const st = STATUS[org?.status ?? "pending"];
 
   return (
@@ -40,26 +41,23 @@ export default async function CroOrgPage() {
             <div className="card card--pad">
               <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>기관 정보</h2>
               <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>GLP 인증과 수행 분야는 회신에 자동으로 채워지고, 배포 대상 선정과 비교표의 제출처 대응 판정에 쓰입니다.</p>
-              <OrgForm org={org} autoReplyAvailable={autoReplyEnabled()} />
+              {isOwner ? (
+                <OrgForm org={org} autoReplyAvailable={autoReplyEnabled()} />
+              ) : (
+                <div className="card--rows">
+                  {[["사업자등록번호", org.business_no], ["웹사이트", org.website], ["소재지", org.address], ["대표 담당자", org.contact_name], ["대표 이메일", org.contact_email], ["대표 연락처", org.contact_phone], ["GLP 인증", org.glp_certs.join(" · ")], ["수행 분야", org.categories.join(" · ")]].map(([k, v]) => (
+                    <div key={String(k)} className="kv"><span className="kv__k">{k}</span><span className="kv__v" style={{ fontWeight: 500 }}>{v || "-"}</span></div>
+                  ))}
+                  <p style={{ padding: "10px 0 4px", fontSize: 13, color: "var(--muted)" }}>기관 정보 수정은 대표 담당자가 합니다.</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="empty">소속 기관이 없습니다. hello@danchu.kr로 알려주세요.</div>
           )}
         </div>
         <div className="stack">
-          <div className="card card--rows">
-            <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>담당자 {members.length}</div>
-            {members.map((m) => (
-              <div key={m.id} className="kv">
-                <span>
-                  <b style={{ fontWeight: 600 }}>{m.name || "-"}</b>
-                  <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""}</span>
-                </span>
-                <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{ymd(m.created_at)}</span>
-              </div>
-            ))}
-            <div style={{ padding: "10px 0 12px", fontSize: 13, color: "var(--muted)" }}>담당자 추가는 같은 기관명으로 <Link href="/signup/cro">CRO 가입 신청</Link>을 하면 운영자가 연결합니다.</div>
-          </div>
+          <OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} />
           <ThemeSettings />
           <div className="card card--rows">
             <Link href="/cro/catalog" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>

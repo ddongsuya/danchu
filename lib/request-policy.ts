@@ -21,6 +21,18 @@ export function identityVisible(opts: { awarded: boolean; signedAt?: string | nu
   return opts.awarded || !!opts.signedAt;
 }
 
+/**
+ * 선정 전 기관에 보여 줄 첨부 이름. 원본 파일명("㈜바이오벤처_시험계획서.pdf")에 회사명이 들어 있으면
+ * 회사명 익명화가 뚫리므로 종류와 크기만 보여 준다
+ */
+export function anonymousFileLabel(index: number, fileName: string, sizeBytes: number): string {
+  const dot = fileName.lastIndexOf(".");
+  const ext = dot > 0 ? fileName.slice(dot + 1).toUpperCase().slice(0, 6) : "파일";
+  const mb = sizeBytes / 1024 / 1024;
+  const size = mb >= 1 ? `${mb.toFixed(1)}MB` : `${Math.max(1, Math.round(sizeBytes / 1024))}KB`;
+  return `첨부 ${index + 1} (${ext}, ${size})`;
+}
+
 /** 선정 전 기관에 보여 줄 의뢰자 표시명 */
 export function maskedClientLabel(orgType: string | null | undefined): string {
   return `${orgType || "의뢰기관"} (선정 시 공개)`;

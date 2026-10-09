@@ -58,3 +58,12 @@ describe("초대 한도 계산", () => {
     expect(inviteExpiresAt("2026-10-20").toISOString()).toBe("2026-10-27T14:59:59.000Z");
   });
 });
+
+describe("첨부 익명 라벨", () => {
+  it("파일명 대신 순번·종류·크기만 보여 준다", async () => {
+    const { anonymousFileLabel } = await import("@/lib/request-policy");
+    expect(anonymousFileLabel(0, "㈜바이오벤처_시험계획서.pdf", 2.1 * 1024 * 1024)).toBe("첨부 1 (PDF, 2.1MB)");
+    expect(anonymousFileLabel(1, "protocol.DOCX", 512 * 1024)).toBe("첨부 2 (DOCX, 512KB)");
+    expect(anonymousFileLabel(2, "noext", 10)).toBe("첨부 3 (파일, 1KB)");
+  });
+});
