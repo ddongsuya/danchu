@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { likeExact } from "@/lib/sql";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { EMAIL_RE, authErrorKo, sendLoginLink } from "@/lib/auth-links";
 import { adminEmails, adminUserIds, notifyUsers } from "@/lib/notify";
@@ -8,11 +9,6 @@ import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "기후에너지환경부·국립환경과학원", "농촌진흥청", "농림축산검역본부"];
-
-/** ilike 패턴 문자를 이스케이프해 이름 전체가 정확히(대소문자 무시) 같은 기관만 찾는다 */
-function likeExact(s: string): string {
-  return s.replace(/[\\%_]/g, (c) => `\\${c}`);
-}
 
 /**
  * POST — CRO 가입 신청. 기관(pending) + 담당자 계정을 만들고 확인 링크를 보낸다.

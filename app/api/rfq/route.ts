@@ -1,4 +1,6 @@
 import { NextResponse, after } from "next/server";
+import { isProduction } from "@/lib/env";
+import { captureError } from "@/lib/observe";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendRfqMails } from "@/lib/mail";
 import { validateRequired, type Values } from "@/lib/rfq-schema";
@@ -168,9 +170,14 @@ export async function POST(req: Request) {
       }
     });
   } else {
-    // 환경변수 미설정: 임시 번호 발급 (9000번대) + 로그
+    // 환경변수 미설정. 운영에서는 "접수된 것처럼" 200 을 돌려주면 안 된다
+    if (isProduction()) {
+      captureError(new Error("SUPABASE 미설정"), "rfq:config");
+      return NextResponse.json({ error: "지금은 접수를 저장할 수 없습니다. 잠시 후 다시 시도하거나 hello@danchu.kr로 알려 주세요." }, { status: 503 });
+    }
+    // 로컬: 임시 번호 발급 (9000번대). 폼 내용은 로그에 남기지 않는다
     rfqNo = `DC-${year}-9${String(Date.now() % 1000).padStart(3, "0")}`;
-    console.warn("[danchu] SUPABASE 미설정 - 임시 접수", rfqNo, JSON.stringify(values));
+    console.warn("[danchu] SUPABASE 미설정 - 임시 접수", rfqNo);
   }
 
   return NextResponse.json({ rfqNo, persisted, uploads });

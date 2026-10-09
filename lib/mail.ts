@@ -2,25 +2,47 @@ import { needsCda, confidentialAccess } from "@/lib/request-policy";
 import { Resend } from "resend";
 import { labelMap, type Values } from "./rfq-schema";
 import { addBusinessDays, formatKo, nowSeoul } from "./dates";
+import { captureError, maskEmail } from "./observe";
+import { isProduction } from "./env";
 
+// 운영에서 RESEND_FROM 이 비면 Resend 기본 발신자로 나가는데, 그 주소는 Resend 계정 소유자에게만 배달된다.
 const FROM = process.env.RESEND_FROM || "단추 <onboarding@resend.dev>";
+if (isProduction() && !process.env.RESEND_FROM) console.error("[danchu] RESEND_FROM 미설정 - 운영 메일이 외부로 배달되지 않습니다");
 const ADMIN = (process.env.ADMIN_EMAIL || "").split(",").map((s) => s.trim()).filter(Boolean);
 
 export function esc(s: string) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 }
 
-/** 범용 발송. 키가 없으면 false. */
+/**
+ * 범용 발송. 키가 없으면 false.
+ * 네트워크 예외는 한 번 더 시도한 뒤 false 로 돌려준다(던지지 않는다). 호출부가 루프 안에서 끊기지 않게.
+ * 로그에는 수신자 주소를 마스킹해 남긴다.
+ */
 export async function sendMail(m: { to: string | string[]; subject: string; html: string; replyTo?: string }): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
+  const toList = Array.isArray(m.to) ? m.to : [m.to];
   if (!key) {
-    console.warn("[danchu] RESEND 미설정 - 메일 미발송:", m.subject, m.to);
+    console.warn("[danchu] RESEND 미설정 - 메일 미발송:", m.subject, toList.map(maskEmail).join(","));
     return false;
   }
   const resend = new Resend(key);
-  const r = await resend.emails.send({ from: FROM, to: m.to, subject: m.subject, html: m.html, replyTo: m.replyTo });
-  if (r.error) console.error("resend", m.subject, r.error);
-  return !r.error;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await resend.emails.send({ from: FROM, to: m.to, subject: m.subject, html: m.html, replyTo: m.replyTo });
+      if (!r.error) return true;
+      // API 가 거부한 것(잘못된 주소·도메인 미인증)은 재시도해도 같다
+      captureError(new Error(r.error.message), "mail:resend", { subject: m.subject, name: r.error.name });
+      return false;
+    } catch (e) {
+      if (attempt === 1) {
+        captureError(e, "mail:transport", { subject: m.subject });
+        return false;
+      }
+      await new Promise((r) => setTimeout(r, 800));
+    }
+  }
+  return false;
 }
 
 const BTN = (href: string, label: string) =>
