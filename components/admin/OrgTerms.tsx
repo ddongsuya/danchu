@@ -8,7 +8,7 @@ import { CATS } from "@/lib/rfq-schema";
  * 기관 약정과 운영 설정. 전달 1건 = 청구 1건이므로 단가·월 한도는 운영자만 적는다.
  * 승인 뒤 기관명 변경도 여기서만 한다 (같은 이름의 다른 기관과 합류 매칭이 섞이지 않게).
  */
-export function OrgTerms({ org }: { org: CroOrg }) {
+export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; autoReplyAvailable?: boolean }) {
   const router = useRouter();
   const [f, setF] = useState({
     name: org.name,
@@ -60,10 +60,12 @@ export function OrgTerms({ org }: { org: CroOrg }) {
           {CATS.map((c) => <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => setCats(cats.includes(c) ? cats.filter((x) => x !== c) : [...cats, c])}>{c}</button>)}
         </div>
       </div>
-      <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 14 }}>
-        <input type="checkbox" checked={autoReply} onChange={(e) => setAutoReply(e.target.checked)} style={{ marginTop: 3 }} />
-        <span>자동 회신 <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>기한까지 손대지 않은 카탈로그 초안을 예비 견적으로 제출합니다. 예비 견적은 PDF를 붙이기 전까지 선정 대상이 아닙니다.</span></span>
-      </label>
+      {autoReplyAvailable && (
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 14 }}>
+          <input type="checkbox" checked={autoReply} onChange={(e) => setAutoReply(e.target.checked)} style={{ marginTop: 3 }} />
+          <span>자동 회신 <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>기한까지 손대지 않은 카탈로그 초안을 예비 견적으로 제출합니다. 예비 견적은 PDF를 붙이기 전까지 선정 대상이 아닙니다.</span></span>
+        </label>
+      )}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button type="submit" className="b1 bsm" disabled={busy || !f.name.trim() || cats.length === 0}>{busy ? "저장 중…" : "약정 저장"}</button>
         {msg && <span style={{ fontSize: 13, color: msg.ok ? "var(--ok)" : "var(--err)" }} role="status">{msg.text}</span>}

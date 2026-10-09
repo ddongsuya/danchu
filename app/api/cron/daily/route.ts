@@ -8,7 +8,7 @@ import { todaySeoul } from "@/lib/format";
 import { won } from "@/lib/format";
 import { saveQuote, type QuoteItemInput } from "@/lib/rpc";
 import { captureError } from "@/lib/observe";
-import { isProduction } from "@/lib/env";
+import { autoReplyEnabled, isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
 
@@ -98,6 +98,7 @@ export async function GET(req: Request) {
 
   // 2) 자동 회신 (기한 당일, auto_reply 기관, 초안이 확인 필요 없이 완성된 경우)
   await step("auto-reply", out.errors, async () => {
+  if (!autoReplyEnabled()) return; // 출시 범위 밖 (lib/env.ts 참고)
   const { data: autoOrgs } = await sb.from("cro_orgs").select("id").eq("auto_reply", true);
   const autoIds = (autoOrgs ?? []).map((o) => o.id as string);
   if (autoIds.length) {

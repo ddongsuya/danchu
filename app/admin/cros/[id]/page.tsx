@@ -5,6 +5,7 @@ import { Crumb } from "@/components/app/ui";
 import { OrgApproval } from "@/components/admin/OrgApproval";
 import { JoinRequests } from "@/components/admin/JoinRequests";
 import { OrgTerms } from "@/components/admin/OrgTerms";
+import { autoReplyEnabled } from "@/lib/env";
 import { ymd, won } from "@/lib/format";
 import { INVITE_LABEL } from "@/lib/status";
 
@@ -50,7 +51,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>약정 · 운영 설정</h2>
             <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>전달 1건이 청구 1건입니다. 단가와 월 한도는 기관과 약정한 값을 적고, 전달 명세의 집계에 그대로 쓰입니다.</p>
-            <OrgTerms org={org} />
+            <OrgTerms org={org} autoReplyAvailable={autoReplyEnabled()} />
           </div>
         </div>
         <div className="stack">

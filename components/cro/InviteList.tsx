@@ -25,7 +25,7 @@ type F = (typeof FILTERS)[number];
 
 function bucket(i: InviteItem): F {
   const expired = new Date(i.expiresAt).getTime() < Date.now();
-  const closed = ["selected", "contracting", "closed", "cancelled"].includes(i.rfqStatus);
+  const closed = ["compared", "selected", "contracting", "closed", "cancelled"].includes(i.rfqStatus);
   if (i.status === "declined" || (expired && i.status !== "submitted")) return "종료";
   if (i.status === "submitted") return closed ? "종료" : "제출";
   if (i.status === "draft") return "작성 중";

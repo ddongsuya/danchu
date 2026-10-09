@@ -76,6 +76,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | 첨부 한도 | 버킷 수준에서 20MB·허용 형식만 받는다(`0010`). 서버 검사는 메타데이터만 보므로 버킷 한도가 실제 방어선이다 |
 | 백업 | Supabase Pro + PITR을 켠다. Storage 객체는 DB 백업에 포함되지 않으므로 `rfq-files`·`cro-files`를 주기적으로 외부에 복제한다. 출시 전 복구 리허설 1회 |
 | 로그 | 이메일 주소는 마스킹(`maskEmail`), 요청서·문의 본문은 로그에 남기지 않는다 |
+| 자동 회신 | 출시 범위 밖. `DANCHU_AUTO_REPLY=1`일 때만 기관·운영자 화면에 토글이 보이고 cron 2단계가 돈다. 비교표가 공개되면 미제출 기관의 링크도 닫힌다(`lib/quote-load.ts` `closed`). 기관을 중지하면 열린 초대가 만료된다 |
 | 운영자 예외 처리 | 회신 0건으로 기한이 지난 요청: `/admin/r/[no]` 회신 현황의 "회신 기한 변경"(`POST …/deadline`)으로 늘린 뒤 재배포. 초대 한도는 살아 있는 초대만 센다(회신하지 않음·만료 제외, 0012 트리거). 수동 배포 때 "이후 자동 보충 안 함"을 켜면 cron·기관 승인이 그 요청에 기관을 더하지 않는다(`rfq_requests.auto_distribute`). 기관 단가·월 한도·분야·대표 연락처·자동 회신은 `/admin/cros/[id]` 약정 카드(`PATCH /api/admin/cros/[id]`) |
 | 회원 탈퇴·보존기간 | 프로필 → 회원 탈퇴(`/app/profile/delete`), 운영자는 `/admin/users`의 삭제. 둘 다 `lib/account.ts`가 진행 중 요청 취소 → 요청서 익명화(미선정 첨부 삭제) → `auth.admin.deleteUser` 순으로 처리한다. 운영자 계정과 선정 후 계약 진행 중인 의뢰자는 막힌다. cron 이 매일 접속 기록 90일·요청서 3년·읽은 알림 180일 기준으로 정리한다(`lib/retention.ts`, 개인정보처리방침 3항과 같은 값) |
 | 운영 계정 | 2개 이상 두고, `ADMIN_EMAIL`에 운영자 메일을 모두 넣는다 |
