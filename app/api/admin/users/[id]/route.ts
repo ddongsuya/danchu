@@ -3,6 +3,8 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { distributeOpenRfqs } from "@/lib/distribute";
 import { notifyUsers } from "@/lib/notify";
+import { deleteAccount } from "@/lib/account";
+import { captureError } from "@/lib/observe";
 
 export const runtime = "nodejs";
 
@@ -39,4 +41,29 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await notifyUsers([id], { kind: "기관", title: "기관 합류 신청이 처리되지 않았습니다", body: "신청한 기관에 연결되지 않았습니다. 문의는 hello@danchu.kr로 보내주세요.", href: "/cro" });
   }
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE — 계정 삭제 (운영자). 본인과 다른 운영자는 지울 수 없다.
+ * 요청서 익명화·진행 중 요청 취소·첨부 삭제는 회원 탈퇴와 같은 함수(lib/account.ts)를 쓴다.
+ */
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const s = await sessionOrNull("admin");
+  if (!s) return NextResponse.json({ error: "운영자만 할 수 있습니다." }, { status: 403 });
+  const { id } = await ctx.params;
+  if (!/^[0-9a-f-]{36}$/.test(id)) return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
+  if (id === s.userId) return NextResponse.json({ error: "본인 계정은 여기서 삭제할 수 없습니다." }, { status: 400 });
+  const sb = getSupabaseAdmin()!;
+  try {
+    const r = await deleteAccount(sb, id, { actorId: s.userId, reason: "admin" });
+    if (!r.ok) {
+      if (r.code === "admin") return NextResponse.json({ error: "운영자 계정은 먼저 역할을 바꾼 뒤 삭제할 수 있습니다." }, { status: 400 });
+      if (r.code === "contracting") return NextResponse.json({ error: `기관을 선정한 요청(${r.contracting?.join(", ")})을 먼저 종료 처리해 주세요.` }, { status: 409 });
+      return NextResponse.json({ error: "계정을 찾을 수 없습니다." }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, cancelled: r.cancelled, anonymized: r.anonymized, filesDeleted: r.filesDeleted });
+  } catch (e) {
+    captureError(e, "admin:deleteUser", { user: id });
+    return NextResponse.json({ error: "삭제하지 못했습니다." }, { status: 500 });
+  }
 }
