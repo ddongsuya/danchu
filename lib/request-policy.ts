@@ -33,6 +33,12 @@ export function anonymousFileLabel(index: number, fileName: string, sizeBytes: n
   return `첨부 ${index + 1} (${ext}, ${size})`;
 }
 
+/** 사업자등록번호 정규화: 숫자만. DB 의 cro_orgs.business_no_norm 과 같은 규칙 */
+export function normalizeBusinessNo(v: string | null | undefined): string | null {
+  const d = (v ?? "").replace(/[^0-9]/g, "");
+  return d || null;
+}
+
 /** 선정 전 기관에 보여 줄 의뢰자 표시명 */
 export function maskedClientLabel(orgType: string | null | undefined): string {
   return `${orgType || "의뢰기관"} (선정 시 공개)`;

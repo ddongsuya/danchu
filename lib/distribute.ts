@@ -92,7 +92,6 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   const capacity = remainingInvites(rfq.cro_count, (existing ?? []).filter((e) => countsTowardLimit(e.status)).length);
   const already = new Set((existing ?? []).map((e) => e.cro_org_id));
   const expiresAt = inviteExpiresAt(replyBy);
-  const masked = needsCda(rfq.confidentiality);
 
   for (const o of orgs) {
     if (already.has(o.id)) continue;
@@ -129,23 +128,14 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     res.sent++;
     res.names.push(o.name);
 
-    const link = `${siteUrl()}/q/${inv.token}`;
-    const portal = `${siteUrl()}/cro/r/${inv.id}`;
-    const html = mailWrap(`
-      <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청서가 도착했습니다 · ${esc(rfq.rfq_no)}</h2>
-      <p><b>${esc(maskedClientLabel(rfq.org_type))}</b> · 시험물질 ${esc(rfq.substance)}<br>
-      시험 항목: ${esc(rfq.categories.join(", "))}<br>
-      의뢰 목적: ${esc(rfq.purpose || "-")} · 요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${masked ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
-      <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개됩니다.</p>
-      <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b> · 링크는 기한 +7일까지 열립니다.</p>
-      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">요청서 보고 회신하기</a></p>
-      <p style="font-size:13px;color:#6F6A63">카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다. 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.</p>`);
     const mailTo = await notificationRecipients(to);
-    // 메일 실패가 다음 기관의 초대 생성을 막으면 안 된다. sendMail 은 예외를 던지지 않지만 한 번 더 감싼다
+    // 메일 실패가 다음 기관의 초대 생성을 막으면 안 된다. 실패하면 mailed_at 이 비어 남고 cron 이 다시 보낸다
     if (mailTo.length) {
-      const mailed = await sendMail({ to: mailTo, subject: `[단추] 견적 요청 ${rfq.rfq_no} · ${rfq.substance} · 회신 기한 ${replyBy}`, html }).catch(() => false);
-      if (mailed) res.mailed++;
-      else console.warn("[danchu] 배포 메일 미발송", rfq.rfq_no, o.id);
+      const mailed = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, replyBy), html: inviteMailHtml(rfq, replyBy, inv.token, inv.id) }).catch(() => false);
+      if (mailed) {
+        res.mailed++;
+        await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
+      } else console.warn("[danchu] 배포 메일 미발송", rfq.rfq_no, o.id);
     }
     await notifyUsers(memberIds, { kind: "배포", title: `새 견적 요청 · ${rfq.rfq_no} ${rfq.substance}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy}`, href: `/cro/r/${inv.id}` });
   }
@@ -163,6 +153,56 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     }
   }
   return res;
+}
+
+/** 배포 메일 제목·본문. 첫 발송과 cron 재발송이 같은 것을 쓴다 */
+export function inviteMailSubject(rfq: Pick<RfqRow, "rfq_no" | "substance">, replyBy: string): string {
+  return `[단추] 견적 요청 ${rfq.rfq_no} · ${rfq.substance} · 회신 기한 ${replyBy}`;
+}
+export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "purpose" | "intent" | "confidentiality" | "org_type">, replyBy: string, token: string, inviteId: string): string {
+  const link = `${siteUrl()}/q/${token}`;
+  const portal = `${siteUrl()}/cro/r/${inviteId}`;
+  const masked = needsCda(rfq.confidentiality);
+  return mailWrap(`
+      <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청서가 도착했습니다 · ${esc(rfq.rfq_no)}</h2>
+      <p><b>${esc(maskedClientLabel(rfq.org_type))}</b> · 시험물질 ${esc(rfq.substance)}<br>
+      시험 항목: ${esc(rfq.categories.join(", "))}<br>
+      의뢰 목적: ${esc(rfq.purpose || "-")} · 요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${masked ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
+      <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개됩니다.</p>
+      <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b> · 링크는 기한 +7일까지 열립니다.</p>
+      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">요청서 보고 회신하기</a></p>
+      <p style="font-size:13px;color:#6F6A63">카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다. 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.</p>`);
+}
+
+/**
+ * 배포 메일이 가지 않은 초대(mailed_at 없음, 최근 3일, 아직 열린 것)를 다시 보낸다. 매일 cron 이 부른다.
+ * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다
+ */
+export async function resendUnmailedInvites(): Promise<{ tried: number; sent: number }> {
+  const sb = getSupabaseAdmin();
+  const out = { tried: 0, sent: 0 };
+  if (!sb) return out;
+  const since = new Date(Date.now() - 3 * 864e5).toISOString();
+  const today = nowSeoul().toLocaleDateString("sv-SE");
+  const { data: invites } = await sb.from("rfq_invites").select("*").is("mailed_at", null).in("status", ["sent", "draft"]).gte("sent_at", since).gte("reply_by", today).limit(50);
+  for (const inv of invites ?? []) {
+    out.tried++;
+    const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
+    if (!rfq || rfq.compared_at || ["selected", "contracting", "closed", "cancelled"].includes(rfq.status)) continue;
+    let to = [inv.cro_email];
+    if (inv.cro_org_id) {
+      const { data: ms } = await sb.from("profiles").select("email").eq("cro_org_id", inv.cro_org_id);
+      to = [...new Set([inv.cro_email, ...(ms ?? []).map((m) => m.email)])];
+    }
+    const mailTo = await notificationRecipients(to);
+    if (!mailTo.length) continue;
+    const ok = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id) }).catch(() => false);
+    if (ok) {
+      out.sent++;
+      await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
+    }
+  }
+  return out;
 }
 
 /** 접수 직후 자동 배포. 맞는 기관이 없으면 운영자에게만 알린다. */

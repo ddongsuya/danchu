@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { publishCompare } from "@/lib/compare";
-import { distributeOpenRfqs } from "@/lib/distribute";
+import { distributeOpenRfqs, resendUnmailedInvites } from "@/lib/distribute";
 import { loadByInvite } from "@/lib/quote-load";
 import { todaySeoul } from "@/lib/format";
 import { won } from "@/lib/format";
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
-  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
+  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, resent: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
 
   // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
   await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
@@ -67,6 +67,11 @@ export async function GET(req: Request) {
   // 0) 빠진 배포 보충: 승인된 기관 중 열린 요청을 아직 받지 못한 곳
   await step("distribute", out.errors, async () => {
     out.distributed = (await distributeOpenRfqs()).invites;
+  });
+
+  // 0-1) 배포 메일이 안 간 초대 재발송 (Resend 장애 뒤 복구)
+  await step("resend", out.errors, async () => {
+    out.resent = (await resendUnmailedInvites()).sent;
   });
 
   // 1) 리마인더

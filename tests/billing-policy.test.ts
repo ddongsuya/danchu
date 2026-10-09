@@ -77,3 +77,13 @@ describe("청구 계산", () => {
     expect(successFee(50_000_000, null)).toBeNull();
   });
 });
+
+describe("사업자등록번호 정규화", () => {
+  it("숫자만 남기고 빈 값은 null", async () => {
+    const { normalizeBusinessNo } = await import("@/lib/request-policy");
+    expect(normalizeBusinessNo("123-45-67890")).toBe("1234567890");
+    expect(normalizeBusinessNo(" 123 45 67890 ")).toBe("1234567890");
+    expect(normalizeBusinessNo("")).toBeNull();
+    expect(normalizeBusinessNo(null)).toBeNull();
+  });
+});

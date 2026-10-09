@@ -102,6 +102,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const sb = getSupabaseAdmin()!;
   const { error } = await sb.from("cro_orgs").update(patch).eq("id", id);
+  if (error?.code === "23505") return NextResponse.json({ error: "같은 기관명 또는 사업자등록번호의 기관이 이미 있습니다." }, { status: 409 });
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   const d = diffFields(org as unknown as Record<string, unknown>, patch as Record<string, unknown>);
   if (Object.keys(d.after).length) await audit({ userId: s.userId, email: s.email }, "org.terms", { type: "cro_org", id, label: org.name }, d);
