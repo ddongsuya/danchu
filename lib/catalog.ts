@@ -345,6 +345,8 @@ export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatc
   if (condOf(payload, c, "histopath") === "포함" && !incl("조직병리")) checks.push("조직병리");
   if (condOf(payload, c, "doseRange") === "포함") checks.push("용량설정시험");
   if (condOf(payload, c, "exposure") === "포함" && !incl("노출증명") && cat.extra?.exposureProof !== "기본 포함") checks.push("노출증명");
+  // 참고 단가가 범위(최저~최고)로 적혀 있으면 하한을 그대로 금액으로 쓰지 않는다. 기관이 보고 정한다
+  if (cat.price_min != null && cat.price_max != null && cat.price_max !== cat.price_min) checks.push("단가 범위 확인");
 
   const source: Prefill["source"] = cat.source === "manual" || cat.price_min != null || cat.weeks != null ? "catalog" : cat.last_amount != null ? "learned" : "manual";
   const amount = checks.length ? "" : cat.unit === "per_sample" ? "" : String(cat.price_min ?? cat.last_amount ?? "");

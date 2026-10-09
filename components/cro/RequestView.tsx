@@ -57,7 +57,7 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
           </span>
         </div>
       )}
-      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>의뢰자가 CRO 선택을 마쳐 이 요청의 회신이 닫혔습니다.</div>}
+      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.</div>}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">

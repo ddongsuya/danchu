@@ -328,7 +328,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "의뢰자가 CRO 선택을 마쳐 회신이 닫혔습니다." : data.declined ? "견적 참여하지 않기된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 회신이 닫혔습니다." : data.declined ? "견적 참여하지 않기된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 

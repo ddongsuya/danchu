@@ -4,6 +4,7 @@ import { OrgForm } from "@/components/cro/OrgForm";
 import { ThemeSettings } from "@/components/ThemeSettings";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { ymd } from "@/lib/format";
+import { autoReplyEnabled } from "@/lib/env";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export default async function CroOrgPage() {
             <div className="card card--pad">
               <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>기관 정보</h2>
               <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>GLP 인증과 수행 분야는 회신에 자동으로 채워지고, 배포 대상 선정과 비교표의 제출처 대응 판정에 쓰입니다.</p>
-              <OrgForm org={org} />
+              <OrgForm org={org} autoReplyAvailable={autoReplyEnabled()} />
             </div>
           ) : (
             <div className="empty">소속 기관이 없습니다. hello@danchu.kr로 알려주세요.</div>

@@ -29,7 +29,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
 function blocked(got: Loaded): string {
   if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
   if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
-  if (got.closed) return "의뢰자가 이미 CRO를 선택해 이 요청의 회신이 닫혔습니다.";
+  if (got.closed) return "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.";
   if (got.declined) return "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.";
   return "";
 }

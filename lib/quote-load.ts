@@ -181,7 +181,15 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
   const now = Date.now();
   const expired = !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
   const locked = draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
-  const closed = ["selected", "contracting", "closed", "cancelled"].includes(r.status);
+  // 비교표가 공개되면 아직 제출하지 않은 기관도 닫힌다. 제때 낸 기관만 잠기고 안 낸 기관은 링크 만료까지
+  // 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 이 없으므로 다시 열린다
+  // 참여가 중지된 기관의 초대도 닫는다 (중지 때 초대를 만료시키지만 2차 방어선)
+  let orgSuspended = false;
+  if (inv.cro_org_id) {
+    const { data: org } = await sb.from("cro_orgs").select("status").eq("id", inv.cro_org_id).maybeSingle();
+    orgSuspended = !!org && org.status !== "approved";
+  }
+  const closed = ["selected", "contracting", "closed", "cancelled"].includes(r.status) || !!r.compared_at || orgSuspended;
 
   return {
     rfq, draft, inviteId: inv.id, rfqId: inv.rfq_id, croName: inv.cro_name, croOrgId: inv.cro_org_id, token: inv.token,

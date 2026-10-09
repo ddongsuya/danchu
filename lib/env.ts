@@ -47,3 +47,12 @@ export function missingProdEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   if (!isProduction(env)) return [];
   return PROD_REQUIRED_ENV.filter((names) => !names.some((n) => (env[n] || "").trim())).map((names) => names[0]);
 }
+
+/**
+ * 자동 회신(기한 당일 카탈로그 초안을 예비 견적으로 제출). 출시 범위에서는 끈다.
+ * PDF 없는 예비 견적은 선정 대상이 아니어서 비교표에 고를 수 없는 열만 남고, 초안 금액이 참고 단가 하한으로
+ * 채워져 의도치 않은 최저가가 구속력 있는 견적으로 나갈 수 있다. 재정비 전까지 DANCHU_AUTO_REPLY=1 일 때만 켠다.
+ */
+export function autoReplyEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.DANCHU_AUTO_REPLY === "1";
+}

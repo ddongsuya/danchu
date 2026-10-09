@@ -32,6 +32,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { error } = await sb.from("cro_orgs").update({ status: m.status, approved_at: action === "approve" ? new Date().toISOString() : org.approved_at }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
 
+  if (action === "suspend") {
+    // 중지된 기관이 토큰 링크로 계속 제출해 비교표에 오르지 않게 열린 초대를 닫는다 (한도에서도 빠진다)
+    await sb.from("rfq_invites").update({ status: "expired" }).eq("cro_org_id", id).in("status", ["sent", "draft"]);
+  }
   const { data: members } = await sb.from("profiles").select("id, email").eq("cro_org_id", id);
   const ids = (members ?? []).map((x) => x.id as string);
   const mails = [...new Set([...(members ?? []).map((x) => x.email as string), org.contact_email].filter((x): x is string => !!x))];

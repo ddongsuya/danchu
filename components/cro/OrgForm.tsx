@@ -7,7 +7,7 @@ import { CATS } from "@/lib/rfq-schema";
 
 const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "기후에너지환경부·국립환경과학원", "농촌진흥청", "농림축산검역본부"];
 
-export function OrgForm({ org }: { org: CroOrg }) {
+export function OrgForm({ org, autoReplyAvailable = false }: { org: CroOrg; autoReplyAvailable?: boolean }) {
   const router = useRouter();
   const [f, setF] = useState({
     name: org.name, businessNo: org.business_no ?? "", website: org.website ?? "", address: org.address ?? "",
@@ -75,13 +75,15 @@ export function OrgForm({ org }: { org: CroOrg }) {
         </div>
       </div>
       <div className="fld"><label className="fld__lab" htmlFor="intro">기관 소개</label><textarea id="intro" className="ta" rows={3} value={f.intro} onChange={set("intro")} /></div>
-      <div className="kv" style={{ alignItems: "center", padding: "12px 14px", border: "1px solid var(--cline)", borderRadius: 12 }}>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontWeight: 600 }}>기한까지 손대지 않은 초안을 예비 견적으로 자동 제출</span>
-          <span style={{ fontSize: 12.5, color: "var(--muted)" }}>카탈로그로 채워진 초안이 확인 없이 기한에 제출됩니다. 의뢰자에게 "예비 견적"으로 표시되고, 확인 필요 항목이 남아 있으면 제출되지 않습니다.</span>
+      {autoReplyAvailable && (
+        <div className="kv" style={{ alignItems: "center", padding: "12px 14px", border: "1px solid var(--cline)", borderRadius: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <span style={{ fontWeight: 600 }}>기한까지 손대지 않은 초안을 예비 견적으로 자동 제출</span>
+            <span style={{ fontSize: 12.5, color: "var(--muted)" }}>카탈로그로 채워진 초안이 확인 없이 기한에 제출됩니다. 예비 견적은 PDF를 붙여 정식 견적으로 바꾸기 전까지 선정 대상이 아닙니다. 확인 필요 항목이 남아 있으면 제출되지 않습니다.</span>
+          </div>
+          <button type="button" className="tgl" aria-pressed={autoReply} aria-label="자동 회신" onClick={() => setAutoReply(!autoReply)}><span /></button>
         </div>
-        <button type="button" className="tgl" aria-pressed={autoReply} aria-label="자동 회신" onClick={() => setAutoReply(!autoReply)}><span /></button>
-      </div>
+      )}
       {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status">{msg.text}</p>}
       <div><button type="submit" className="b1" disabled={busy || !f.name || cats.length === 0}>{busy ? "저장 중…" : "저장"}</button></div>
     </form>
