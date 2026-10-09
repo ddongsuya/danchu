@@ -148,6 +148,8 @@ export async function GET(req: Request) {
       if (!ev) {
         await logEvent(rfq.id, "no_reply", "기한 경과 · 회신 없음", "재배포 또는 기한 연장 판단 필요", null);
         await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "재배포하거나 기한을 연장해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+        // 의뢰자에게도 한 번: 기다리는 이유와 선택지
+        await notifyUsers(rfq.user_id ? [rfq.user_id] : [], { kind: "비교", title: `${rfq.rfq_no} 회신 기한이 지났지만 아직 견적이 없습니다`, body: `${rfq.substance} · 운영자가 기한을 늘려 다시 전달하거나 기관을 추가합니다. 진행을 원하지 않으시면 요청 화면에서 마무리할 수 있습니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
       }
     }
   }

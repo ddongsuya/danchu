@@ -31,7 +31,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const r = { rfq_no: rc.rfq_no, user_id: rc.user_id, substance: rc.substance };
 
   await logEvent(award.rfq_id, "contract", `${award.cro_name} 계약 체결 보고`, `체결일 ${date} · ${won(amount)}`, s.userId);
-  if (r?.user_id) await notifyUsers([r.user_id], { kind: "계약", title: `${award.cro_name}과 계약이 체결되었습니다`, body: `${r.rfq_no} · ${won(amount)}`, href: `/app/r/${r.rfq_no}` });
+  if (r?.user_id) {
+    const { data: rq } = await getSupabaseAdmin()!.from("rfq_requests").select("email").eq("id", award.rfq_id).maybeSingle();
+    await notifyUsers([r.user_id], { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 보고 내용이 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${r.rfq_no}` }, rq?.email ? { to: [rq.email] } : undefined);
+  }
   await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} 계약 체결 보고 · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}`, href: `/admin/awards` }, { to: adminEmails() });
   return NextResponse.json({ ok: true });
 }

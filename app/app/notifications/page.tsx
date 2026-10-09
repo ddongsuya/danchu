@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listNotifications } from "@/lib/data";
 import { ago } from "@/lib/format";
 import { MarkAllRead } from "@/components/MarkAllRead";
+import { NotificationLink } from "@/components/NotificationLink";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export default async function Notifications() {
             );
             const style: React.CSSProperties = { borderRadius: 14, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start", color: "var(--ink)" };
             return n.href ? (
-              <Link key={n.id} href={n.href} className="card card--link" style={style}>{inner}</Link>
+              <NotificationLink key={n.id} id={n.id} href={n.href} unread={!n.read_at} style={style}>{inner}</NotificationLink>
             ) : (
               <div key={n.id} className="card" style={style}>{inner}</div>
             );

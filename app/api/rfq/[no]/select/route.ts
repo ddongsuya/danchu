@@ -75,7 +75,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   }
 
   await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-  await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name}을 선택했습니다`, body: "선택한 기관에 연락처를 전달했습니다. 계약은 기관과 직접 진행합니다.", href: `/app/r/${rfq.rfq_no}` });
+  await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name} 선정 완료 · ${rfq.rfq_no}`, body: "선정한 기관에 연락처를 전달했습니다. 기관이 곧 연락드리며, 계약은 기관과 직접 진행합니다. 계약이 체결되면 기관이 단추에 보고하고 알림으로 알려 드립니다.", href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
 
   return NextResponse.json({ ok: true, awardId: award.id });
 }
