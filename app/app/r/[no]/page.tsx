@@ -114,7 +114,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             )}
           </div>
 
-          {!d.award && canCompare && !["closed", "cancelled"].includes(rfq.status) && <OutcomeForm no={rfq.rfq_no} />}
+          {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <OutcomeForm no={rfq.rfq_no} compared={canCompare} />}
           {!d.award && rfq.outcome && (
             <div className="note" style={{ flexDirection: "column", gap: 4 }}>
               <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>

@@ -171,9 +171,15 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     const done = r.submitted_invites ?? 0;
     const count = r.total_invites ?? 0;
     await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id });
-    const { data: rq } = await sb.from("rfq_requests").select("user_id").eq("id", got.rfqId).maybeSingle();
+    const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
     if (rq?.user_id) {
-      await notifyUsers([rq.user_id], { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done}/${count}곳 회신 · 비교표는 회신 기한 후 공개됩니다.`, href: `/app/r/${got.rfq.no}` });
+      // 메일은 첫 견적이 왔을 때와 전원이 회신했을 때만. 그 사이 도착은 앱 알림으로 충분하다
+      const mailWorthy = first && (done === 1 || (count > 0 && done >= count));
+      await notifyUsers(
+        [rq.user_id],
+        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done}/${count}곳 회신 · 비교표는 회신 기한 후 공개됩니다.${done >= count && count > 0 ? " 전달한 기관이 모두 회신해 곧 비교표가 열립니다." : ""}`, href: `/app/r/${got.rfq.no}` },
+        mailWorthy && rq.email ? { to: [rq.email] } : undefined,
+      );
     }
     await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
   }

@@ -15,7 +15,7 @@ const HELP: Record<Outcome, string> = {
  * 선정 버튼을 누르지 않은 이유를 한 번 묻는다. 선정이 아니면 어떤 경로였는지 단추가 알아야
  * 기관별 전달 명세와 선정률을 바르게 볼 수 있다.
  */
-export function OutcomeForm({ no }: { no: string }) {
+export function OutcomeForm({ no, compared }: { no: string; compared: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | "">("");
@@ -42,9 +42,9 @@ export function OutcomeForm({ no }: { no: string }) {
   if (!open) {
     return (
       <div className="card" style={{ padding: 18 }}>
-        <div className="sec-title" style={{ margin: "0 0 6px" }}><h2>기관을 선정하지 않고 마무리하나요?</h2></div>
-        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>비교표의 기관과 진행하려면 비교표에서 선정해 주세요. 선정하면 그 기관에 연락처가 전달됩니다. 다른 경로로 진행하거나 보류하는 경우 여기서 알려 주시면 회신 기관에 결과를 안내합니다.</p>
-        <button type="button" className="b2" onClick={() => setOpen(true)}>선정 없이 마무리</button>
+        <div className="sec-title" style={{ margin: "0 0 6px" }}><h2>{compared ? "기관을 선정하지 않고 마무리하나요?" : "이 요청을 더 진행하지 않나요?"}</h2></div>
+        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>{compared ? "비교표의 기관과 진행하려면 비교표에서 선정해 주세요. 선정하면 그 기관에 연락처가 전달됩니다. 다른 경로로 진행하거나 보류하는 경우 여기서 알려 주시면 회신 기관에 결과를 안내합니다." : "계획이 바뀌었거나 다른 경로로 진행하기로 했다면 여기서 마무리할 수 있습니다. 회신 중인 기관에는 닫혔다고 안내합니다."}</p>
+        <button type="button" className="b2" onClick={() => setOpen(true)}>{compared ? "선정 없이 마무리" : "요청 마무리"}</button>
       </div>
     );
   }

@@ -27,13 +27,17 @@ export default async function Compare({ params }: { params: Promise<{ no: string
     );
   }
 
-  const quotes = d.quotes.filter((q) => q.status === "submitted");
+  // 금액 오름차순, 같으면 기관명 순. 정렬이 없으면 새로 고칠 때마다 열 순서가 바뀐다
+  const quotes = d.quotes.filter((q) => q.status === "submitted").sort((a, b) => (a.total_amount ?? 0) - (b.total_amount ?? 0) || a.cro_name.localeCompare(b.cro_name, "ko"));
   const orgIds = quotes.map((q) => q.cro_org_id).filter((x): x is string => !!x);
   const sb = getSupabaseAdmin()!;
   const { data: orgs } = orgIds.length ? await sb.from("cro_orgs").select("id, glp_certs, aaalac").in("id", orgIds) : { data: [] };
   const certsOf = new Map((orgs ?? []).map((o) => [o.id as string, (o.glp_certs ?? []) as string[]]));
   const authorities = Array.isArray(rfq.payload.authority) ? (rfq.payload.authority as string[]) : [];
-  const rows = quotes[0]?.cro_quote_items?.map((it) => ({ seq: it.seq, name: it.name, category: it.category })) ?? [];
+  // 행은 첫 견적이 아니라 모든 견적의 항목 합집합 (어느 기관이 항목을 빠뜨려도 행이 사라지지 않게)
+  const rowMap = new Map<number, { seq: number; name: string; category: string }>();
+  for (const q of quotes) for (const it of q.cro_quote_items ?? []) if (!rowMap.has(it.seq)) rowMap.set(it.seq, { seq: it.seq, name: it.name, category: it.category });
+  const rows = [...rowMap.values()].sort((a, b) => a.seq - b.seq);
 
   const cols: CompareCol[] = quotes.map((q) => {
     const cov = glpCoverage(authorities, certsOf.get(q.cro_org_id ?? "") ?? []);

@@ -156,6 +156,8 @@ export async function POST(req: Request) {
           const r = await autoDistribute(full);
           if (!r.matched) {
             await notifyUsers(await adminUserIds(), { kind: "배포", title: `${no} 자동 배포 대상 없음`, body: "분야가 맞는 승인 기관이 없습니다. 수동 배포가 필요합니다.", href: `/admin/r/${no}` }, { to: adminEmails() });
+            // 의뢰자도 기다리는 이유를 알아야 한다. 운영자가 직접 전달 기관을 정하는 동안의 안내
+            await notifyUsers([userId], { kind: "배포", title: `${no} 전달할 기관을 찾고 있습니다`, body: "요청 분야에 바로 맞는 참여 기관이 없어 운영자가 직접 전달 기관을 정합니다. 보통 영업일 1~2일 안에 전달 현황을 알려 드리고, 맞는 기관이 없으면 그 사실을 안내합니다. 기다리지 않으시려면 요청 화면에서 마무리할 수 있습니다.", href: `/app/r/${no}` }, { to: [sess.email] });
           } else if (r.skipped.length) {
             await logEvent(rfqId, "distributed", `배포 제외 ${r.skipped.length}곳`, r.skipped.join(", "), null, { skipped: r.skipped });
           }
