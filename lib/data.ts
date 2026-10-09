@@ -143,6 +143,12 @@ export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq
   return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null }));
 }
 
+export type OrgClientRow = Tables<"cro_org_clients">;
+export async function listOrgClients(orgId: string): Promise<OrgClientRow[]> {
+  const { data } = await sb().from("cro_org_clients").select("*").eq("org_id", orgId).order("name");
+  return data ?? [];
+}
+
 export type MemberRow = { id: string; name: string | null; email: string; phone: string | null; created_at: string; org_role?: string };
 
 export async function listOrgMembers(orgId: string): Promise<MemberRow[]> {

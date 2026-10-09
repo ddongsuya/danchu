@@ -110,6 +110,25 @@ export type Database = {
           { foreignKeyName: "rfq_invites_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
         ];
       };
+      cro_org_clients: {
+        Row: {
+          id: string;
+          org_id: string;
+          name: string;
+          name_norm: string;
+          business_no: string | null;
+          business_no_norm: string | null;
+          last_contract_on: string | null;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["cro_org_clients"]["Row"], "id" | "name_norm" | "business_no" | "business_no_norm" | "last_contract_on" | "note" | "created_by" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_org_clients"]["Row"]>;
+        Relationships: [
+          { foreignKeyName: "cro_org_clients_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
+        ];
+      };
       cro_quotes: {
         Row: {
           id: string;
@@ -226,8 +245,14 @@ export type Database = {
           contract_note: string | null;
           fee_basis_amount: number | null;
           invite_source: string | null;
+          existing_client_claim: string | null;
+          existing_client_claimed_at: string | null;
+          fee_exempt: boolean;
+          fee_exempt_reason: string | null;
+          fee_exempt_at: string | null;
+          fee_exempt_by: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "existing_client_claim" | "existing_client_claimed_at" | "fee_exempt" | "fee_exempt_reason" | "fee_exempt_at" | "fee_exempt_by">;
         Update: Partial<Database["public"]["Tables"]["rfq_awards"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_awards_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: true; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -421,5 +446,7 @@ export type BillingSummaryRow = {
   declined: number;
   unanswered: number;
   selected: number;
+  /** 면제된 수주를 뺀 선정 견적 합계 (성사수수료 기준) */
   selected_amount: number;
+  exempt: number;
 };

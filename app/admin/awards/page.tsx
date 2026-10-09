@@ -4,6 +4,7 @@ import { dbReady, listAllAwards } from "@/lib/data";
 import { statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { won, ymd } from "@/lib/format";
+import { FeeExemptForm } from "@/components/admin/FeeExemptForm";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function AdminAwards() {
       <div className="ph">
         <div>
           <h1>수주·계약</h1>
-          <p>선정 {list.length}건 · 계약 보고 {list.filter((a) => a.contract_reported_at).length}건 · 보고된 계약금액 합계 {won(total)}</p>
+          <p>선정 {list.length}건 · 계약 보고 {list.filter((a) => a.contract_reported_at).length}건 · 보고된 계약금액 합계 {won(total)}{list.some((a) => a.existing_client_claim && !a.fee_exempt_at) ? ` · 면제 요청 ${list.filter((a) => a.existing_client_claim && !a.fee_exempt_at).length}건 대기` : ""}</p>
         </div>
       </div>
       {list.length === 0 ? (
@@ -25,7 +26,7 @@ export default async function AdminAwards() {
         <div className="card tbl-wrap">
           <table className="tbl">
             <thead>
-              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th>선정일</th><th>계약 보고</th><th>상태</th></tr>
+              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th>선정일</th><th>계약 보고</th><th>성사수수료</th><th>상태</th></tr>
             </thead>
             <tbody>
               {list.map((a) => (
@@ -35,6 +36,7 @@ export default async function AdminAwards() {
                   <td style={{ fontWeight: 600 }}>{a.cro_name}</td>
                   <td className="tnum">{ymd(a.awarded_at)}</td>
                   <td className="tnum">{a.contract_reported_at ? <>{a.contract_date} · <b>{won(a.contract_amount ?? 0)}</b>{a.contract_note ? <div style={{ fontSize: 12, color: "var(--muted)" }}>{a.contract_note}</div> : null}</> : <span style={{ color: "var(--muted)" }}>대기</span>}</td>
+                  <td><FeeExemptForm awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} /></td>
                   <td><StatusPill tone={statusTone(a.rfq?.status)}>{statusLabel(a.rfq?.status)}</StatusPill></td>
                 </tr>
               ))}
