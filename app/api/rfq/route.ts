@@ -1,3 +1,4 @@
+import { cleanNominees } from "@/lib/request-policy";
 import { NextResponse, after } from "next/server";
 import { isProduction } from "@/lib/env";
 import { captureError } from "@/lib/observe";
@@ -86,6 +87,13 @@ export async function POST(req: Request) {
   if (supabase) {
     let rfqId: string;
     try {
+      // 지명 기관: 승인된 기관 이름에 있는 것만 남긴다 (화면에서 고른 값이라도 서버에서 다시 거른다)
+      if (values.nominees !== undefined) {
+        const { data: approvedOrgs } = await supabase.from("cro_orgs").select("name").eq("status", "approved");
+        const cleaned = cleanNominees(values.nominees, str("croCount"), (approvedOrgs ?? []).map((o) => o.name as string));
+        if (cleaned.length) values.nominees = cleaned;
+        else delete values.nominees;
+      }
       const { data: no, error: e1 } = await supabase.rpc("next_rfq_no", { p_year: year });
       if (e1 || !no) throw e1 || new Error("채번 실패");
       rfqNo = String(no);

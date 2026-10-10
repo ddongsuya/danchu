@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Field, Values } from "@/lib/rfq-schema";
 import { Chevron } from "./Chevron";
+import { OrgPicker } from "./OrgPicker";
 
 const MAX_FILE_MB = 20;
 
@@ -194,6 +195,8 @@ export function RfqField({
       )}
 
       {field.type === "file" && <FileDrop id={id} placeholder={field.placeholder} files={files} onFiles={onFiles} />}
+
+      {field.type === "orgs" && <OrgPicker id={id} values={values} onChange={onChange} />}
 
       {field.help && <p className="field__help" id={`${id}-help`}>{field.help}</p>}
     </div>

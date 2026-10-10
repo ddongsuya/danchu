@@ -115,3 +115,19 @@ export function findExistingClient<T extends ClientMatch>(company: string | null
 
 /** 기존 고객 신고 기한: 선정일부터 10영업일 (참여 약정서 제5조 6항) */
 export const EXEMPT_CLAIM_BUSINESS_DAYS = 10;
+
+/** 의뢰자가 지명한 기관 이름을 정리한다: 문자열만, 중복 제거, 한도(기관 수) 안에서, 승인된 기관 이름에 있는 것만 */
+export function cleanNominees(raw: unknown, croCount: string | null | undefined, approvedNames: string[]): string[] {
+  if (!Array.isArray(raw)) return [];
+  const approved = new Map(approvedNames.map((n) => [n.trim().toLowerCase(), n]));
+  const limit = Math.min(5, invitationLimit(croCount));
+  const out: string[] = [];
+  for (const v of raw) {
+    if (typeof v !== "string") continue;
+    const hit = approved.get(v.trim().toLowerCase());
+    if (!hit || out.includes(hit)) continue;
+    out.push(hit);
+    if (out.length >= limit) break;
+  }
+  return out;
+}

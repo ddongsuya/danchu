@@ -207,9 +207,30 @@ export async function resendUnmailedInvites(): Promise<{ tried: number; sent: nu
 
 /** 접수 직후 자동 배포. 맞는 기관이 없으면 운영자에게만 알린다. */
 export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { matched: number }> {
+  const replyBy = defaultReplyBy(rfq);
   const { orgs, skipped } = await matchOrgs(rfq);
-  const r = await distributeTo(rfq, orgs, defaultReplyBy(rfq), null, true);
-  return { ...r, skipped: [...r.skipped, ...skipped], matched: orgs.length };
+  // 의뢰자가 지명한 기관이 있으면 먼저 보낸다 (기관 수 한도 안에서). 분야가 안 맞아도 의뢰자의 선택을 존중한다
+  const nominees = Array.isArray(rfq.payload.nominees) ? (rfq.payload.nominees as string[]) : [];
+  let first: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [], capped: [] };
+  let nominated: Org[] = [];
+  if (nominees.length) {
+    const sb = getSupabaseAdmin();
+    const { data } = sb ? await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").in("name", nominees) : { data: [] };
+    nominated = (data ?? []) as Org[];
+    if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated");
+  }
+  const nominatedIds = new Set(nominated.map((o) => o.id));
+  const rest = orgs.filter((o) => !nominatedIds.has(o.id));
+  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [], capped: [] } : await distributeTo(rfq, rest, replyBy, null, true);
+  return {
+    sent: first.sent + r.sent,
+    mailed: first.mailed + r.mailed,
+    names: [...first.names, ...r.names],
+    skipped: [...first.skipped, ...r.skipped, ...skipped],
+    capped: [...first.capped, ...r.capped],
+    blocked: first.blocked ?? r.blocked,
+    matched: orgs.length + nominated.filter((o) => !orgs.some((m) => m.id === o.id)).length,
+  };
 }
 
 /**

@@ -42,7 +42,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
         <div>
           <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{rfq.rfq_no} · 접수 {ymd(rfq.created_at)}</span>
           <h1>{rfq.substance} · {rfq.company}</h1>
-          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "-"}</p>
+          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "-"}{Array.isArray(p.nominees) && p.nominees.length ? ` · 지명 ${(p.nominees as string[]).join(", ")}` : ""}</p>
           <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status)}</StatusPill>
             {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
@@ -98,7 +98,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                             <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{!i.mailed_at && ["sent", "draft"].includes(i.status) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
                           </td>
                           <td>
-                            <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{INVITE_LABEL[i.status] ?? i.status}</span>
+                            <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{INVITE_LABEL[i.status] ?? i.status}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}
                             {i.decline_reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{i.decline_reason}</div>}
                           </td>
                           <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>

@@ -54,6 +54,7 @@ const FIELD_LABELS: Record<string, string> = {
   replyBy: "견적 회신 희망일",
   budget: "예산 범위",
   croCount: "요청할 기관 수",
+  nominees: "지명 기관",
   confid: "정보 공개 방식",
   categories: "시험 항목",
   notes: "추가 설명",
@@ -551,7 +552,7 @@ export function NewRequest({
         )}
         {step === 1 && (
           <section className="request__section request__fields">
-            {baseFields(["start", "replyBy", "budget", "croCount"])}
+            {baseFields(["start", "replyBy", "budget", "croCount", "nominees"])}
             <p className="fld__help">
               승인된 기관 중 시험 분야가 맞는 곳에 순차적으로 전달합니다. 기관이
               부족하면 선택한 수보다 적게 전달될 수 있습니다.
@@ -599,7 +600,7 @@ export function NewRequest({
                       "authority",
                     ]
                   : section === 1
-                    ? ["start", "replyBy", "budget", "croCount"]
+                    ? ["start", "replyBy", "budget", "croCount", "nominees"]
                     : ["confid", "notes"];
               return (
                 <section className="request__section" key={section}>

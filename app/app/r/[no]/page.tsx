@@ -140,6 +140,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               ["개발 분야", p.devField],
               ["희망 착수", p.start],
               ["예산", rfq.budget],
+              ["지명 기관", Array.isArray(p.nominees) && p.nominees.length ? (p.nominees as string[]).join(", ") : ""],
               ["기밀 등급", rfq.confidentiality],
               ["접수일", ymd(rfq.created_at)],
               ["상세 입력", rfq.submitted_step === 2 ? "완료" : "기본 정보만"],
