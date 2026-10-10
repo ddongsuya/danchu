@@ -25,7 +25,9 @@ export type FieldType =
   | "segmented"
   | "chips"
   | "checkbox"
-  | "file";
+  | "file"
+  /** 참여 기관 지명 (승인된 기관 이름 목록에서 고름) */
+  | "orgs";
 
 export interface Field {
   id: string;
@@ -237,6 +239,12 @@ export const WIZ: WizStep[] = [
     eyebrow: "일정·예산",
     q: "몇 곳의 CRO에서 견적을 받을까요?",
     fields: [{ id: "croCount", type: "segmented", required: true, options: ["3곳", "5곳", "전체"] }],
+  },
+  {
+    eyebrow: "일정·예산",
+    q: "꼭 포함하고 싶은 기관이 있나요?",
+    sub: "선택 사항입니다. 지명한 기관은 요청할 기관 수 안에서 먼저 전달되고, 나머지 자리는 분야가 맞는 기관으로 채워집니다. 지명하지 않아도 됩니다.",
+    fields: [{ id: "nominees", type: "orgs", label: "지명 기관" }],
   },
   {
     eyebrow: "일정·예산",
