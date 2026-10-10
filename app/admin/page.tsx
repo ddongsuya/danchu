@@ -75,7 +75,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <div className="empty"><b>{q ? `"${q}"에 맞는 요청이 없습니다` : "요청이 없습니다"}</b></div>
       ) : (
         <div className="card tbl-wrap">
-          <table className="tbl">
+          <table className="tbl tbl--stack">
             <thead>
               <tr>
                 <th>번호</th>
@@ -91,18 +91,18 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               {list.map((r) => (
                 <tr key={r.id}>
                   <td><Link href={`/admin/r/${r.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{r.rfq_no}</Link></td>
-                  <td>
+                  <td data-label="의뢰자">
                     <div style={{ fontWeight: 600 }}>{r.company}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.contact_name} · {r.email}</div>
                   </td>
-                  <td>
+                  <td data-label="시험물질 · 항목">
                     <div style={{ fontWeight: 600 }}>{r.substance}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.categories.join(" · ")}{needsCda(r.confidentiality) ? " · CDA" : ""}</div>
                   </td>
-                  <td><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status)}</StatusPill></td>
-                  <td className="tnum">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
-                  <td className="tnum">{r.reply_by ? md(r.reply_by) : "-"}</td>
-                  <td className="tnum">{ymd(r.created_at)}</td>
+                  <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status)}</StatusPill></td>
+                  <td className="tnum" data-label="회신">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
+                  <td className="tnum" data-label="회신 기한">{r.reply_by ? md(r.reply_by) : "-"}</td>
+                  <td className="tnum" data-label="접수일">{ymd(r.created_at)}</td>
                 </tr>
               ))}
             </tbody>

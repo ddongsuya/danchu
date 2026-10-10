@@ -235,6 +235,8 @@
   .tbl--stack td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
   .tbl--stack td.tbl__act { grid-column: 1 / -1; padding-top: 4px; }
   .tbl--stack td.tbl__act .b2 { width: 100%; }
+  .tbl--stack td.tbl__act > span { display: flex; width: 100%; }
+  .tbl--stack td.tbl__act > span > * { flex: 1; }
 }
 /* 기관 회신 화면의 제출 상자: 모바일에서는 바닥에 붙어 스크롤 없이 총액·제출 버튼이 보인다 */
 @media (max-width: 959px) {

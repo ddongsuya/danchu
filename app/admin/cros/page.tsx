@@ -18,7 +18,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
 
   const Table = ({ rows }: { rows: typeof list }) => (
     <div className="card tbl-wrap">
-      <table className="tbl">
+      <table className="tbl tbl--stack">
         <thead>
           <tr><th>기관</th><th>상태</th><th>GLP</th><th>수행 분야</th><th>담당자</th><th>신청일</th><th>처리</th></tr>
         </thead>
@@ -29,12 +29,12 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
                 <Link href={`/admin/cros/${o.id}`} style={{ fontWeight: 700 }}>{o.name}</Link>
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.contact_name} · {o.contact_email}</div>
               </td>
-              <td><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
-              <td style={{ fontSize: 12 }}>{o.glp_certs.join(" · ") || "-"}</td>
-              <td style={{ fontSize: 12 }}>{o.categories.join(" · ") || "-"}</td>
-              <td className="tnum">{o.members}</td>
-              <td className="tnum">{ymd(o.created_at)}</td>
-              <td style={{ whiteSpace: "nowrap" }}>
+              <td data-label="상태"><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
+              <td data-label="GLP" style={{ fontSize: 12 }}>{o.glp_certs.join(" · ") || "-"}</td>
+              <td data-label="수행 분야" style={{ fontSize: 12 }}>{o.categories.join(" · ") || "-"}</td>
+              <td className="tnum" data-label="담당자">{o.members}</td>
+              <td className="tnum" data-label="신청일">{ymd(o.created_at)}</td>
+              <td className="tbl__act" style={{ whiteSpace: "nowrap" }}>
                 <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                   {o.status === "pending" && <QuickApprove id={o.id} name={o.name} />}
                   <Link href={`/admin/cros/${o.id}`} className="b2 bsm">상세</Link>

@@ -24,7 +24,7 @@ export default async function AdminAwards() {
         <div className="empty"><b>수주가 없습니다</b>의뢰자가 비교표에서 CRO를 선택하면 여기에 쌓입니다.</div>
       ) : (
         <div className="card tbl-wrap">
-          <table className="tbl">
+          <table className="tbl tbl--stack">
             <thead>
               <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th>선정일</th><th>계약 보고</th><th>성사수수료</th><th>상태</th></tr>
             </thead>
@@ -32,12 +32,12 @@ export default async function AdminAwards() {
               {list.map((a) => (
                 <tr key={a.id}>
                   <td><Link href={`/admin/r/${a.rfq?.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{a.rfq?.rfq_no}</Link><div style={{ fontSize: 12, color: "var(--muted)" }}>{a.rfq?.substance}</div></td>
-                  <td>{a.rfq?.company}</td>
-                  <td style={{ fontWeight: 600 }}>{a.cro_name}</td>
-                  <td className="tnum">{ymd(a.awarded_at)}</td>
-                  <td className="tnum">{a.contract_reported_at ? <>{a.contract_date} · <b>{won(a.contract_amount ?? 0)}</b>{a.contract_note ? <div style={{ fontSize: 12, color: "var(--muted)" }}>{a.contract_note}</div> : null}</> : <span style={{ color: "var(--muted)" }}>대기</span>}</td>
-                  <td><FeeExemptForm awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} /></td>
-                  <td><StatusPill tone={statusTone(a.rfq?.status)}>{statusLabel(a.rfq?.status)}</StatusPill></td>
+                  <td data-label="의뢰자">{a.rfq?.company}</td>
+                  <td data-label="선정 CRO" style={{ fontWeight: 600 }}>{a.cro_name}</td>
+                  <td className="tnum" data-label="선정일">{ymd(a.awarded_at)}</td>
+                  <td className="tnum" data-label="계약 보고">{a.contract_reported_at ? <>{a.contract_date} · <b>{won(a.contract_amount ?? 0)}</b>{a.contract_note ? <div style={{ fontSize: 12, color: "var(--muted)" }}>{a.contract_note}</div> : null}</> : <span style={{ color: "var(--muted)" }}>대기</span>}</td>
+                  <td data-label="성사수수료"><FeeExemptForm awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} /></td>
+                  <td data-label="상태"><StatusPill tone={statusTone(a.rfq?.status)}>{statusLabel(a.rfq?.status)}</StatusPill></td>
                 </tr>
               ))}
             </tbody>
