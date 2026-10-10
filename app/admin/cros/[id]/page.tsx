@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
-import { getCroOrg, listInvitesForOrg, listOrgMembers, listPendingMembers } from "@/lib/data";
+import { getCroOrg, listInvitesForOrg, listOrgClients, listOrgMembers, listPendingMembers } from "@/lib/data";
 import { Crumb } from "@/components/app/ui";
 import { OrgApproval } from "@/components/admin/OrgApproval";
 import { JoinRequests } from "@/components/admin/JoinRequests";
@@ -18,7 +18,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const org = await getCroOrg(id);
   if (!org) notFound();
-  const [members, pendingMembers, invites] = await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id), listInvitesForOrg(org.id)]);
+  const [members, pendingMembers, invites, clients] = await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id), listInvitesForOrg(org.id), listOrgClients(org.id)]);
   const st = ST[org.status];
 
   return (
@@ -65,6 +65,17 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
                 <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{ymd(m.created_at)}</span>
               </div>
             ))}
+          </div>
+          <div className="card card--rows">
+            <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>기관이 등록한 기존 고객 {clients.length}</div>
+            {clients.length === 0 && <p style={{ padding: "8px 0 12px", fontSize: 13, color: "var(--muted)" }}>없음. 기관 대표 담당자가 내 기관 화면에서 등록합니다. 선정 시 의뢰자 회사명과 대조해 성사수수료 면제 후보로 표시됩니다.</p>}
+            {clients.slice(0, 50).map((c) => (
+              <div key={c.id} className="kv" style={{ fontSize: 13 }}>
+                <span><b style={{ fontWeight: 600 }}>{c.name}</b>{c.business_no ? <span style={{ color: "var(--muted)" }}> · {c.business_no}</span> : null}</span>
+                <span className="tnum" style={{ color: "var(--muted)" }}>{c.last_contract_on ? `마지막 계약 ${c.last_contract_on}` : "-"}</span>
+              </div>
+            ))}
+            {clients.length > 50 && <p style={{ padding: "8px 0 12px", fontSize: 12, color: "var(--muted)" }}>외 {clients.length - 50}곳</p>}
           </div>
           <div className="card card--rows">
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>배포 이력 {invites.length}</div>
