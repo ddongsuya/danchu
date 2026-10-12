@@ -1,0 +1,16 @@
+/* 브랜드 필름 검토 화면(app/design-preview/brand-film). 운영 화면에는 쓰지 않는다. */
+.bfp { max-width: 80rem; margin: 0 auto; padding: 32px 24px 64px; color: var(--ink); }
+.bfp__head { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+.bfp__head h1 { margin: 0; font-size: 28px; line-height: 1.2; letter-spacing: -0.03em; text-wrap: balance; }
+.bfp__head p { margin: 0; font-size: 14px; color: var(--muted); }
+.bfp__nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-top: 8px; font-size: 15px; }
+.bfp__nav--sub { margin-top: 0; font-size: 14px; }
+.bfp__nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--body); text-decoration: underline; text-decoration-color: var(--dash); }
+.bfp__nav a[aria-current] { color: var(--brand); font-weight: 600; text-decoration-color: currentColor; }
+.bfp__sep { width: 1px; height: 16px; background: var(--card-line); }
+.bfp__notes { margin: 12px 0 0; padding-left: 1.2em; max-width: 68ch; font-size: 14px; line-height: 1.6; color: var(--body); }
+.bfp__meta { margin: 16px 0 0; font-size: 14px; color: var(--muted); max-width: 68ch; }
+@media (max-width: 599px) { .bfp { padding: 20px 16px 48px; } }
+
+/* 캡처용: 사이트 크롬 없이 무대만 화면 꽉 차게 */
+.bfp-bare { position: fixed; inset: 0; background: var(--surface); }

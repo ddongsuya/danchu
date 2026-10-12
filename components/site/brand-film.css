@@ -1,0 +1,521 @@
+/* ─────────────────────────────────────────────────────────────
+   브랜드 필름 (components/site/BrandFilm.tsx). .bfilm 으로 시작하는 클래스만 쓴다.
+   - 콘텐츠 필름 예외(DESIGN.md): 장면 전환 600~900ms, 필름 길이의 keyframes 타임라인.
+     움직이는 속성은 transform·opacity·clip-path 뿐이다. ease-in 없음. will-change 없음.
+   - 키프레임은 이 파일에 없다. components/site/brand-film-motion.ts 가 lib/brand-film.ts 의 시각(초)으로 만든다.
+     이 파일은 모양과 배치, 그리고 "마지막 장면(엔드카드)"인 기본 스타일만 둔다.
+     동작 줄이기에서 animation:none 이면 기본 스타일 그대로 엔드카드가 보인다.
+   ───────────────────────────────────────────────────────────── */
+
+.bfilm { margin: 0; width: 100%; }
+.bfilm[data-ratio="9x16"] { max-width: min(100%, calc(82dvh * 9 / 16)); margin-inline: auto; }
+.bfilm[data-ratio="1x1"] { max-width: min(100%, 82dvh); margin-inline: auto; }
+.bfilm[data-ratio="4x5"] { max-width: min(100%, calc(82dvh * 4 / 5)); margin-inline: auto; }
+.bfilm[data-fill] { max-width: none; height: 100%; }
+
+/* ── 무대 ── */
+.bfilm__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  container: bfilm / size;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  isolation: isolate;
+  user-select: none;
+}
+.bfilm[data-ratio="9x16"] .bfilm__stage { aspect-ratio: 9 / 16; }
+.bfilm[data-ratio="1x1"] .bfilm__stage { aspect-ratio: 1 / 1; }
+.bfilm[data-ratio="4x5"] .bfilm__stage { aspect-ratio: 4 / 5; }
+@media (max-width: 599px) { .bfilm[data-ratio="auto"] .bfilm__stage { aspect-ratio: 4 / 5; } }
+.bfilm[data-fill] .bfilm__stage { aspect-ratio: auto; height: 100%; border-radius: 0; }
+
+/* 모든 무대 애니메이션은 같은 길이의 한 타임라인. 시작 전에는 멈춰 있고 JS(Web Animations)가 움직인다. */
+.bfilm__stage *, .bfilm__progress i {
+  animation-duration: var(--bfilm-dur, 22s);
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-play-state: paused;
+}
+
+/* 층과 배치 변수. 컨테이너 단위는 층(무대의 자손)에서 풀린다.
+   --mn 그림 단추 크기(cqmin 수)   --cy 그림 중심 높이   --ty 문구 위쪽 위치
+   --eun 엔드카드 단위(cqmin 배)    --ey 엔드카드 마크 중심 높이(엔드카드 묶음이 세로 가운데에 오게) */
+.bfilm__layer {
+  position: absolute;
+  inset: 0;
+  --mn: 24;
+  --m: calc(var(--mn) * 1cqmin);
+  --cy: 41cqh;
+  --ty: 68cqh;
+  --fs: min(6.2cqmin, 6rem);
+  --k2: 1.15;
+  --eun: 1;
+  --eu: calc(var(--eun) * 1cqmin);
+  --em: calc(var(--eu) * 10);
+  --ey: calc(50cqh - var(--eu) * 16);
+  --ek: calc(10 * var(--eun) / var(--mn));
+  --rise: 1.4cqmin;
+  /* 천: 위 천(여밈선과 단춧구멍이 있는 면)은 세이지, 아래 천은 바탕에 가까운 면. 라이트·다크 모두 토큰에서 파생 */
+  --bfilm-cloth-hi: color-mix(in oklab, var(--brand) 20%, var(--surface));
+  --bfilm-cloth-lo: color-mix(in oklab, var(--brand) 5%, var(--surface));
+  --bfilm-shade: color-mix(in oklab, color-mix(in oklab, var(--inverse-surface) 72%, var(--brand)) 30%, transparent);
+  --seam: calc(var(--cy) + var(--m) * 0.75);
+  /* 단춧구멍: 회색 UI 막대처럼 보이지 않게 위 천의 색조에서 어둡게 파생한 홈 */
+  --bfilm-slit: color-mix(in oklab, var(--brand-dark) 55%, var(--bfilm-cloth-hi));
+}
+/* 다크: 천이 어두우므로 홈을 더 깊게 */
+:root[data-theme="dark"] .bfilm__layer { --bfilm-slit: color-mix(in oklab, var(--inverse-surface) 85%, var(--bfilm-cloth-hi)); }
+/* 정사각·세로: 가운데로 모은 구성. 그림 바로 아래에 문구 */
+@container bfilm (aspect-ratio <= 1.2) {
+  .bfilm__layer {
+    --mn: 26;
+    --cy: calc(50cqh - 21cqmin);
+    --ty: calc(50cqh + 9cqmin);
+    --fs: min(6.6cqmin, 6rem);
+  }
+}
+/* 4:5 는 위로 몰리지 않게 조금 내린다 */
+@container bfilm (0.7 <= aspect-ratio < 0.95) {
+  .bfilm__layer { --cy: calc(55cqh - 21cqmin); --ty: calc(55cqh + 9cqmin); }
+}
+/* 9:16: 세로 화면을 채우게 그림·글자·엔드카드를 키운다 */
+@container bfilm (aspect-ratio < 0.7) {
+  .bfilm__layer {
+    --mn: 34;
+    --cy: calc(50cqh - 25cqmin);
+    --ty: calc(50cqh + 13cqmin);
+    --fs: min(7.6cqmin, 6rem);
+    --k2: 1;
+    --eun: 1.15;
+  }
+}
+
+.bfilm__bg { background: var(--surface); }
+.bfilm__art { overflow: hidden; }
+
+/* ── 글자 층 ── */
+.bfilm__cue {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--ty);
+  margin: 0;
+  padding: 0 8cqw;
+  font-size: var(--fs);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  text-align: center;
+  text-wrap: balance;
+  white-space: pre-line;
+  color: var(--ink);
+  opacity: 0;
+}
+@container bfilm (aspect-ratio < 0.7) { .bfilm__cue { padding: 0 6cqw; } }
+
+/* ── 엔드카드 층 (공통). 바탕은 두 필름 모두 --surface ── */
+.bfilm-mark, .bfilm__end-mark {
+  position: absolute;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--brand);
+}
+/* LogoMark 와 같은 비율: 반경 .3, 안쪽 여백 .25, 간격 .125 */
+.bfilm-mark {
+  left: calc(50% - var(--m) / 2);
+  top: calc(var(--cy) - var(--m) / 2);
+  width: var(--m);
+  height: var(--m);
+  gap: calc(var(--m) * 0.125);
+  padding: calc(var(--m) * 0.25);
+  border-radius: calc(var(--m) * 0.3);
+}
+.bfilm__end-mark {
+  left: calc(50% - var(--em) / 2);
+  top: calc(var(--ey) - var(--em) / 2);
+  width: var(--em);
+  height: var(--em);
+  gap: calc(var(--em) * 0.125);
+  padding: calc(var(--em) * 0.25);
+  border-radius: calc(var(--em) * 0.3);
+}
+.bfilm__end-mark i, .bfilm-mark i { background: var(--on-brand); border-radius: 50%; }
+.bfilm__end-stack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--ey) + var(--em) / 2 + var(--eu) * 2.6);
+  padding: 0 6cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.bfilm__end-stack p { margin: 0; text-wrap: balance; }
+.bfilm__end-lead {
+  font-size: calc(var(--eu) * 4.6);
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+.bfilm__end-promise {
+  margin-top: calc(var(--eu) * 1) !important;
+  font-size: min(calc(var(--eu) * 8.6), 6rem);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--brand);
+}
+.bfilm__end-line, .bfilm__end-domain {
+  font-size: max(calc(var(--eu) * 3.2), 12px);
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+.bfilm__end-line { margin-top: calc(var(--eu) * 2.8) !important; font-weight: 500; color: var(--body); }
+.bfilm__end-domain { margin-top: calc(var(--eu) * 1) !important; font-weight: 600; letter-spacing: 0.01em; color: var(--ink-2); }
+/* 휴대폰 화면의 작은 무대: 보조 문장이 하한에 걸려 약속 문장과 크기 차이가 너무 커지지 않게 */
+@container bfilm (width < 480px) {
+  .bfilm__end-line { font-size: max(calc(var(--eu) * 3.6), 13px); }
+  .bfilm__end-domain { font-size: max(calc(var(--eu) * 3.6), 13px); }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   천과 채우기 (두 필름 공통)
+   아래 천 = .bfilm-fx 바탕. 위 천 = .bfilm-fx__top, 아래쪽 가장자리(여밈선)가 --seam 에 놓이고
+   그 위 단추 자리(--cy)에 단춧구멍(테두리 없는 홈, 단추 폭의 1.15배)이 있다.
+   단추는 아래 천에서 위 천 밑으로 들어가(__under), 단춧구멍을 통과해 위 천 위로 올라와 눕는다(__button).
+   ───────────────────────────────────────────────────────────── */
+.bfilm-fx {
+  position: absolute;
+  inset: 0;
+  background: var(--bfilm-cloth-lo);
+  opacity: 0;
+  --hole-x: calc(50cqw - var(--m) * 0.15625);
+  --hole-y: calc(var(--cy) - var(--m) * 0.15625);
+  --hole-r: calc(var(--m) * 0.09375);
+  --far: hypot(100cqw, 100cqh);
+  /* 컷3 동안 여밈선이 놓이는 낮은 자리 */
+  --drop: calc(86cqh - var(--seam));
+}
+.bfilm-fx__top {
+  position: absolute;
+  left: -50cqw;
+  width: 200cqw;
+  top: -150cqh;
+  height: calc(var(--seam) + 150cqh);
+  background: var(--bfilm-cloth-hi);
+  transform-origin: 50% 100%;
+  /* 위 천이 아래 천에 닿아 생기는 아주 얕은 그림자 */
+  box-shadow: 0 calc(var(--m) * 0.012) calc(var(--m) * 0.045) var(--bfilm-shade);
+}
+/* 여밈선 위의 상침(점선 바느질). 위 천과 함께 움직인다. 컷2의 실과 같은 색 */
+.bfilm-fx__top::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--m) * 0.13);
+  height: max(2px, 0.28cqmin);
+  background: repeating-linear-gradient(to right, color-mix(in oklab, var(--brand-dark) 70%, transparent) 0 calc(var(--m) * 0.07), transparent 0 calc(var(--m) * 0.11));
+}
+.bfilm-fx__slit {
+  position: absolute;
+  --sh: max(2px, calc(var(--m) * 0.024));
+  left: calc(50% - var(--m) * 0.575);
+  width: calc(var(--m) * 1.15);
+  bottom: calc(var(--m) * 0.75 - var(--sh) / 2);
+  height: var(--sh);
+  border-radius: var(--r-pill);
+  background: var(--bfilm-slit);
+  /* 홈 아래 가장자리에 천이 살짝 들린 밝은 입술: 막대가 아니라 베어 낸 틈으로 읽히게 */
+  box-shadow: 0 max(1px, calc(var(--sh) * 0.45)) 0 color-mix(in oklab, var(--surface) 50%, var(--bfilm-cloth-hi));
+}
+.bfilm-fx__under { opacity: 0; }
+.bfilm-fx__shadow {
+  position: absolute;
+  left: calc(50% - var(--m) / 2);
+  top: calc(var(--cy) - var(--m) / 2);
+  width: var(--m);
+  height: var(--m);
+  border-radius: calc(var(--m) * 0.3);
+  /* 천 위에 누운 단추의 접지 그림자: 짧은 오프셋, 작은 번짐 */
+  box-shadow: 0 calc(var(--m) * 0.022) calc(var(--m) * 0.05) calc(var(--m) * -0.012) var(--bfilm-shade);
+}
+.bfilm-fx__button {
+  opacity: 0;
+  --fx-p: calc(var(--m) * 3);
+  --fx-in: translateY(calc(var(--m) * 0.06)) perspective(var(--fx-p)) rotateX(74deg) scale(0.96);
+  --fx-seat: translateY(0px) perspective(var(--fx-p)) rotateX(0deg) scale(1.03);
+  --fx-rest: translateY(0px) perspective(var(--fx-p)) rotateX(0deg) scale(1);
+  --fx-end: translateY(calc(var(--ey) - var(--cy))) perspective(var(--fx-p)) rotateX(0deg) scale(var(--ek));
+  transform: var(--fx-end);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   B안 「단추를 채우다」 그림 층
+   ───────────────────────────────────────────────────────────── */
+.bfilm-mk { position: absolute; inset: 0; }
+
+/* 그림 단추 자리: 무대 가로 가운데, 높이 --cy */
+.bfilm-mk__box {
+  position: absolute;
+  left: calc(50% - var(--m) / 2);
+  top: calc(var(--cy) - var(--m) / 2);
+  width: var(--m);
+  height: var(--m);
+}
+.bfilm-mk__plate { left: 0; top: 0; opacity: 0; }
+
+/* 컷1·2 점. 기준 자리는 단추 구멍 중심(구멍 지름 .1875 × 단추).
+   --x0,--y0 컷1 시작 자리, --x1,--y1 컷1 끝 자리(무대 좌표). 이동량 = 그 자리 - 구멍 자리 */
+.bfilm-mk__dot {
+  position: absolute;
+  width: calc(var(--m) * 0.1875);
+  height: calc(var(--m) * 0.1875);
+  margin: calc(var(--m) * -0.09375) 0 0 calc(var(--m) * -0.09375);
+  border-radius: 50%;
+  background: var(--brand);
+  opacity: 0;
+  --hx0: calc(50cqw + var(--hx) * var(--m) * 0.15625);
+  --hy0: calc(var(--cy) + var(--hy) * var(--m) * 0.15625);
+  --p0: calc(var(--x0) - var(--hx0)) calc(var(--y0) - var(--hy0));
+  --p1: calc(var(--x1) - var(--hx0)) calc(var(--y1) - var(--hy0));
+}
+.bfilm-mk__dot i { position: absolute; inset: 0; border-radius: 50%; background: var(--on-brand); }
+.bfilm-mk__dot--a { left: 34.375%; top: 34.375%; --hx: -1; --hy: -1; --x0: 13cqw; --y0: 17cqh; --x1: 16cqw; --y1: 13cqh; --s: 0.92; }
+.bfilm-mk__dot--b { left: 65.625%; top: 34.375%; --hx: 1; --hy: -1; --x0: 64cqw; --y0: 8cqh; --x1: 61cqw; --y1: 11.5cqh; --s: 1.08; }
+.bfilm-mk__dot--c { left: 34.375%; top: 65.625%; --hx: -1; --hy: 1; --x0: 31cqw; --y0: 93cqh; --x1: 27.5cqw; --y1: 90cqh; --s: 1; }
+.bfilm-mk__dot--d { left: 65.625%; top: 65.625%; --hx: 1; --hy: 1; --x0: 99cqw; --y0: 41cqh; --x1: 95.5cqw; --y1: 45.5cqh; --s: 0.96; }
+
+/* 컷2 바느질 실: 늘어진 S자(위아래로 드나듦). 선 굵기는 변형과 무관 */
+.bfilm-mk__thread {
+  position: absolute;
+  left: -30cqw;
+  width: 160cqw;
+  top: calc(var(--cy) - 10cqmin);
+  height: 20cqmin;
+  overflow: visible;
+  opacity: 0;
+}
+.bfilm-mk__thread g { transform-box: view-box; transform-origin: 50% 50%; }
+.bfilm-mk__thread path { fill: none; stroke: var(--brand-dark); stroke-width: max(2px, 0.28cqmin); stroke-linecap: round; }
+
+/* 컷3 문구는 그림 없이 천 위 가운데에 조금 크게 */
+.bfilm[data-film="mark"] .bfilm-mark-cue-2 {
+  --fs2: min(calc(var(--fs) * var(--k2)), 6rem);
+  font-size: var(--fs2);
+  top: calc(50cqh - var(--fs2) * 1.3 - 4cqh);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   C안 「첫 단추」 배경 장면·그림 층
+   - 사진 컷은 테마와 무관하게 같다: 글자 --inverse-ink, 스크림은 두 테마 모두 어두운 세이지.
+   - L1·L2·흐린 L3 상자는 이미지 비율(16:9)을 유지한 채 무대를 덮는다(cover). 초점(--fx, --fy)을 무대 가운데에 둔다.
+   - 선명한 L3 는 가운데 2x2 웰(이미지 기준 x .4603/.5426, y .4235/.5682, 가운데 .5014/.4959)이 무대 가운데에 오게 놓는다.
+     LogoMark 비율에서 원 중심 간격 = .3125 × 마크, 웰 간격 = .0823 × 이미지 폭 → 이미지 폭 = 마크 / .2634.
+     마크 크기(--lb-sm, cqmin)를 먼저 정하고 이미지 폭을 거기서 얻는다. 넓은 화면은 cover 와 같고,
+     정사각·세로는 마크가 화면을 덮지 않게 이미지를 줄이고 위아래를 흐린 L3 로 이어 붙인다(세로용 이미지가 생기기 전까지).
+   ───────────────────────────────────────────────────────────── */
+.bfilm[data-film="lab"] .bfilm__layer {
+  --lb-w: max(100cqw, calc(100cqh * 16 / 9));
+  --lb-h: calc(var(--lb-w) * 0.5625);
+  --lb-sm: 46.83;
+  --lb-s: calc(var(--lb-sm) * 1cqmin);
+  --lb-w3: calc(var(--lb-s) / 0.2634);
+  --lb-h3: calc(var(--lb-w3) * 0.5625);
+  --lb-mx: 50cqw;
+  --lb-my: 50cqh;
+  /* 마크가 채우기 단추의 출발 자리(아래 천)로 옮겨 가며 작아진다 */
+  --lb-go: translate(calc(50cqw - var(--lb-mx)), calc(var(--cy) + var(--m) * 1.5 - var(--lb-my))) scale(calc(var(--mn) / var(--lb-sm)));
+  /* 천 장면이 열리는 모양: 마크 외곽(둥근 사각형) → 화면 전체 */
+  --lb-wipe0: inset(calc(var(--lb-my) - var(--lb-s) / 2) calc(100cqw - var(--lb-mx) - var(--lb-s) / 2) calc(100cqh - var(--lb-my) - var(--lb-s) / 2) calc(var(--lb-mx) - var(--lb-s) / 2) round calc(var(--lb-s) * 0.3));
+  --lb-wipe1: inset(calc(var(--lb-s) * -0.3) round calc(var(--lb-s) * 0.3));
+  /* 스크림: 사진의 세이지에서 끌어온 어두운 색. 아래 --lb-sh 높이만, 글자 자리 최대 .6 + 글자 둘레 halo. 큰 글자 3:1 은 실제 프레임에서 잰다 */
+  --lb-scrim: color-mix(in oklab, var(--inverse-surface) 64%, var(--brand));
+  --lb-sh: 36%;
+  --lb-ink: color-mix(in oklab, var(--inverse-surface) 88%, var(--brand));
+  --lb-halo: color-mix(in oklab, var(--lb-scrim) 62%, transparent);
+}
+:root[data-theme="dark"] .bfilm[data-film="lab"] .bfilm__layer {
+  /* 다크의 --brand 는 밝은 민트라 섞으면 스크림이 밝아진다. 어두운 --on-brand(짙은 초록)에서 끌어온다 */
+  --lb-scrim: color-mix(in oklab, var(--inverse-surface) 58%, var(--on-brand));
+}
+@container bfilm (aspect-ratio <= 1.2) {
+  .bfilm[data-film="lab"] .bfilm__layer { --lb-sm: 39.51; --lb-sh: 40%; }
+}
+@container bfilm (aspect-ratio < 0.7) {
+  .bfilm[data-film="lab"] .bfilm__layer { --lb-sh: 62%; }
+}
+
+.bfilm-lb, .bfilm-lb__art { position: absolute; inset: 0; }
+
+/* 장면 상자: 겉은 등장·퇴장(opacity), 안의 이미지는 켄번스(transform) */
+.bfilm-lb__shot {
+  position: absolute;
+  left: clamp(calc(100cqw - var(--lb-w)), calc(50cqw - var(--lb-w) * var(--fx)), 0px);
+  top: clamp(calc(100cqh - var(--lb-h)), calc(50cqh - var(--lb-h) * var(--fy)), 0px);
+  width: var(--lb-w);
+  height: var(--lb-h);
+  overflow: hidden;
+  opacity: 0;
+}
+.bfilm-lb__shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: calc(var(--fx) * 100%) calc(var(--fy) * 100%);
+}
+.bfilm-lb__shot--L1 { --fx: 0.68; --fy: 0.5; }
+.bfilm-lb__shot--L2 { --fx: 0.62; --fy: 0.5; }
+/* 크게 흐린 플레이트: 컷3 문장 바탕. 흐림은 고정, 움직임은 transform 뿐 */
+.bfilm-lb__shot--L3b { --fx: 0.5014; --fy: 0.4959; }
+.bfilm-lb__shot--L3b img { filter: blur(2.4cqmin); }
+/* 선명한 플레이트: 웰 정렬용 */
+.bfilm-lb__shot--L3 {
+  --fx: 0.5014;
+  --fy: 0.4959;
+  left: calc(var(--lb-mx) - var(--lb-w3) * 0.5014);
+  top: calc(var(--lb-my) - var(--lb-h3) * 0.4959);
+  width: var(--lb-w3);
+  height: var(--lb-h3);
+}
+@container bfilm (aspect-ratio <= 1.2) {
+  /* 이미지가 무대보다 낮으므로 위아래 끝을 흐린 L3 로 녹인다(정지 마스크) */
+  .bfilm-lb__shot--L3 { mask-image: linear-gradient(to bottom, transparent, var(--ink) 16%, var(--ink) 84%, transparent); }
+}
+
+/* 아래쪽 스크림: 순검정이 아닌 어두운 세이지. 정지점을 촘촘히 두어 띠의 경계가 보이지 않게 */
+.bfilm-lb__scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--lb-sh);
+  opacity: 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--lb-scrim) 62%, transparent) 0%,
+    color-mix(in oklab, var(--lb-scrim) 60%, transparent) 42%,
+    color-mix(in oklab, var(--lb-scrim) 53%, transparent) 54%,
+    color-mix(in oklab, var(--lb-scrim) 42%, transparent) 64%,
+    color-mix(in oklab, var(--lb-scrim) 29%, transparent) 74%,
+    color-mix(in oklab, var(--lb-scrim) 16%, transparent) 84%,
+    color-mix(in oklab, var(--lb-scrim) 6%, transparent) 93%,
+    color-mix(in oklab, var(--lb-scrim) 0%, transparent) 100%
+  );
+}
+/* AI 생성 장면임을 밝히는 표시. 스크림이 걷힌 뒤(컷4)에도 남으므로 자기 바탕(짧은 태그 = pill)을 가진다 */
+.bfilm-lb__credit {
+  position: absolute;
+  right: 2.6cqmin;
+  bottom: 2.4cqmin;
+  padding: 0.28em 0.75em;
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--lb-scrim) 82%, transparent);
+  font-size: max(2.4cqmin, 12px);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--inverse-ink);
+  opacity: 0;
+}
+
+/* 컷4 마크: 웰 위에 원 넷 → 뒤로 판 → 원이 구멍 색으로. 이어서 채우기 단추 출발 자리로 */
+.bfilm-lb__mark {
+  position: absolute;
+  left: calc(var(--lb-mx) - var(--lb-s) / 2);
+  top: calc(var(--lb-my) - var(--lb-s) / 2);
+  width: var(--lb-s);
+  height: var(--lb-s);
+  opacity: 0;
+  transform: var(--lb-go);
+}
+.bfilm-lb__plate {
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--lb-s) * 0.3);
+  background: var(--brand);
+}
+.bfilm-lb__dot {
+  position: absolute;
+  width: calc(var(--lb-s) * 0.1875);
+  height: calc(var(--lb-s) * 0.1875);
+  border-radius: 50%;
+  background: var(--brand);
+}
+.bfilm-lb__dot--a { left: calc(var(--lb-s) * 0.25); top: calc(var(--lb-s) * 0.25); }
+.bfilm-lb__dot--b { left: calc(var(--lb-s) * 0.5625); top: calc(var(--lb-s) * 0.25); }
+.bfilm-lb__dot--c { left: calc(var(--lb-s) * 0.25); top: calc(var(--lb-s) * 0.5625); }
+.bfilm-lb__dot--d { left: calc(var(--lb-s) * 0.5625); top: calc(var(--lb-s) * 0.5625); }
+.bfilm-lb__dot i { position: absolute; inset: 0; border-radius: 50%; background: var(--on-brand); }
+
+/* C안 문구: 사진 위 아래쪽. 넓은 화면은 왼쪽 정렬, 정사각·세로는 가운데 */
+.bfilm[data-film="lab"] .bfilm__cue {
+  top: auto;
+  bottom: 8cqh;
+  padding: 0 24cqw 0 7cqw;
+  text-align: left;
+  color: var(--inverse-ink);
+  /* 글자 둘레만 스크림 색으로 살짝 눌러 큰 글자 3:1 을 지킨다(스크림을 넓히지 않고) */
+  text-shadow: 0 0.04em 0.45em var(--lb-halo), 0 0 0.12em var(--lb-halo);
+}
+@container bfilm (aspect-ratio <= 1.2) {
+  .bfilm[data-film="lab"] .bfilm__cue { --fs: min(6cqmin, 6rem); bottom: 10cqh; padding: 0 7cqw; text-align: center; }
+  /* 표시는 문구 블록 바로 아래, 같은 스크림 위 */
+  .bfilm-lb__credit { right: auto; left: 50%; translate: -50% 0; bottom: 4.5cqh; }
+}
+@container bfilm (aspect-ratio < 0.7) {
+  /* 세로 SNS: 아래쪽 캡션·버튼 영역을 피해 문구를 올리고, 표시는 문구 블록 바로 아래(같은 스크림 위)에 둔다 */
+  .bfilm[data-film="lab"] .bfilm__cue { --fs: min(7cqmin, 6rem); bottom: 28cqh; padding: 0 6cqw; }
+  .bfilm-lb__credit { bottom: calc(28cqh - 6cqmin); }
+}
+
+/* 비교안: 스크림 없이 밝은 실험대 위에 진한 글자 */
+.bfilm[data-variant="ink"] .bfilm-lb__scrim { display: none; }
+.bfilm[data-variant="ink"] .bfilm__cue, .bfilm[data-variant="ink"] .bfilm-lb__credit { color: var(--lb-ink); text-shadow: none; }
+.bfilm[data-variant="ink"] .bfilm-lb__credit { background: color-mix(in oklab, var(--surface) 86%, transparent); }
+
+/* ── 동작 줄이기: 무대 애니메이션을 끄면 기본 스타일 = 엔드카드 ── */
+@media (prefers-reduced-motion: reduce) {
+  .bfilm:not([data-motion="on"]) .bfilm__stage *,
+  .bfilm:not([data-motion="on"]) .bfilm__progress i { animation: none !important; }
+}
+.bfilm[data-motion="still"] .bfilm__stage *,
+.bfilm[data-motion="still"] .bfilm__progress i { animation: none !important; }
+
+/* ── 재생 제어 (무대 아래) ── */
+.bfilm__bar { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.bfilm__progress { height: 2px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.bfilm__progress i { display: block; height: 100%; background: var(--brand); transform-origin: left center; animation-name: bfilm-progress; }
+@keyframes bfilm-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bfilm__buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bfilm__note { margin: 0 8px 0 0; font-size: 14px; color: var(--muted); }
+.bfilm__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--input-line);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.bfilm__btn:active:not([aria-disabled="true"]) { transform: scale(0.97); }
+.bfilm__btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: var(--r-md); }
+.bfilm__btn[aria-pressed="true"] { background: var(--brand-tint); border-color: var(--brand-line); color: var(--brand-dark); }
+.bfilm__btn[aria-disabled="true"] { color: var(--muted); border-color: var(--card-line); background: transparent; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .bfilm__btn:hover:not([aria-disabled="true"]) { border-color: var(--ink); }
+}
