@@ -26,6 +26,9 @@ import uuid
 
 ZEP_BASE_URL = "https://api.getzep.com/api/v2"  # same as MiroFish backend/app/utils/zep.py
 N_TYPES = 10  # MiroFish caps ontologies at 10 entity and 10 edge types (backend/app/utils/ontology.py)
+# Zep accepts letters only in type names: PascalCase for entities, SCREAMING_SNAKE_CASE
+# for edges (digits are rejected), so the test types are suffixed A..J.
+SUFFIXES = "ABCDEFGHIJ"
 
 
 def redact(text: str) -> str:
@@ -114,7 +117,7 @@ def build_ontology():
 
     entities = {}
     for i in range(N_TYPES):
-        name = f"PreflightType{i}"
+        name = f"PreflightType{SUFFIXES[i]}"
         attrs = {
             "__doc__": f"Preflight entity type {i}.",
             "role_note": Field(description="A short note.", default=None),
@@ -124,14 +127,14 @@ def build_ontology():
 
     edges = {}
     for i in range(N_TYPES):
-        name = f"PREFLIGHT_REL_{i}"
+        name = f"PREFLIGHT_REL_{SUFFIXES[i]}"
         attrs = {
             "__doc__": f"Preflight relation {i}.",
             "note": Field(description="A short note.", default=None),
             "__annotations__": {"note": Optional[str]},
         }
-        cls = type(f"PreflightRel{i}", (EdgeModel,), attrs)
-        src, dst = f"PreflightType{i}", f"PreflightType{(i + 1) % N_TYPES}"
+        cls = type(f"PreflightRel{SUFFIXES[i]}", (EdgeModel,), attrs)
+        src, dst = f"PreflightType{SUFFIXES[i]}", f"PreflightType{SUFFIXES[(i + 1) % N_TYPES]}"
         edges[name] = (cls, [EntityEdgeSourceTarget(source=src, target=dst)])
     return entities, edges
 
@@ -162,9 +165,11 @@ def check_zep() -> bool:
         hint = ""
         if status == 401:
             hint = " The Zep key is wrong or revoked."
-        elif created:
-            hint = (" The plan likely allows fewer custom types than MiroFish sends (10). "
+        elif created and re.search(r"limit|maximum|exceed|too many|plan", body, re.I):
+            hint = (" The plan seems to allow fewer custom types than MiroFish sends (10). "
                     "Check the Zep plan (the Free plan lists 5) before a paid LLM run.")
+        elif created:
+            hint = " Zep rejected the test ontology; read the message above before a paid LLM run."
         say(f"Zep check FAILED ({type(err).__name__}, HTTP {status}): {body}.{hint}")
     finally:
         if created:
