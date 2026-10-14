@@ -144,24 +144,13 @@ esac
 LLM_BASE_URL="${LLM_BASE_URL:-https://api.openai.com/v1}"
 LLM_MODEL_NAME="${LLM_MODEL_NAME:-gpt-4o-mini}"
 
-# Critic P0-3: MiroFish needs an OpenAI-compatible provider (it sends temperature
-# to every model not named gpt-5*), and must never reuse this session's Anthropic
-# endpoint or credentials. Values are compared here, never printed.
+# MiroFish needs an OpenAI-compatible provider: it sends temperature to every
+# model not named gpt-5*, which current Claude models reject. Only the two
+# MiroFish variables are looked at here, and nothing is printed.
 base_lc="$(lc "${LLM_BASE_URL%/}")"
 case "$base_lc" in
   *anthropic*) die "LLM_BASE_URL points at an Anthropic endpoint; MiroFish needs an OpenAI-compatible provider" ;;
 esac
-if [[ -n "${ANTHROPIC_BASE_URL:-}" ]]; then
-  anth_lc="$(lc "${ANTHROPIC_BASE_URL%/}")"
-  if [[ "$base_lc" == "$anth_lc" || "$base_lc" == "$anth_lc"/* ]]; then
-    die "LLM_BASE_URL is the ANTHROPIC_BASE_URL endpoint; MiroFish needs its own OpenAI-compatible provider"
-  fi
-fi
-for name in ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN; do
-  if [[ -n "${!name:-}" && "$LLM_API_KEY" == "${!name}" ]]; then
-    die "LLM_API_KEY has the same value as $name; use a separate OpenAI-compatible key"
-  fi
-done
 case "$LLM_API_KEY" in
   sk-ant-*) die "LLM_API_KEY looks like an Anthropic key (sk-ant-); use an OpenAI-compatible key" ;;
 esac
@@ -182,25 +171,14 @@ head="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || true)"
 # .env files: config.py loads one with override=True (backend/app/config.py:8-14)
 # and every simulation subprocess loads one again when /start spawns it
 # (scripts/run_parallel_simulation.py:93-103). PYTHON_DOTENV_DISABLED=1 below
-# turns all of that off; this walk over the physical path is a second check.
+# turns all of that off; refusing a checkout that holds one is a second check.
 dotenvs=()
 for f in "$SRC/.env" "$SRC/backend/.env" "$SRC/backend/app/.env"; do [[ -e "$f" ]] && dotenvs+=("$f"); done
-d="$(dirname "$SRC")"
-while :; do [[ -e "$d/.env" ]] && dotenvs+=("$d/.env"); [[ "$d" == "/" ]] && break; d="$(dirname "$d")"; done
 if ((${#dotenvs[@]})); then
   printf '[backend] ERROR: refusing to start, MiroFish would load these .env files with override=True:\n' >&2
   printf '            %s\n' "${dotenvs[@]}" >&2
   exit 1
 fi
-
-# Names that are never passed (the allowlist below leaves them out anyway).
-dropped=()
-for name in $(compgen -e); do
-  case "$name" in
-    LLM_BOOST_*|LANGFUSE*|TRACEROOT*|AGENTOPS*|ZEP_API_URL|FLASK_DEBUG|HF_*TOKEN*|HUGGING_FACE_HUB_TOKEN) dropped+=("$name") ;;
-  esac
-done
-((${#dropped[@]})) && say "not passed to the backend: ${dropped[*]}"
 
 # Already running?
 old_pid="$(read_pid)"

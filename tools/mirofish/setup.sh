@@ -26,23 +26,15 @@ VENV="$MIROFISH_HOME/venv"
 say() { printf '[setup] %s\n' "$*"; }
 die() { printf '[setup] ERROR: %s\n' "$*" >&2; exit 1; }
 
-# MiroFish loads a .env with override=True (backend/app/config.py:8-14). When
-# src/.env is absent it searches upward from backend/app with find_dotenv, and
-# the simulation script also reads backend/.env. Any of these files would
-# override the shell environment, and placeholder LLM_BOOST_* lines from
-# .env.example would silently route Reddit agents to another provider.
-# start-backend.sh also sets PYTHON_DOTENV_DISABLED=1; this check runs on the
-# physical path because that is the one find_dotenv walks.
+# MiroFish loads a .env with override=True (backend/app/config.py:8-14), and
+# placeholder LLM_BOOST_* lines from .env.example would silently route Reddit
+# agents to another provider. start-backend.sh turns .env loading off for the
+# backend and every simulation subprocess (PYTHON_DOTENV_DISABLED=1); this only
+# refuses a checkout that already holds one.
 check_dotenv() {
-  local found=() dir
+  local found=()
   for f in "$SRC/.env" "$SRC/backend/.env" "$SRC/backend/app/.env"; do
     [[ -e "$f" ]] && found+=("$f")
-  done
-  dir="$(dirname "$SRC")"
-  while :; do
-    [[ -e "$dir/.env" ]] && found+=("$dir/.env")
-    [[ "$dir" == "/" ]] && break
-    dir="$(dirname "$dir")"
   done
   if ((${#found[@]})); then
     printf '[setup] ERROR: refusing to continue, MiroFish would load these .env files with override=True:\n' >&2
@@ -126,22 +118,7 @@ print(f"[setup] venv ok: python {sys.version.split()[0]}, flask {version('flask'
 PY
 mkdir -p "$MIROFISH_HOME/logs"
 
-# 3. Environment check. Names only, never values.
-say "environment (names only):"
-missing=0
-for name in LLM_API_KEY ZEP_API_KEY; do
-  if [[ -n "${!name:-}" ]]; then say "  $name: set"; else say "  $name: MISSING (required)"; missing=1; fi
-done
-if [[ -n "${LLM_BASE_URL:-}" ]]; then say "  LLM_BASE_URL: set"; else say "  LLM_BASE_URL: not set, default https://api.openai.com/v1"; fi
-if [[ -n "${LLM_MODEL_NAME:-}" ]]; then say "  LLM_MODEL_NAME: set"; else say "  LLM_MODEL_NAME: not set, default gpt-4o-mini"; fi
-for prefix in LLM_BOOST_ LANGFUSE TRACEROOT AGENTOPS ZEP_API_URL; do
-  while IFS= read -r name; do
-    [[ -n "$name" ]] && say "  $name: set here, start-backend.sh will drop it"
-  done < <(compgen -e | grep "^$prefix" || true)
-done
-
 say "done. Next:"
-say "  export LLM_API_KEY=... ZEP_API_KEY=...   (OpenAI-compatible LLM key and Zep Cloud key)"
+say "  \"$VENV/bin/python\" tools/mirofish/preflight.py   (checks LLM_API_KEY and ZEP_API_KEY)"
 say "  tools/mirofish/start-backend.sh"
 say "  \"$VENV/bin/python\" tools/mirofish/run.py --requirement <id> --dry-run"
-if ((missing)); then say "note: required keys are not set in this shell yet"; fi
