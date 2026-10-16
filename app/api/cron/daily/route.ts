@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo } from "@/lib/notify";
 import { publishCompare } from "@/lib/compare";
 import { distributeOpenRfqs, resendUnmailedInvites } from "@/lib/distribute";
 import { loadByInvite } from "@/lib/quote-load";
@@ -12,6 +12,10 @@ import { autoReplyEnabled, isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
 import { daysSince, reminderStage } from "@/lib/contract-reminder";
+import { inviteReplyTo } from "@/lib/distribute";
+import { contractFollowupMail, sendMail } from "@/lib/mail";
+import { notificationRecipients } from "@/lib/mail-preferences";
+import { autoPublishDue, needsContractReminder, replyPath } from "@/lib/concierge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +47,7 @@ function addDays(ymd: string, n: number): string {
  * 매일 09:00 KST 실행 (vercel.json crons).
  * 1) 미회신 기관에 D-2·당일 리마인더
  * 2) 자동 회신을 켠 기관의 완성된 초안을 기한 당일 예비 견적으로 제출
- * 3) 회신 기한이 지난 요청의 비교표 자동 공개 (제출 1건 이상)
+ * 3) 회신 기한이 지난 요청의 비교표 자동 공개 (제출 1건 이상). 요청별 auto_publish 를 끈 요청은 건너뛴다
  */
 export async function GET(req: Request) {
   if (!authorized(req)) {
@@ -86,15 +90,26 @@ export async function GET(req: Request) {
       if (!rfq || ["selected", "contracting", "closed", "cancelled"].includes(rfq.status)) continue;
       let ids: string[] = [];
       let mails: string[] = [inv.cro_email];
+      let managed = false;
       if (inv.cro_org_id) {
-        const { data: ms } = await sb.from("profiles").select("id, email").eq("cro_org_id", inv.cro_org_id);
+        const [{ data: ms }, { data: org }] = await Promise.all([
+          sb.from("profiles").select("id, email").eq("cro_org_id", inv.cro_org_id),
+          sb.from("cro_orgs").select("managed").eq("id", inv.cro_org_id).maybeSingle(),
+        ]);
         ids = (ms ?? []).map((m) => m.id as string);
         mails = [...new Set([inv.cro_email, ...(ms ?? []).map((m) => m.email as string)])];
+        managed = !!org?.managed;
       }
+      // 담당자 계정이 없는 기관(운영자 관리 포함)은 로그인 없는 회신 링크로. 계정이 있으면 포털 링크 그대로
+      const href = replyPath(inv, { managed, members: ids.length });
+      // 운영자 관리 기관의 초안은 운영자가 PDF 를 옮겨 적다 저장한 것일 수 있고, 기관은 PDF 를 이미 메일로 보냈을 수 있다. 초안 여부로 문구를 나누지 않는다
+      const body = managed
+        ? "아직 제출된 견적이 없습니다. 아래 버튼의 회신 링크에서 직접 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 비교표에 옮겨 적습니다. 이미 PDF를 보내셨다면 이 안내는 넘기셔도 됩니다."
+        : inv.status === "draft" ? "작성 중인 초안이 있습니다. 확인하고 제출해 주세요." : "아직 회신하지 않았습니다. 회신하지 않을 경우 '회신하지 않음'으로 처리해 주시면 의뢰자에게 안내됩니다.";
       await notifyUsers(
         ids,
-        { kind: "견적", title: kind === "d2" ? `회신 기한 이틀 전 · ${inv.rfq_no} ${rfq.substance}` : `오늘이 회신 기한입니다 · ${inv.rfq_no} ${rfq.substance}`, body: inv.status === "draft" ? "작성 중인 초안이 있습니다. 확인하고 제출해 주세요." : "아직 회신하지 않았습니다. 회신하지 않을 경우 '회신하지 않음'으로 처리해 주시면 의뢰자에게 안내됩니다.", href: `/cro/r/${inv.id}` },
-        { to: mails },
+        { kind: "견적", title: kind === "d2" ? `회신 기한 이틀 전 · ${inv.rfq_no} ${rfq.substance}` : `오늘이 회신 기한입니다 · ${inv.rfq_no} ${rfq.substance}`, body, href },
+        { to: mails, replyTo: inviteReplyTo({ managed }) },
       );
       await sb.from("invite_reminders").insert({ invite_id: inv.id, kind });
       out.reminded++;
@@ -144,6 +159,18 @@ export async function GET(req: Request) {
   await step("compare", out.errors, async () => {
   const { data: rfqs } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).is("compared_at", null).lt("reply_by", today);
   for (const rfq of rfqs ?? []) {
+    if (!autoPublishDue(rfq, today)) {
+      // 운영자가 자동 공개를 끈 요청: 공개하지 않고(늦은 회신도 닫지 않는다) 기한이 지났다고 기한마다 한 번 알린다
+      // 운영자가 기한을 늘렸다가 그 기한도 지나면 다시 알려야 하므로 지난 기한(meta.replyBy)까지 같을 때만 건너뛴다
+      if (rfq.auto_publish !== false) continue;
+      const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "publish_pending").contains("meta", { replyBy: rfq.reply_by }).limit(1);
+      if (!(ev ?? []).length) {
+        const { count } = await sb.from("cro_quotes").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id).eq("status", "submitted");
+        await logEvent(rfq.id, "publish_pending", "기한 경과 · 비교표 수동 공개 대기", `회신 ${count ?? 0}건 · 자동 공개 꺼짐 · 기한 ${rfq.reply_by}`, null, { replyBy: rfq.reply_by });
+        await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 비교표 수동 공개 대기`, body: `회신 ${count ?? 0}건. 자동 공개를 꺼 둔 요청입니다. 기관 PDF를 다 입력했으면 요청 화면에서 비교표를 공개해 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+      }
+      continue;
+    }
     const r = await publishCompare(rfq, null, true);
     if (r.ok) {
       out.compared++;
@@ -179,8 +206,20 @@ export async function GET(req: Request) {
   //      성사수수료는 보고된 계약에만 붙으므로, 보고 누락이 곧 매출 누락이다
   await step("contract-remind", out.errors, async () => {
     const since = new Date(Date.now() - 14 * 864e5).toISOString();
-    const { data: awards } = await sb.from("rfq_awards").select("id, rfq_id, cro_org_id, cro_name, awarded_at").is("contract_reported_at", null).lt("awarded_at", since).order("awarded_at").limit(100);
+    // 마지막 단계(45일)에 15일 여유를 둔 60일 창. 미체결로 기록했거나 이미 마지막 단계를 지난 오래된 수주가 창을 채워 새 수주를 밀어내지 않게 한다
+    const horizon = new Date(Date.now() - 60 * 864e5).toISOString();
+    const { data: awards } = await sb
+      .from("rfq_awards")
+      .select("id, rfq_id, cro_org_id, invite_id, cro_name, awarded_at, contract_reported_at, contract_status")
+      .is("contract_reported_at", null)
+      .neq("contract_status", "not_signed")
+      .lt("awarded_at", since)
+      .gte("awarded_at", horizon)
+      .order("awarded_at")
+      .limit(200);
     for (const a of awards ?? []) {
+      // 운영자가 미체결로 기록한 수주는 더 묻지 않는다
+      if (!needsContractReminder(a)) continue;
       const days = daysSince(a.awarded_at);
       const stage = reminderStage(a.awarded_at);
       if (!stage) continue;
@@ -189,13 +228,30 @@ export async function GET(req: Request) {
       const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", stage).maybeSingle();
       if (ev) continue;
       if (stage === "contract_asked") {
-        await notifyUsers(await adminUserIds(), { kind: "계약", title: `${rfq.rfq_no} 선정 45일 경과 · 계약 보고 없음`, body: `${a.cro_name} 이 계약 체결을 보고하지 않았습니다. 기관과 의뢰자에게 진행 여부를 확인해 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+        await notifyUsers(await adminUserIds(), { kind: "계약", title: `${rfq.rfq_no} 선정 45일 경과 · 계약 보고 없음`, body: `${a.cro_name} 이 계약 체결을 보고하지 않았습니다. 기관과 의뢰자에게 진행 여부를 확인하고 요청 화면의 계약 결과 기록에 남겨 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
         if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약이 진행되고 있나요?`, body: `${rfq.substance} · ${a.cro_name} 을 선정한 지 45일이 지났습니다. 계약이 끝났거나 진행하지 않기로 했다면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
         await logEvent(a.rfq_id, stage, "계약 진행 여부 확인 요청", "선정 45일 경과", null);
       } else {
-        const { data: members } = a.cro_org_id ? await sb.from("profiles").select("id").eq("cro_org_id", a.cro_org_id) : { data: [] };
+        const [{ data: org }, { data: members }] = a.cro_org_id
+          ? await Promise.all([
+              sb.from("cro_orgs").select("managed, contact_email").eq("id", a.cro_org_id).maybeSingle(),
+              sb.from("profiles").select("id").eq("cro_org_id", a.cro_org_id),
+            ])
+          : [{ data: null }, { data: [] as { id: string }[] }];
         const ids = (members ?? []).map((m) => m.id as string);
-        if (!ids.length) continue;
+        if (org?.managed || !ids.length) {
+          // 운영자 관리 기관이나 담당자 계정이 없는 기관: 앱 알림을 못 받고 포털도 열 수 없다. 대표 이메일로 계약 진행 상황을 묻고 회신은 운영자가 받는다 (로그인 링크 없음)
+          // 선정 메일이 "운영자가 메일로 여쭙겠다"고 안내한 대상과 같다 (app/api/rfq/[no]/select/route.ts)
+          const { data: inv } = !org?.contact_email && a.invite_id ? await sb.from("rfq_invites").select("cro_email").eq("id", a.invite_id).maybeSingle() : { data: null };
+          const to = await notificationRecipients([org?.contact_email || inv?.cro_email || ""].filter(Boolean));
+          if (!to.length) continue;
+          const m = contractFollowupMail({ rfqNo: rfq.rfq_no, substance: rfq.substance, croName: a.cro_name, days, awardedOn: new Date(a.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) });
+          // 보내지 못하면 이력을 남기지 않아 다음 날 다시 시도한다 (같은 단계는 이력이 있으면 건너뛴다)
+          if (!(await sendMail({ to, subject: m.subject, html: m.html, replyTo: operatorReplyTo() }))) continue;
+          await logEvent(a.rfq_id, stage, `계약 진행 확인 메일 (${org?.managed ? "운영자 관리 기관" : "담당자 계정 없음"})`, `선정 ${days}일 경과`, null, { to: to.length });
+          out.contractReminded++;
+          continue;
+        }
         await notifyUsers(ids, { kind: "계약", title: `${rfq.rfq_no} 계약 체결을 보고해 주세요`, body: `${rfq.substance} · 선정 ${days}일 경과. 계약을 맺었다면 체결일과 금액을, 진행하지 않게 되었다면 단추(hello@danchu.kr)에 알려 주세요.`, href: "/cro/awards" });
         await logEvent(a.rfq_id, stage, "계약 보고 리마인더", `선정 ${days}일 경과`, null);
       }

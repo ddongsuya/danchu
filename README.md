@@ -41,7 +41,7 @@ npm test                     # Vitest (lib 순수 함수)
 CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 
 ## Supabase 설정 (1회)
-1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0015_org_dedup_mail_tracking.sql`). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
+1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0019_concierge_mode.sql`). 0019 는 코드 배포 전에 적용한다 (새 열을 읽는 코드가 먼저 나가면 cron·회신 저장이 실패한다). 새 마이그레이션은 다음 번호로 추가하고, 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
 2. Storage에 비공개 버킷 `rfq-files`, `cro-files`가 있는지 확인 (스키마가 만들지만 없으면 직접 생성)
 3. Authentication → Providers → Email: 켜 둔다. **Confirm email 켜짐** 유지 (가입 확인은 우리가 보내는 메일 링크로 처리)
    - Authentication → Sign In / Providers → **"Allow new users to sign up" 끄기**. 가입은 서버가 `auth.admin.createUser`로만 만든다. 켜 두면 anon 키로 직접 가입해 프로필을 만들 수 있다 (역할·기관은 어차피 서버만 적지만, 불필요한 계정이 생긴다)
@@ -55,7 +55,7 @@ CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 ```sql
 update public.profiles set role = 'admin' where lower(email) = 'ops@example.com';
 ```
-`ADMIN_EMAIL`은 운영자 알림 메일 수신 주소일 뿐 권한과 무관하다.
+`ADMIN_EMAIL`은 운영자 알림 메일 수신 주소일 뿐 권한과 무관하다. 운영자 관리 기관(계정 없음)에 보내는 메일의 회신 주소는 `OPERATOR_REPLY_TO`(비우면 hello@danchu.kr)이며, 견적서 PDF와 계약 결과가 이 주소로 오므로 개인 메일함이 아닌 역할 주소를 쓴다.
 
 ### CRO 담당자 합류
 같은 이름의 기관으로 CRO 가입 신청이 오면 계정은 만들되 기관에 연결하지 않는다 (`profiles.pending_org_id`).

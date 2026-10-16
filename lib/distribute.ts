@@ -3,11 +3,12 @@ import { countsTowardLimit, inviteExpiresAt, maskedClientLabel, needsCda, remain
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
 import type { TablesUpdate } from "./db-types";
-import { logEvent, notifyUsers, siteUrl } from "./notify";
+import { logEvent, notifyUsers, operatorReplyTo, siteUrl, type NotifyKind } from "./notify";
 import { mailWrap, esc, sendMail } from "./mail";
 import { addBusinessDays, nowSeoul } from "./dates";
 import { quoteRowsFromPayload } from "./quote-items";
 import { rowKey } from "./catalog";
+import { replyPath } from "./concierge";
 
 export type DistributeResult = {
   sent: number;
@@ -18,22 +19,25 @@ export type DistributeResult = {
   capped: string[];
   /** DB 트리거가 막은 이유. request_not_open: 비교표 공개·선정 이후 / invitation_limit_reached: 요청 기관 수 한도 */
   blocked?: "request_not_open" | "invitation_limit_reached";
+  /** 운영자 관리 기관에 보내면서 비교표 자동 공개를 껐다 */
+  autoPublishOff?: boolean;
 };
 
-type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; monthly_cap?: number | null };
+type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; monthly_cap?: number | null; managed?: boolean };
 
 /** 배포 대상 기관 조회에 쓰는 컬럼 (운영자 수동 배포 라우트와 같게) */
-export const ORG_COLUMNS = "id, name, contact_email, categories, glp_certs, monthly_cap";
+export const ORG_COLUMNS = "id, name, contact_email, categories, glp_certs, monthly_cap, managed";
 
 /**
  * 배포 대상 자동 선정.
  * - 승인된 기관 중 요청서 대분류와 수행 분야가 겹치는 기관
  * - 카탈로그에서 요청 항목 전부를 "수행하지 않음"으로 꺼 둔 기관은 제외
+ * - 운영자 관리 기관(managed)은 제외. 참여 계약이 없는 기관이라 자동 배포·보충·지명으로 보내지 않고, 운영자가 배포 패널에서 요청마다 고른다
  */
 export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: string[] }> {
   const sb = getSupabaseAdmin();
   if (!sb) return { orgs: [], skipped: [] };
-  const { data } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").order("id");
+  const { data } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).order("id");
   const all = (data ?? []) as Org[];
   const cats = rfq.categories;
   const candidates = all.filter((o) => (o.categories ?? []).some((c) => cats.includes(c)));
@@ -92,6 +96,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   const capacity = remainingInvites(rfq.cro_count, (existing ?? []).filter((e) => countsTowardLimit(e.status)).length);
   const already = new Set((existing ?? []).map((e) => e.cro_org_id));
   const expiresAt = inviteExpiresAt(replyBy);
+  let managedSent = false;
 
   for (const o of orgs) {
     if (already.has(o.id)) continue;
@@ -127,11 +132,13 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     usedThisMonth.set(o.id, (usedThisMonth.get(o.id) ?? 0) + 1);
     res.sent++;
     res.names.push(o.name);
+    if (o.managed) managedSent = true;
 
     const mailTo = await notificationRecipients(to);
     // 메일 실패가 다음 기관의 초대 생성을 막으면 안 된다. 실패하면 mailed_at 이 비어 남고 cron 이 다시 보낸다
     if (mailTo.length) {
-      const mailed = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, replyBy), html: inviteMailHtml(rfq, replyBy, inv.token, inv.id) }).catch(() => false);
+      const mailOpts = { managed: !!o.managed, members: memberIds.length };
+      const mailed = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, replyBy), html: inviteMailHtml(rfq, replyBy, inv.token, inv.id, mailOpts), replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
       if (mailed) {
         res.mailed++;
         await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
@@ -143,8 +150,13 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   if (res.sent) {
     const patch: TablesUpdate<"rfq_requests"> = { reply_by: rfq.reply_by || replyBy };
     if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
+    // 운영자 관리 기관은 견적서 PDF 를 메일로 보내고 운영자가 기한 뒤에 옮겨 적는다. 자동 공개가 켜져 있으면 입력 전에 비교표가 열리고 회신이 닫힌다
+    if (managedSent && rfq.auto_publish !== false) {
+      patch.auto_publish = false;
+      res.autoPublishOff = true;
+    }
     await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
-    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped });
+    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}${res.autoPublishOff ? " · 운영자 관리 기관이 있어 비교표 자동 공개를 껐습니다" : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped, autoPublishOff: !!res.autoPublishOff });
     const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id);
     if (rfq.user_id) {
       await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 참여 CRO ${count ?? res.sent}곳에 배포했습니다`, body: `회신 기한 ${replyBy} · 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
@@ -159,10 +171,22 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
 export function inviteMailSubject(rfq: Pick<RfqRow, "rfq_no" | "substance">, replyBy: string): string {
   return `[단추] 견적 요청 ${rfq.rfq_no} · ${rfq.substance} · 회신 기한 ${replyBy}`;
 }
-export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "purpose" | "intent" | "confidentiality" | "org_type">, replyBy: string, token: string, inviteId: string): string {
+/** 받는 기관의 종류. 운영자 관리 기관이나 담당자 계정이 없는 기관에는 로그인이 필요한 포털 링크를 넣지 않는다 */
+export type InviteMailOpts = { managed?: boolean; members?: number };
+
+/** 운영자 관리 기관은 견적서 PDF 를 메일 회신으로 보낼 수 있게 회신 주소를 운영 역할 주소(OPERATOR_REPLY_TO)로 둔다 */
+export function inviteReplyTo(opts: InviteMailOpts = {}): string | undefined {
+  return opts.managed ? operatorReplyTo() : undefined;
+}
+
+export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "purpose" | "intent" | "confidentiality" | "org_type">, replyBy: string, token: string, inviteId: string, opts: InviteMailOpts = {}): string {
   const link = `${siteUrl()}/q/${token}`;
-  const portal = `${siteUrl()}/cro/r/${inviteId}`;
+  const portalPath = replyPath({ id: inviteId, token }, { managed: opts.managed, members: opts.members ?? 1 });
+  const portal = portalPath.startsWith("/cro/") ? `${siteUrl()}${portalPath}` : "";
   const masked = needsCda(rfq.confidentiality);
+  const guide = opts.managed
+    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 요청을 받았습니다.<br>위 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 비교표에 옮겨 적습니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달됩니다.<br>비교표는 의뢰자에게만 전달되며 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 앞으로 요청을 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
+    : `카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."} 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.`;
   return mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청서가 도착했습니다 · ${esc(rfq.rfq_no)}</h2>
       <p><b>${esc(maskedClientLabel(rfq.org_type))}</b> · 시험물질 ${esc(rfq.substance)}<br>
@@ -171,7 +195,7 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "substance" | "categ
       <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개됩니다.</p>
       <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b> · 링크는 기한 +7일까지 열립니다.</p>
       <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">요청서 보고 회신하기</a></p>
-      <p style="font-size:13px;color:#6F6A63">카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다. 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.</p>`);
+      <p style="font-size:13px;color:#6F6A63">${guide}</p>`);
 }
 
 /**
@@ -190,13 +214,19 @@ export async function resendUnmailedInvites(): Promise<{ tried: number; sent: nu
     const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
     if (!rfq || rfq.compared_at || ["selected", "contracting", "closed", "cancelled"].includes(rfq.status)) continue;
     let to = [inv.cro_email];
+    const mailOpts: InviteMailOpts = { members: 0 };
     if (inv.cro_org_id) {
-      const { data: ms } = await sb.from("profiles").select("email").eq("cro_org_id", inv.cro_org_id);
+      const [{ data: ms }, { data: org }] = await Promise.all([
+        sb.from("profiles").select("email").eq("cro_org_id", inv.cro_org_id),
+        sb.from("cro_orgs").select("managed").eq("id", inv.cro_org_id).maybeSingle(),
+      ]);
       to = [...new Set([inv.cro_email, ...(ms ?? []).map((m) => m.email)])];
+      mailOpts.members = (ms ?? []).length;
+      mailOpts.managed = !!org?.managed;
     }
     const mailTo = await notificationRecipients(to);
     if (!mailTo.length) continue;
-    const ok = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id) }).catch(() => false);
+    const ok = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id, mailOpts), replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
     if (ok) {
       out.sent++;
       await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
@@ -215,7 +245,8 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
   let nominated: Org[] = [];
   if (nominees.length) {
     const sb = getSupabaseAdmin();
-    const { data } = sb ? await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").in("name", nominees) : { data: [] };
+    // 지명 목록(/api/orgs)에 운영자 관리 기관은 나오지 않는다. 이름이 같아도 여기서 다시 거른다
+    const { data } = sb ? await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).in("name", nominees) : { data: [] };
     nominated = (data ?? []) as Org[];
     if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated");
   }
@@ -253,8 +284,9 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   let list = (data ?? []).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
   if (orgId) {
     // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
-    const { data: org } = await sb.from("cro_orgs").select("status, categories").eq("id", orgId).maybeSingle();
-    if (!org || org.status !== "approved") return out;
+    const { data: org } = await sb.from("cro_orgs").select("status, categories, managed").eq("id", orgId).maybeSingle();
+    // 운영자 관리 기관은 자동 보충하지 않는다 (matchOrgs 와 같은 규칙)
+    if (!org || org.status !== "approved" || org.managed) return out;
     const cats = (org.categories ?? []) as string[];
     const { data: inv } = await sb.from("rfq_invites").select("rfq_id").eq("cro_org_id", orgId);
     const invited = new Set((inv ?? []).map((i) => i.rfq_id as string));
@@ -274,4 +306,41 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
     if (r.sent) { out.rfqs++; out.invites += r.sent; }
   }
   return out;
+}
+
+type InvitedRow = { id: string; token: string; cro_org_id: string | null; cro_email: string };
+
+/**
+ * 초대받은 기관들에 같은 안내(기한 변경·취소·마무리·미선정)를 기관마다 따로 보낸다.
+ * - 한 메일의 받는 사람 칸에 경쟁 기관의 주소가 함께 보이지 않게 기관마다 한 통씩 보낸다.
+ * - 담당자 계정이 있는 기관은 앱 알림과 포털 링크(portalHref, 없으면 /cro/r/{초대}),
+ *   계정이 없거나 운영자 관리 기관은 로그인 없는 회신 링크(/q/{token})로 보낸다. /cro 는 로그인이 필요해 막힌 길이 된다.
+ * - 운영자 관리 기관의 회신은 운영 역할 주소로 받는다.
+ */
+export async function notifyInvitedOrgs(invites: InvitedRow[], n: { kind: NotifyKind; title: string; body?: string; portalHref?: string }): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (!sb || !invites.length) return;
+  const orgIds = [...new Set(invites.map((i) => i.cro_org_id).filter((x): x is string => !!x))];
+  let members: { id: string; email: string | null; cro_org_id: string | null }[] = [];
+  let managed = new Set<string>();
+  if (orgIds.length) {
+    const [{ data: ms }, { data: orgs }] = await Promise.all([
+      sb.from("profiles").select("id, email, cro_org_id").in("cro_org_id", orgIds),
+      sb.from("cro_orgs").select("id, managed").in("id", orgIds),
+    ]);
+    members = (ms ?? []) as typeof members;
+    managed = new Set((orgs ?? []).filter((o) => o.managed).map((o) => o.id as string));
+  }
+  const seen = new Set<string>();
+  for (const i of invites) {
+    const key = i.cro_org_id ?? `mail:${i.cro_email}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const mine = members.filter((m) => !!i.cro_org_id && m.cro_org_id === i.cro_org_id);
+    const isManaged = managed.has(i.cro_org_id ?? "");
+    const path = replyPath(i, { managed: isManaged, members: mine.length });
+    const href = path.startsWith("/cro/") ? n.portalHref ?? path : path;
+    const to = [...new Set([i.cro_email, ...mine.map((m) => m.email)].filter((x): x is string => !!x))];
+    await notifyUsers(mine.map((m) => m.id), { kind: n.kind, title: n.title, body: n.body, href }, { to, replyTo: inviteReplyTo({ managed: isManaged }) });
+  }
 }

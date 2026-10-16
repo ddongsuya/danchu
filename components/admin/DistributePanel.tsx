@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ManagedBadge } from "./ManagedBadge";
 
-type Org = { id: string; name: string; categories: string[]; glp: string[]; email: string | null; members: number; invited: boolean };
+type Org = { id: string; name: string; categories: string[]; glp: string[]; email: string | null; members: number; invited: boolean; managed?: boolean };
 
 /** 배포 — 승인된 CRO 중 수행 분야가 맞는 기관을 골라 초대(회신 링크 메일)를 보낸다 */
 export function DistributePanel({ no, categories, defaultReplyBy, orgs, today, autoDistribute: initialAuto }: { no: string; categories: string[]; defaultReplyBy: string; orgs: Org[]; today: string; autoDistribute: boolean }) {
@@ -24,9 +25,9 @@ export function DistributePanel({ no, categories, defaultReplyBy, orgs, today, a
     setMsg(null);
     try {
       const res = await fetch(`/api/admin/rfqs/${no}/distribute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orgIds: picked, replyBy, autoDistribute: !keepManual }) });
-      const d = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; mailed?: number; skipped?: string[]; capped?: string[]; blocked?: string };
+      const d = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; mailed?: number; skipped?: string[]; capped?: string[]; blocked?: string; autoPublishOff?: boolean };
       if (!res.ok) throw new Error(d.error || "배포하지 못했습니다.");
-      setMsg({ ok: true, text: `${d.sent}곳에 전달했습니다. 메일 ${d.mailed}건.${d.blocked ? ` ${d.blocked}` : d.skipped?.length ? ` 연락처가 없거나 한도에 걸려 ${d.skipped.length}곳은 제외했습니다.` : ""}${d.capped?.length ? ` 월 전달 한도에 닿아 ${d.capped.join(", ")}은(는) 제외했습니다.` : ""}` });
+      setMsg({ ok: true, text: `${d.sent}곳에 전달했습니다. 메일 ${d.mailed}건.${d.blocked ? ` ${d.blocked}` : d.skipped?.length ? ` 연락처가 없거나 한도에 걸려 ${d.skipped.length}곳은 제외했습니다.` : ""}${d.capped?.length ? ` 월 전달 한도에 닿아 ${d.capped.join(", ")}은(는) 제외했습니다.` : ""}${d.autoPublishOff ? " 운영자 관리 기관이 있어 비교표 자동 공개를 껐습니다. 기관 PDF를 입력한 뒤 직접 공개해 주세요." : ""}` });
       setPicked([]);
       router.refresh();
     } catch (e) {
@@ -48,9 +49,9 @@ export function DistributePanel({ no, categories, defaultReplyBy, orgs, today, a
               <input type="checkbox" checked={on} disabled={o.invited} onChange={(e) => setPicked(e.target.checked ? [...picked, o.id] : picked.filter((x) => x !== o.id))} style={{ width: 18, height: 18, accentColor: "var(--brand)" }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>
-                  {o.name} {o.invited && <span className="pill pill--sf">배포됨</span>}{!ok && <span className="pill pill--warn">분야 불일치</span>}
+                  {o.name} {o.invited && <span className="pill pill--sf">배포됨</span>}{!ok && <span className="pill pill--warn">분야 불일치</span>}{o.managed && <ManagedBadge />}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.glp.join(" · ") || "GLP 미등록"} · 담당자 {o.members}명{o.email ? ` · ${o.email}` : ""}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.glp.join(" · ") || "GLP 미등록"} · {o.managed ? "회신은 운영자 대리 입력" : `담당자 ${o.members}명`}{o.email ? ` · ${o.email}` : ""}</div>
               </div>
             </label>
           );

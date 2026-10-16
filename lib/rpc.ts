@@ -3,7 +3,7 @@
  * 알림·메일·이력은 여기서 보내지 않는다. 호출한 라우트가 결과를 받아 처리한다.
  */
 import { getSupabaseAdmin } from "./supabase";
-import type { Database, Json } from "./db-types";
+import type { Database, Json, QuoteEntrySource } from "./db-types";
 
 type Fns = Database["public"]["Functions"];
 
@@ -51,6 +51,8 @@ export type QuoteHeader = {
   pdf_path?: string;
   pdf_name?: string;
   pdf_size?: number;
+  /** 입력 주체 (0019). 제출 때만 기록하고, 없으면 기관(cro) */
+  entry_source?: QuoteEntrySource;
 };
 export type QuoteItemInput = {
   seq: number;

@@ -9,6 +9,8 @@ import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { todaySeoul, won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
+import { entrySourceFor, loadOptsFor } from "@/lib/concierge";
+import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,10 +20,18 @@ const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 type PdfRef = { path: string; name: string; size: number };
 
+/** 요청을 보낸 사람. 로그인 CRO·운영자면 계정, 토큰 접근이면 null */
+type Actor = { userId: string; email: string; role: string } | null;
+async function actorOf(): Promise<Actor> {
+  const s = await sessionOrNull();
+  return s ? { userId: s.userId, email: s.email, role: s.profile.role } : null;
+}
+
 /** GET — 회신 화면에 필요한 모든 것 */
 export async function GET(_req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await load(token);
+  const a = await actorOf();
+  const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed });
 }
@@ -107,8 +117,11 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf };
 }
 
-async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string | null, who?: { ip: string; ua: string }) {
+async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who?: { ip: string; ua: string }) {
   const sb = getSupabaseAdmin()!;
+  const actorId = actor?.userId ?? null;
+  // 운영자가 회신 링크로 제출하면 기관 PDF 를 보고 옮겨 적은 대리 입력이다 (비교표 표기·카탈로그 학습 제외)
+  const source = entrySourceFor(actor?.role);
   const { items, note, common, pdf } = p;
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const weeks = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
@@ -125,6 +138,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     report_lang: common.reportLang || null,
     includes: common.includes,
     note,
+    // 입력 주체는 제출과 같은 트랜잭션에서 남긴다 (save_quote, 0019). 따로 갱신하다 실패하면 대리 입력이 기관 제출로 보인다
+    entry_source: source,
   };
 
   if (pdf) {
@@ -158,11 +173,12 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
   // 헤더 + 항목 + 초대 상태 + 요청 상태를 한 트랜잭션으로. 초안 저장은 제출본을 절대 덮지 않는다.
   const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
   // 토큰 제출은 행위자가 없다. 금전 구속력이 있는 제출이라 누가 보냈는지 IP·브라우저라도 남긴다
-  if (submit && r.ok && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
+  if (submit && r.ok && !r.skipped && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
   if (!r.ok) return { error: "저장에 실패했습니다.", status: 500 };
   if (r.skipped) return { ok: true, skipped: true };
 
-  if (submit && got.croOrgId) {
+  if (submit && got.croOrgId && source === "cro") {
+    // 운영자가 옮겨 적은 금액은 기관이 정한 값이 아니므로 기관 카탈로그로 되돌리지 않는다
     // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (응답 뒤에 실행, 실패해도 제출은 성공)
     const orgId = got.croOrgId;
     const learned = itemRows.map((x) => ({ category: x.category, name: x.name, avail: x.avail, amount: x.amount, weeks: x.weeks, unit: x.unit, unitPrice: x.unit_price, design: x.design }));
@@ -173,7 +189,10 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     const first = r.first ?? true;
     const done = r.submitted_invites ?? 0;
     const count = r.total_invites ?? 0;
-    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null });
+    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}${source === "operator" ? " (운영자 대리 입력)" : ""}`, `총 ${won(total)} · ${weeks}주${source === "operator" ? " · 기관 PDF 기준" : ""}`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null, entrySource: source });
+    if (source === "operator" && actor) {
+      await audit({ userId: actor.userId, email: actor.email }, "quote.proxy", { type: "cro_quote", id: r.quote_id, label: `${got.rfq.no} · ${got.croName}` }, { after: { entry_source: source, total_amount: total, total_weeks: weeks, pdf_name: pdf?.name ?? got.draft?.pdfName ?? null }, note: first ? "대리 입력" : "대리 입력 수정" });
+    }
     const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
     if (rq?.user_id) {
       // 메일은 첫 견적이 왔을 때와 전원이 회신했을 때만. 그 사이 도착은 앱 알림으로 충분하다
@@ -189,23 +208,18 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
   return { ok: true, total, weeks };
 }
 
-/** 로그인 CRO면 행위자 ID, 토큰 접근이면 null */
-async function actor(_got: Loaded): Promise<string | null> {
-  const s = await sessionOrNull();
-  return s ? s.userId : null;
-}
-
 /** PUT — 초안 자동 저장 (JSON) */
 export async function PUT(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await load(token);
+  const a = await actorOf();
+  const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   const why = blocked(got);
   if (why) return NextResponse.json({ error: why }, { status: 403 });
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
   if (got.draft?.status === "submitted") return NextResponse.json({ ok: true, skipped: true }); // 제출본은 자동 저장으로 덮지 않는다
-  const r = await upsert(got, parsed, false, await actor(got));
+  const r = await upsert(got, parsed, false, a);
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, skipped: !!r.skipped });
 }
@@ -213,7 +227,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
 /** POST — 제출 (JSON: { items, note, common, pdf? }). 전 항목 답변 + 공통 필수 + PDF 필수. */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await load(token);
+  const a = await actorOf();
+  const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   const why = blocked(got);
   if (why) return NextResponse.json({ error: why }, { status: 403 });
@@ -233,7 +248,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났습니다. 날짜를 확인해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
-  const r = await upsert(got, parsed, true, await actor(got), { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
+  const r = await upsert(got, parsed, true, a, { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, total: r.total ?? null, weeks: r.weeks ?? null });
 }

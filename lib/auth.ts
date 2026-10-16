@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSessionClient } from "./supabase-server";
 import { getSupabaseAdmin } from "./supabase";
+import { loadOptsFor } from "./concierge";
 
 export type Role = "requester" | "cro" | "admin";
 
@@ -48,6 +49,8 @@ export type CroOrg = {
   per_request_fee?: number | null;
   /** 성사수수료율 (0.05 = 5%). null 이면 미정 */
   fee_rate?: number | null;
+  /** 운영자가 등록·관리하는 기관 (담당자 계정 없음, 메일 링크는 /q 토큰) */
+  managed?: boolean;
 };
 
 export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null; /** 합류 신청 중인 기관 */ pendingOrg: CroOrg | null };
@@ -110,6 +113,12 @@ export async function requireSession(role?: Role, next?: string): Promise<Sessio
   if (!s) redirect(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   if (role && s.profile.role !== role && s.profile.role !== "admin") redirect(homeOf(s.profile.role));
   return s;
+}
+
+/** 회신 링크(/q)를 연 사람에 맞춘 불러오기 옵션. 운영자가 연 것은 기관 열람으로 남기지 않고, 공개 전이면 기한 잠금을 풀어 준다 */
+export async function viewerLoadOpts(): Promise<{ markOpened: boolean; operator: boolean }> {
+  const s = await getSession();
+  return loadOptsFor(s?.profile.role);
 }
 
 /** 라우트 핸들러용: 세션이 없으면 null (redirect 대신) */

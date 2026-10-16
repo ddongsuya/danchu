@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { loadQuote } from "@/lib/quote-load";
+import { viewerLoadOpts } from "@/lib/auth";
 import { RequestView } from "@/components/cro/RequestView";
 import { DeclineForm } from "@/components/cro/DeclineForm";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function TokenRequest({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ decline?: string }> }) {
   const { token } = await params;
   const { decline } = await searchParams;
-  const got = await loadQuote(token);
+  const got = await loadQuote(token, await viewerLoadOpts());
   if (!got) notFound();
   if (decline === "1") {
     return (

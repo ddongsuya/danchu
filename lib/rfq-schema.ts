@@ -293,7 +293,7 @@ export const WIZ: WizStep[] = [
       {
         id: "agreeShare",
         type: "checkbox",
-        label: "견적 목적으로 참여 CRO에 요청 내용을 제공하는 것에 동의합니다.",
+        label: "견적 목적으로 참여 CRO(단추가 요청마다 골라 전달하는 등록 기관 포함)에 요청 내용을 제공하는 것에 동의합니다.",
         required: true,
       },
     ],
@@ -693,6 +693,13 @@ export const DETAILS: Record<Cat, Field[]> = {
     { id: "desc", type: "textarea", label: "상세 내용", placeholder: "필요한 시험을 자유롭게 적어 주세요." },
   ],
 };
+
+/**
+ * 요청 접수 때 의뢰자가 동의한 문구의 판. payload.consentVersion 으로 요청마다 남긴다.
+ * 약관(app/terms)·개인정보처리방침(app/privacy)·요청 내용 제공 동의(agreeShare) 문구를 바꾸면 함께 올린다.
+ * 2026-10-16: 제공받는 자에 단추가 요청마다 골라 전달하는 등록 기관(운영자 관리 기관)을 더했다 (약관·방침 v1.1)
+ */
+export const CONSENT_VERSION = "2026-10-16";
 
 export const DEFAULT_VALUES: Values = { croCount: "3곳", confid: "일반", categories: [] };
 

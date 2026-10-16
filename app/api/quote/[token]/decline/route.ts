@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { loadQuote } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
+import { loadOptsFor } from "@/lib/concierge";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
 /** POST { reason? } — 이번 요청은 회신하지 않음 */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await loadQuote(token);
+  const s = await sessionOrNull();
+  const got = await loadQuote(token, loadOptsFor(s?.profile.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 회신은 취소할 수 없습니다. 단추에 문의해 주세요." }, { status: 400 });
   if (got.declined) return NextResponse.json({ ok: true, already: true });
@@ -20,8 +23,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const sb = getSupabaseAdmin()!;
   const { error } = await sb.from("rfq_invites").update({ status: "declined", declined_at: new Date().toISOString(), decline_reason: reason || null }).eq("id", got.inviteId);
   if (error) return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 500 });
-  const s = await sessionOrNull();
-  await logEvent(got.rfqId, "declined", `${got.croName} 회신하지 않음`, reason || undefined, s?.userId ?? null);
+  const byOperator = s?.profile.role === "admin";
+  await logEvent(got.rfqId, "declined", `${got.croName} 회신하지 않음${byOperator ? " (운영자 처리)" : ""}`, reason || undefined, s?.userId ?? null);
+  // 운영자가 기관 대신 처리한 것은 운영 기록에도 남긴다 (기관의 의사를 운영자가 옮긴 것)
+  if (s && byOperator) await audit({ userId: s.userId, email: s.email }, "invite.decline_proxy", { type: "rfq_invite", id: got.inviteId, label: `${got.rfq.no} · ${got.croName}` }, { after: { status: "declined" }, note: reason || undefined });
   await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신하지 않음 · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
   // 의뢰자에게는 기관명 없이 숫자만. 선정 전 기관 정보는 비교표에서만 본다
   const { data: rq } = await sb.from("rfq_requests").select("user_id, status").eq("id", got.rfqId).maybeSingle();

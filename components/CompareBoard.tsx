@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
 import { comma, dday, md, won } from "@/lib/format";
+import { quoteKindLabel } from "@/lib/concierge";
 
 export type CompareCol = {
   id: string;
@@ -33,6 +34,8 @@ export type CompareCol = {
   selected: boolean;
   /** 카탈로그 기준 자동 제출된 예비 견적 */
   auto: boolean;
+  /** 운영자가 기관 PDF 를 보고 옮겨 적은 견적 (기준 문서는 PDF 원본) */
+  operator?: boolean;
 };
 export type CompareRowDef = { seq: number; name: string; category: string };
 
@@ -87,7 +90,14 @@ export function CompareBoard({
       },
       {
         label: "견적 구분",
-        cell: (c) => (c.auto ? "기관 확인 전 예비 견적" : "기관 제출 견적"),
+        cell: (c) => (
+          <>
+            {quoteKindLabel({ auto: c.auto, entry_source: c.operator ? "operator" : "cro" })}
+            {c.operator && !c.auto && (
+              <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 PDF 원본이 기준입니다.</p>
+            )}
+          </>
+        ),
       },
       {
         label: "회신 금액 합계",
@@ -155,7 +165,10 @@ export function CompareBoard({
         label: "견적서 원본",
         cell: (c) =>
           c.hasPdf ? (
-            <a href={`/api/quotes/${c.id}/pdf`}>PDF 열기</a>
+            <>
+              <a href={`/api/quotes/${c.id}/pdf`}>PDF 열기</a>
+              {c.operator && <p className="fld__help">이 견적의 기준 문서</p>}
+            </>
           ) : (
             "미첨부"
           ),

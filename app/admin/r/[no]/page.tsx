@@ -11,6 +11,8 @@ import { AdminActions } from "@/components/admin/AdminActions";
 import { DeadlineForm } from "@/components/admin/DeadlineForm";
 import { InviteActions } from "@/components/admin/InviteActions";
 import { RequestTerms } from "@/components/admin/RequestTerms";
+import { AutoPublishToggle } from "@/components/admin/AutoPublishToggle";
+import { ContractRecord } from "@/components/admin/ContractRecord";
 import { todaySeoul } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { quoteRowsFromPayload } from "@/lib/quote-items";
@@ -30,6 +32,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   const submitted = d.invites.filter((i) => i.status === "submitted");
   const defaultReplyBy = rfq.reply_by || addBusinessDays(nowSeoul(), 7).toLocaleDateString("sv-SE");
   const invitedOrgIds = new Set(d.invites.map((i) => i.cro_org_id).filter(Boolean));
+  const managedIds = new Set(orgs.filter((o) => o.managed).map((o) => o.id));
   const rows = quoteRowsFromPayload(p);
   const today = todaySeoul();
   const canChangeDeadline = ["received", "distributed", "quoted"].includes(rfq.status) && !rfq.compared_at;
@@ -65,7 +68,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                 no={rfq.rfq_no}
                 categories={rfq.categories}
                 defaultReplyBy={defaultReplyBy}
-                orgs={orgs.map((o) => ({ id: o.id, name: o.name, categories: o.categories, glp: o.glp_certs, email: o.contact_email, members: o.members, invited: invitedOrgIds.has(o.id) }))}
+                orgs={orgs.map((o) => ({ id: o.id, name: o.name, categories: o.categories, glp: o.glp_certs, email: o.contact_email, members: o.members, invited: invitedOrgIds.has(o.id), managed: !!o.managed }))}
                 today={today}
                 autoDistribute={rfq.auto_distribute !== false}
               />
@@ -98,13 +101,13 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                             <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{!i.mailed_at && ["sent", "draft"].includes(i.status) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
                           </td>
                           <td>
-                            <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{INVITE_LABEL[i.status] ?? i.status}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}
+                            <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{INVITE_LABEL[i.status] ?? i.status}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}{q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf" style={{ marginLeft: 6 }}>대리 입력</span>}
                             {i.decline_reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{i.decline_reason}</div>}
                           </td>
                           <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
                           <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
                           <td>
-                            <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}>회신 링크</a>
+                            <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }} title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
                             {["sent", "draft"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} /></div>}
                           </td>
                         </tr>
@@ -120,6 +123,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>진행 관리</h2>
             {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites} />}
             {!done && <div style={{ marginBottom: 12 }}><RequestTerms no={rfq.rfq_no} croCount={rfq.cro_count} confidentiality={rfq.confidentiality} /></div>}
+            {!done && !rfq.compared_at && <AutoPublishToggle no={rfq.rfq_no} on={rfq.auto_publish !== false} />}
             <AdminActions
               no={rfq.rfq_no}
               status={rfq.status}
@@ -128,6 +132,11 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
               note={rfq.admin_note ?? ""}
               award={d.award ? { cro: d.award.cro_name, at: ymd(d.award.awarded_at), contract: d.award.contract_reported_at ? `${d.award.contract_date} · ${won(d.award.contract_amount ?? 0)}` : "" } : null}
             />
+            {d.award && (
+              <div style={{ marginTop: 12 }}>
+                <ContractRecord awardId={d.award.id} status={d.award.contract_status} reported={!!d.award.contract_reported_at} today={today} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} note={d.award.contract_note} />
+              </div>
+            )}
           </div>
         </div>
 

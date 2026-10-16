@@ -37,15 +37,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const r = { rfq_no: rc.rfq_no, user_id: rc.user_id, substance: rc.substance };
   const corrected = rc.corrected === true;
 
-  await logEvent(award.rfq_id, "contract", `${award.cro_name} 계약 체결 ${corrected ? "정정" : "보고"}`, `체결일 ${date} · ${won(amount)}`, s.userId);
-  if (corrected) {
-    await audit({ userId: s.userId, email: s.email }, "award.contract", { type: "rfq_award", id, label: `${r.rfq_no} · ${award.cro_name}` }, { before: { contract_date: award.contract_date, contract_amount: award.contract_amount }, after: { contract_date: date, contract_amount: amount }, note: note || undefined });
-    return NextResponse.json({ ok: true, corrected: true });
+  // 운영자가 기관에 확인해 대신 남긴 기록은 기관의 보고가 아니다. 성사수수료의 근거라 처음 기록부터 감사 로그를 남긴다
+  const what = `계약 체결 ${corrected ? "정정" : isAdmin ? "확인" : "보고"}${isAdmin ? " (운영자 기록)" : ""}`;
+  await logEvent(award.rfq_id, "contract", `${award.cro_name} ${what}`, `체결일 ${date} · ${won(amount)}`, s.userId);
+  if (isAdmin || corrected) {
+    await audit({ userId: s.userId, email: s.email }, "award.contract", { type: "rfq_award", id, label: `${r.rfq_no} · ${award.cro_name}` }, { before: { contract_date: award.contract_date, contract_amount: award.contract_amount, contract_status: award.contract_status }, after: { contract_date: date, contract_amount: amount, contract_status: "signed" }, note: [corrected ? "정정" : isAdmin ? "운영자 기록" : "", note].filter(Boolean).join(" · ") || undefined });
   }
+  if (corrected) return NextResponse.json({ ok: true, corrected: true });
   if (r?.user_id) {
     const { data: rq } = await getSupabaseAdmin()!.from("rfq_requests").select("email").eq("id", award.rfq_id).maybeSingle();
-    await notifyUsers([r.user_id], { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 보고 내용이 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${r.rfq_no}` }, rq?.email ? { to: [rq.email] } : undefined);
+    await notifyUsers(
+      [r.user_id],
+      isAdmin
+        ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 단추가 기관에 확인해 기록했습니다. 내용이 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${r.rfq_no}` }
+        : { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 보고 내용이 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${r.rfq_no}` },
+      rq?.email ? { to: [rq.email] } : undefined,
+    );
   }
-  await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} 계약 체결 보고 · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}`, href: `/admin/awards` }, { to: adminEmails() });
+  await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} ${what} · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}`, href: `/admin/awards` }, { to: adminEmails() });
   return NextResponse.json({ ok: true });
 }

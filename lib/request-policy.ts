@@ -94,7 +94,7 @@ export function seoulMonthRange(d = new Date()): { from: string; to: string } {
 }
 
 /**
- * 기관의 기존 고객 판정에 쓰는 회사명 정규화: 공백·법인 표기(주식회사, (주), ㈜, 유한회사 등)·기호를 떼고 소문자로.
+ * 기관명 중복 판정에 쓰는 회사명 정규화: 공백·법인 표기(주식회사, (주), ㈜, 유한회사 등)·기호를 떼고 소문자로.
  * "㈜바이오벤처" 와 "바이오벤처 주식회사" 를 같은 회사로 본다
  */
 export function normalizeCompanyName(v: string | null | undefined): string {
@@ -103,18 +103,6 @@ export function normalizeCompanyName(v: string | null | undefined): string {
     .replace(/주식회사|유한회사|유한책임회사|합자회사|합명회사|\(주\)|㈜|\(유\)|co\.,?\s*ltd\.?|inc\.?|corp\.?|ltd\.?/g, "")
     .replace(/[\s·.,()\-_]/g, "");
 }
-
-export type ClientMatch = { name: string; business_no: string | null };
-
-/** 의뢰자 회사명이 기관의 기존 고객 목록에 있으면 그 고객 행을 돌려준다 */
-export function findExistingClient<T extends ClientMatch>(company: string | null | undefined, clients: T[]): T | null {
-  const key = normalizeCompanyName(company);
-  if (!key) return null;
-  return clients.find((c) => normalizeCompanyName(c.name) === key) ?? null;
-}
-
-/** 기존 고객 신고 기한: 선정일부터 10영업일 (참여 약정서 제5조 6항) */
-export const EXEMPT_CLAIM_BUSINESS_DAYS = 10;
 
 /** 의뢰자가 지명한 기관 이름을 정리한다: 문자열만, 중복 제거, 한도(기관 수) 안에서, 승인된 기관 이름에 있는 것만 */
 export function cleanNominees(raw: unknown, croCount: string | null | undefined, approvedNames: string[]): string[] {

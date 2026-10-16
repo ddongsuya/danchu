@@ -4,7 +4,7 @@ import { isProduction } from "@/lib/env";
 import { captureError } from "@/lib/observe";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendRfqMails } from "@/lib/mail";
-import { validateRequired, type Values } from "@/lib/rfq-schema";
+import { CONSENT_VERSION, validateRequired, type Values } from "@/lib/rfq-schema";
 import { addBusinessDays, nowSeoul } from "@/lib/dates";
 import { safeName, type UploadTicket } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
@@ -63,6 +63,8 @@ export async function POST(req: Request) {
   // 의뢰자 연락처는 계정 기준으로 고정한다
   values.email = sess.email;
   values.source = "app";
+  // 동의한 문구의 판(약관·개인정보처리방침·요청 내용 제공 동의). 제공 범위가 바뀌면 판이 바뀌므로 요청마다 남긴다
+  values.consentVersion = CONSENT_VERSION;
 
   const today = nowSeoul().toLocaleDateString("sv-SE");
   if (values.replyBy) {
@@ -89,7 +91,8 @@ export async function POST(req: Request) {
     try {
       // 지명 기관: 승인된 기관 이름에 있는 것만 남긴다 (화면에서 고른 값이라도 서버에서 다시 거른다)
       if (values.nominees !== undefined) {
-        const { data: approvedOrgs } = await supabase.from("cro_orgs").select("name").eq("status", "approved");
+        // 운영자 관리 기관은 지명 대상이 아니다 (/api/orgs 목록에도 없다)
+        const { data: approvedOrgs } = await supabase.from("cro_orgs").select("name").eq("status", "approved").eq("managed", false);
         const cleaned = cleanNominees(values.nominees, str("croCount"), (approvedOrgs ?? []).map((o) => o.name as string));
         if (cleaned.length) values.nominees = cleaned;
         else delete values.nominees;

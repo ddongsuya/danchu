@@ -8,7 +8,18 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalLayout title="개인정보처리방침" effectiveDate="2026년 9월 6일" version="v1.0" current="/privacy">
+    <LegalLayout
+      title="개인정보처리방침"
+      effectiveDate="2026년 11월 16일"
+      version="v1.1"
+      current="/privacy"
+      notice={
+        <p>
+          <strong>개정 안내 (2026년 10월 16일 공지)</strong>: 2026년 11월 16일부터 v1.1을 시행합니다. 4항의 제공받는 자에 회사가
+          요청마다 골라 전달하려고 등록한 기관(등록 기관)을 더했습니다. 그 전까지는 v1.0(2026년 9월 6일 시행)이 적용됩니다.
+        </p>
+      }
+    >
       <p>
         단추(이하 &ldquo;회사&rdquo;)는 비임상 시험 견적 요청(RFQ)을 접수하여 참여 CRO에 배포하고 견적 비교표를 제공하는 중개
         서비스를 운영합니다. 회사는 「개인정보 보호법」을 준수하며, 정보주체의 개인정보를 아래와 같이 처리합니다.
@@ -103,7 +114,7 @@ export default function PrivacyPage() {
         </thead>
         <tbody>
           <tr>
-            <td>이용자가 요청한 시험을 수행 가능한 참여 CRO</td>
+            <td>이용자가 요청한 시험을 수행 가능한 참여 CRO (회사와 계약한 기관, 회사가 요청마다 골라 전달하는 등록 기관)</td>
             <td>회사/기관명, 담당자 성명·이메일·연락처, 의뢰 내용 및 시험 조건, 첨부파일</td>
             <td>견적 산출 및 회신, 이후 계약 협의</td>
             <td>제공받은 자의 개인정보처리방침에 따름</td>
@@ -111,6 +122,7 @@ export default function PrivacyPage() {
         </tbody>
       </LegalTable>
       <p>
+        등록 기관은 회사와 별도의 계약을 체결하지 않은 기관으로, 회사가 요청마다 골라 전달하며 요청 내용을 견적 목적으로만 이용하도록 안내합니다.
         회사명과 담당자 연락처는 모든 요청에서 이용자가 선정한 CRO에만 제공하며, 선정 전에는 기관 유형과 시험 조건만 전달합니다. 이용자가 <strong>&ldquo;CDA 필요&rdquo; 또는 &ldquo;자체 CDA 사용&rdquo;</strong>을 선택한 경우, 첨부자료는 기관별 비밀유지계약(CDA) 체결 확인 후 공개합니다. 이용자는 위 제3자 제공에 동의하지 않을 수 있으나, 이 경우 견적 중개 서비스를 이용할 수
         없습니다.
       </p>

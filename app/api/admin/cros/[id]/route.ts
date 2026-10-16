@@ -11,7 +11,10 @@ import { audit, diffFields } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
-/** POST { action: 'approve'|'reject'|'suspend', reason? } — CRO 기관 승인 처리 */
+/**
+ * POST { action: 'approve'|'reject'|'suspend'|'optout', reason? } — CRO 기관 승인 처리.
+ * optout: 운영자 관리 기관이 "수신 거부"로 회신했을 때. 중지와 같이 배포를 멈추고 열린 초대를 닫되, 참여한 적 없는 기관이라 중지 안내 메일은 보내지 않는다
+ */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull("admin");
   if (!s) return NextResponse.json({ error: "운영자만 할 수 있습니다." }, { status: 403 });
@@ -25,19 +28,25 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     approve: { status: "approved", title: `${org.name} 참여가 승인되었습니다`, body: "이제 수행 분야에 맞는 견적 요청서가 배포됩니다. 기관 탭에서 GLP 인증과 수행 분야를 확인해 두세요.", msg: "승인했습니다." },
     reject: { status: "rejected", title: `${org.name} 가입 신청이 반려되었습니다`, body: reason || "자세한 사유는 hello@danchu.kr로 문의해 주세요.", msg: "반려했습니다." },
     suspend: { status: "suspended", title: `${org.name} 참여가 일시 중지되었습니다`, body: reason || "문의는 hello@danchu.kr로 보내주세요.", msg: "중지했습니다." },
+    optout: { status: "suspended", title: "", body: "", msg: "수신 거부로 처리했습니다. 이 기관에는 더 이상 요청서가 가지 않습니다." },
   };
   const m = map[action];
   if (!m) return NextResponse.json({ error: "알 수 없는 동작" }, { status: 400 });
+  if (action === "optout" && !org.managed) return NextResponse.json({ error: "수신 거부는 운영자 관리 기관에만 씁니다. 참여 기관은 중지로 처리해 주세요." }, { status: 400 });
 
   const sb = getSupabaseAdmin()!;
   const { error } = await sb.from("cro_orgs").update({ status: m.status, approved_at: action === "approve" ? new Date().toISOString() : org.approved_at }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
-  await audit({ userId: s.userId, email: s.email }, `org.${action}` as "org.approve" | "org.reject" | "org.suspend", { type: "cro_org", id, label: org.name }, { before: { status: org.status }, after: { status: m.status }, note: reason || undefined });
+  const note = action === "optout" ? ["기관이 수신 거부", reason].filter(Boolean).join(" · ") : reason || undefined;
+  await audit({ userId: s.userId, email: s.email }, `org.${action}` as "org.approve" | "org.reject" | "org.suspend" | "org.optout", { type: "cro_org", id, label: org.name }, { before: { status: org.status }, after: { status: m.status }, note });
 
-  if (action === "suspend") {
+  if (action === "suspend" || action === "optout") {
     // 중지된 기관이 토큰 링크로 계속 제출해 비교표에 오르지 않게 열린 초대를 닫는다 (한도에서도 빠진다)
     await sb.from("rfq_invites").update({ status: "expired" }).eq("cro_org_id", id).in("status", ["sent", "draft"]);
   }
+  // 운영자 관리 기관은 참여 계약을 맺은 적이 없다. 승인·중지 안내 메일을 보내지 않는다 (수신 거부한 기관에는 더더욱).
+  // 자동 배포 대상도 아니라 승인(수신 재개) 뒤 보충 배포도 하지 않는다
+  if (org.managed) return NextResponse.json({ ok: true, message: action === "approve" ? "수신을 다시 열었습니다. 요청 화면의 배포 패널에서 골라 보낼 수 있습니다." : m.msg });
   const { data: members } = await sb.from("profiles").select("id, email").eq("cro_org_id", id);
   const ids = (members ?? []).map((x) => x.id as string);
   const mails = [...new Set([...(members ?? []).map((x) => x.email as string), org.contact_email].filter((x): x is string => !!x))];

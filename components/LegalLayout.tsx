@@ -9,12 +9,15 @@ export function LegalLayout({
   effectiveDate,
   version,
   current,
+  notice,
   children,
 }: {
   title: string;
   effectiveDate: string;
   version: string;
   current?: string;
+  /** 개정 공지 (시행 전 공지 기간에 바뀌는 내용과 이전 판의 적용 기간을 알린다) */
+  notice?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -26,6 +29,7 @@ export function LegalLayout({
           <p className="legal__meta">
             시행일 {effectiveDate} · {version}
           </p>
+          {notice && <aside className="legal__notice">{notice}</aside>}
           {children}
           <div className="legal__back">
             <Link href="/" className="b b--line b--sm">

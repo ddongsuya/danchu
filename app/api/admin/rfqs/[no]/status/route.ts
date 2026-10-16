@@ -3,6 +3,7 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
 import { logEvent, notifyUsers } from "@/lib/notify";
+import { notifyInvitedOrgs } from "@/lib/distribute";
 
 export const runtime = "nodejs";
 
@@ -32,10 +33,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     await sb.from("rfq_requests").update({ status: "cancelled", closed_at: new Date().toISOString() }).eq("id", rfq.id);
     await sb.from("rfq_invites").update({ status: "expired" }).eq("rfq_id", rfq.id).in("status", ["sent", "draft"]);
     await logEvent(rfq.id, "cancelled", "취소", undefined, s.userId);
-    const { data: inv } = await sb.from("rfq_invites").select("cro_org_id, cro_email").eq("rfq_id", rfq.id);
-    const orgIds = (inv ?? []).map((i) => i.cro_org_id).filter((x): x is string => !!x);
-    const { data: ms } = orgIds.length ? await sb.from("profiles").select("id").in("cro_org_id", orgIds) : { data: [] };
-    await notifyUsers((ms ?? []).map((m) => m.id as string), { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소되었습니다`, body: "의뢰자 사정으로 요청이 취소되어 회신이 닫혔습니다.", href: "/cro" }, { to: (inv ?? []).map((i) => i.cro_email as string) });
+    // 기관마다 따로 보낸다. 계정이 없거나 운영자 관리 기관은 로그인이 필요한 /cro 대신 회신 링크(/q)로
+    const { data: inv } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email").eq("rfq_id", rfq.id);
+    await notifyInvitedOrgs(inv ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소되었습니다`, body: "의뢰자 사정으로 요청이 취소되어 회신이 닫혔습니다.", portalHref: "/cro" });
     if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소되었습니다`, href: `/app/r/${rfq.rfq_no}` });
     return NextResponse.json({ ok: true, message: "취소 처리했습니다." });
   }

@@ -10,6 +10,11 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 type Obj = Record<string, unknown>;
 
+/** cro_quotes.entry_source */
+export type QuoteEntrySource = "cro" | "operator";
+/** rfq_awards.contract_status */
+export type ContractStatus = "pending" | "negotiating" | "signed" | "not_signed";
+
 /** Row 에서 Insert 를 만든다: 기본값이 있는 컬럼은 선택 */
 type Ins<Row, Optional extends keyof Row> = Omit<Row, Optional> & Partial<Pick<Row, Optional>>;
 
@@ -50,10 +55,12 @@ export type Database = {
           outcome_at: string | null;
           anonymized_at: string | null;
           auto_distribute: boolean;
+          /** 회신 기한 뒤 비교표 자동 공개. 끄면 운영자가 직접 공개한다 (0019) */
+          auto_publish: boolean;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "auto_publish"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
@@ -110,25 +117,6 @@ export type Database = {
           { foreignKeyName: "rfq_invites_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
         ];
       };
-      cro_org_clients: {
-        Row: {
-          id: string;
-          org_id: string;
-          name: string;
-          name_norm: string;
-          business_no: string | null;
-          business_no_norm: string | null;
-          last_contract_on: string | null;
-          note: string | null;
-          created_by: string | null;
-          created_at: string;
-        };
-        Insert: Ins<Database["public"]["Tables"]["cro_org_clients"]["Row"], "id" | "name_norm" | "business_no" | "business_no_norm" | "last_contract_on" | "note" | "created_by" | "created_at">;
-        Update: Partial<Database["public"]["Tables"]["cro_org_clients"]["Row"]>;
-        Relationships: [
-          { foreignKeyName: "cro_org_clients_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
-        ];
-      };
       cro_quotes: {
         Row: {
           id: string;
@@ -178,6 +166,8 @@ export type Database = {
           includes: string[];
           auto: boolean;
           material_by: string;
+          /** 입력 주체: cro 기관 / operator 운영자가 기관 PDF 를 보고 대리 입력 (0019) */
+          entry_source: QuoteEntrySource;
         };
         Insert: Ins<
           Database["public"]["Tables"]["cro_quotes"]["Row"],
@@ -245,14 +235,10 @@ export type Database = {
           contract_note: string | null;
           fee_basis_amount: number | null;
           invite_source: string | null;
-          existing_client_claim: string | null;
-          existing_client_claimed_at: string | null;
-          fee_exempt: boolean;
-          fee_exempt_reason: string | null;
-          fee_exempt_at: string | null;
-          fee_exempt_by: string | null;
+          /** 계약 진행 상태. signed 는 체결 보고(contract_reported_at)와 항상 함께 있다 (0019) */
+          contract_status: ContractStatus;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "existing_client_claim" | "existing_client_claimed_at" | "fee_exempt" | "fee_exempt_reason" | "fee_exempt_at" | "fee_exempt_by">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "contract_status">;
         Update: Partial<Database["public"]["Tables"]["rfq_awards"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_awards_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: true; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -282,6 +268,8 @@ export type Database = {
           monthly_cap: number | null;
           per_request_fee: number | null;
           fee_rate: number | null;
+          /** 운영자가 등록·관리하는 기관 (담당자 계정 없음, 메일 링크는 /q 토큰) (0019) */
+          managed: boolean;
           /** 생성 컬럼: 사업자번호 숫자만. insert/update 에 넣지 않는다 */
           business_no_norm: string | null;
         };
@@ -436,6 +424,8 @@ export type BillingSummaryRow = {
   org_name: string;
   per_request_fee: number | null;
   monthly_cap: number | null;
+  /** 운영자 관리 기관 */
+  managed: boolean;
   delivered: number;
   billable: number;
   excluded: number;
@@ -446,7 +436,6 @@ export type BillingSummaryRow = {
   declined: number;
   unanswered: number;
   selected: number;
-  /** 면제된 수주를 뺀 선정 견적 합계 (성사수수료 기준) */
+  /** 선정 견적 합계 (성사수수료 기준) */
   selected_amount: number;
-  exempt: number;
 };

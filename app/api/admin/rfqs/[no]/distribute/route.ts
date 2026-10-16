@@ -37,5 +37,5 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const { data: orgs } = await sb.from("cro_orgs").select(ORG_COLUMNS).in("id", orgIds).eq("status", "approved");
   const r = await distributeTo(rfq, orgs ?? [], replyBy, s.userId, false, "manual");
   if (r.blocked && !r.sent) return NextResponse.json({ error: BLOCKED_MSG[r.blocked] }, { status: 409 });
-  return NextResponse.json({ ok: true, sent: r.sent, mailed: r.mailed, skipped: r.skipped, capped: r.capped, blocked: r.blocked ? BLOCKED_MSG[r.blocked] : undefined });
+  return NextResponse.json({ ok: true, sent: r.sent, mailed: r.mailed, skipped: r.skipped, capped: r.capped, blocked: r.blocked ? BLOCKED_MSG[r.blocked] : undefined, autoPublishOff: !!r.autoPublishOff });
 }

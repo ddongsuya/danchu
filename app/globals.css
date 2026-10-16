@@ -259,6 +259,8 @@ input, textarea { caret-color: var(--brand); }
 .legal { max-width: 800px; margin: 0 auto; font-size: 17px; line-height: 1.65; }
 .legal__title { margin: 0 0 8px; font-size: clamp(26px, 3vw, 32px); font-weight: 700; letter-spacing: -0.02em; }
 .legal__meta { margin: 0 0 40px; font-size: 14px; color: var(--muted); }
+.legal__notice { margin: -24px 0 32px; padding: 14px 16px; border: 1px solid var(--brand-line); border-radius: var(--r-md); background: var(--brand-tint); font-size: 15px; line-height: 1.6; color: var(--ink); }
+.legal__notice p { margin: 0; color: inherit; }
 .legal h2 { margin: 40px 0 12px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; padding-top: 24px; border-top: 1px solid var(--card-line); }
 .legal h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 32px; }
 .legal h3 { margin: 24px 0 8px; font-size: 16px; font-weight: 700; }

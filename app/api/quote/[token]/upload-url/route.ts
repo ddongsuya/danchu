@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { loadQuote } from "@/lib/quote-load";
+import { viewerLoadOpts } from "@/lib/auth";
 import { safeName } from "@/lib/upload";
 
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ const MAX_PDF = 20 * 1024 * 1024;
 /** POST { name, size, type } — 정식 견적서 PDF를 올릴 서명 URL 발급. 본문은 브라우저가 직접 올린다. */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await loadQuote(token);
+  const got = await loadQuote(token, await viewerLoadOpts());
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
   if (got.locked || got.closed) return NextResponse.json({ error: "지금은 수정할 수 없습니다." }, { status: 403 });

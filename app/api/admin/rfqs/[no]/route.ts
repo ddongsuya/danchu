@@ -9,8 +9,9 @@ import { CONFIDENTIALITY_OPTIONS, countsTowardLimit, CRO_COUNT_OPTIONS, invitati
 export const runtime = "nodejs";
 
 /**
- * PATCH { croCount?, confidentiality? } — 의뢰자가 잘못 고른 전달 기관 수·기밀 등급을 운영자가 바로잡는다.
+ * PATCH { croCount?, confidentiality?, autoPublish? } — 의뢰자가 잘못 고른 전달 기관 수·기밀 등급을 운영자가 바로잡는다.
  * 종료·취소된 요청은 바꾸지 않는다. 기관 수를 이미 전달한 수보다 줄일 수는 없다 (전달 기록이 청구 근거라서).
+ * autoPublish: 회신 기한 뒤 비교표 자동 공개 여부. 끄면 운영자가 PDF 를 다 모은 뒤 직접 공개한다.
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");
@@ -20,8 +21,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
   if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "종료·취소된 요청은 바꿀 수 없습니다." }, { status: 409 });
 
-  const b = (await req.json().catch(() => ({}))) as { croCount?: unknown; confidentiality?: unknown };
-  const patch: { cro_count?: string; confidentiality?: string } = {};
+  const b = (await req.json().catch(() => ({}))) as { croCount?: unknown; confidentiality?: unknown; autoPublish?: unknown };
+  const patch: { cro_count?: string; confidentiality?: string; auto_publish?: boolean } = {};
   if (b.croCount !== undefined) {
     if (!(CRO_COUNT_OPTIONS as readonly string[]).includes(b.croCount as string)) return NextResponse.json({ error: "전달 기관 수 값이 올바르지 않습니다." }, { status: 400 });
     patch.cro_count = b.croCount as string;
@@ -29,6 +30,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
   if (b.confidentiality !== undefined) {
     if (!(CONFIDENTIALITY_OPTIONS as readonly string[]).includes(b.confidentiality as string)) return NextResponse.json({ error: "기밀 등급 값이 올바르지 않습니다." }, { status: 400 });
     patch.confidentiality = b.confidentiality as string;
+  }
+  if (b.autoPublish !== undefined) {
+    if (typeof b.autoPublish !== "boolean") return NextResponse.json({ error: "자동 공개 값이 올바르지 않습니다." }, { status: 400 });
+    if (b.autoPublish !== (rfq.auto_publish !== false)) patch.auto_publish = b.autoPublish;
   }
   if (!Object.keys(patch).length) return NextResponse.json({ error: "바꿀 항목이 없습니다." }, { status: 400 });
 
@@ -38,13 +43,16 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
     const used = (inv ?? []).filter((i) => countsTowardLimit(i.status)).length;
     if (used > invitationLimit(patch.cro_count)) return NextResponse.json({ error: `이미 ${used}곳에 전달되어 그보다 적게 줄일 수 없습니다. 필요하면 초대를 개별로 취소하세요.` }, { status: 409 });
   }
-  const before = { cro_count: rfq.cro_count, confidentiality: rfq.confidentiality };
+  const before = { cro_count: rfq.cro_count, confidentiality: rfq.confidentiality, auto_publish: rfq.auto_publish !== false };
   const { error } = await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   const changed = diffFields(before, { ...before, ...patch });
-  const label = [patch.cro_count && `전달 기관 수 ${rfq.cro_count ?? "-"} → ${patch.cro_count}`, patch.confidentiality && `기밀 등급 ${rfq.confidentiality ?? "일반"} → ${patch.confidentiality}`].filter(Boolean).join(" · ");
+  const label = [patch.cro_count && `전달 기관 수 ${rfq.cro_count ?? "-"} → ${patch.cro_count}`, patch.confidentiality && `기밀 등급 ${rfq.confidentiality ?? "일반"} → ${patch.confidentiality}`, patch.auto_publish !== undefined && `비교표 자동 공개 ${patch.auto_publish ? "켬" : "끔"}`].filter(Boolean).join(" · ");
   await logEvent(rfq.id, "terms", "요청 조건 변경", label, s.userId, patch);
   await audit({ userId: s.userId, email: s.email }, "rfq.terms", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, changed);
   const wider = patch.cro_count && invitationLimit(patch.cro_count) > invitationLimit(rfq.cro_count);
+  if (patch.auto_publish !== undefined && !patch.cro_count && !patch.confidentiality) {
+    return NextResponse.json({ ok: true, message: patch.auto_publish ? "기한이 지나면 비교표를 자동으로 공개합니다." : "자동 공개를 껐습니다. 회신을 다 모은 뒤 '비교표 공개'를 눌러 주세요." });
+  }
   return NextResponse.json({ ok: true, message: wider ? "저장했습니다. 늘어난 자리는 배포 패널에서 채우거나 다음 자동 보충 때 채워집니다." : "저장했습니다." });
 }

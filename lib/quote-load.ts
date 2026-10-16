@@ -131,15 +131,21 @@ async function prefillDraft(orgId: string, r: RfqRow, rfq: RfqView): Promise<Rep
   return { items, note: "", pdfName: "", status: "draft", common: { ...EMPTY_COMMON, validUntil: valid, includes }, prefilled: true };
 }
 
+/**
+ * markOpened: 첫 열람 시각을 남길지. 운영자가 대리 입력하려고 연 것은 기관의 열람이 아니므로 false.
+ * operator: 운영자 세션. 비교표 공개 전이면 회신 기한 잠금(locked)과 링크 만료(expired)를 적용하지 않는다 (lib/concierge.ts loadOptsFor)
+ */
+export type LoadOpts = { markOpened?: boolean; operator?: boolean };
+
 /** 초대 행 → 회신 화면 전체 */
-export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
+export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise<Loaded | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
   const { data: r } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
   if (!r) return null;
 
-  // 첫 열람 시각 기록 (실패해도 무시)
-  if (!inv.opened_at) {
+  // 첫 열람 시각 기록 (실패해도 무시). 운영자가 연 것은 남기지 않는다
+  if (!inv.opened_at && opts.markOpened !== false) {
     await sb.from("rfq_invites").update({ opened_at: new Date().toISOString() }).eq("id", inv.id);
   }
   const { data: files } = await sb.from("rfq_files").select("id, file_name, size_bytes").eq("rfq_id", inv.rfq_id).order("created_at");
@@ -180,8 +186,9 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
     draft = await prefillDraft(inv.cro_org_id, r, rfq);
   }
   const now = Date.now();
-  const expired = !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
-  const locked = draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
+  // 운영자는 기한 뒤에도 대리 입력한 견적을 고칠 수 있다. 비교표 공개·선정 뒤에는 아래 closed 가 막는다
+  const expired = !opts.operator && !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
+  const locked = !opts.operator && draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
   // 비교표가 공개되면 아직 제출하지 않은 기관도 닫힌다. 제때 낸 기관만 잠기고 안 낸 기관은 링크 만료까지
   // 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 이 없으므로 다시 열린다
   // 참여가 중지된 기관의 초대도 닫는다 (중지 때 초대를 만료시키지만 2차 방어선)
@@ -199,11 +206,11 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
 }
 
 /** 토큰 링크로 접근 (로그인 없음) */
-export async function loadQuote(token: string): Promise<Loaded | null> {
+export async function loadQuote(token: string, opts: LoadOpts = {}): Promise<Loaded | null> {
   if (!/^[\w-]{8,128}$/.test(token)) return null;
   const sb = getSupabaseAdmin();
   if (!sb) return null;
   const { data: inv } = await sb.from("rfq_invites").select("*").eq("token", token).maybeSingle();
   if (!inv) return null;
-  return loadByInvite(inv);
+  return loadByInvite(inv, opts);
 }

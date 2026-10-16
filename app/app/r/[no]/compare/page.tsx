@@ -62,6 +62,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
+      operator: q.entry_source === "operator",
     };
   });
 
