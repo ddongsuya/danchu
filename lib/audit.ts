@@ -5,7 +5,7 @@ export type AuditAction =
   | "org.approve" | "org.reject" | "org.suspend" | "org.terms"
   | "user.role" | "user.delete"
   | "invite.billing" | "invite.resend" | "invite.cancel" | "billing.close"
-  | "rfq.deadline" | "rfq.terms" | "award.contract" | "award.contract_status"
+  | "rfq.deadline" | "rfq.close_replies" | "rfq.terms" | "award.contract" | "award.contract_status"
   | "org.create" | "org.optout" | "quote.proxy" | "invite.decline_proxy";
 
 /**

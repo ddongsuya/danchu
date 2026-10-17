@@ -28,7 +28,7 @@ function bucket(i: InviteItem): F {
   const closed = ["compared", "selected", "contracting", "closed", "cancelled"].includes(i.rfqStatus);
   if (i.status === "declined" || (expired && i.status !== "submitted")) return "종료";
   if (i.status === "submitted") return closed ? "종료" : "제출";
-  if (i.status === "draft") return "작성 중";
+  if (i.status === "draft") return closed ? "종료" : "작성 중";
   return closed ? "종료" : "신규";
 }
 

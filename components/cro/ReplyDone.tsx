@@ -12,7 +12,7 @@ export function ReplyDone({ no, replyBy, total, weeks, editHref, backHref, backL
           {no}{total ? ` · 총 ${won(total)}` : ""}{weeks ? ` · ${weeks}주` : ""}
         </p>
         <p style={{ fontSize: 13, color: "var(--muted)" }}>
-          {replyBy ? `회신 기한(${md(replyBy)})까지는 수정할 수 있습니다. ` : ""}비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.
+          제출한 견적은 지금부터 의뢰자 비교표에 보입니다. {replyBy ? `회신 기한(${md(replyBy)})까지는 수정할 수 있지만, 의뢰자가 기관을 선정하거나 운영자가 회신을 마감하면 그때 회신이 닫힙니다. ` : ""}다른 기관은 귀 기관의 견적을 볼 수 없습니다.
         </p>
         <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
           <Link href={editHref} className="b2 bsm">수정하기</Link>

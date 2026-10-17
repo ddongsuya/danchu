@@ -7,6 +7,7 @@ import type { InviteRow, RfqRow } from "./data";
 import { catalogMap } from "./catalog-db";
 import type { CatalogRow } from "./catalog";
 import { pickVariant, prefillRow, rowKey } from "./catalog";
+import { endOfDaySeoul, repliesClosed } from "./reply-window";
 
 export type Loaded = {
   rfq: RfqView;
@@ -22,23 +23,18 @@ export type Loaded = {
   locked: boolean;
   /** 회신하지 않음 처리 */
   declined: boolean;
-  /** 의뢰자가 이미 CRO를 선택해 회신이 닫힘 */
+  /** 의뢰자가 CRO를 선택했거나 회신이 마감되어(compared_at) 회신이 닫힘 */
   closed: boolean;
 };
 
 /**
  * 의뢰자 표시명과 공개 상태.
- * - client/identityMasked: 회사명은 이 기관이 선정됐거나 CDA 체결이 확인될 때만 보인다 (모든 요청 공통)
+ * - client/identityMasked: 회사명과 원본 첨부 파일명은 이 기관이 선정됐을 때만 보인다 (모든 요청 공통, CDA 체결과 무관)
  * - masked: CDA 요청의 첨부·상세 비공개 (체결 확인 전)
  */
 function maskClient(company: string, orgType: string | null, confid: string | null, signedAt: string | null | undefined, awarded: boolean): { client: string; masked: boolean; identityMasked: boolean } {
-  const identityMasked = !identityVisible({ awarded, signedAt });
+  const identityMasked = !identityVisible({ awarded });
   return { client: identityMasked ? maskedClientLabel(orgType) : company, masked: !confidentialAccess(confid, signedAt), identityMasked };
-}
-
-/** 'YYYY-MM-DD'의 서울 기준 그날 23:59:59 */
-export function endOfDaySeoul(ymd: string): number {
-  return new Date(`${ymd.slice(0, 10)}T23:59:59+09:00`).getTime();
 }
 
 function ddayOf(replyBy: string): { label: string; urgent: boolean } {
@@ -133,7 +129,7 @@ async function prefillDraft(orgId: string, r: RfqRow, rfq: RfqView): Promise<Rep
 
 /**
  * markOpened: 첫 열람 시각을 남길지. 운영자가 대리 입력하려고 연 것은 기관의 열람이 아니므로 false.
- * operator: 운영자 세션. 비교표 공개 전이면 회신 기한 잠금(locked)과 링크 만료(expired)를 적용하지 않는다 (lib/concierge.ts loadOptsFor)
+ * operator: 운영자 세션. 회신 마감 전이면 회신 기한 잠금(locked)과 링크 만료(expired)를 적용하지 않는다 (lib/concierge.ts loadOptsFor)
  */
 export type LoadOpts = { markOpened?: boolean; operator?: boolean };
 
@@ -186,18 +182,18 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
     draft = await prefillDraft(inv.cro_org_id, r, rfq);
   }
   const now = Date.now();
-  // 운영자는 기한 뒤에도 대리 입력한 견적을 고칠 수 있다. 비교표 공개·선정 뒤에는 아래 closed 가 막는다
+  // 운영자는 기한 뒤에도 대리 입력한 견적을 고칠 수 있다. 회신 마감·선정 뒤에는 아래 closed 가 막는다
   const expired = !opts.operator && !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
   const locked = !opts.operator && draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
-  // 비교표가 공개되면 아직 제출하지 않은 기관도 닫힌다. 제때 낸 기관만 잠기고 안 낸 기관은 링크 만료까지
-  // 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 이 없으므로 다시 열린다
+  // 회신이 마감되면(compared_at, 기한 다음 날 cron 또는 운영자 회신 마감) 아직 제출하지 않은 기관도 닫힌다. 제때 낸 기관만 잠기고
+  // 안 낸 기관은 링크 만료까지 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 을 비우므로 다시 열린다 (lib/reply-window.ts)
   // 참여가 중지된 기관의 초대도 닫는다 (중지 때 초대를 만료시키지만 2차 방어선)
   let orgSuspended = false;
   if (inv.cro_org_id) {
     const { data: org } = await sb.from("cro_orgs").select("status").eq("id", inv.cro_org_id).maybeSingle();
     orgSuspended = !!org && org.status !== "approved";
   }
-  const closed = ["selected", "contracting", "closed", "cancelled"].includes(r.status) || !!r.compared_at || orgSuspended;
+  const closed = repliesClosed(r) || orgSuspended;
 
   return {
     rfq, draft, inviteId: inv.id, rfqId: inv.rfq_id, croName: inv.cro_name, croOrgId: inv.cro_org_id, token: inv.token,

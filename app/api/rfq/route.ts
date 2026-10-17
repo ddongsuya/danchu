@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendRfqMails } from "@/lib/mail";
 import { CONSENT_VERSION, validateRequired, type Values } from "@/lib/rfq-schema";
 import { addBusinessDays, nowSeoul } from "@/lib/dates";
-import { safeName, type UploadTicket } from "@/lib/upload";
+import { opaqueObjectName, type UploadTicket } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { autoDistribute } from "@/lib/distribute";
@@ -130,7 +130,7 @@ export async function POST(req: Request) {
       rfqId = row.id as string;
 
       for (const f of files) {
-        const path = `${rfqNo}/${Date.now()}-${safeName(f.name)}`;
+        const path = `${rfqNo}/${opaqueObjectName(f.name)}`;
         const { data: signed, error: e3 } = await supabase.storage.from("rfq-files").createSignedUploadUrl(path);
         if (e3 || !signed) {
           console.error("signed upload url", e3);

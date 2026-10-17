@@ -52,7 +52,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
           </div>
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>약정 · 운영 설정</h2>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>전달 1건이 청구 1건입니다. 단가와 월 한도는 기관과 약정한 값을 적고, 전달 명세의 집계에 그대로 쓰입니다.</p>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>시범운영 기간에는 청구하지 않습니다. 단가와 월 한도는 서면 합의 후 그 값을 적고, 전달 명세의 참고 집계에 그대로 쓰입니다.</p>
             <OrgTerms org={org} autoReplyAvailable={autoReplyEnabled()} />
           </div>
         </div>

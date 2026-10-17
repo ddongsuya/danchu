@@ -5,6 +5,7 @@ const fixture = vi.hoisted(() => ({
   session: null as unknown,
   expired: false,
   status: "sent",
+  selected: null as string | null,
   signedUrl: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ sessionOrNull: async () => fixture.session }));
@@ -14,6 +15,7 @@ vi.mock("@/lib/supabase", () => ({
       const query = {
         select: () => query,
         eq: () => query,
+        order: () => query,
         maybeSingle: async () => ({
           data:
             table === "rfq_files"
@@ -21,8 +23,10 @@ vi.mock("@/lib/supabase", () => ({
                   id: "file",
                   rfq_id: "request",
                   uploaded_at: "2026-01-01",
-                  storage_path: "private.pdf",
-                  file_name: "private.pdf",
+                  storage_path: "R-2026-0001/1760000000000-AcmeBio_protocol.pdf",
+                  file_name: "AcmeBio_protocol.pdf",
+                  mime_type: "application/pdf",
+                  size_bytes: 1024,
                 }
               : table === "rfq_requests"
                 ? {
@@ -30,6 +34,7 @@ vi.mock("@/lib/supabase", () => ({
                     user_id: "owner",
                     email: "owner@example.invalid",
                     confidentiality: fixture.confidentiality,
+                    selected_quote_id: fixture.selected,
                   }
                 : {
                     id: "invite",
@@ -45,6 +50,8 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 import { GET } from "@/app/api/files/[id]/route";
+const upstream = vi.fn();
+vi.stubGlobal("fetch", upstream);
 const fetchFile = () =>
   GET(
     new Request(
@@ -58,11 +65,13 @@ beforeEach(() => {
   fixture.session = null;
   fixture.expired = false;
   fixture.status = "sent";
+  fixture.selected = null;
   fixture.signedUrl
     .mockReset()
     .mockResolvedValue({
-      data: { signedUrl: "https://storage.example.invalid/file" },
+      data: { signedUrl: "https://storage.example.invalid/object/sign/rfq-files/R-2026-0001/1760000000000-AcmeBio_protocol.pdf?token=t" },
     });
+  upstream.mockReset().mockImplementation(async () => new Response("%PDF-1.4", { status: 200 }));
 });
 describe("첨부 API 정보 공개 경계", () => {
   it.each(["CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"])(
@@ -76,7 +85,7 @@ describe("첨부 API 정보 공개 경계", () => {
   it("체결 확인한 초대만 서명 다운로드 발급", async () => {
     fixture.confidentiality = "자체 CDA 사용";
     fixture.signed = "2026-01-01";
-    expect((await fetchFile()).status).toBe(302);
+    expect((await fetchFile()).status).toBe(200);
     expect(fixture.signedUrl).toHaveBeenCalledTimes(1);
   });
   it("만료 토큰은 체결 후에도 접근 불가", async () => {
@@ -101,5 +110,30 @@ describe("첨부 API 정보 공개 경계", () => {
     };
     fixture.confidentiality = "자체 CDA 사용";
     expect((await fetchFile()).status).toBe(302);
+  });
+  it.each([
+    ["CDA 체결 확인", "CDA 필요 (단추 표준 CDA)", "2026-01-01"],
+    ["일반 요청", "일반", null],
+  ])("%s 후에도 선정 전 기관에는 원본 파일명이 응답 어디에도 없다", async (_label, confid, signed) => {
+    fixture.confidentiality = confid;
+    fixture.signed = signed;
+    const res = await fetchFile();
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+    const headers = JSON.stringify([...res.headers.entries()]);
+    expect(headers).not.toContain("AcmeBio");
+    expect(headers).not.toContain("1760000000000");
+    expect(res.headers.get("content-disposition")).toContain(encodeURIComponent("첨부 1.pdf"));
+    expect(await res.text()).toBe("%PDF-1.4");
+    // 서명 URL 은 서버 안에서만 쓰고 download 이름에도 원본을 넣지 않는다
+    expect(fixture.signedUrl).toHaveBeenCalledWith("R-2026-0001/1760000000000-AcmeBio_protocol.pdf", 60);
+  });
+  it("선정된 기관에는 원본 파일명으로 내려준다", async () => {
+    fixture.confidentiality = "CDA 필요 (단추 표준 CDA)";
+    fixture.signed = "2026-01-01";
+    fixture.selected = "invite"; // 이 기관의 견적(mock 의 cro_quotes 행 id)이 선정됨
+    expect((await fetchFile()).status).toBe(302);
+    expect(fixture.signedUrl).toHaveBeenCalledWith("R-2026-0001/1760000000000-AcmeBio_protocol.pdf", 300, { download: "AcmeBio_protocol.pdf" });
+    expect(upstream).not.toHaveBeenCalled();
   });
 });

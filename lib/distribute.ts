@@ -17,10 +17,8 @@ export type DistributeResult = {
   skipped: string[];
   /** 월 전달 한도에 걸려 제외한 기관 */
   capped: string[];
-  /** DB 트리거가 막은 이유. request_not_open: 비교표 공개·선정 이후 / invitation_limit_reached: 요청 기관 수 한도 */
+  /** DB 트리거가 막은 이유. request_not_open: 회신 마감(compared_at)·선정 이후 / invitation_limit_reached: 요청 기관 수 한도 */
   blocked?: "request_not_open" | "invitation_limit_reached";
-  /** 운영자 관리 기관에 보내면서 비교표 자동 공개를 껐다 */
-  autoPublishOff?: boolean;
 };
 
 type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; monthly_cap?: number | null; managed?: boolean };
@@ -96,7 +94,6 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   const capacity = remainingInvites(rfq.cro_count, (existing ?? []).filter((e) => countsTowardLimit(e.status)).length);
   const already = new Set((existing ?? []).map((e) => e.cro_org_id));
   const expiresAt = inviteExpiresAt(replyBy);
-  let managedSent = false;
 
   for (const o of orgs) {
     if (already.has(o.id)) continue;
@@ -132,7 +129,6 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     usedThisMonth.set(o.id, (usedThisMonth.get(o.id) ?? 0) + 1);
     res.sent++;
     res.names.push(o.name);
-    if (o.managed) managedSent = true;
 
     const mailTo = await notificationRecipients(to);
     // 메일 실패가 다음 기관의 초대 생성을 막으면 안 된다. 실패하면 mailed_at 이 비어 남고 cron 이 다시 보낸다
@@ -150,13 +146,8 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   if (res.sent) {
     const patch: TablesUpdate<"rfq_requests"> = { reply_by: rfq.reply_by || replyBy };
     if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
-    // 운영자 관리 기관은 견적서 PDF 를 메일로 보내고 운영자가 기한 뒤에 옮겨 적는다. 자동 공개가 켜져 있으면 입력 전에 비교표가 열리고 회신이 닫힌다
-    if (managedSent && rfq.auto_publish !== false) {
-      patch.auto_publish = false;
-      res.autoPublishOff = true;
-    }
     await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
-    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}${res.autoPublishOff ? " · 운영자 관리 기관이 있어 비교표 자동 공개를 껐습니다" : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped, autoPublishOff: !!res.autoPublishOff });
+    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped });
     const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id);
     if (rfq.user_id) {
       await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 참여 CRO ${count ?? res.sent}곳에 배포했습니다`, body: `회신 기한 ${replyBy} · 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
@@ -185,8 +176,8 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "substance" | "categ
   const portal = portalPath.startsWith("/cro/") ? `${siteUrl()}${portalPath}` : "";
   const masked = needsCda(rfq.confidentiality);
   const guide = opts.managed
-    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 요청을 받았습니다.<br>위 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 비교표에 옮겨 적습니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달됩니다.<br>비교표는 의뢰자에게만 전달되며 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 앞으로 요청을 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
-    : `카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."} 비교표는 의뢰자에게만 전달되며 타사 견적은 열람할 수 없습니다.`;
+    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 요청을 받았습니다.<br>위 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시합니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선합니다. 메일로 보내 주신 견적서는 단추가 옮겨 정리한 때 비교표에 보입니다. 의뢰자는 기한 전에도 선정할 수 있으니 견적서는 되도록 일찍 보내 주십시오.<br>링크로 제출한 견적은 즉시 의뢰자 비교표에 보이며, 의뢰자는 회신 기한 전에도 기관을 선정할 수 있습니다. 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 요청을 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
+    : `카탈로그를 등록해 두셨다면 회신 초안이 채워진 채 열립니다. 확인 필요 표시가 붙은 항목만 보고 제출하시면 됩니다.<br>${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."}<br>제출한 견적은 즉시 의뢰자 비교표에 보이고, 회신이 마감되기 전까지 회신 기한 안에서 수정할 수 있습니다. 의뢰자가 기한 전에 기관을 선정하거나 운영자가 회신을 마감하면 회신이 닫힙니다. 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
   return mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청서가 도착했습니다 · ${esc(rfq.rfq_no)}</h2>
       <p><b>${esc(maskedClientLabel(rfq.org_type))}</b> · 시험물질 ${esc(rfq.substance)}<br>
@@ -266,7 +257,7 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
 
 /**
  * 새로 승인된 기관에 아직 열려 있는 요청서를 배포한다.
- * - 대상: 이미 배포되어 회신을 받는 중이고(비교표 공개 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
+ * - 대상: 이미 배포되어 회신을 받는 중이고(회신 마감 전), 회신 기한이 지나지 않았고, 분야가 맞는 요청
  *   아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 포함한다 (해당 분야 기관이 없어 기다리던 요청)
  * - 회신 기한은 먼저 배포된 기관과 같게 한다 (같은 조건에서 경쟁)
  * - 이미 초대한 요청은 건너뛴다

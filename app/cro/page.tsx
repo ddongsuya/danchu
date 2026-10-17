@@ -23,7 +23,9 @@ export default async function CroInbox() {
   }
   // 빠진 배포는 승인·분야 변경 시점과 매일 크론(distributeOpenRfqs)이 채운다. 읽기 화면에서는 쓰지 않는다.
   const list: InviteWithQuote[] = dbReady() ? await listInvitesForOrg(org.id) : [];
-  const fresh = list.filter((i) => i.status === "sent" && new Date(i.expires_at).getTime() > Date.now()).length;
+  // 선정·회신 마감·종료된 요청은 신규로 세지 않는다 (InviteList 의 "종료"와 같은 규칙)
+  const closedStatuses = ["compared", "selected", "contracting", "closed", "cancelled"];
+  const fresh = list.filter((i) => i.status === "sent" && new Date(i.expires_at).getTime() > Date.now() && !closedStatuses.includes(i.rfq?.status ?? "")).length;
   return (
     <>
       <div className="ph">
@@ -36,7 +38,7 @@ export default async function CroInbox() {
         id: i.id,
         no: i.rfq_no,
         substance: i.rfq?.substance ?? "",
-        client: identityVisible({ awarded: !!i.quote && !!i.rfq?.selected_quote_id && i.rfq.selected_quote_id === i.quote.id, signedAt: i.cda_signed_at }) ? i.rfq?.company ?? "" : maskedClientLabel(i.rfq?.org_type),
+        client: identityVisible({ awarded: !!i.quote && !!i.rfq?.selected_quote_id && i.rfq.selected_quote_id === i.quote.id }) ? i.rfq?.company ?? "" : maskedClientLabel(i.rfq?.org_type),
         purpose: [i.rfq?.purpose, Array.isArray(i.rfq?.payload?.authority) ? (i.rfq!.payload.authority as string[]).join(" · ") : ""].filter(Boolean).join(" · "),
         tags: i.rfq?.categories ?? [],
         replyBy: i.reply_by,

@@ -40,12 +40,14 @@ export default async function Done({
           견적 회신 기한: <b>{defaultReplyBy(rfq)}</b>
         </p>
         <p>
-          기한 이후 회신이 있으면 비교표가 공개됩니다. 회신이 없으면 추가 진행을
-          확인합니다.
+          견적은 기관이 제출하는 대로 비교표에서 바로 볼 수 있고, 회신 기한까지는
+          기관이 수정할 수 있습니다. 기한이 지나면 회신을 마감하고 요약을 보내 드리며,
+          회신이 없으면 추가 진행을 확인합니다.
         </p>
         {needsCda(rfq.confidentiality) && (
           <p className="fld__help">
-            회사명과 첨부는 기관별 CDA 체결 확인 후 공개합니다.
+            첨부는 기관별 CDA 체결 확인 후 공개하고, 회사명과 담당자 연락처는 선정한
+            기관에만 공개합니다.
           </p>
         )}
       </section>

@@ -40,7 +40,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     return NextResponse.json({ ok: true, message: "취소 처리했습니다." });
   }
   if (status === "reopen") {
-    const next = rfq.selected_quote_id ? "selected" : rfq.compared_at ? "compared" : rfq.distributed_at ? "distributed" : "received";
+    // 제출된 견적이 있으면 견적 도착으로 되돌린다 (기한 연장으로 다시 열 때와 같은 규칙, deadline/route.ts). 그래야 의뢰자 화면의 "견적 도착"에 다시 잡힌다
+    const { count: submitted } = rfq.selected_quote_id || rfq.compared_at ? { count: 0 } : await sb.from("cro_quotes").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id).eq("status", "submitted");
+    const next = rfq.selected_quote_id ? "selected" : rfq.compared_at ? "compared" : submitted ? "quoted" : rfq.distributed_at ? "distributed" : "received";
     await sb.from("rfq_requests").update({ status: next, closed_at: null }).eq("id", rfq.id);
     if (rfq.status === "cancelled") {
       // 취소 때 만료시킨 초대를 되살린다 (회신하지 않음 처리한 기관은 그대로 둔다)

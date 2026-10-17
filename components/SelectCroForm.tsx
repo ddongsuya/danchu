@@ -5,22 +5,29 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckDisc, CheckMark } from "@/components/app/ui";
 
+/**
+ * 선정 확인. caution 이 있으면(회신 기한 전이거나 아직 회신하지 않은 기관이 있으면) 기한·미회신 수·남은 회신 링크가 닫힌다는 사실을
+ * 보여 주고 따로 확인받는다 (lib/reply-window.ts selectionCaution).
+ */
 export function SelectCroForm({
-  no, quoteId, croName, summary, others, contact,
+  no, quoteId, croName, summary, others, contact, caution,
 }: {
   no: string; quoteId: string; croName: string;
   summary: [string, string][];
   others: { name: string; total: string }[];
   contact: string;
+  caution?: { early: boolean; pending: number; replyBy: string | null } | null;
 }) {
   const router = useRouter();
   const [agree, setAgree] = useState(false);
+  const [early, setEarly] = useState(false);
+  const ready = agree && (!caution || early);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
 
   const go = async () => {
-    if (!agree || busy) return;
+    if (!ready || busy) return;
     setBusy(true);
     setError("");
     try {
@@ -78,17 +85,36 @@ export function SelectCroForm({
         </div>
       )}
 
+      {caution && (
+        <div className="note note--warn" role="note" style={{ flexDirection: "column", gap: 6 }}>
+          <b style={{ fontWeight: 600 }}>{caution.early ? "아직 회신 기한 전입니다" : "아직 회신하지 않은 기관이 있습니다"}</b>
+          <span>
+            회신 기한 {caution.replyBy ?? "미정"} · 아직 회신하지 않은 기관 {caution.pending}곳.
+            {" "}지금 선정하면 남은 회신 링크가 닫혀 더는 견적을 받지 않고, 이미 제출한 기관도 견적을 고칠 수 없습니다.
+          </span>
+        </div>
+      )}
+
+      {caution && (
+        <button type="button" className="chkcard" aria-pressed={early} onClick={() => setEarly(!early)}>
+          <span className="chkcard__box">
+            <CheckMark />
+          </span>
+          <span>{caution.early ? "회신 기한 전에 선정하며, " : ""}선정하면 남은 회신 링크가 닫힌다는 것을 확인했습니다.</span>
+        </button>
+      )}
+
       <button type="button" className="chkcard" aria-pressed={agree} onClick={() => setAgree(!agree)}>
         <span className="chkcard__box">
           <CheckMark />
         </span>
-        <span>견적서 원본(PDF) 견적서를 확인했고, 선택한 CRO에 회사명과 담당자 연락처가 공개되는 것에 동의합니다.</span>
+        <span>견적서 원본(PDF)을 확인했고, 선택한 CRO에 회사명과 담당자 연락처(성명·이메일·휴대전화)를 계약 협의 목적으로 제공하는 것에 동의합니다.</span>
       </button>
 
       {error && <p className="note note--err" role="alert">{error}</p>}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <button type="button" className="b1 blg" style={{ flex: 1 }} disabled={!agree || busy} onClick={go}>
+        <button type="button" className="b1 blg" style={{ flex: 1 }} disabled={!ready || busy} onClick={go}>
           {busy ? "저장 중…" : `${croName}으로 진행`}
         </button>
         <Link href={`/app/r/${no}/compare`} className="b2" style={{ height: 56 }}>비교표로</Link>

@@ -28,7 +28,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   // 운영자가 기관 대신 처리한 것은 운영 기록에도 남긴다 (기관의 의사를 운영자가 옮긴 것)
   if (s && byOperator) await audit({ userId: s.userId, email: s.email }, "invite.decline_proxy", { type: "rfq_invite", id: got.inviteId, label: `${got.rfq.no} · ${got.croName}` }, { after: { status: "declined" }, note: reason || undefined });
   await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신하지 않음 · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
-  // 의뢰자에게는 기관명 없이 숫자만. 선정 전 기관 정보는 비교표에서만 본다
+  // 알림에는 기관명 없이 숫자만. 어느 기관이 회신하지 않는지는 요청 화면의 회신 현황에서 본다
   const { data: rq } = await sb.from("rfq_requests").select("user_id, status").eq("id", got.rfqId).maybeSingle();
   if (rq?.user_id && !["closed", "cancelled"].includes(rq.status)) {
     const { data: all } = await sb.from("rfq_invites").select("status").eq("rfq_id", got.rfqId).neq("status", "expired");

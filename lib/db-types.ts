@@ -45,6 +45,7 @@ export type Database = {
           ip: string | null;
           user_id: string | null;
           distributed_at: string | null;
+          /** 회신 마감 시각 (0019). 비교표 공개 여부가 아니다. lib/reply-window.ts */
           compared_at: string | null;
           selected_quote_id: string | null;
           closed_at: string | null;
@@ -55,12 +56,10 @@ export type Database = {
           outcome_at: string | null;
           anonymized_at: string | null;
           auto_distribute: boolean;
-          /** 회신 기한 뒤 비교표 자동 공개. 끄면 운영자가 직접 공개한다 (0019) */
-          auto_publish: boolean;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "auto_publish"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];

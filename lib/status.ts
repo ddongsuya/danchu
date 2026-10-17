@@ -5,8 +5,9 @@ export type RfqStatus = "received" | "distributed" | "quoted" | "compared" | "se
 export const STAGES: { key: RfqStatus; label: string; pct: number; desc: string }[] = [
   { key: "received", label: "접수", pct: 8, desc: "요청서를 정리하고 있습니다" },
   { key: "distributed", label: "배포", pct: 25, desc: "참여 CRO에 요청서를 전달했습니다" },
-  { key: "quoted", label: "견적 도착", pct: 45, desc: "CRO 회신이 들어오고 있습니다" },
-  { key: "compared", label: "비교표 발송", pct: 60, desc: "도착한 견적을 비교할 수 있습니다" },
+  { key: "quoted", label: "견적 도착", pct: 45, desc: "도착한 견적은 비교표에서 바로 볼 수 있습니다. 회신 기한까지는 수정될 수 있습니다" },
+  // compared: 회신 마감 (compared_at, lib/reply-window.ts). 예전 "비교표 발송" 단계. 기한 전에 선정하면 이 단계를 거치지 않는다
+  { key: "compared", label: "회신 마감", pct: 60, desc: "회신이 마감되어 견적이 더 바뀌지 않습니다. 비교표에서 선정해 주세요" },
   { key: "selected", label: "CRO 선택", pct: 75, desc: "선택한 CRO에 연락처가 전달되었습니다" },
   { key: "contracting", label: "계약 진행", pct: 88, desc: "CRO와 직접 계약을 진행합니다" },
   { key: "closed", label: "종료", pct: 100, desc: "계약이 체결되어 종료되었습니다" },

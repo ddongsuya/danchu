@@ -6,11 +6,12 @@ import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib
 import { loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
-import { todaySeoul, won } from "@/lib/format";
+import { md, todaySeoul, won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
 import { entrySourceFor, loadOptsFor } from "@/lib/concierge";
 import { audit } from "@/lib/audit";
+import { beforeDeadline } from "@/lib/reply-window";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,11 +37,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
   return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed });
 }
 
+const CLOSED_MSG = "의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다.";
+
 /** 저장·제출이 막힌 상태면 그 이유 */
 function blocked(got: Loaded): string {
   if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
   if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
-  if (got.closed) return "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.";
+  if (got.closed) return CLOSED_MSG;
   if (got.declined) return "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.";
   return "";
 }
@@ -174,7 +177,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
   const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
   // 토큰 제출은 행위자가 없다. 금전 구속력이 있는 제출이라 누가 보냈는지 IP·브라우저라도 남긴다
   if (submit && r.ok && !r.skipped && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
-  if (!r.ok) return { error: "저장에 실패했습니다.", status: 500 };
+  // 화면을 연 뒤에 의뢰자가 선정했거나 회신이 마감되면 save_quote 가 closed 로 거절한다 (0019)
+  if (!r.ok) return r.code === "closed" ? { error: CLOSED_MSG, status: 409 } : { error: "저장에 실패했습니다.", status: 500 };
   if (r.skipped) return { ok: true, skipped: true };
 
   if (submit && got.croOrgId && source === "cro") {
@@ -193,14 +197,19 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
     if (source === "operator" && actor) {
       await audit({ userId: actor.userId, email: actor.email }, "quote.proxy", { type: "cro_quote", id: r.quote_id, label: `${got.rfq.no} · ${got.croName}` }, { after: { entry_source: source, total_amount: total, total_weeks: weeks, pdf_name: pdf?.name ?? got.draft?.pdfName ?? null }, note: first ? "대리 입력" : "대리 입력 수정" });
     }
-    const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
+    const { data: rq } = await sb.from("rfq_requests").select("user_id, email, reply_by").eq("id", got.rfqId).maybeSingle();
     if (rq?.user_id) {
-      // 메일은 첫 견적이 왔을 때와 전원이 회신했을 때만. 그 사이 도착은 앱 알림으로 충분하다
-      const mailWorthy = first && (done === 1 || (count > 0 && done >= count));
+      // 견적은 제출 즉시 의뢰자 비교표에 기관명과 함께 보인다 (lib/reply-window.ts). 앱 알림은 견적마다,
+      // 메일은 이 요청의 첫 견적일 때만 보낸다. 나머지는 회신 마감 때 요약 메일 한 번 (lib/compare.ts closeReplies).
+      // save_quote 가 요청 행을 잠그고 세므로 동시에 두 기관이 내도 done === 1 은 한 번만 나온다
+      const mailWorthy = first && done === 1;
+      // 기한이 지난 뒤(운영자가 PDF 를 옮겨 적은 경우 등)에는 "기한까지 수정할 수 있다"고 쓰지 않는다
+      const until = !rq.reply_by ? "회신 기한까지는 기관이 견적을 수정할 수 있습니다." : beforeDeadline(rq.reply_by) ? `회신 기한(${md(rq.reply_by)})까지는 기관이 견적을 수정할 수 있습니다.` : "";
+      const lead = source === "operator" ? `단추 정리 · 기관 PDF 기준 견적이 ${first ? "도착했습니다" : "수정되었습니다"}. ` : "";
       await notifyUsers(
         [rq.user_id],
-        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done}/${count}곳 회신 · 비교표는 회신 기한 후 공개됩니다.${done >= count && count > 0 ? " 전달한 기관이 모두 회신해 곧 비교표가 열립니다." : ""}`, href: `/app/r/${got.rfq.no}` },
-        mailWorthy && rq.email ? { to: [rq.email] } : undefined,
+        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no} ${got.croName}` : `견적이 수정되었습니다 · ${got.rfq.no} ${got.croName}`, body: `${lead}${done}/${count}곳 회신 · 비교표에서 바로 확인할 수 있습니다.${until ? ` ${until}` : ""}`, href: `/app/r/${got.rfq.no}/compare` },
+        mailWorthy && rq.email ? { to: [rq.email], subject: `[단추] ${got.rfq.no} 첫 견적이 도착했습니다` } : undefined,
       );
     }
     await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });

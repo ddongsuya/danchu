@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo } from "@/lib/notify";
-import { publishCompare } from "@/lib/compare";
+import { closeReplies } from "@/lib/compare";
 import { distributeOpenRfqs, resendUnmailedInvites } from "@/lib/distribute";
 import { loadByInvite } from "@/lib/quote-load";
 import { todaySeoul } from "@/lib/format";
@@ -15,7 +15,8 @@ import { daysSince, reminderStage } from "@/lib/contract-reminder";
 import { inviteReplyTo } from "@/lib/distribute";
 import { contractFollowupMail, sendMail } from "@/lib/mail";
 import { notificationRecipients } from "@/lib/mail-preferences";
-import { autoPublishDue, needsContractReminder, replyPath } from "@/lib/concierge";
+import { needsContractReminder, replyPath } from "@/lib/concierge";
+import { closeRepliesDue, repliesClosed } from "@/lib/reply-window";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,7 +48,8 @@ function addDays(ymd: string, n: number): string {
  * 매일 09:00 KST 실행 (vercel.json crons).
  * 1) 미회신 기관에 D-2·당일 리마인더
  * 2) 자동 회신을 켠 기관의 완성된 초안을 기한 당일 예비 견적으로 제출
- * 3) 회신 기한이 지난 요청의 비교표 자동 공개 (제출 1건 이상). 요청별 auto_publish 를 끈 요청은 건너뛴다
+ * 3) 회신 기한이 지난 요청의 회신 마감 (제출 1건 이상): compared_at 을 채워 남은 회신을 닫고 의뢰자에게 요약을 한 번 보낸다.
+ *    비교표 공개 단계는 없다. 의뢰자는 첫 견적부터 비교표를 본다 (lib/reply-window.ts)
  */
 export async function GET(req: Request) {
   if (!authorized(req)) {
@@ -55,7 +57,7 @@ export async function GET(req: Request) {
     if (isProduction() && !(process.env.CRON_SECRET || "").trim()) {
       captureError(new Error("CRON_SECRET 미설정"), "cron:auth");
       // 이 경로는 인증 없이 열려 있으므로 알림은 하루 한 번만
-      if (!(await rateLimited("cron-secret-missing", "global", 1, 86400))) await notifyUsers(await adminUserIds(), { kind: "시스템", title: "예약 작업이 실행되지 않았습니다 · CRON_SECRET 미설정", body: "Vercel 환경변수에 CRON_SECRET 을 넣고 다시 배포해 주세요. 리마인더·비교표 자동 공개가 멈춰 있습니다.", href: "/admin" }, { to: adminEmails() }).catch(() => {});
+      if (!(await rateLimited("cron-secret-missing", "global", 1, 86400))) await notifyUsers(await adminUserIds(), { kind: "시스템", title: "예약 작업이 실행되지 않았습니다 · CRON_SECRET 미설정", body: "Vercel 환경변수에 CRON_SECRET 을 넣고 다시 배포해 주세요. 리마인더·회신 마감이 멈춰 있습니다.", href: "/admin" }, { to: adminEmails() }).catch(() => {});
       return NextResponse.json({ error: "CRON_SECRET 미설정" }, { status: 500 });
     }
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -86,8 +88,9 @@ export async function GET(req: Request) {
     for (const inv of invites ?? []) {
       const { data: done } = await sb.from("invite_reminders").select("invite_id").eq("invite_id", inv.id).eq("kind", kind).maybeSingle();
       if (done) continue;
-      const { data: rfq } = await sb.from("rfq_requests").select("substance, status").eq("id", inv.rfq_id).maybeSingle();
-      if (!rfq || ["selected", "contracting", "closed", "cancelled"].includes(rfq.status)) continue;
+      const { data: rfq } = await sb.from("rfq_requests").select("substance, status, compared_at").eq("id", inv.rfq_id).maybeSingle();
+      // 운영자가 기한 전에 회신을 마감했거나(compared_at) 선정·종료된 요청에는 "회신해 주세요"를 보내지 않는다
+      if (!rfq || repliesClosed(rfq)) continue;
       let ids: string[] = [];
       let mails: string[] = [inv.cro_email];
       let managed = false;
@@ -143,9 +146,11 @@ export async function GET(req: Request) {
         const saved = await saveQuote(inv.id, { total_amount: total || null, total_weeks: weeks || null, vat: "별도", valid_until: valid, auto: true, start_date: d.common.startDate || null, pay_terms: null, substance_qty: null, report_lang: null, includes: d.common.includes, note: d.note }, items, true, null);
         if (!saved.ok) throw new Error(`save_quote ${saved.code}`);
         const q = { id: saved.quote_id };
-        const { data: r } = await sb.from("rfq_requests").select("user_id").eq("id", inv.rfq_id).maybeSingle();
+        const { data: r } = await sb.from("rfq_requests").select("user_id, email").eq("id", inv.rfq_id).maybeSingle();
         await logEvent(inv.rfq_id, "quote_submitted", `${inv.cro_name} 예비 견적 자동 제출`, `총 ${won(total)} · ${weeks}주`, null, { quoteId: q.id, auto: true });
-        if (r?.user_id) await notifyUsers([r.user_id], { kind: "견적", title: `예비 견적이 도착했습니다 · ${inv.rfq_no}`, body: `${inv.cro_name} · 카탈로그 기준 자동 회신`, href: `/app/r/${inv.rfq_no}` });
+        // 견적 라우트와 같은 규칙: 앱 알림은 견적마다, 메일은 이 요청의 첫 견적일 때만 (app/api/quote/[token]/route.ts)
+        const mailWorthy = (saved.first ?? true) && saved.submitted_invites === 1;
+        if (r?.user_id) await notifyUsers([r.user_id], { kind: "견적", title: `예비 견적이 도착했습니다 · ${inv.rfq_no}`, body: `${inv.cro_name} · 카탈로그 기준 자동 회신 · 비교표에서 바로 확인할 수 있습니다.`, href: `/app/r/${inv.rfq_no}/compare` }, mailWorthy && r.email ? { to: [r.email], subject: `[단추] ${inv.rfq_no} 첫 견적이 도착했습니다` } : undefined);
         out.autoSubmitted++;
       } catch (e) {
         captureError(e, "cron:auto-reply", { invite: inv.id, rfq: inv.rfq_no });
@@ -155,28 +160,19 @@ export async function GET(req: Request) {
   }
   });
 
-  // 3) 기한 후 비교표 자동 공개
-  await step("compare", out.errors, async () => {
+  // 3) 기한 후 회신 마감 + 의뢰자 요약 (한 번만, lib/compare.ts closeReplies)
+  await step("close-replies", out.errors, async () => {
   const { data: rfqs } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).is("compared_at", null).lt("reply_by", today);
   for (const rfq of rfqs ?? []) {
-    if (!autoPublishDue(rfq, today)) {
-      // 운영자가 자동 공개를 끈 요청: 공개하지 않고(늦은 회신도 닫지 않는다) 기한이 지났다고 기한마다 한 번 알린다
-      // 운영자가 기한을 늘렸다가 그 기한도 지나면 다시 알려야 하므로 지난 기한(meta.replyBy)까지 같을 때만 건너뛴다
-      if (rfq.auto_publish !== false) continue;
-      const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "publish_pending").contains("meta", { replyBy: rfq.reply_by }).limit(1);
-      if (!(ev ?? []).length) {
-        const { count } = await sb.from("cro_quotes").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id).eq("status", "submitted");
-        await logEvent(rfq.id, "publish_pending", "기한 경과 · 비교표 수동 공개 대기", `회신 ${count ?? 0}건 · 자동 공개 꺼짐 · 기한 ${rfq.reply_by}`, null, { replyBy: rfq.reply_by });
-        await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 비교표 수동 공개 대기`, body: `회신 ${count ?? 0}건. 자동 공개를 꺼 둔 요청입니다. 기관 PDF를 다 입력했으면 요청 화면에서 비교표를 공개해 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-      }
-      continue;
-    }
-    const r = await publishCompare(rfq, null, true);
+    if (!closeRepliesDue(rfq, today)) continue;
+    const r = await closeReplies(rfq, null, true);
     if (r.ok) {
       out.compared++;
-      await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 비교표 자동 공개 · ${r.count}건`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-    } else {
-      // 회신이 하나도 없으면 운영자에게 재배포 판단을 넘긴다 (하루 한 번만)
+      // 미회신 기관 이름을 적는다. 운영자 관리 기관이 기한 당일 늦게 PDF 를 보냈다면 기한을 늘려 다시 연 뒤 옮겨 적어야 한다
+      const names = r.pendingNames?.length ? `미회신: ${r.pendingNames.join(", ")}. 견적서 PDF가 메일로 와 있다면 기한을 늘려 다시 연 뒤 옮겨 적어 주세요.` : undefined;
+      await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 회신 마감 · 견적 ${r.count}건${r.pending ? ` · 미회신 ${r.pending}곳` : ""}`, body: names, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+    } else if (!r.count) {
+      // 회신이 하나도 없으면 마감하지 않고(늦은 회신을 받을 수 있게) 운영자에게 재배포 판단을 넘긴다 (한 번만)
       const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "no_reply").maybeSingle();
       if (!ev) {
         await logEvent(rfq.id, "no_reply", "기한 경과 · 회신 없음", "재배포 또는 기한 연장 판단 필요", null);
@@ -188,7 +184,7 @@ export async function GET(req: Request) {
   }
   });
 
-  // 4) 비교표 공개 14일 뒤에도 선정도 마무리도 없는 요청: 의뢰자에게 한 번 묻는다
+  // 4) 회신 마감 14일 뒤에도 선정도 마무리도 없는 요청: 의뢰자에게 한 번 묻는다
   //    선정 버튼을 누르지 않은 요청이 어디로 갔는지 알아야 전달 명세와 선정률이 맞는다
   await step("outcome-ask", out.errors, async () => {
   const asked = new Date(Date.now() - 14 * 864e5).toISOString();
@@ -196,8 +192,8 @@ export async function GET(req: Request) {
   for (const rfq of idle ?? []) {
     const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "outcome_asked").maybeSingle();
     if (ev || !rfq.user_id) continue;
-    await notifyUsers([rfq.user_id], { kind: "비교", title: `${rfq.rfq_no} 기관을 정하셨나요?`, body: `${rfq.substance} 비교표가 공개된 지 2주가 지났습니다. 비교표에서 기관을 선정하거나, 다른 경로로 진행·보류하신 경우 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` });
-    await logEvent(rfq.id, "outcome_asked", "선정 여부 확인 요청", "비교표 공개 14일 경과", null);
+    await notifyUsers([rfq.user_id], { kind: "비교", title: `${rfq.rfq_no} 기관을 정하셨나요?`, body: `${rfq.substance} 회신이 마감된 지 2주가 지났습니다. 비교표에서 기관을 선정하거나, 다른 경로로 진행·보류하신 경우 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` });
+    await logEvent(rfq.id, "outcome_asked", "선정 여부 확인 요청", "회신 마감 14일 경과", null);
     out.outcomeAsked++;
   }
   });

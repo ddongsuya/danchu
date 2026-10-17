@@ -5,12 +5,16 @@ import { validateRequired } from "@/lib/rfq-schema";
 describe("선정 전 익명: 회사명·연락처 공개 조건", () => {
   it("일반 요청도 선정 전에는 회사명을 가린다", () => {
     expect(needsCda("일반")).toBe(false);
-    expect(identityVisible({ awarded: false, signedAt: null })).toBe(false);
+    expect(identityVisible({ awarded: false })).toBe(false);
     expect(maskedClientLabel("바이오벤처")).toBe("바이오벤처 (선정 시 공개)");
     expect(maskedClientLabel(null)).toBe("의뢰기관 (선정 시 공개)");
   });
-  it("선정되면 공개된다", () => expect(identityVisible({ awarded: true, signedAt: null })).toBe(true));
-  it("CDA 체결이 확인되면 선정 전에도 공개된다", () => expect(identityVisible({ awarded: false, signedAt: "2026-10-01T00:00:00Z" })).toBe(true));
+  it("선정되면 공개된다", () => expect(identityVisible({ awarded: true })).toBe(true));
+  it("CDA 체결이 확인돼도 선정 전에는 회사명을 가린다 (첨부만 열린다)", () => {
+    const signedAt = "2026-10-01T00:00:00Z";
+    expect(identityVisible({ awarded: false })).toBe(false);
+    expect(confidentialAccess("CDA 필요 (단추 표준 CDA)", signedAt)).toBe(true);
+  });
   it("첨부 공개(confidentialAccess)는 기밀 등급을 따르고 회사명 공개와 독립이다", () => {
     expect(confidentialAccess("일반")).toBe(true);
     expect(confidentialAccess("CDA 필요 (단추 표준 CDA)", null)).toBe(false);
@@ -85,5 +89,23 @@ describe("사업자등록번호 정규화", () => {
     expect(normalizeBusinessNo(" 123 45 67890 ")).toBe("1234567890");
     expect(normalizeBusinessNo("")).toBeNull();
     expect(normalizeBusinessNo(null)).toBeNull();
+  });
+});
+
+describe("기관 요청 화면: CDA 체결은 첨부만 연다", () => {
+  it("CDA 체결 확인된 미선정 기관에는 회사명과 원본 파일명을 가린다", async () => {
+    const { rfqViewOf } = await import("@/lib/quote-load");
+    type Args = Parameters<typeof rfqViewOf>;
+    const r = { rfq_no: "R-1", substance: "X", company: "㈜바이오벤처", org_type: "바이오벤처", confidentiality: "CDA 필요 (단추 표준 CDA)", cro_count: "3곳", payload: {} } as unknown as Args[0];
+    const inv = { reply_by: "2099-01-01", cda_signed_at: "2026-10-01T00:00:00Z" } as unknown as Args[1];
+    const files = [{ id: "f1", file_name: "㈜바이오벤처_시험계획서.pdf", size_bytes: 2 * 1024 * 1024 }];
+    const view = rfqViewOf(r, inv, files, false);
+    expect(view.masked).toBe(false);
+    expect(view.identityMasked).toBe(true);
+    expect(view.client).toBe("바이오벤처 (선정 시 공개)");
+    expect(view.files).toEqual([{ id: "f1", name: "첨부 1 (PDF, 2.0MB)", size: files[0].size_bytes }]);
+    const picked = rfqViewOf(r, inv, files, true);
+    expect(picked.client).toBe("㈜바이오벤처");
+    expect(picked.files[0].name).toBe("㈜바이오벤처_시험계획서.pdf");
   });
 });

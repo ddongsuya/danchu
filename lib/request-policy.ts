@@ -1,9 +1,10 @@
 /**
  * 요청 정보 공개와 배포 정책. 화면 문구가 아니라 여기의 함수가 접근을 정한다.
  *
- * - 회사명·담당자 연락처: 모든 요청에서 선정(또는 해당 기관의 CDA 체결 확인) 전까지 기관에 보이지 않는다.
- *   기관이 선정 전에 의뢰자에게 직접 연락할 길을 없애, 견적 비교와 선정이 단추 안에서 끝나게 하기 위한 장치다.
- * - 첨부: '일반' 요청은 초대받은 기관에 공개, CDA 요청은 체결 확인 후 공개 (confidentialAccess).
+ * - 회사명·담당자 연락처: 모든 요청에서 의뢰자가 그 기관을 선정할 때까지 기관에 보이지 않는다 (identityVisible).
+ *   CDA 체결 확인도 신원을 열지 않는다 (약관 제4조2항·제9조2항). 기관이 선정 전에 의뢰자에게 직접 연락할 길을 없애,
+ *   견적 비교와 선정이 단추 안에서 끝나게 하기 위한 장치다. 첨부 파일명도 회사명이 들어 있을 수 있어 선정 전에는 가린다.
+ * - 첨부: '일반' 요청은 초대받은 기관에 공개, CDA 요청은 체결 확인 후 공개 (confidentialAccess). 신원 공개와 독립이다.
  */
 
 /** Display copy is not an access policy. Unknown nonempty legacy values fail closed. */
@@ -16,9 +17,9 @@ export function confidentialAccess(value: unknown, signedAt?: string | null): bo
   return !needsCda(value) || !!signedAt;
 }
 
-/** 회사명·연락처 공개 여부: 이 기관이 선정됐거나 CDA 체결이 확인됨. 기밀 등급과 무관하게 선정 전에는 비공개 */
-export function identityVisible(opts: { awarded: boolean; signedAt?: string | null }): boolean {
-  return opts.awarded || !!opts.signedAt;
+/** 회사명·연락처·원본 첨부 파일명 공개 여부: 이 기관이 선정됐을 때만. 기밀 등급·CDA 체결과 무관하게 선정 전에는 비공개 */
+export function identityVisible(opts: { awarded: boolean }): boolean {
+  return opts.awarded;
 }
 
 /**

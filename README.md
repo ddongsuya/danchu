@@ -6,7 +6,8 @@ Next.js(App Router) + Supabase(DB·Auth·Storage) + Resend · Vercel 배포 · �
 
 ```
 의뢰자  가입(/signup) → /app/new 접수 ─→ [운영자 /admin 배포] ─→ CRO /q/{token} 또는 /cro 회신
-        ─→ [운영자 비교표 공개] ─→ 의뢰자 /app 비교표·CRO 선택 ─→ CRO /cro/awards 연락처·계약 보고 ─→ [운영자 종료]
+        ─→ 의뢰자 /app 비교표(제출 즉시 표시, 기한 전 선정 가능)·CRO 선택 ─→ CRO /cro/awards 연락처·계약 보고 ─→ [운영자 종료]
+        (기한 다음 날 cron 또는 운영자가 회신 마감 = compared_at, lib/reply-window.ts)
 ```
 
 상태: `received → distributed → quoted → compared → selected → contracting → closed` (`cancelled`)
@@ -20,7 +21,7 @@ Next.js(App Router) + Supabase(DB·Auth·Storage) + Resend · Vercel 배포 · �
 | 의뢰자 | `/app` `/app/new` `/app/r/[no]` `/app/r/[no]/compare` `/app/r/[no]/q/[quoteId]` `/app/notifications` `/app/profile` | 내 요청·진행 타임라인·비교표·CRO 선택·알림 |
 | CRO | `/cro` `/cro/r/[id]` `/cro/r/[id]/reply` `/cro/quotes` `/cro/awards` `/cro/org` | 받은 요청·회신·제출 목록·수주(연락처·계약 보고)·기관 정보 |
 | CRO 토큰 | `/q/[token]` `/q/[token]/reply` | 로그인 없이 배포 메일 링크로 회신 |
-| 운영자 | `/admin` `/admin/r/[no]` `/admin/cros` `/admin/awards` `/admin/users` | 접수 현황, 배포, 비교표 공개, 종료·취소, CRO 승인, 역할 관리 |
+| 운영자 | `/admin` `/admin/r/[no]` `/admin/cros` `/admin/awards` `/admin/users` | 접수 현황, 배포, 회신 마감·기한 연장, 종료·취소, CRO 승인, 역할 관리 |
 
 `/app` `/cro` `/admin`은 로그인 필수([proxy.ts](proxy.ts)). 역할이 다르면 각자의 홈으로 보낸다. 운영자는 모든 영역을 볼 수 있다.
 
@@ -71,7 +72,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | 항목 | 어떻게 |
 |---|---|
 | 오류 모니터링 | `SENTRY_DSN`·`NEXT_PUBLIC_SENTRY_DSN`을 넣으면 서버·브라우저 오류가 Sentry로 간다(`instrumentation.ts`, `lib/observe.ts`). 없으면 콘솔 로그만 남고 `/admin`에 경고가 뜬다 |
-| 예약 작업 | `/api/cron/daily` 매일 09:00 KST(`vercel.json`). 단계(보충 배포·리마인더·자동 회신·비교표 공개·결과 문의)마다 오류를 격리하고, 실패한 단계가 있으면 운영자에게 앱 알림+메일을 보낸다. `CRON_SECRET`이 비어 있으면 500과 함께 운영자에게 알린다 |
+| 예약 작업 | `/api/cron/daily` 매일 09:00 KST(`vercel.json`). 단계(보충 배포·리마인더·자동 회신·회신 마감·결과 문의)마다 오류를 격리하고, 실패한 단계가 있으면 운영자에게 앱 알림+메일을 보낸다. `CRON_SECRET`이 비어 있으면 500과 함께 운영자에게 알린다 |
 | 메일 | Resend. 전송 예외는 한 번 재시도하고 실패해도 호출부를 끊지 않는다. 운영에서 `RESEND_FROM`이 비면 Resend 기본 발신자로만 나가 외부에 배달되지 않으므로 도메인 인증(SPF·DKIM·DMARC) 후 반드시 설정한다 |
 | 첨부 한도 | 버킷 수준에서 20MB·허용 형식만 받는다(`0010`). 서버 검사는 메타데이터만 보므로 버킷 한도가 실제 방어선이다 |
 | 백업 | Supabase Pro + PITR을 켠다. Storage 객체는 DB 백업에 포함되지 않으므로 `rfq-files`·`cro-files`를 주기적으로 외부에 복제한다. 출시 전 복구 리허설 1회 |
@@ -81,7 +82,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | 기관 내 역할 | `profiles.org_role` owner/member. 기관을 처음 만든 계정이 owner. owner 만 기관 정보 수정(`/api/cro/org`), 합류 승인·거절·내보내기(`/api/cro/org/members`). 내보내면 그 기관의 열린 회신 링크가 새로 발급된다(`rotate_org_invite_tokens`). 대표 변경은 운영자가 SQL 로 |
 | 익명화 | 선정 전 기관에는 회사명·연락처뿐 아니라 첨부 파일명도 "첨부 1 (PDF, 2.1MB)"로 보이고 다운로드 이름도 같다(`anonymousFileLabel`). 토큰 제출은 `cro_quotes.submitted_ip`·`submitted_ua` 를 남긴다 |
 | 운영 기록 | `/admin/audit`. 기관 승인·반려·중지·약정 변경, 역할·기관 연결, 계정 삭제, 청구 제외, 기한 변경을 `admin_audit`에 남긴다(`lib/audit.ts`) |
-| 자동 회신 | 출시 범위 밖. `DANCHU_AUTO_REPLY=1`일 때만 기관·운영자 화면에 토글이 보이고 cron 2단계가 돈다. 비교표가 공개되면 미제출 기관의 링크도 닫힌다(`lib/quote-load.ts` `closed`). 기관을 중지하면 열린 초대가 만료된다 |
+| 자동 회신 | 출시 범위 밖. `DANCHU_AUTO_REPLY=1`일 때만 기관·운영자 화면에 토글이 보이고 cron 2단계가 돈다. 회신이 마감되면(`compared_at`) 미제출 기관의 링크도 닫힌다(`lib/quote-load.ts` `closed`). 기관을 중지하면 열린 초대가 만료된다 |
 | 운영자 예외 처리 | 회신 0건으로 기한이 지난 요청: `/admin/r/[no]` 회신 현황의 "회신 기한 변경"(`POST …/deadline`)으로 늘린 뒤 재배포. 초대 한도는 살아 있는 초대만 센다(회신하지 않음·만료 제외, 0012 트리거). 수동 배포 때 "이후 자동 보충 안 함"을 켜면 cron·기관 승인이 그 요청에 기관을 더하지 않는다(`rfq_requests.auto_distribute`). 기관 단가·월 한도·분야·대표 연락처·자동 회신은 `/admin/cros/[id]` 약정 카드(`PATCH /api/admin/cros/[id]`) |
 | 회원 탈퇴·보존기간 | 프로필 → 회원 탈퇴(`/app/profile/delete`), 운영자는 `/admin/users`의 삭제. 둘 다 `lib/account.ts`가 진행 중 요청 취소 → 요청서 익명화(미선정 첨부 삭제) → `auth.admin.deleteUser` 순으로 처리한다. 운영자 계정과 선정 후 계약 진행 중인 의뢰자는 막힌다. cron 이 매일 접속 기록 90일·요청서 3년·읽은 알림 180일 기준으로 정리한다(`lib/retention.ts`, 개인정보처리방침 3항과 같은 값) |
 | 운영 계정 | 2개 이상 두고, `ADMIN_EMAIL`에 운영자 메일을 모두 넣는다 |
@@ -93,7 +94,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | `GET/PUT/POST /api/quote/[token]` | CRO 회신 조회·초안 저장·제출. `POST …/upload-url` PDF 서명 URL, `POST …/decline` 회신 안 함 |
 | `POST /api/rfq/[no]/select` | 의뢰자 CRO 선택 → `rfq_awards`, 양측 알림 |
 | `POST /api/awards/[id]/contract` | CRO 계약 체결 보고 |
-| `POST /api/admin/rfqs/[no]/distribute` · `/compare` · `/status` | 배포(초대·메일), 비교표 공개, 종료·취소·메모 |
+| `POST /api/admin/rfqs/[no]/distribute` · `/close-replies` · `/deadline` · `/status` | 배포(초대·메일), 회신 마감, 기한 변경(마감된 회신 다시 열기), 종료·취소·메모 |
 | `POST /api/admin/cros/[id]` · `/api/admin/users/[id]` | CRO 승인·반려·중지, 역할·기관 연결 |
 | `GET /api/files/[id]` · `/api/quotes/[id]/pdf` | 첨부·정본 PDF (권한 확인 후 서명 URL) |
 | `/api/auth/*` | signup, signup-cro, login, magic, forgot, reset, logout, me |
@@ -112,5 +113,5 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 
 ## 아직 없는 것
 - 푸시 알림(앱 내 알림·이메일은 동작). 웹 푸시는 설치 후 권한 흐름과 서버 키가 필요하다.
-- CDA 전자서명 흐름(현재는 메일로 요청). 마스킹 해제는 운영자가 기밀 등급을 바꾸는 방식.
+- CDA 전자서명 흐름(현재는 메일로 요청). 첨부 비공개 해제는 운영자가 기밀 등급을 바꾸는 방식(신원은 선정 시에만 공개).
 - 비교표 PDF 내보내기. 화면과 정본 PDF 링크로 대체.

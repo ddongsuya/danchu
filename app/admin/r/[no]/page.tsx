@@ -11,13 +11,13 @@ import { AdminActions } from "@/components/admin/AdminActions";
 import { DeadlineForm } from "@/components/admin/DeadlineForm";
 import { InviteActions } from "@/components/admin/InviteActions";
 import { RequestTerms } from "@/components/admin/RequestTerms";
-import { AutoPublishToggle } from "@/components/admin/AutoPublishToggle";
 import { ContractRecord } from "@/components/admin/ContractRecord";
 import { todaySeoul } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { quoteRowsFromPayload } from "@/lib/quote-items";
 import { addBusinessDays, nowSeoul } from "@/lib/dates";
 import { md, mdhm, won, ymd } from "@/lib/format";
+import { beforeDeadline, pendingInvites } from "@/lib/reply-window";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +35,8 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   const managedIds = new Set(orgs.filter((o) => o.managed).map((o) => o.id));
   const rows = quoteRowsFromPayload(p);
   const today = todaySeoul();
-  const canChangeDeadline = ["received", "distributed", "quoted"].includes(rfq.status) && !rfq.compared_at;
+  // 회신 마감(compared, compared_at) 뒤에도 선정 전이면 기한을 늘려 다시 열 수 있다 (deadline 라우트가 compared_at 을 비운다)
+  const canChangeDeadline = ["received", "distributed", "quoted", "compared"].includes(rfq.status) && !rfq.selected_quote_id;
   const done = rfq.status === "closed" || rfq.status === "cancelled";
 
   return (
@@ -79,7 +80,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
             <div className="sec-title" style={{ margin: "0 0 10px" }}>
               <h2>회신 현황 {submitted.length}/{d.invites.length}</h2>
               <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                {rfq.reply_by ? <span>{`기한 ${md(rfq.reply_by)}`}{rfq.reply_by < today ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>지남</span> : null}</span> : null}
+                {rfq.reply_by ? <span>{`기한 ${md(rfq.reply_by)}`}{rfq.compared_at ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>회신 마감 {mdhm(rfq.compared_at)}</span> : rfq.reply_by < today ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>지남</span> : null}</span> : null}
                 {canChangeDeadline && <DeadlineForm no={rfq.rfq_no} current={rfq.reply_by} min={today} />}
               </span>
             </div>
@@ -123,12 +124,13 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>진행 관리</h2>
             {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites} />}
             {!done && <div style={{ marginBottom: 12 }}><RequestTerms no={rfq.rfq_no} croCount={rfq.cro_count} confidentiality={rfq.confidentiality} /></div>}
-            {!done && !rfq.compared_at && <AutoPublishToggle no={rfq.rfq_no} on={rfq.auto_publish !== false} />}
             <AdminActions
               no={rfq.rfq_no}
               status={rfq.status}
               submitted={submitted.length}
-              compared={!!rfq.compared_at}
+              pending={pendingInvites(d.invites)}
+              early={beforeDeadline(rfq.reply_by)}
+              closed={!!rfq.compared_at}
               note={rfq.admin_note ?? ""}
               award={d.award ? { cro: d.award.cro_name, at: ymd(d.award.awarded_at), contract: d.award.contract_reported_at ? `${d.award.contract_date} · ${won(d.award.contract_amount ?? 0)}` : "" } : null}
             />

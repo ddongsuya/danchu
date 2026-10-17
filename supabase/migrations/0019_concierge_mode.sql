@@ -1,4 +1,4 @@
--- 단추(Danchu) 19차: 운영자 대행 모드 · 기존 고객 면제 제거
+-- 단추(Danchu) 19차: 운영자 대행 모드 · 실시간 비교 · 기존 고객 면제 제거
 -- 0018 실행 후 적용. 두 번 실행해도 안전합니다.
 --
 -- 배경
@@ -6,8 +6,11 @@
 --    운영자 관리 기관은 담당자 계정이 없으므로 메일 링크는 로그인이 필요 없는 /q/{token} 으로 보낸다 (코드에서 처리).
 -- 2) cro_quotes.entry_source: 견적을 입력한 주체. 'cro' 기관 / 'operator' 운영자 대리 입력.
 --    비교표 표기("단추 정리 · 기관 PDF 기준")와 카탈로그 학습 제외에 쓴다. 기준 문서는 기관 PDF 원본이다.
--- 3) rfq_requests.auto_publish: 회신 기한 뒤 비교표 자동 공개 여부. 운영자가 PDF 를 모으는 요청은 끄고 직접 공개한다.
---    끈 요청은 cron 이 공개하지 않으므로 늦게 온 회신도 닫히지 않는다.
+-- 3) 실시간 비교 (2026-10-17 결정): 비교표 공개 단계를 없앤다. 기관이 견적을 제출하면 바로 의뢰자 비교표에 기관명과 함께 보이고,
+--    의뢰자는 견적이 1건 이상이면 기한 전에도 선정할 수 있다 (select_quote 의 not_compared 검사 삭제).
+--    rfq_requests.compared_at 은 이제 "회신 마감 시각"이다. 기한 다음 날 cron(제출 1건 이상) 또는 운영자의 '회신 마감'이 채우고,
+--    채워지면 모든 기관의 회신이 닫힌다. 운영자가 기한을 늘리면 비워져 다시 열린다. 새 열은 없다.
+--    선정·마감된 요청에는 저장·제출이 들어가지 않도록 save_quote 가 요청 행을 먼저 잠그고 확인한다 (선정과 같은 잠금 순서).
 -- 4) rfq_awards.contract_status: 선정 뒤 계약 진행 상태.
 --    pending 대기 · negotiating 협의 중 · signed 체결 · not_signed 미체결.
 --    체결 보고(report_contract)가 signed 로 맞추고, signed 와 체결 보고 기록은 항상 함께 있다 (제약).
@@ -36,6 +39,7 @@ update public.cro_quotes set entry_source = 'operator'
 
 -- 회신 저장·제출: 0007 과 같고, 제출할 때 입력 주체(p_header.entry_source, 없으면 cro)를 같은 트랜잭션에서 남긴다.
 -- 따로 갱신하면 그 갱신이 실패했을 때 운영자가 옮겨 적은 견적이 의뢰자에게 기관 제출 견적으로 보인다. 초안 저장은 입력 주체를 바꾸지 않는다
+-- 선정됐거나 회신이 마감된 요청(compared_at)에는 초안·제출 모두 code 'closed' 로 거절한다 (위 배경 3)
 create or replace function public.save_quote(p_invite_id uuid, p_header jsonb, p_items jsonb, p_submit boolean, p_actor uuid)
 returns jsonb
 language plpgsql
@@ -43,12 +47,20 @@ security definer set search_path = public
 as $$
 declare
   inv public.rfq_invites%rowtype;
+  r public.rfq_requests%rowtype;
   v_quote uuid;
   v_prev_status text;
   v_total int;
   v_done int;
   v_source text := case when p_header->>'entry_source' = 'operator' then 'operator' else 'cro' end;
 begin
+  -- 요청 행을 먼저 잠근다. select_quote 도 요청 행부터 잠그므로, 의뢰자가 선정하는 순간 들어온 저장은 선정 뒤에 처리되어 아래에서 막힌다
+  select * into r from public.rfq_requests where id = (select rfq_id from public.rfq_invites where id = p_invite_id) for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  if r.status in ('selected', 'contracting', 'closed', 'cancelled') or r.compared_at is not null then
+    return jsonb_build_object('ok', false, 'code', 'closed');
+  end if;
+
   select * into inv from public.rfq_invites where id = p_invite_id for update;
   if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
 
@@ -122,9 +134,43 @@ $$;
 revoke execute on function public.save_quote(uuid, jsonb, jsonb, boolean, uuid) from public, anon, authenticated;
 
 -- ─────────────────────────────────────────────
--- 3) 비교표 자동 공개 스위치 (요청별)
+-- 3) 실시간 비교: 기한 전 선정 허용, compared_at = 회신 마감 시각
 -- ─────────────────────────────────────────────
-alter table public.rfq_requests add column if not exists auto_publish boolean not null default true;
+comment on column public.rfq_requests.compared_at is
+  '회신 마감 시각 (0019). 기한 다음 날 cron 또는 운영자 회신 마감이 채운다. 채워지면 모든 기관의 회신이 닫히고, 기한을 늘리면 비운다. 비교표 공개 여부가 아니다';
+
+-- 선정: 0009 와 같고, 비교표 공개(compared_at) 검사만 뺀다. 제출된 견적이 있으면 기한 전에도 선정할 수 있다
+create or replace function public.select_quote(p_rfq_id uuid, p_quote_id uuid, p_user uuid)
+returns jsonb
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  r public.rfq_requests%rowtype;
+  q public.cro_quotes%rowtype;
+  v_source text;
+  v_award uuid;
+begin
+  select * into r from public.rfq_requests where id = p_rfq_id for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  if r.selected_quote_id is not null then return jsonb_build_object('ok', false, 'code', 'already_selected'); end if;
+  if r.status in ('closed', 'cancelled') then return jsonb_build_object('ok', false, 'code', 'not_open'); end if;
+
+  select * into q from public.cro_quotes where id = p_quote_id and rfq_id = p_rfq_id and status = 'submitted';
+  if not found then return jsonb_build_object('ok', false, 'code', 'bad_quote'); end if;
+
+  select source into v_source from public.rfq_invites where id = q.invite_id;
+
+  insert into public.rfq_awards (rfq_id, quote_id, invite_id, cro_org_id, cro_name, selected_by, fee_basis_amount, invite_source)
+  values (r.id, q.id, q.invite_id, q.cro_org_id, q.cro_name, p_user, q.total_amount, v_source)
+  returning id into v_award;
+
+  update public.rfq_requests set status = 'selected', selected_quote_id = q.id where id = r.id;
+
+  return jsonb_build_object('ok', true, 'award_id', v_award, 'invite_id', q.invite_id, 'cro_org_id', q.cro_org_id, 'cro_name', q.cro_name);
+end;
+$$;
+revoke execute on function public.select_quote(uuid, uuid, uuid) from public, anon, authenticated;
 
 -- ─────────────────────────────────────────────
 -- 4) 계약 진행 상태

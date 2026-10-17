@@ -31,6 +31,15 @@ export function safeName(name: string): string {
   return (base || "file") + (ext ? `.${ext}` : "");
 }
 
+/**
+ * 의뢰자 첨부의 저장 객체 이름. 원본 파일명에 회사명이 들어 있을 수 있어 경로에는 이름을 넣지 않고 확장자만 남긴다
+ * (서명 URL 경로가 그대로 드러나도 선정 전 기관이 회사명을 알 수 없게)
+ */
+export function opaqueObjectName(name: string): string {
+  const m = /\.[a-z0-9]+$/.exec(safeName(name));
+  return `${crypto.randomUUID()}${m ? m[0] : ""}`;
+}
+
 /** 서버 전용: 비공개 버킷에 객체가 실제로 있는지 (서명 업로드가 끝났는지) */
 export async function storageHas(sb: { storage: { from: (b: string) => { list: (dir: string, o: { search: string; limit: number }) => Promise<{ data: { name: string }[] | null; error: unknown }> } } }, bucket: string, path: string): Promise<boolean> {
   const i = path.lastIndexOf("/");

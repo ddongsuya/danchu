@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  autoPublishDue,
   entrySourceFor,
   findDuplicateOrg,
   loadOptsFor,
@@ -140,20 +139,6 @@ describe("대리 입력", () => {
     expect(quoteKindLabel({ auto: false, entry_source: "cro" })).toBe("기관 제출 견적");
     expect(quoteKindLabel({ auto: false, entry_source: "operator" })).toBe("단추 정리 · 기관 PDF 기준");
     expect(quoteKindLabel({ auto: true, entry_source: "cro" })).toBe("기관 확인 전 예비 견적");
-  });
-});
-
-describe("비교표 자동 공개 스위치", () => {
-  const base = { auto_publish: true, compared_at: null, reply_by: "2026-10-10", status: "quoted" };
-  it("기한이 지난 열린 요청만 공개", () => {
-    expect(autoPublishDue(base, "2026-10-11")).toBe(true);
-    expect(autoPublishDue(base, "2026-10-10")).toBe(false);
-    expect(autoPublishDue({ ...base, compared_at: "2026-10-11T00:00:00Z" }, "2026-10-12")).toBe(false);
-    expect(autoPublishDue({ ...base, status: "selected" }, "2026-10-12")).toBe(false);
-    expect(autoPublishDue({ ...base, reply_by: null }, "2026-10-12")).toBe(false);
-  });
-  it("끈 요청은 기한이 지나도 공개하지 않는다", () => {
-    expect(autoPublishDue({ ...base, auto_publish: false }, "2026-10-20")).toBe(false);
   });
 });
 

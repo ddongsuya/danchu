@@ -4,7 +4,6 @@
  * - 운영자 관리 기관(managed): 운영자가 직접 등록한 기관. 담당자 계정이 없어 메일 링크는 로그인 없는 /q/{token} 으로 간다.
  * - 대리 입력(entry_source = operator): 운영자가 기관이 보낸 견적서 PDF 를 보고 회신 링크에서 숫자를 옮겨 적은 견적.
  *   기준 문서는 기관 PDF 원본이다. 기관 카탈로그 학습에는 쓰지 않는다.
- * - 비교표 자동 공개(auto_publish): 끄면 회신 기한이 지나도 cron 이 공개하지 않는다. 운영자가 직접 공개한다.
  * - 계약 진행 상태(contract_status): 체결 보고가 signed 를 만들고, 운영자는 협의 중·미체결을 기록한다.
  */
 import { CATS } from "./rfq-schema";
@@ -112,8 +111,8 @@ export function marksOpened(role: string | null | undefined): boolean {
 
 /**
  * 회신 링크를 여는 사람에 따른 불러오기 옵션 (lib/quote-load.ts LoadOpts).
- * 운영자는 기관 열람으로 남기지 않고, 비교표 공개 전이면 회신 기한·링크 만료와 관계없이 대리 입력한 견적을 고칠 수 있다.
- * 자동 공개를 끈 요청은 기한 뒤에 PDF 를 옮겨 적으므로, 기한 잠금이 운영자의 오타 수정을 막으면 안 된다.
+ * 운영자는 기관 열람으로 남기지 않고, 회신 마감 전이면 회신 기한·링크 만료와 관계없이 대리 입력한 견적을 고칠 수 있다.
+ * 기한 날 늦게 온 PDF 를 옮겨 적거나 오타를 고칠 때 기한 잠금이 막으면 안 된다. 마감 뒤에 받은 PDF 는 운영자가 기한을 늘려 다시 연 뒤 입력한다.
  */
 export function loadOptsFor(role: string | null | undefined): { markOpened: boolean; operator: boolean } {
   return { markOpened: marksOpened(role), operator: role === "admin" };
@@ -126,17 +125,7 @@ export function quoteKindLabel(q: { auto?: boolean | null; entry_source?: string
   return "기관 제출 견적";
 }
 
-/* ── 4) 비교표 자동 공개 ── */
-
-/** cron 이 이 요청의 비교표를 자동 공개해도 되는지: 스위치가 켜져 있고, 아직 공개 전이고, 기한이 지났다 */
-export function autoPublishDue(rfq: { auto_publish?: boolean | null; compared_at: string | null; reply_by: string | null; status: string }, today: string): boolean {
-  if (rfq.auto_publish === false) return false;
-  if (rfq.compared_at) return false;
-  if (!["distributed", "quoted"].includes(rfq.status)) return false;
-  return !!rfq.reply_by && rfq.reply_by < today;
-}
-
-/* ── 5) 계약 진행 상태 ── */
+/* ── 4) 계약 진행 상태 ── */
 
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   pending: "확인 전",

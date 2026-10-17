@@ -108,7 +108,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
   const cats = Array.isArray(values.categories) ? values.categories.join(", ") : "";
   const cda = needsCda(values.confid);
   const shareNote = cda
-    ? "시험 개요는 초대받은 기관에 전달하고, 회사명과 첨부는 기관별 CDA 체결 확인 후 공개합니다."
+    ? "시험 개요는 초대받은 기관에 전달하고, 첨부는 기관별 CDA 체결 확인 후 공개합니다. 회사명과 담당자 연락처는 선정한 기관에만 공개합니다."
     : "입력 내용은 견적 목적으로 참여 CRO에만 전달됩니다.";
 
   const requesterHtml = wrap(`
@@ -122,7 +122,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     <ol style="padding-left:20px;margin:0 0 20px">
       <li>시험 분야가 맞는 기관에 요청 전달. 실제 전달 수는 앱에서 확인할 수 있습니다.</li>
       <li>견적 회신 기한: ${esc(String(values.replyBy || "앱에서 확인"))}</li>
-      <li>기한 이후 회신이 있으면 비교표 공개. 앱 안의 알림으로 안내합니다.</li>
+      <li>견적은 기관이 제출하는 대로 앱의 비교표에서 바로 볼 수 있습니다. 회신 기한까지는 기관이 수정할 수 있습니다. 첫 견적이 도착할 때와 회신 기한이 지나 마감될 때 메일로 알려 드립니다.</li>
     </ol>
     <p style="font-size:14px;color:#6F6A63">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
     <p style="font-size:14px;color:#6F6A63">의뢰자 무료 · ${shareNote}</p>`);

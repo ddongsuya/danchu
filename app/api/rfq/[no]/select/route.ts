@@ -14,6 +14,8 @@ export const runtime = "nodejs";
 /**
  * POST { quoteId } — 의뢰자가 CRO를 선택한다.
  * rfq_awards 생성, 상태 selected, 선택된 CRO에 의뢰자 연락처 공개 알림, 나머지 CRO에 결과 안내.
+ * 제출된 견적이 있으면 회신 기한 전에도 선택할 수 있다 (lib/reply-window.ts). 선택하면 남은 회신 링크가 닫히므로,
+ * 회신이 아직 열려 있던 요청이면 회신하지 않은 기관에도 마감을 알린다. 확인 단계는 선정 화면(SelectCroForm)에 있다.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
@@ -76,11 +78,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     { to: winnerMails, replyTo: winnerManaged ? operatorReplyTo() : rfq.email },
   );
 
-  // 나머지 제출 CRO: 결과 안내 (금액·타사명은 알리지 않는다). 기관마다 따로, 계정 없는 기관은 /q 링크로
-  const { data: others } = await sb.from("cro_quotes").select("invite_id").eq("rfq_id", rfq.id).eq("status", "submitted").neq("id", quote.id);
-  const otherIds = (others ?? []).map((o) => o.invite_id).filter((x): x is string => !!x);
-  const { data: otherInvites } = otherIds.length ? await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email").in("id", otherIds) : { data: [] };
-  await notifyInvitedOrgs(otherInvites ?? [], { kind: "선정", title: `미선정 · ${rfq.rfq_no} ${rfq.substance}`, body: "의뢰자가 다른 기관을 선택했습니다. 참여해 주셔서 감사합니다.", portalHref: "/cro/quotes" });
+  // 나머지 기관: 결과 안내 (금액·타사명은 알리지 않는다). 기관마다 따로, 계정 없는 기관은 /q 링크로
+  // 제출한 기관에는 미선정, 회신이 열려 있던 중에 아직 내지 않은 기관에는 회신 마감 (마감 뒤 선정이면 이미 닫혀 있어 보내지 않는다)
+  const { data: rest } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]).neq("id", quote.invite_id);
+  const losers = (rest ?? []).filter((i) => i.status === "submitted");
+  const unreplied = rfq.compared_at ? [] : (rest ?? []).filter((i) => i.status === "sent" || i.status === "draft");
+  await notifyInvitedOrgs(losers, { kind: "선정", title: `미선정 · ${rfq.rfq_no} ${rfq.substance}`, body: "의뢰자가 다른 기관을 선택했습니다. 참여해 주셔서 감사합니다.", portalHref: "/cro/quotes" });
+  await notifyInvitedOrgs(unreplied, { kind: "선정", title: `${rfq.rfq_no} 회신이 마감되었습니다`, body: `${rfq.substance} · 의뢰자가 기관을 선정해 이 요청의 회신이 마감되었습니다. 참여해 주셔서 감사합니다.`, portalHref: "/cro" });
 
   // 거래 귀속은 선정 시점의 기록(rfq_awards)으로 본다. 기존 거래 여부로 따로 판정하지 않는다
   await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });

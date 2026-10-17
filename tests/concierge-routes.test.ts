@@ -168,22 +168,23 @@ describe("POST /api/admin/awards/[id]/contract-status", () => {
   });
 });
 
-describe("PATCH /api/admin/rfqs/[no] autoPublish", () => {
+describe("PATCH /api/admin/rfqs/[no] 자동 공개 스위치 제거", () => {
   const ctx = { params: Promise.resolve({ no: "DC-2026-0001" }) };
   beforeEach(() => {
-    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "distributed", cro_count: "3곳", confidentiality: "일반", auto_publish: true };
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "distributed", cro_count: "3곳", confidentiality: "일반" };
   });
-  it("자동 공개를 끈다", async () => {
+  it("autoPublish 는 더 받지 않는다 (비교표 공개 단계가 없다)", async () => {
     fx.session = admin;
     const r = await patchRfq(json({ autoPublish: false }, "PATCH"), ctx);
-    expect(r.status).toBe(200);
-    expect(fx.calls.find((c) => c.op === "update")?.payload).toEqual({ auto_publish: false });
+    expect(r.status).toBe(400);
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
   });
-  it("불리언이 아니면 400, 운영자가 아니면 403", async () => {
+  it("기관 수 변경은 그대로", async () => {
     fx.session = admin;
-    expect((await patchRfq(json({ autoPublish: "no" }, "PATCH"), ctx)).status).toBe(400);
-    fx.session = cro;
-    expect((await patchRfq(json({ autoPublish: false }, "PATCH"), ctx)).status).toBe(403);
+    fx.respond = (q) => (q.table === "rfq_invites" ? { data: [], error: null } : { data: null, error: null });
+    const r = await patchRfq(json({ croCount: "5곳" }, "PATCH"), ctx);
+    expect(r.status).toBe(200);
+    expect(fx.calls.find((c) => c.op === "update")?.payload).toEqual({ cro_count: "5곳" });
   });
 });
 
@@ -207,7 +208,7 @@ describe("POST /api/quote/[token] 운영자 대리 입력", () => {
     fx.session = admin;
     const r = await submitQuote(json(body), ctx);
     expect(r.status).toBe(200);
-    // 운영자는 기관 열람으로 남기지 않고, 공개 전이면 기한 잠금 없이 고칠 수 있다
+    // 운영자는 기관 열람으로 남기지 않고, 회신 마감 전이면 기한 잠금 없이 고칠 수 있다
     expect(fx.loadOpts[0]).toEqual({ markOpened: false, operator: true });
     // 입력 주체는 save_quote 한 트랜잭션 안에서 남긴다 (따로 갱신하지 않는다)
     expect((fx.saveQuote.mock.calls[0] as unknown[])[1]).toMatchObject({ entry_source: "operator" });
@@ -240,6 +241,7 @@ describe("POST /api/admin/rfqs/[no]/deadline 기한 변경 메일", () => {
         ], error: null };
       if (q.table === "profiles") return { data: [{ id: "m1", cro_org_id: "org-member" }], error: null };
       if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false }, { id: "org-managed", managed: true }], error: null };
+      if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
       return { data: null, error: null };
     };
     const r = await changeDeadline(json({ replyBy: "2099-01-05" }), ctx);
@@ -278,6 +280,24 @@ describe("요청 취소 메일: 기관마다 따로, 계정 없는 기관은 /q"
     const managed = calls.find((c) => c[1].href === "/q/tok_managed");
     expect(managed?.[2]?.to).toEqual(["managed@example.com"]);
     expect(managed?.[2]?.replyTo).toBe("hello@danchu.kr");
+  });
+});
+
+describe("취소한 요청 다시 열기", () => {
+  const ctx = { params: Promise.resolve({ no: "DC-2026-0001" }) };
+  it("제출된 견적이 있으면 견적 도착(quoted)으로 되돌린다", async () => {
+    fx.session = admin;
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "cancelled", compared_at: null, selected_quote_id: null, distributed_at: "2026-10-01T00:00:00Z", user_id: null };
+    fx.respond = (q) => (q.table === "cro_quotes" ? { data: [], error: null, count: 2 } : { data: [], error: null });
+    expect((await changeStatus(json({ status: "reopen" }), ctx)).status).toBe(200);
+    expect(fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update")?.payload).toMatchObject({ status: "quoted" });
+  });
+  it("제출된 견적이 없으면 배포 단계로", async () => {
+    fx.session = admin;
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "cancelled", compared_at: null, selected_quote_id: null, distributed_at: "2026-10-01T00:00:00Z", user_id: null };
+    fx.respond = (q) => (q.table === "cro_quotes" ? { data: [], error: null, count: 0 } : { data: [], error: null });
+    expect((await changeStatus(json({ status: "reopen" }), ctx)).status).toBe(200);
+    expect(fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update")?.payload).toMatchObject({ status: "distributed" });
   });
 });
 
@@ -360,7 +380,7 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
           : { data: [{ invite_id: "inv-l" }], error: null };
       if (q.table === "cro_quotes") return { data: { id: QID, invite_id: "inv-w", cro_org_id: "org-managed", cro_name: "바이오랩", total_amount: 1000 }, error: null };
       if (q.table === "rfq_invites" && q.filters.some(([k, v]) => k === "id" && v === "inv-w")) return { data: { id: "inv-w", token: "tok_winner1", cro_org_id: "org-managed", cro_email: "lab@example.com" }, error: null };
-      if (q.table === "rfq_invites") return { data: [{ id: "inv-l", token: "tok_loser01", cro_org_id: "org-solo", cro_email: "solo@example.com" }], error: null };
+      if (q.table === "rfq_invites") return { data: [{ id: "inv-l", token: "tok_loser01", cro_org_id: "org-solo", cro_email: "solo@example.com", status: "submitted" }, { id: "inv-o", token: "tok_open001", cro_org_id: null, cro_email: "open@example.com", status: "sent" }], error: null };
       if (q.table === "profiles") return { data: [], error: null };
       if (q.table === "cro_orgs") return q.filters.some(([k]) => k === "id") ? { data: { managed: true }, error: null } : { data: [{ id: "org-solo", managed: false }], error: null };
       return { data: null, error: null };
@@ -376,6 +396,11 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
     const lose = calls.find((c) => c[1].title.startsWith("미선정"));
     expect(lose?.[1].href).toBe("/q/tok_loser01");
     expect(lose?.[2]?.to).toEqual(["solo@example.com"]);
+    // 기한 전 선정: 아직 회신하지 않은 기관에는 미선정이 아니라 회신 마감을 따로 알린다
+    const open = calls.filter((c) => c[2]?.to.includes("open@example.com"));
+    expect(open).toHaveLength(1);
+    expect(open[0][1].title).toContain("회신이 마감되었습니다");
+    expect(calls.filter((c) => c[1].title.startsWith("미선정"))).toHaveLength(1);
     const sponsor = calls.find((c) => c[0][0] === "admin-1" && c[1].title.includes("선정 완료"));
     expect(sponsor?.[1].body).not.toContain("기관이 단추에 보고");
   });

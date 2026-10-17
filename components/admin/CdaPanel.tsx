@@ -19,8 +19,8 @@ export function CdaPanel({
     if (
       !window.confirm(
         selected.cda_signed_at
-          ? "회사명과 첨부를 다시 비공개로 전환할까요? 이미 내려받은 파일은 회수되지 않습니다."
-          : "양측의 CDA 체결을 확인했습니까? 이 기관에 회사명과 첨부파일을 공개합니다.",
+          ? "첨부를 다시 비공개로 전환할까요? 이미 내려받은 파일은 회수되지 않습니다."
+          : "양측의 CDA 체결을 확인했습니까? 이 기관에 첨부파일을 공개합니다. 단추 화면의 회사명과 연락처는 선정 전까지 계속 가려지지만, CDA 문서에 적힌 당사자 정보는 가려지지 않습니다.",
       )
     )
       return;
@@ -50,8 +50,9 @@ export function CdaPanel({
     <section className="card card--pad stack">
       <h2 style={{ fontSize: 16 }}>기관별 CDA 확인</h2>
       <p className="fld__help">
-        외부에서 체결한 계약을 확인한 뒤 공개하세요. 체결 확인 전에는 회사명과
-        첨부를 공개하지 않습니다.
+        외부에서 체결한 계약을 확인한 뒤 첨부를 공개하세요. 체결 확인 전에는
+        첨부를 공개하지 않고, 회사명과 연락처는 체결 후에도 선정 전까지 공개하지
+        않습니다.
       </p>
       <label className="fld">
         <span>기관</span>

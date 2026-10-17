@@ -115,7 +115,7 @@ export async function requireSession(role?: Role, next?: string): Promise<Sessio
   return s;
 }
 
-/** 회신 링크(/q)를 연 사람에 맞춘 불러오기 옵션. 운영자가 연 것은 기관 열람으로 남기지 않고, 공개 전이면 기한 잠금을 풀어 준다 */
+/** 회신 링크(/q)를 연 사람에 맞춘 불러오기 옵션. 운영자가 연 것은 기관 열람으로 남기지 않고, 회신 마감 전이면 기한 잠금을 풀어 준다 */
 export async function viewerLoadOpts(): Promise<{ markOpened: boolean; operator: boolean }> {
   const s = await getSession();
   return loadOptsFor(s?.profile.role);

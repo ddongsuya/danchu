@@ -29,7 +29,7 @@ export function selectQuote(rfqId: string, quoteId: string, userId: string) {
 }
 export const SELECT_QUOTE_ERRORS: Record<string, { message: string; status: number }> = {
   not_found: { message: "요청을 찾을 수 없습니다.", status: 404 },
-  not_compared: { message: "비교표가 공개된 뒤에 선택할 수 있습니다.", status: 400 },
+  not_open: { message: "마무리된 요청이라 선택할 수 없습니다.", status: 409 },
   already_selected: { message: "이미 CRO를 선택했습니다.", status: 409 },
   bad_quote: { message: "선택할 수 없는 견적입니다.", status: 400 },
 };

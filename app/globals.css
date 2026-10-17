@@ -240,6 +240,7 @@ input, textarea { caret-color: var(--brand); }
 }
 .chk--on { border-color: var(--brand); background: var(--brand-tint); }
 .chk input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--brand); flex: none; }
+.chk__help { display: block; margin-top: 6px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 72ch; }
 
 /* 파일 */
 .file {

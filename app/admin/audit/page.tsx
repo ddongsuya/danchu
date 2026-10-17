@@ -11,6 +11,7 @@ const ACTION_KO: Record<string, string> = {
   "user.role": "역할·기관 연결 변경", "user.delete": "계정 삭제",
   "invite.billing": "청구 제외·복원", "invite.decline_proxy": "회신하지 않음 대리 처리",
   "rfq.deadline": "회신 기한 변경",
+  "rfq.close_replies": "회신 마감",
   "quote.proxy": "견적 대리 입력",
   "award.contract": "계약 체결 기록·정정", "award.contract_status": "계약 상태 기록",
 };
