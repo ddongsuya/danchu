@@ -3,7 +3,7 @@
  * 알림·메일·이력은 여기서 보내지 않는다. 호출한 라우트가 결과를 받아 처리한다.
  */
 import { getSupabaseAdmin } from "./supabase";
-import type { Database, Json } from "./db-types";
+import type { Database, Json, QuoteEntrySource } from "./db-types";
 
 type Fns = Database["public"]["Functions"];
 
@@ -29,7 +29,7 @@ export function selectQuote(rfqId: string, quoteId: string, userId: string) {
 }
 export const SELECT_QUOTE_ERRORS: Record<string, { message: string; status: number }> = {
   not_found: { message: "요청을 찾을 수 없습니다.", status: 404 },
-  not_compared: { message: "비교표가 공개된 뒤에 선택할 수 있습니다.", status: 400 },
+  not_open: { message: "마무리된 요청이라 선택할 수 없습니다.", status: 409 },
   already_selected: { message: "이미 CRO를 선택했습니다.", status: 409 },
   bad_quote: { message: "선택할 수 없는 견적입니다.", status: 400 },
 };
@@ -51,6 +51,8 @@ export type QuoteHeader = {
   pdf_path?: string;
   pdf_name?: string;
   pdf_size?: number;
+  /** 입력 주체 (0019). 제출 때만 기록하고, 없으면 기관(cro) */
+  entry_source?: QuoteEntrySource;
 };
 export type QuoteItemInput = {
   seq: number;

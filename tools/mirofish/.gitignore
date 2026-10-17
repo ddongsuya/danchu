@@ -1,0 +1,12 @@
+# Run folders hold uploaded-seed hashes, generated personas and raw MiroFish
+# reports. Reports are reviewed and copied out deliberately, never committed from here.
+runs/
+
+# Keys are passed as environment variables, never stored in files.
+.env
+.env.*
+*.env
+
+# Bytecode from running or compiling run.py.
+__pycache__/
+*.pyc

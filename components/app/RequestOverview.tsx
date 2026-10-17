@@ -17,7 +17,8 @@ export function RequestOverview({ name, list }: { name: string; list: RequestLis
   const ongoing = list.filter((r) => !["closed", "cancelled"].includes(r.status));
   const arrived = list.filter((r) => ["quoted", "compared"].includes(r.status));
   const closed = list.filter((r) => ["closed", "cancelled"].includes(r.status));
-  const hot = list.find((r) => r.status === "compared");
+  // 비교표는 첫 견적부터 열린다 (lib/reply-window.ts). 선정 전이고 견적이 있는 요청을 먼저 보여 준다
+  const hot = list.find((r) => ["quoted", "compared"].includes(r.status) && r.submitted > 0);
   const source = filter === "진행 중" ? ongoing : filter === "견적 도착" ? arrived : filter === "종료" ? closed : list;
   const query = search.trim().toLocaleLowerCase();
   const filtered = source.filter((r) => `${r.rfq_no} ${r.substance} ${r.categories.join(" ")}`.toLocaleLowerCase().includes(query));
@@ -29,7 +30,7 @@ export function RequestOverview({ name, list }: { name: string; list: RequestLis
         <div><span>도착한 견적 요청</span><strong className="request-summary__accent">{arrived.length}<small>건</small></strong></div>
         <div><span>종료·취소된 요청</span><strong>{closed.length}<small>건</small></strong></div>
       </div>
-      {hot && <Link href={`/app/r/${hot.rfq_no}/compare`} className="request-attention"><span className="request-attention__icon"><FileText size={21} aria-hidden="true" /></span><div><b>비교표가 준비되었습니다</b><p>{hot.substance} · {hot.submitted}곳의 회신을 확인하세요.</p></div><span>비교표 보기 <ArrowRight size={17} aria-hidden="true" /></span></Link>}
+      {hot && <Link href={`/app/r/${hot.rfq_no}/compare`} className="request-attention"><span className="request-attention__icon"><FileText size={21} aria-hidden="true" /></span><div><b>도착한 견적이 있습니다</b><p>{hot.substance} · {hot.submitted}곳의 견적을 비교표에서 확인하세요.{hot.status === "quoted" ? " 회신 기한까지는 수정될 수 있습니다." : ""}</p></div><span>비교표 보기 <ArrowRight size={17} aria-hidden="true" /></span></Link>}
       <section className="request-panel" aria-labelledby="request-list-title">
         <div className="request-panel__heading"><h2 id="request-list-title">요청 목록 <span>{list.length}</span></h2><label className="request-search"><MagnifyingGlass size={18} aria-hidden="true" /><span className="sr-only">요청 번호, 물질명, 시험 분야 검색</span><input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명 검색" /></label></div>
         <div className="request-filters" role="group" aria-label="요청 상태 필터">{FILTERS.map((f) => <button key={f} type="button" aria-pressed={f === filter} onClick={() => setFilter(f)}>{f}</button>)}</div>

@@ -58,10 +58,12 @@ export function RfqField({
     const on = v === true;
     return (
       <label className={`chk${on ? " chk--on" : ""}`}>
-        <input type="checkbox" name={id} checked={on} onChange={(e) => onChange(id, e.target.checked)} />
+        <input type="checkbox" name={id} checked={on} onChange={(e) => onChange(id, e.target.checked)} aria-describedby={field.help ? `${id}-help` : undefined} />
         <span>
           <LabelWithLink label={field.label || ""} link={field.link} />
           {field.required && <span className="field__req">*</span>}
+          {/* 동의 문구의 고지 사항(제공받는 자·항목·목적·보유 기간·거부 시 불이익)은 체크박스 바로 아래에 둔다 */}
+          {field.help && <span className="chk__help" id={`${id}-help`}>{field.help}</span>}
         </span>
       </label>
     );

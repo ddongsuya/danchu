@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
 import { comma, dday, md, won } from "@/lib/format";
+import { quoteKindLabel } from "@/lib/concierge";
+import { REVISABLE_LABEL } from "@/lib/reply-window";
 
 export type CompareCol = {
   id: string;
@@ -33,6 +35,10 @@ export type CompareCol = {
   selected: boolean;
   /** 카탈로그 기준 자동 제출된 예비 견적 */
   auto: boolean;
+  /** 운영자가 기관 PDF 를 보고 옮겨 적은 견적 (기준 문서는 PDF 원본) */
+  operator?: boolean;
+  /** 회신 기한 전이라 기관이 아직 고칠 수 있는 견적 (lib/reply-window.ts quoteRevisable) */
+  revisable?: boolean;
 };
 export type CompareRowDef = { seq: number; name: string; category: string };
 
@@ -87,7 +93,14 @@ export function CompareBoard({
       },
       {
         label: "견적 구분",
-        cell: (c) => (c.auto ? "기관 확인 전 예비 견적" : "기관 제출 견적"),
+        cell: (c) => (
+          <>
+            {quoteKindLabel({ auto: c.auto, entry_source: c.operator ? "operator" : "cro" })}
+            {c.operator && !c.auto && (
+              <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 같은 양식으로 옮겨 정리했습니다. 금액·조건이 다르면 PDF 원본이 우선하며, 옮겨 적은 내용에 오류가 있으면 단추가 바로잡습니다.</p>
+            )}
+          </>
+        ),
       },
       {
         label: "회신 금액 합계",
@@ -155,7 +168,10 @@ export function CompareBoard({
         label: "견적서 원본",
         cell: (c) =>
           c.hasPdf ? (
-            <a href={`/api/quotes/${c.id}/pdf`}>PDF 열기</a>
+            <>
+              <a href={`/api/quotes/${c.id}/pdf`}>PDF 열기</a>
+              {c.operator && <p className="fld__help">이 견적의 기준 문서</p>}
+            </>
           ) : (
             "미첨부"
           ),
@@ -166,7 +182,7 @@ export function CompareBoard({
       <p className="note note--tint">
         수행 범위와 포함 비용이 다르면 합계만으로 비교하기 어렵습니다. 조건을
         먼저 확인하세요. 예비 견적은 기관 확인 후 정식 견적서를 받아야 선택할 수
-        있습니다.
+        있습니다.{cols.some((c) => c.revisable) ? ` "${REVISABLE_LABEL}" 표시가 붙은 견적은 회신 기한까지 기관이 고칠 수 있습니다.` : ""}
       </p>
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
         <legend style={{ marginBottom: 10 }}>비교할 기관</legend>
@@ -243,6 +259,7 @@ export function CompareBoard({
                 <th scope="col" key={c.id}>
                   <div>{c.name}</div>
                   {c.selected && <span>선택한 기관</span>}
+                  {c.revisable && !c.selected && <span className="pill pill--warn compare-col__live">{REVISABLE_LABEL}</span>}
                   <div>
                     <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
                       견적 상세 보기

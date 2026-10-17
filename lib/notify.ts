@@ -64,3 +64,11 @@ export async function adminUserIds(): Promise<string[]> {
 export function adminEmails(): string[] {
   return (process.env.ADMIN_EMAIL || "").split(",").map((s) => s.trim()).filter(Boolean);
 }
+
+/**
+ * 기관이 메일에 회신하면 받을 운영 주소 (운영자 관리·계정 없는 기관용). 견적서 PDF·계약 금액이 오므로 개인 메일함이 아닌 역할 주소를 쓴다.
+ * ADMIN_EMAIL 은 운영자 알림을 받을 사람 목록이라 여기에 쓰지 않는다.
+ */
+export function operatorReplyTo(): string {
+  return (process.env.OPERATOR_REPLY_TO || "").trim() || "hello@danchu.kr";
+}

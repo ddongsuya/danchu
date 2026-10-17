@@ -323,6 +323,13 @@
 .request-summary strong { display: block; font-size: 36px; font-weight: 600; letter-spacing: -.035em; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .request-summary strong small { font-size: 13px; margin-left: 9px; color: var(--muted); font-weight: 400; }
 .request-summary__accent { color: var(--brand); }
+/* 실시간 비교표 위의 회신 현황 (도착 견적 · 미회신 · 기한). 640px 미만에서는 세로로 쌓는다 */
+.compare-status { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 16px; background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-md); }
+.compare-status > div { padding: 14px 18px; border-left: 1px solid var(--cline); }
+.compare-status > div:first-child { border-left: 0; }
+.compare-status dt { font-size: 12px; color: var(--muted); }
+.compare-status dd { margin: 4px 0 0; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.compare-col__live { display: inline-block; margin-top: 4px; }
 .request-attention { display: flex; align-items: center; gap: 14px; padding: 20px 22px; border-radius: var(--r-md); background: var(--tint); margin-bottom: 30px; border: 1px solid var(--bline); }
 .request-attention__icon { color: var(--brand); flex: none; }
 .request-attention b { font-size: 14px; font-weight: 650; }
@@ -379,6 +386,9 @@
   .pt .ph h1 { font-size: 25px; }
   .pt .ph p { font-size: 13px; }
   .request-summary { padding: 18px 0; }
+  .compare-status { grid-template-columns: 1fr; }
+  .compare-status > div { border-left: 0; border-top: 1px solid var(--cline); padding: 12px 16px; }
+  .compare-status > div:first-child { border-top: 0; }
   .request-summary > div { padding: 0 13px; }
   .request-summary span { font-size: 11px; }
   .request-summary strong { font-size: 27px; }

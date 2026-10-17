@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
-import { getCroOrg, listInvitesForOrg, listOrgClients, listOrgMembers, listPendingMembers } from "@/lib/data";
+import { getCroOrg, listInvitesForOrg, listOrgMembers, listPendingMembers } from "@/lib/data";
 import { Crumb } from "@/components/app/ui";
 import { OrgApproval } from "@/components/admin/OrgApproval";
 import { JoinRequests } from "@/components/admin/JoinRequests";
@@ -8,6 +8,7 @@ import { OrgTerms } from "@/components/admin/OrgTerms";
 import { autoReplyEnabled } from "@/lib/env";
 import { ymd, won } from "@/lib/format";
 import { INVITE_LABEL } from "@/lib/status";
+import { ManagedBadge } from "@/components/admin/ManagedBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const org = await getCroOrg(id);
   if (!org) notFound();
-  const [members, pendingMembers, invites, clients] = await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id), listInvitesForOrg(org.id), listOrgClients(org.id)]);
+  const [members, pendingMembers, invites] = await Promise.all([listOrgMembers(org.id), listPendingMembers(org.id), listInvitesForOrg(org.id)]);
   const st = ST[org.status];
 
   return (
@@ -29,8 +30,9 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
           <h1>{org.name}</h1>
           <p>신청 {ymd(org.created_at)}{org.approved_at ? ` · 승인 ${ymd(org.approved_at)}` : ""}</p>
         </div>
-        <span className={`pill ${st[1]}`}>{st[0]}</span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}><span className={`pill ${st[1]}`}>{st[0]}</span>{org.managed && <ManagedBadge />}</span>
       </div>
+      {org.managed && <p className="note note--tint" style={{ marginBottom: 16 }}>운영자가 등록한 기관입니다. 담당자 계정이 없어 요청서·리마인더 메일은 로그인 없는 회신 링크로 가고, 기관이 보낸 견적서 PDF는 요청 화면의 회신 링크에서 대신 입력합니다. 기관 담당자가 가입해 이 기관에 연결되면 운영자 관리가 풀립니다.</p>}
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">
           <div className="card card--rows">
@@ -46,16 +48,16 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
           </div>
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>승인 처리</h2>
-            <OrgApproval id={org.id} status={org.status} />
+            <OrgApproval id={org.id} status={org.status} managed={!!org.managed} />
           </div>
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>약정 · 운영 설정</h2>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>전달 1건이 청구 1건입니다. 단가와 월 한도는 기관과 약정한 값을 적고, 전달 명세의 집계에 그대로 쓰입니다.</p>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>시범운영 기간에는 청구하지 않습니다. 단가와 월 한도는 서면 합의 후 그 값을 적고, 전달 명세의 참고 집계에 그대로 쓰입니다.</p>
             <OrgTerms org={org} autoReplyAvailable={autoReplyEnabled()} />
           </div>
         </div>
         <div className="stack">
-          <JoinRequests orgId={org.id} members={pendingMembers} />
+          <JoinRequests orgId={org.id} members={pendingMembers} orgEmail={org.contact_email} managed={!!org.managed} />
           <div className="card card--rows">
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>담당자 계정 {members.length}</div>
             {members.length === 0 && <p style={{ padding: "8px 0 12px", fontSize: 13, color: "var(--muted)" }}>연결된 계정이 없습니다. 사용자 탭에서 이 기관에 연결할 수 있습니다.</p>}
@@ -65,17 +67,6 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
                 <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{ymd(m.created_at)}</span>
               </div>
             ))}
-          </div>
-          <div className="card card--rows">
-            <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>기관이 등록한 기존 고객 {clients.length}</div>
-            {clients.length === 0 && <p style={{ padding: "8px 0 12px", fontSize: 13, color: "var(--muted)" }}>없음. 기관 대표 담당자가 내 기관 화면에서 등록합니다. 선정 시 의뢰자 회사명과 대조해 성사수수료 면제 후보로 표시됩니다.</p>}
-            {clients.slice(0, 50).map((c) => (
-              <div key={c.id} className="kv" style={{ fontSize: 13 }}>
-                <span><b style={{ fontWeight: 600 }}>{c.name}</b>{c.business_no ? <span style={{ color: "var(--muted)" }}> · {c.business_no}</span> : null}</span>
-                <span className="tnum" style={{ color: "var(--muted)" }}>{c.last_contract_on ? `마지막 계약 ${c.last_contract_on}` : "-"}</span>
-              </div>
-            ))}
-            {clients.length > 50 && <p style={{ padding: "8px 0 12px", fontSize: 12, color: "var(--muted)" }}>외 {clients.length - 50}곳</p>}
           </div>
           <div className="card card--rows">
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>배포 이력 {invites.length}</div>

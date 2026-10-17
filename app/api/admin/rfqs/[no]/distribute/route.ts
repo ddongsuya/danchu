@@ -13,7 +13,7 @@ export const runtime = "nodejs";
  * autoDistribute 를 false 로 주면 이후 cron 보충 배포가 이 요청을 건드리지 않는다 (운영자가 고른 기관만 유지).
  */
 const BLOCKED_MSG = {
-  request_not_open: "비교표가 공개되었거나 선정이 끝난 요청이라 더 배포할 수 없습니다. 다시 열려면 운영자 문의 후 SQL 로 compared_at 을 비워야 합니다.",
+  request_not_open: "회신이 마감되었거나 선정이 끝난 요청이라 더 배포할 수 없습니다. 회신 마감 뒤라면 회신 기한을 늘려 다시 연 다음 배포해 주세요.",
   invitation_limit_reached: "의뢰자가 요청한 기관 수에 이미 닿았습니다. 회신하지 않음·만료 초대는 한도에서 빠지므로, 다른 초대를 정리한 뒤 다시 시도하세요.",
 };
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {

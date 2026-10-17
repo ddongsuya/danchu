@@ -6,8 +6,13 @@ import { ymd } from "@/lib/format";
 
 type M = { id: string; name: string | null; email: string; phone: string | null; created_at: string };
 
-/** 기관 상세 - 담당자 합류 신청을 연결하거나 거절한다 */
-export function JoinRequests({ orgId, members }: { orgId: string; members: M[] }) {
+const domainOf = (email: string | null | undefined) => (email ?? "").split("@")[1]?.toLowerCase() ?? "";
+
+/**
+ * 기관 상세 - 담당자 합류 신청을 연결하거나 거절한다.
+ * 운영자 관리 기관은 이름만 비슷해도 합류 신청이 붙을 수 있어, 등록된 대표 이메일과 도메인이 다른 신청자를 표시한다
+ */
+export function JoinRequests({ orgId, members, orgEmail = null, managed = false }: { orgId: string; members: M[]; orgEmail?: string | null; managed?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
@@ -33,12 +38,17 @@ export function JoinRequests({ orgId, members }: { orgId: string; members: M[] }
   return (
     <div className="card card--rows" style={{ borderColor: "var(--bline)" }}>
       <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>담당자 합류 신청 {members.length}</div>
-      <p style={{ padding: "0 0 8px", fontSize: 12, color: "var(--muted)" }}>기관 이메일 도메인과 담당자 정보를 확인한 뒤 연결하세요. 연결 전에는 이 기관의 요청서를 볼 수 없습니다.</p>
+      <p style={{ padding: "0 0 8px", fontSize: 12, color: "var(--muted)" }}>
+        기관 이메일 도메인과 담당자 정보를 확인한 뒤 연결하세요. 연결 전에는 이 기관의 요청서를 볼 수 없습니다.
+        {orgEmail ? ` 등록된 대표 이메일: ${orgEmail}` : ""}
+        {managed ? " 운영자 관리 기관은 연결하면 운영자 관리가 풀리고, 선정된 요청의 의뢰자 연락처까지 담당자에게 보입니다." : ""}
+      </p>
       {members.map((m) => (
         <div key={m.id} className="kv" style={{ gap: 10 }}>
           <span>
             <b style={{ fontWeight: 600 }}>{m.name || "-"}</b>
             <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""} · 신청 {ymd(m.created_at)}</span>
+            {orgEmail && domainOf(m.email) !== domainOf(orgEmail) && <span className="pill pill--warn" style={{ marginTop: 4 }}>대표 이메일과 도메인이 다릅니다</span>}
           </span>
           <span style={{ display: "inline-flex", gap: 6, flex: "none" }}>
             <button type="button" className="b1 bsm" disabled={!!busy} onClick={() => act(m, true)}>{busy === m.id ? "…" : "연결"}</button>

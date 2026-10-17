@@ -2,16 +2,13 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listAwardsForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { ContractReport } from "@/components/cro/ContractReport";
-import { ExemptClaim } from "@/components/cro/ExemptClaim";
-import { addBusinessDays } from "@/lib/dates";
-import { EXEMPT_CLAIM_BUSINESS_DAYS } from "@/lib/request-policy";
 import { ymd, won } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 const NEXT = [
   ["의뢰자와 계약 협의", "단추는 조건에 관여하지 않습니다. 직접 진행하세요."],
-  ["계약 체결 보고", "체결일·계약금액을 아래에 입력 (수수료 정산 기준)"],
+  ["계약 체결 보고", "체결일·계약금액을 아래에 입력 (계약 진행 확인용). 보고하면 계약 진행 단계로 바뀌고, 단추가 양쪽에 확인한 뒤 종료합니다"],
   ["시험물질 수령", "회신에 적은 필요량·시점 기준"],
 ];
 
@@ -20,8 +17,6 @@ export default async function CroAwards() {
   const org = s.org;
   if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   const list = dbReady() ? await listAwardsForOrg(org.id) : [];
-  const nowSeoul = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const canClaim = (awardedAt: string) => nowSeoul <= addBusinessDays(new Date(new Date(awardedAt).toLocaleString("en-US", { timeZone: "Asia/Seoul" })), EXEMPT_CLAIM_BUSINESS_DAYS);
 
   return (
     <>
@@ -57,7 +52,6 @@ export default async function CroAwards() {
                 </span>
               </div>
 
-              <ExemptClaim awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} canClaim={canClaim(a.awarded_at)} />
               {!a.contract_reported_at && (
                 <div className="grid2" style={{ alignItems: "start" }}>
                   <div className="stack" style={{ gap: 10 }}>

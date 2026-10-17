@@ -7,15 +7,23 @@ export const dynamic = "force-dynamic";
 
 const ACTION_KO: Record<string, string> = {
   "org.approve": "기관 승인", "org.reject": "기관 반려", "org.suspend": "기관 중지", "org.terms": "기관 약정·설정 변경",
+  "org.create": "기관 추가(운영자 관리)", "org.optout": "수신 거부 처리",
   "user.role": "역할·기관 연결 변경", "user.delete": "계정 삭제",
-  "invite.billing": "청구 제외·복원",
+  "invite.billing": "청구 제외·복원", "invite.decline_proxy": "회신하지 않음 대리 처리",
   "rfq.deadline": "회신 기한 변경",
+  "rfq.close_replies": "회신 마감",
+  "quote.proxy": "견적 대리 입력",
+  "award.contract": "계약 체결 기록·정정", "award.contract_status": "계약 상태 기록",
 };
+/** 대상 라벨이 "요청번호 · 기관명" 인 행은 요청 화면으로 보낸다 */
+const rfqOf = (label: string | null) => (label ? label.split(" · ")[0] || null : null);
 const TARGET_HREF: Record<string, (id: string, label: string | null) => string | null> = {
   cro_org: (id) => `/admin/cros/${id}`,
   profile: () => "/admin/users",
   rfq_request: (_id, label) => (label ? `/admin/r/${label}` : null),
   rfq_invite: () => "/admin/billing",
+  cro_quote: (_id, label) => (rfqOf(label) ? `/admin/r/${rfqOf(label)}` : null),
+  rfq_award: () => "/admin/awards",
 };
 
 /** 운영자 행위 기록. 요청 단위 이력(각 요청의 "이력")에 없는 기관·사용자·청구 변경을 본다 */
@@ -28,7 +36,7 @@ export default async function AdminAudit() {
       <div className="ph">
         <div>
           <h1>운영 기록</h1>
-          <p>기관 승인·반려·중지, 약정 변경, 역할·기관 연결, 계정 삭제, 청구 제외, 기한 변경 · 최근 200건</p>
+          <p>기관 추가·승인·중지, 약정 변경, 역할·기관 연결, 계정 삭제, 청구 제외, 기한 변경, 대리 입력, 계약 기록 · 최근 200건</p>
         </div>
       </div>
       {rows.length === 0 ? (

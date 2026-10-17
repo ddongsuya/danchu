@@ -12,7 +12,7 @@ import { Pager } from "@/components/admin/Pager";
 
 export const dynamic = "force-dynamic";
 
-const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "비교표"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"], ["cancelled", "취소"]];
+const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "회신 마감"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"], ["cancelled", "취소"]];
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; page?: string }> }) {
   await requireSession("admin");
@@ -42,14 +42,14 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <div className="ph">
         <div>
           <h1>접수 현황</h1>
-          <p>배포 대기 {todo.receive} · 비교표 대기 {todo.quoted} · CRO 승인 대기 {todo.pendingOrg} · 계약 진행 {todo.contracting}</p>
+          <p>배포 대기 {todo.receive} · 회신 중 {todo.quoted} · CRO 승인 대기 {todo.pendingOrg} · 계약 진행 {todo.contracting}</p>
         </div>
       </div>
 
       <div className="tiles4" style={{ marginBottom: 20 }}>
         {[
           ["배포 대기", todo.receive, "/admin?status=received"],
-          ["비교표 대기", todo.quoted, "/admin?status=quoted"],
+          ["회신 중 (견적 도착)", todo.quoted, "/admin?status=quoted"],
           ["CRO 승인 대기", todo.pendingOrg, "/admin/cros?status=pending"],
           ["계약 진행", todo.contracting, "/admin/awards"],
         ].map(([label, n, href]) => (

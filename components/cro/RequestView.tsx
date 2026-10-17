@@ -45,19 +45,19 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
       {rfq.identityMasked && !rfq.masked && (
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <Lock />
-          <span>의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 이 기관을 선정하면 공개됩니다. 요청 내용에 대한 질문은 회신의 문의 항목으로 남겨 주세요.</span>
+          <span>의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 이 기관을 선정하면 공개됩니다. 요청 내용에 대한 질문은 회신의 문의 항목으로 남겨 주세요. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.</span>
         </div>
       )}
       {rfq.masked && (
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <Lock />
           <span>
-            기밀 등급 <b style={{ fontWeight: 600 }}>CDA 필요</b>. 요청에 맞는 CDA를 양측이 체결하고 운영자가 확인한 뒤 첨부 자료가 열립니다. 회사명과 연락처는 선정 시 공개됩니다.{" "}
+            기밀 등급 <b style={{ fontWeight: 600 }}>CDA 필요</b>. 요청에 맞는 CDA를 양측이 체결하고 운영자가 확인한 뒤 첨부 자료가 열립니다. 단추 화면의 회사명과 연락처는 선정 시 공개되며, CDA 문서에 당사자로 적힌 정보는 체결 과정에서 알게 될 수 있습니다. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.{" "}
             <a href={`mailto:hello@danchu.kr?subject=${encodeURIComponent(`[${rfq.no}] CDA 서명 요청`)}`}>CDA 서명 요청 →</a>
           </span>
         </div>
       )}
-      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.</div>}
+      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다.</div>}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">

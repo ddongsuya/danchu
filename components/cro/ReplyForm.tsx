@@ -328,7 +328,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 회신이 닫혔습니다." : data.declined ? "회신하지 않음으로 처리된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다." : data.declined ? "회신하지 않음으로 처리된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 
@@ -479,6 +479,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             </div>
             {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
             {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">회신하지 않음으로 처리</Link>}
+            {!readOnly && <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>제출하면 견적이 바로 의뢰자 비교표에 기관명과 함께 보입니다. 회신 기한까지 고칠 수 있지만, 의뢰자가 그 전에 선정하거나 회신이 마감되면 고칠 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
             <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
               {busy ? "제출 중…" : blockedLabel}
             </button>

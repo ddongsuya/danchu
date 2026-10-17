@@ -6,6 +6,7 @@ import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { Crumb } from "@/components/app/ui";
 import { SelectCroForm } from "@/components/SelectCroForm";
 import { md, won } from "@/lib/format";
+import { selectionCaution } from "@/lib/reply-window";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
   if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
   const q = d.quotes.find((x) => x.id === quoteId && x.status === "submitted");
-  if (!q || !rfq.compared_at) notFound();
+  if (!q || ["closed", "cancelled"].includes(rfq.status)) notFound();
   if (rfq.selected_quote_id) {
     return (
       <>
@@ -27,6 +28,8 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
   }
   if (!quoteSelectable(q)) return <div className="note note--warn">정식 견적서와 유효기간을 확인한 뒤 기관을 선택해 주세요. <Link href={`/app/r/${no}/q/${quoteId}`}>견적 상세로 돌아가기</Link></div>;
   const others = d.quotes.filter((x) => x.status === "submitted" && x.id !== q.id);
+  // 기한 전이거나 아직 회신하지 않은 기관이 있으면 선정 전에 한 번 더 확인한다. 선정하면 남은 회신 링크가 닫힌다
+  const caution = selectionCaution(rfq, d.invites);
 
   return (
     <>
@@ -49,6 +52,7 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
         ]}
         others={others.map((o) => ({ name: o.cro_name, total: won(o.total_amount ?? 0) }))}
         contact={`${rfq.company} · ${rfq.contact_name} · ${rfq.email}${rfq.phone ? ` · ${rfq.phone}` : ""}`}
+        caution={caution.needed ? { early: caution.early, pending: caution.pending, replyBy: caution.replyBy ? md(caution.replyBy) : null } : null}
       />
     </>
   );

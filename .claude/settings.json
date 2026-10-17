@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tools/mirofish/setup.sh)",
+      "Bash(tools/mirofish/start-backend.sh)",
+      "Bash(tools/mirofish/start-backend.sh:*)",
+      "Bash(~/.cache/danchu-mirofish/venv/bin/python tools/mirofish/preflight.py)",
+      "Bash(~/.cache/danchu-mirofish/venv/bin/python tools/mirofish/run.py:*)",
+      "Bash(/root/.cache/danchu-mirofish/venv/bin/python tools/mirofish/preflight.py)",
+      "Bash(/root/.cache/danchu-mirofish/venv/bin/python tools/mirofish/run.py:*)"
+    ]
+  }
+}

@@ -9,6 +9,7 @@ import { STAGES, stageIndex, statusLabel, statusTone, INVITE_LABEL } from "@/lib
 import { CheckMark, Crumb, StatusPill } from "@/components/app/ui";
 import { md, mdhm, ymd } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
+import { pendingInvites, quoteRevisable, repliesClosed } from "@/lib/reply-window";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,11 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const d = await getRfqDetail(rfq);
   const idx = stageIndex(rfq.status);
   const submitted = d.invites.filter((i) => i.status === "submitted").length;
-  const canCompare = !!rfq.compared_at && submitted > 0;
+  // 비교표는 첫 견적부터 열린다. 공개 단계가 없다 (lib/reply-window.ts)
+  const canCompare = submitted > 0;
+  const pending = pendingInvites(d.invites);
+  const open = !repliesClosed(rfq);
+  const revisable = quoteRevisable(rfq, rfq.reply_by);
   const p = rfq.payload;
   const labels = labelMap();
   const chips = [
@@ -102,15 +107,21 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: i.status === "submitted" ? "var(--brand)" : "var(--dash)" }} />
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{rfq.compared_at || i.status !== "submitted" ? i.cro_name : "회신 CRO"}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{i.cro_name}</span>
                     </div>
                     <span style={{ fontSize: 13, color: i.status === "submitted" ? "var(--ink)" : "var(--muted)" }}>{INVITE_LABEL[i.status] ?? i.status}</span>
                   </div>
                 ))}
               </div>
             )}
-            {submitted > 0 && !rfq.compared_at && (
-              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>회신 기한이 지난 뒤 비교표가 공개됩니다. 공개되면 앱 안의 알림으로 알려 드립니다.</p>
+            {d.invites.length > 0 && !d.award && (
+              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
+                {!open
+                  ? `회신이 마감되었습니다. 도착한 견적은 더 바뀌지 않습니다.${submitted > 0 ? " 비교표에서 기관을 선정해 주세요." : ""}`
+                  : submitted > 0
+                    ? `도착한 견적은 비교표에서 바로 볼 수 있습니다. ${revisable ? `회신 기한(${md(rfq.reply_by)})까지는 기관이 견적을 수정할 수 있습니다. ` : ""}${pending ? `아직 회신하지 않은 기관이 ${pending}곳 있습니다.` : "전달한 기관이 모두 회신했습니다."}`
+                    : "기관이 견적을 제출하면 바로 비교표에 나타나고 알림으로 알려 드립니다."}
+              </p>
             )}
           </div>
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getInviteById } from "@/lib/data";
 import { loadByInvite } from "@/lib/quote-load";
+import { loadOptsFor } from "@/lib/concierge";
 import { RequestView } from "@/components/cro/RequestView";
 import { DeclineForm } from "@/components/cro/DeclineForm";
 import { Crumb } from "@/components/app/ui";
@@ -14,7 +15,7 @@ export default async function CroRequest({ params, searchParams }: { params: Pro
   const { decline } = await searchParams;
   const inv = await getInviteById(id);
   if (!inv || (s.profile.role !== "admin" && inv.cro_org_id !== s.profile.cro_org_id)) notFound();
-  const got = await loadByInvite(inv);
+  const got = await loadByInvite(inv, loadOptsFor(s.profile.role));
   if (!got) notFound();
   if (decline === "1") {
     return (

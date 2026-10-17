@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import type { BillingSummaryRow } from "@/lib/db-types";
 import { won, ymd } from "@/lib/format";
 import { BillableToggle } from "@/components/admin/BillableToggle";
+import { ManagedBadge } from "@/components/admin/ManagedBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -59,23 +60,24 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <BillingClose month={r.from.slice(0, 7)} closed={closed} />
         </div>
       </div>
+      <div className="note note--tint" style={{ marginBottom: 16 }}>시범운영 기간에는 기관에 청구하지 않습니다(이용약관 제5조3항). 이 화면의 금액은 참고 집계이며, 수수료는 기관과 서면으로 합의한 뒤 전달된 요청에만 적용합니다.</div>
       {closed && <div className="note note--ok" style={{ marginBottom: 16 }}>이 달은 청구가 마감되었습니다. 청구 제외·복원은 마감을 해제해야 바꿀 수 있습니다.</div>}
 
       {error && <div className="note note--warn" style={{ marginBottom: 16 }}>집계 함수를 불러오지 못했습니다. `0009_anonymous_billing.sql` 마이그레이션이 적용됐는지 확인하세요. ({error.message})</div>}
 
       <div className="card tbl-wrap" style={{ marginBottom: 20 }}>
-        <div style={{ padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>기관별 집계 · 선정률이 유독 낮은 기관은 우회 신호로 본다</div>
+        <div style={{ padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>기관별 집계 · 선정률이 유독 낮은 기관은 운영 방식을 확인합니다</div>
         {rows.length === 0 ? (
           <p className="empty">이 달에 전달된 요청이 없습니다.</p>
         ) : (
           <table className="tbl">
             <thead>
-              <tr><th>기관</th><th className="tnum">전달</th><th className="tnum">청구</th><th className="tnum">제외</th><th>출처</th><th className="tnum">회신</th><th className="tnum">미회신</th><th className="tnum">선정</th><th className="tnum">선정 견적 합계 (면제 제외)</th><th className="tnum">약정 단가</th><th className="tnum">전달 이용료</th><th className="tnum">성사수수료</th><th className="tnum">월 한도</th></tr>
+              <tr><th>기관</th><th className="tnum">전달</th><th className="tnum">청구</th><th className="tnum">제외</th><th>출처</th><th className="tnum">회신</th><th className="tnum">미회신</th><th className="tnum">선정</th><th className="tnum">선정 견적 합계</th><th className="tnum">약정 단가</th><th className="tnum">전달 이용료</th><th className="tnum">성사수수료</th><th className="tnum">월 한도</th></tr>
             </thead>
             <tbody>
               {rows.map((x) => (
                 <tr key={x.org_id}>
-                  <td><Link href={`/admin/cros/${x.org_id}`}>{x.org_name}</Link></td>
+                  <td><Link href={`/admin/cros/${x.org_id}`}>{x.org_name}</Link>{x.managed && <ManagedBadge />}</td>
                   <td className="tnum">{x.delivered}</td>
                   <td className="tnum">{x.billable}</td>
                   <td className="tnum">{x.excluded || "-"}</td>
@@ -83,7 +85,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td className="tnum">{x.replied}</td>
                   <td className="tnum">{x.unanswered}</td>
                   <td className="tnum">{x.selected}{x.replied ? ` (${Math.round((x.selected / x.replied) * 100)}%)` : ""}</td>
-                  <td className="tnum">{x.selected_amount ? won(x.selected_amount) : "-"}{x.exempt ? <div style={{ fontSize: 11, color: "var(--muted)" }}>면제 {x.exempt}건 제외</div> : null}</td>
+                  <td className="tnum">{x.selected_amount ? won(x.selected_amount) : "-"}</td>
                   <td className="tnum">{x.per_request_fee ? won(x.per_request_fee) : "-"}</td>
                   <td className="tnum">{x.per_request_fee != null ? won(x.per_request_fee * x.billable) : "-"}</td>
                   <td className="tnum">{(() => { const f = successFee(x.selected_amount, rateOf.get(x.org_id)); return f == null ? (x.selected ? "요율 미정" : "-") : won(f); })()}</td>
@@ -97,7 +99,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card tbl-wrap">
-          <div style={{ padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>전달 기록 · 허위·중복·범위 불일치만 제외한다. 예산 검토·비교 견적은 정상 요청이다</div>
+          <div style={{ padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>전달 기록 · 허위·중복·범위 불일치만 제외합니다. 예산 검토·비교 견적은 정상 요청입니다</div>
           {(invites ?? []).length === 0 ? (
             <p className="empty">전달 기록이 없습니다.</p>
           ) : (
@@ -120,12 +122,12 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         </div>
 
         <div className="card tbl-wrap">
-          <div style={{ padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>비교표 공개 후 선정 없는 요청 · 외부 진행이 반복되는 기관을 확인한다</div>
+          <div style={{ padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>회신 마감 후 선정 없는 요청 · 외부 진행이 반복되는 기관을 확인합니다</div>
           {(noSelect ?? []).length === 0 ? (
             <p className="empty">해당 요청이 없습니다.</p>
           ) : (
             <table className="tbl">
-              <thead><tr><th>요청</th><th>비교표</th><th>결과</th><th>사유</th></tr></thead>
+              <thead><tr><th>요청</th><th>회신 마감</th><th>결과</th><th>사유</th></tr></thead>
               <tbody>
                 {(noSelect ?? []).map((q) => (
                   <tr key={q.rfq_no}>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { sendMail } from "@/lib/mail";
-import { inviteMailHtml, inviteMailSubject } from "@/lib/distribute";
+import { inviteMailHtml, inviteMailSubject, inviteReplyTo, type InviteMailOpts } from "@/lib/distribute";
 import { logEvent } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import { rateLimited, TOO_MANY } from "@/lib/rate-limit";
@@ -26,9 +26,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
 
   // 기관 대표 메일이 바뀌었으면 바뀐 주소로. 초대 행의 주소도 맞춰 둔다
-  const { data: org } = inv.cro_org_id ? await sb.from("cro_orgs").select("contact_email").eq("id", inv.cro_org_id).maybeSingle() : { data: null };
+  const { data: org } = inv.cro_org_id ? await sb.from("cro_orgs").select("contact_email, managed").eq("id", inv.cro_org_id).maybeSingle() : { data: null };
+  const { count: members } = inv.cro_org_id ? await sb.from("profiles").select("id", { count: "exact", head: true }).eq("cro_org_id", inv.cro_org_id) : { count: 0 };
+  const mailOpts: InviteMailOpts = { managed: !!org?.managed, members: members ?? 0 };
   const to = (org?.contact_email || inv.cro_email).trim();
-  const ok = await sendMail({ to: [to], subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id) }).catch(() => false);
+  const ok = await sendMail({ to: [to], subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id, mailOpts), replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
   if (!ok) return NextResponse.json({ error: "메일을 보내지 못했습니다. 메일 설정(RESEND_API_KEY)을 확인해 주세요." }, { status: 502 });
   await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString(), cro_email: to }).eq("id", id);
   await logEvent(inv.rfq_id, "resend", `${inv.cro_name} 배포 메일 재발송`, to, s.userId, { inviteId: id });

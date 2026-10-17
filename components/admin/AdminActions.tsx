@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function AdminActions({ no, status, submitted, compared, note: initialNote, award }: { no: string; status: string; submitted: number; compared: boolean; note: string; award: { cro: string; at: string; contract: string } | null }) {
+/**
+ * 운영자 진행 관리. "회신 마감"은 compared_at 을 채워 남은 회신 링크를 닫는다 (비교표 공개 단계는 없다, lib/reply-window.ts).
+ * 기한 다음 날 cron 이 같은 일을 하므로, 기한 전에 닫아야 할 때만 쓴다(전원 회신 또는 의뢰자 요청). 다시 열려면 회신 기한을 늘린다.
+ */
+export function AdminActions({ no, status, submitted, pending, early, closed, note: initialNote, award }: { no: string; status: string; submitted: number; pending: number; early: boolean; closed: boolean; note: string; award: { cro: string; at: string; contract: string } | null }) {
   const router = useRouter();
   const [note, setNote] = useState(initialNote);
   const [busy, setBusy] = useState("");
@@ -27,13 +31,19 @@ export function AdminActions({ no, status, submitted, compared, note: initialNot
     }
   };
   const done = status === "closed" || status === "cancelled";
+  // 기한 전 마감은 전원 회신했거나 의뢰자가 요청한 경우만 (약관 제4조5항). 미회신 기관이 있으면 의뢰자 요청으로 기록한다
+  const closeConfirm = !early
+    ? `견적 ${submitted}건으로 회신을 마감할까요?${pending ? ` 회신하지 않은 ${pending}곳의 회신 링크도 닫힙니다.` : ""} 의뢰자에게 요약을 보냅니다. 다시 열려면 기한을 늘려 주세요.`
+    : pending
+      ? `아직 회신 기한 전이고 회신하지 않은 기관이 ${pending}곳 있습니다. 기한 전 마감은 의뢰자가 요청한 경우에만 할 수 있습니다. 의뢰자의 마감 요청을 받았습니까? 확인을 누르면 의뢰자 요청으로 기록하고 견적 ${submitted}건으로 회신을 마감합니다. 이 요청의 모든 기관에 마감을 알리고 의뢰자에게 요약을 보냅니다. 다시 열려면 기한을 늘려 주세요.`
+      : `견적 ${submitted}건으로 회신을 마감할까요? 아직 회신 기한 전이지만 전달받은 기관이 모두 회신했습니다. 제출한 기관에 마감을 알리고 의뢰자에게 요약을 보냅니다. 다시 열려면 기한을 늘려 주세요.`;
 
   return (
     <div className="stack" style={{ gap: 12 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {!done && (
-          <button type="button" className="b1" disabled={submitted === 0 || !!busy} onClick={() => call("compare", `/api/admin/rfqs/${no}/compare`, {}, compared ? "비교표를 다시 공개하고 의뢰자에게 알림을 보낼까요?" : `회신 ${submitted}건으로 비교표를 공개하고 의뢰자에게 알릴까요?`)}>
-            {busy === "compare" ? "처리 중…" : compared ? "비교표 재공개 · 알림" : `비교표 공개 (${submitted}건)`}
+        {!done && !closed && ["distributed", "quoted"].includes(status) && (
+          <button type="button" className="b1" disabled={submitted === 0 || !!busy} title={submitted === 0 ? "제출된 견적이 있어야 마감할 수 있습니다" : undefined} onClick={() => call("close-replies", `/api/admin/rfqs/${no}/close-replies`, { sponsorRequested: early && pending > 0 }, closeConfirm)}>
+            {busy === "close-replies" ? "처리 중…" : `회신 마감 (견적 ${submitted}건)`}
           </button>
         )}
         {!done && (
