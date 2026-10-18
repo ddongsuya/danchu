@@ -174,7 +174,9 @@ export async function POST(req: Request) {
           }
         }
       } catch (e) {
-        console.error("auto distribute", e);
+        // DB 조회 실패·마이그레이션 미적용은 "대상 없음"이 아니다. 운영자가 알아야 수동 배포하거나 DB 를 고친다
+        captureError(e, "rfq:auto-distribute", { rfqNo: no });
+        await notifyUsers(await adminUserIds(), { kind: "배포", title: `${no} 자동 배포 실패`, body: "배포 대상을 조회하거나 초대를 만드는 중 오류가 났습니다. 오류 기록과 DB 판(npm run check:schema)을 확인한 뒤 수동 배포해 주세요.", href: `/admin/r/${no}` }, { to: adminEmails() }).catch(() => {});
       }
       try {
         await sendRfqMails({ rfqNo: no, values, fileNames });

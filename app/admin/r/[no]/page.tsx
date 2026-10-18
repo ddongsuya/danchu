@@ -109,7 +109,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                           <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
                           <td>
                             <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }} title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
-                            {["sent", "draft"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} /></div>}
+                            {["sent", "draft", "submitted"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} canCancel={i.status !== "submitted"} /></div>}
                           </td>
                         </tr>
                       );

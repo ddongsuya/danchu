@@ -15,7 +15,7 @@ export default async function Done({
   const { no } = await searchParams;
   if (!no) notFound();
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin"))
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin"))
     notFound();
   const d = await getRfqDetail(rfq);
   const missing = d.files.filter((f) => !f.uploaded_at);

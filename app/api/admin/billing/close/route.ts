@@ -5,7 +5,11 @@ import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
-/** POST { month: 'YYYY-MM', closed: boolean, note? } — 청구 월 마감·해제. 마감된 달은 청구 제외 토글이 막힌다 */
+/**
+ * POST { month: 'YYYY-MM', closed: boolean, note? } — 청구 월 마감·해제.
+ * 마감하면 그 달 명세를 저장본(billing_periods.snapshot)으로 고정하고 청구 제외 토글이 막힌다 (close_billing_month, 0020).
+ * 해제하면 저장본도 지워지고, 다시 마감할 때 그때 값으로 새로 저장한다
+ */
 export async function POST(req: Request) {
   const s = await sessionOrNull("admin");
   if (!s) return NextResponse.json({ error: "운영자만 할 수 있습니다." }, { status: 403 });
@@ -15,8 +19,8 @@ export async function POST(req: Request) {
   const note = typeof b.note === "string" ? b.note.trim().slice(0, 300) : "";
   const sb = getSupabaseAdmin()!;
   if (b.closed) {
-    const { error } = await sb.from("billing_periods").upsert({ month, closed_by: s.userId, note: note || null, closed_at: new Date().toISOString() });
-    if (error) return NextResponse.json({ error: "마감하지 못했습니다." }, { status: 500 });
+    const { error } = await sb.rpc("close_billing_month", { p_month: month, p_actor: s.userId, p_note: note });
+    if (error) return NextResponse.json({ error: "마감하지 못했습니다. 0020 마이그레이션이 적용됐는지 확인해 주세요." }, { status: 500 });
   } else {
     const { error } = await sb.from("billing_periods").delete().eq("month", month);
     if (error) return NextResponse.json({ error: "해제하지 못했습니다." }, { status: 500 });

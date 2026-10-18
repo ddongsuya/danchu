@@ -38,6 +38,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
 }
 
 const CLOSED_MSG = "의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다.";
+const LINK_GONE = "유효하지 않거나 만료된 링크입니다.";
+
+/** save_quote 가 잠금 뒤 재검사에서 거절한 이유 (0021) */
+const SAVE_DENIED: Record<string, { error: string; status: number }> = {
+  revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(hello@danchu.kr)에서 새 링크를 받아 주세요.`, status: 403 },
+  expired: { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 },
+  declined: { error: "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
+  org_inactive: { error: "기관 참여가 중지되어 저장할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
+  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관 견적을 저장할 수 없습니다. 이 기관의 견적이라면 로그아웃한 뒤 메일의 링크로 다시 열어 회신해 주세요.", status: 403 },
+};
 
 /** 저장·제출이 막힌 상태면 그 이유 */
 function blocked(got: Loaded): string {
@@ -174,11 +184,12 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
   });
 
   // 헤더 + 항목 + 초대 상태 + 요청 상태를 한 트랜잭션으로. 초안 저장은 제출본을 절대 덮지 않는다.
-  const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
+  // 토큰을 함께 넘긴다: 화면 검사 뒤 취소·담당자 제외(토큰 재발급)·기관 중지가 끼어들면 save_quote 가 잠금 뒤에 거절한다 (0021)
+  const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId, got.token);
   // 토큰 제출은 행위자가 없다. 금전 구속력이 있는 제출이라 누가 보냈는지 IP·브라우저라도 남긴다
   if (submit && r.ok && !r.skipped && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
   // 화면을 연 뒤에 의뢰자가 선정했거나 회신이 마감되면 save_quote 가 closed 로 거절한다 (0019)
-  if (!r.ok) return r.code === "closed" ? { error: CLOSED_MSG, status: 409 } : { error: "저장에 실패했습니다.", status: 500 };
+  if (!r.ok) return r.code === "closed" ? { error: CLOSED_MSG, status: 409 } : SAVE_DENIED[r.code] ?? { error: "저장에 실패했습니다.", status: 500 };
   if (r.skipped) return { ok: true, skipped: true };
 
   if (submit && got.croOrgId && source === "cro") {

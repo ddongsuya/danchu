@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureError } from "@/lib/observe";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getCroOrg } from "@/lib/data";
@@ -41,8 +42,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   await audit({ userId: s.userId, email: s.email }, `org.${action}` as "org.approve" | "org.reject" | "org.suspend" | "org.optout", { type: "cro_org", id, label: org.name }, { before: { status: org.status }, after: { status: m.status }, note });
 
   if (action === "suspend" || action === "optout") {
-    // 중지된 기관이 토큰 링크로 계속 제출해 비교표에 오르지 않게 열린 초대를 닫는다 (한도에서도 빠진다)
-    await sb.from("rfq_invites").update({ status: "expired" }).eq("cro_org_id", id).in("status", ["sent", "draft"]);
+    // 중지된 기관이 토큰 링크로 계속 제출해 비교표에 오르지 않게 열린 초대를 닫는다 (한도에서도 빠진다).
+    // 위 상태 변경에서 DB 트리거가 이 기관의 회신 링크를 제출 건까지 모두 새로 발급했다 (0021). 다시 승인해도 옛 링크는 살아나지 않는다
+    // 실패해도 저장(save_quote)은 org_inactive 로 막히지만, 열린 초대가 남은 것을 알 수 있게 오류를 남긴다
+    const { error: expireError } = await sb.from("rfq_invites").update({ status: "expired" }).eq("cro_org_id", id).in("status", ["sent", "draft"]);
+    if (expireError) captureError(expireError, "org-suspend:expire-invites", { org: id });
   }
   // 운영자 관리 기관은 참여 계약을 맺은 적이 없다. 승인·중지 안내 메일을 보내지 않는다 (수신 거부한 기관에는 더더욱).
   // 자동 배포 대상도 아니라 승인(수신 재개) 뒤 보충 배포도 하지 않는다
@@ -65,8 +69,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 /**
- * PATCH { name?, perRequestFee?, monthlyCap?, contactEmail?, contactPhone?, categories?, autoReply? } — 약정·운영 설정.
- * 전달 1건 = 청구 1건이라 단가·월 한도는 운영자만 적는다. 승인된 기관의 이름도 여기서만 바꾼다.
+ * PATCH { name?, perRequestFee?, feeRate?, monthlyFee?, monthlyFeeFrom?, contactEmail?, contactPhone?, categories?, autoReply? } — 약정·운영 설정.
+ * monthlyFeeFrom 은 구독 시작 월 'YYYY-MM' (비우면 구독료를 처음 저장한 달. 구독료를 지우면 함께 지워진다, 0020 트리거).
+ * 청구 기준(0020): 1,000만 원 미만 견적은 월 구독료(monthlyFee), 1,000만 원 이상은 건당 이용료(perRequestFee),
+ * 5,000만 원 이상이 체결되면 성사수수료(feeRate). 약정 값은 서면 합의 뒤 운영자만 적는다. 승인된 기관의 이름도 여기서만 바꾼다.
+ * 월 전달 한도는 없앴다. 예전 화면이 monthlyCap 을 보내도 저장하지 않는다.
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull("admin");
@@ -82,12 +89,18 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!name) return NextResponse.json({ error: "기관명을 입력해 주세요." }, { status: 400 });
     patch.name = name;
   }
-  for (const [key, col] of [["perRequestFee", "per_request_fee"], ["monthlyCap", "monthly_cap"]] as const) {
+  for (const [key, col, label] of [["perRequestFee", "per_request_fee", "건당 이용료"], ["monthlyFee", "monthly_fee", "월 구독료"]] as const) {
     if (!(key in b)) continue;
     const v = b[key];
     if (v === null || v === "") patch[col] = null;
     else if (typeof v === "number" && Number.isInteger(v) && v >= 0 && v <= 100_000_000) patch[col] = v;
-    else return NextResponse.json({ error: `${key === "perRequestFee" ? "이용료" : "월 한도"}는 0 이상의 정수여야 합니다.` }, { status: 400 });
+    else return NextResponse.json({ error: `${label}는 0 이상 1억 원 이하의 정수(원)로 적어 주세요.` }, { status: 400 });
+  }
+  if ("monthlyFeeFrom" in b) {
+    const v = b.monthlyFeeFrom;
+    if (v === null || v === "") patch.monthly_fee_from = null;
+    else if (typeof v === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(v)) patch.monthly_fee_from = `${v}-01`;
+    else return NextResponse.json({ error: "구독 시작 월은 YYYY-MM 형식으로 적어 주세요." }, { status: 400 });
   }
   if ("feeRate" in b) {
     const v = b.feeRate;

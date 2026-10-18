@@ -15,7 +15,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   const s = await requireSession("requester");
   const { no } = await params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
   // 실시간 비교: 기관이 제출한 견적은 바로 이 표에 기관명과 함께 나타난다. 공개 단계가 없다 (lib/reply-window.ts)
   const open = !repliesClosed(rfq);

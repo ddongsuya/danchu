@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** 열린 초대 1건의 운영 조치: 배포 메일 재발송, 초대 취소 */
-export function InviteActions({ inviteId, croName }: { inviteId: string; croName: string }) {
+/** 초대 1건의 운영 조치: 배포 메일 재발송, 초대 취소. 제출한 초대는 재발송만 (담당자 변경으로 링크가 재발급된 뒤 새 링크 안내) */
+export function InviteActions({ inviteId, croName, canCancel = true }: { inviteId: string; croName: string; canCancel?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -34,7 +34,7 @@ export function InviteActions({ inviteId, croName }: { inviteId: string; croName
   return (
     <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
       <button type="button" className="btxt" style={{ fontSize: 12 }} disabled={!!busy} onClick={() => call("resend")}>{busy === "resend" ? "보내는 중…" : "메일 재발송"}</button>
-      <button type="button" className="btxt" style={{ fontSize: 12, color: "var(--err)" }} disabled={!!busy} onClick={() => call("cancel")}>{busy === "cancel" ? "취소 중…" : "초대 취소"}</button>
+      {canCancel && <button type="button" className="btxt" style={{ fontSize: 12, color: "var(--err)" }} disabled={!!busy} onClick={() => call("cancel")}>{busy === "cancel" ? "취소 중…" : "초대 취소"}</button>}
       {msg && <span style={{ color: msg.ok ? "var(--ok)" : "var(--err)" }} role="status">{msg.text}</span>}
     </span>
   );

@@ -133,10 +133,19 @@ async function prefillDraft(orgId: string, r: RfqRow, rfq: RfqView): Promise<Rep
  */
 export type LoadOpts = { markOpened?: boolean; operator?: boolean };
 
-/** 초대 행 → 회신 화면 전체 */
+/** 초대 행 → 회신 화면 전체. 운영자가 거둔 초대(revoked_at, 0021)는 누구에게도 열지 않는다 (열람·저장·업로드·회신하지 않음 모두 여기를 거친다) */
 export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise<Loaded | null> {
+  if (inv.revoked_at) return null;
   const sb = getSupabaseAdmin();
   if (!sb) return null;
+  // 참여가 중지·반려된 기관의 초대는 운영자 외에는 열지 않는다. 포털(/cro/r)로 요청서를 계속 보거나 새로 발급된 토큰을 받아 가지 않게 한다
+  // (중지 때 DB 트리거가 토큰을 바꾸고 열린 초대를 만료시킨다, 0021). 운영자는 기록 확인을 위해 닫힌 화면으로 연다
+  let orgSuspended = false;
+  if (inv.cro_org_id) {
+    const { data: org } = await sb.from("cro_orgs").select("status").eq("id", inv.cro_org_id).maybeSingle();
+    orgSuspended = !!org && org.status !== "approved";
+    if (orgSuspended && !opts.operator) return null;
+  }
   const { data: r } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
   if (!r) return null;
 
@@ -187,12 +196,7 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
   const locked = !opts.operator && draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
   // 회신이 마감되면(compared_at, 기한 다음 날 cron 또는 운영자 회신 마감) 아직 제출하지 않은 기관도 닫힌다. 제때 낸 기관만 잠기고
   // 안 낸 기관은 링크 만료까지 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 을 비우므로 다시 열린다 (lib/reply-window.ts)
-  // 참여가 중지된 기관의 초대도 닫는다 (중지 때 초대를 만료시키지만 2차 방어선)
-  let orgSuspended = false;
-  if (inv.cro_org_id) {
-    const { data: org } = await sb.from("cro_orgs").select("status").eq("id", inv.cro_org_id).maybeSingle();
-    orgSuspended = !!org && org.status !== "approved";
-  }
+  // 참여가 중지된 기관의 초대는 위에서 막았다. 운영자가 열면 닫힌 화면으로 보인다
   const closed = repliesClosed(r) || orgSuspended;
 
   return {

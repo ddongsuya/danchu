@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function Support({ searchParams }: { searchParams: Promise<{ rfq?: string }> }) {
   const { rfq } = await searchParams;
   const s = await requireSession();
-  const reqs = dbReady() && s.profile.role === "requester" ? await listRequestsForUser(s.userId, s.email) : [];
+  const reqs = dbReady() && s.profile.role === "requester" ? await listRequestsForUser(s.userId) : [];
   return (
     <>
       <Crumb href="/app/profile" label="프로필" />

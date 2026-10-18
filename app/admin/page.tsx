@@ -6,6 +6,7 @@ import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { md, ymd } from "@/lib/format";
 import { missingProdEnv } from "@/lib/env";
+import { readSchemaStatus } from "@/lib/schema-version";
 import { sentryEnabled } from "@/lib/observe";
 import { SearchBox } from "@/components/admin/SearchBox";
 import { Pager } from "@/components/admin/Pager";
@@ -19,7 +20,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const { status = "", q = "", page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr, 10) || 1);
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
-  const [{ list, hasMore }, counts] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy()]);
+  const [{ list, hasMore }, counts, schema] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus()]);
   const href = (p: number) => `/admin?${new URLSearchParams({ ...(status ? { status } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
   const missingEnv = missingProdEnv();
   const noSentry = process.env.NODE_ENV === "production" && !sentryEnabled();
@@ -32,9 +33,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      {(missingEnv.length > 0 || noSentry) && (
+      {(missingEnv.length > 0 || noSentry || !schema.ok) && (
         <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>
           <b>운영 설정 확인</b>
+          {!schema.ok && <div>{schema.message} 배포(기관에 요청 보내기)가 멈춰 있습니다. README의 배포 순서대로 마이그레이션을 적용한 뒤 npm run check:schema 로 확인해 주세요.</div>}
           {missingEnv.length > 0 && <div>환경변수 누락: {missingEnv.join(", ")}. 접수·메일·예약 작업이 제대로 동작하지 않습니다. Vercel → Settings → Environment Variables 에 넣고 다시 배포해 주세요.</div>}
           {noSentry && <div>오류 모니터링(SENTRY_DSN)이 꺼져 있습니다. 서버 오류가 어디에도 기록되지 않습니다.</div>}
         </div>

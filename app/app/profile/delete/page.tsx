@@ -3,7 +3,6 @@ import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { CONTRACT_STATUSES, OPEN_STATUSES } from "@/lib/account";
-import { likeExact, orValue } from "@/lib/sql";
 import { DeleteAccountForm } from "@/components/app/DeleteAccountForm";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +20,7 @@ export default async function DeleteAccountPage() {
   let contracting: string[] = [];
   if (dbReady() && !isAdmin) {
     const sb = getSupabaseAdmin()!;
-    const { data } = await sb.from("rfq_requests").select("rfq_no, status").or(`user_id.eq.${s.userId},email.ilike.${orValue(likeExact(s.email.toLowerCase()))}`);
+    const { data } = await sb.from("rfq_requests").select("rfq_no, status").eq("user_id", s.userId);
     open = (data ?? []).filter((r) => (OPEN_STATUSES as readonly string[]).includes(r.status)).length;
     contracting = (data ?? []).filter((r) => (CONTRACT_STATUSES as readonly string[]).includes(r.status)).map((r) => r.rfq_no);
   }

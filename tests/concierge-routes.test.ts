@@ -240,7 +240,8 @@ describe("POST /api/admin/rfqs/[no]/deadline 기한 변경 메일", () => {
           { id: "inv-g", token: "tok_managed", cro_org_id: "org-managed", cro_email: "managed@example.com", status: "sent" },
         ], error: null };
       if (q.table === "profiles") return { data: [{ id: "m1", cro_org_id: "org-member" }], error: null };
-      if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false }, { id: "org-managed", managed: true }], error: null };
+      // 받는 사람은 지금의 기관 대표 메일 + 소속 담당자 (초대의 cro_email 이 아님, lib/distribute.ts orgMailTargets)
+      if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false, contact_email: "member-org@example.com" }, { id: "org-managed", managed: true, contact_email: "managed@example.com" }], error: null };
       if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
       return { data: null, error: null };
     };
@@ -269,7 +270,7 @@ describe("요청 취소 메일: 기관마다 따로, 계정 없는 기관은 /q"
           { id: "inv-g", token: "tok_managed", cro_org_id: "org-managed", cro_email: "managed@example.com" },
         ], error: null };
       if (q.table === "profiles") return { data: [{ id: "m1", email: "m1@member.example", cro_org_id: "org-member" }], error: null };
-      if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false }, { id: "org-managed", managed: true }], error: null };
+      if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false, contact_email: "member-org@example.com" }, { id: "org-managed", managed: true, contact_email: "managed@example.com" }], error: null };
       return { data: null, error: null };
     };
     expect((await changeStatus(json({ status: "cancelled" }), ctx)).status).toBe(200);
@@ -382,11 +383,13 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
       if (q.table === "rfq_invites" && q.filters.some(([k, v]) => k === "id" && v === "inv-w")) return { data: { id: "inv-w", token: "tok_winner1", cro_org_id: "org-managed", cro_email: "lab@example.com" }, error: null };
       if (q.table === "rfq_invites") return { data: [{ id: "inv-l", token: "tok_loser01", cro_org_id: "org-solo", cro_email: "solo@example.com", status: "submitted" }, { id: "inv-o", token: "tok_open001", cro_org_id: null, cro_email: "open@example.com", status: "sent" }], error: null };
       if (q.table === "profiles") return { data: [], error: null };
-      if (q.table === "cro_orgs") return q.filters.some(([k]) => k === "id") ? { data: { managed: true }, error: null } : { data: [{ id: "org-solo", managed: false }], error: null };
+      if (q.table === "cro_orgs") return { data: [{ id: "org-managed", managed: true, contact_email: "lab@example.com" }, { id: "org-solo", managed: false, contact_email: "solo@example.com" }], error: null };
       return { data: null, error: null };
     };
-    const r = await selectRoute(json({ quoteId: QID }), ctx);
+    const r = await selectRoute(json({ quoteId: QID, revision: 3 }), ctx);
     expect(r.status).toBe(200);
+    // 확인 화면이 본 견적 판을 그대로 넘긴다 (0022)
+    expect(fx.selectQuote).toHaveBeenCalledWith("rfq-1", QID, expect.any(String), 3);
     const calls = fx.notifyUsers.mock.calls as [string[], { title: string; body?: string; href?: string }, { to: string[]; replyTo?: string } | undefined][];
     const win = calls.find((c) => c[1].title.startsWith("선정되었습니다"));
     expect(win?.[1].href).toBe("/q/tok_winner1");

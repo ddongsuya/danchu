@@ -16,7 +16,7 @@ export async function POST(
     );
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin"))
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin"))
     return NextResponse.json(
       { error: "요청을 찾을 수 없습니다." },
       { status: 404 },

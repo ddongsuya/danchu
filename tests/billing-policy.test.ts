@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confidentialAccess, identityVisible, isIntent, maskedClientLabel, needsCda, seoulMonthRange, withinMonthlyCap } from "@/lib/request-policy";
+import { confidentialAccess, identityVisible, isIntent, maskedClientLabel, needsCda, seoulMonthRange } from "@/lib/request-policy";
 import { validateRequired } from "@/lib/rfq-schema";
 
 describe("선정 전 익명: 회사명·연락처 공개 조건", () => {
@@ -35,14 +35,10 @@ describe("요청 성격", () => {
   });
 });
 
-describe("월 전달 한도", () => {
-  it("한도가 없으면 항상 전달한다", () => {
-    expect(withinMonthlyCap(null, 999)).toBe(true);
-    expect(withinMonthlyCap(0, 5)).toBe(true);
-  });
-  it("한도에 닿으면 멈춘다", () => {
-    expect(withinMonthlyCap(10, 9)).toBe(true);
-    expect(withinMonthlyCap(10, 10)).toBe(false);
+describe("월 범위", () => {
+  it("월 전달 한도는 없다 (0020)", async () => {
+    const policy = await import("@/lib/request-policy");
+    expect("withinMonthlyCap" in policy).toBe(false);
   });
   it("서울 기준 이번 달 범위", () => {
     const r = seoulMonthRange(new Date("2026-12-15T03:00:00Z"));
@@ -77,7 +73,7 @@ describe("청구 계산", () => {
     const { monthRangeOf, successFee } = await import("@/lib/billing");
     expect(monthRangeOf("2026-12")).toMatchObject({ from: "2026-12-01", to: "2027-01-01", prev: "2026-11", next: "2027-01" });
     expect(monthRangeOf("garbage").from).toMatch(/-01$/);
-    expect(successFee(50_000_000, 0.05)).toBe(2_500_000);
+    expect(successFee(50_000_000, 0.03)).toBe(1_500_000);
     expect(successFee(50_000_000, null)).toBeNull();
   });
 });

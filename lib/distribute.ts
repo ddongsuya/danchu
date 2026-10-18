@@ -1,5 +1,5 @@
 import { notificationRecipients } from "./mail-preferences";
-import { countsTowardLimit, inviteExpiresAt, maskedClientLabel, needsCda, remainingInvites, seoulMonthRange, withinMonthlyCap, type InviteSource } from "@/lib/request-policy";
+import { countsTowardLimit, inviteExpiresAt, maskedClientLabel, needsCda, remainingInvites, type InviteSource } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
 import type { TablesUpdate } from "./db-types";
@@ -9,33 +9,70 @@ import { addBusinessDays, nowSeoul } from "./dates";
 import { quoteRowsFromPayload } from "./quote-items";
 import { rowKey } from "./catalog";
 import { replyPath } from "./concierge";
+import { assertSchemaReady } from "./schema-version";
+import { captureError } from "./observe";
 
 export type DistributeResult = {
   sent: number;
   mailed: number;
   names: string[];
   skipped: string[];
-  /** 월 전달 한도에 걸려 제외한 기관 */
-  capped: string[];
   /** DB 트리거가 막은 이유. request_not_open: 회신 마감(compared_at)·선정 이후 / invitation_limit_reached: 요청 기관 수 한도 */
   blocked?: "request_not_open" | "invitation_limit_reached";
 };
 
-type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; monthly_cap?: number | null; managed?: boolean };
+type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; managed?: boolean };
 
-/** 배포 대상 기관 조회에 쓰는 컬럼 (운영자 수동 배포 라우트와 같게) */
-export const ORG_COLUMNS = "id, name, contact_email, categories, glp_certs, monthly_cap, managed";
+/**
+ * 배포 대상 기관 조회에 쓰는 컬럼 (운영자 수동 배포 라우트와 같게).
+ * 요금 약정(건당 이용료·요율·구독료)은 읽지 않는다. 약정은 어느 기관에 보낼지에 영향을 주지 않는다 (월 전달 한도는 0020 에서 없앴다)
+ */
+export const ORG_COLUMNS = "id, name, contact_email, categories, glp_certs, managed";
+
+type Admin = NonNullable<ReturnType<typeof getSupabaseAdmin>>;
+
+/** 기관에 메일을 보낼 때 쓰는 지금의 연락처: 대표 메일, 지금 소속 담당자, 운영자 관리 여부 */
+export type OrgMailTarget = { managed: boolean; contactEmail: string | null; members: { id: string; email: string | null }[] };
+
+/**
+ * 기관별 지금의 연락처를 한 번에 읽는다. 회신 링크(토큰)가 들어가는 메일은 모두 이것으로 받는 사람을 정한다.
+ * 초대에 저장된 cro_email 은 배포 당시 주소라 이미 떠난 담당자일 수 있다 (토큰을 새로 발급해도 그 주소로 보내면 소용없다, 0021)
+ */
+export async function orgMailTargets(sb: Admin, orgIds: string[]): Promise<Map<string, OrgMailTarget>> {
+  const out = new Map<string, OrgMailTarget>();
+  const ids = [...new Set(orgIds.filter(Boolean))];
+  if (!ids.length) return out;
+  const [{ data: orgs }, { data: ms }] = await Promise.all([
+    sb.from("cro_orgs").select("id, managed, contact_email").in("id", ids),
+    sb.from("profiles").select("id, email, cro_org_id").in("cro_org_id", ids),
+  ]);
+  for (const o of orgs ?? []) out.set(o.id, { managed: !!o.managed, contactEmail: o.contact_email ?? null, members: [] });
+  for (const m of ms ?? []) {
+    if (m.cro_org_id) out.get(m.cro_org_id)?.members.push({ id: m.id, email: m.email ?? null });
+  }
+  return out;
+}
+
+/** 초대 1건의 메일 받는 사람. 기관 초대는 지금의 대표 메일 + 지금 소속 담당자만, 기관 없는 초대만 초대에 적힌 주소 */
+export function inviteMailTo(inv: { cro_org_id: string | null; cro_email: string | null }, t: OrgMailTarget | undefined): string[] {
+  const list = inv.cro_org_id ? [t?.contactEmail, ...(t?.members ?? []).map((m) => m.email)] : [inv.cro_email];
+  return [...new Set(list.filter((x): x is string => !!x && !!x.trim()))];
+}
 
 /**
  * 배포 대상 자동 선정.
  * - 승인된 기관 중 요청서 대분류와 수행 분야가 겹치는 기관
  * - 카탈로그에서 요청 항목 전부를 "수행하지 않음"으로 꺼 둔 기관은 제외
  * - 운영자 관리 기관(managed)은 제외. 참여 계약이 없는 기관이라 자동 배포·보충·지명으로 보내지 않고, 운영자가 배포 패널에서 요청마다 고른다
+ * DB 를 읽지 못하면(연결·권한 오류, 마이그레이션 미적용) 빈 목록이 아니라 오류를 던진다. 빈 목록은 "맞는 기관 없음"이라는 뜻이라
+ * 호출한 쪽이 운영자에게 "대상 없음"으로 알리고 끝내 버린다 (2026-10-18 보안 검토 #10)
  */
 export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: string[] }> {
   const sb = getSupabaseAdmin();
-  if (!sb) return { orgs: [], skipped: [] };
-  const { data } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).order("id");
+  if (!sb) throw new Error("배포 대상 기관을 조회하지 못했습니다: Supabase 환경변수가 없습니다.");
+  await assertSchemaReady(sb);
+  const { data, error } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).order("id");
+  if (error) throw new Error(`배포 대상 기관을 조회하지 못했습니다: ${error.message}`);
   const all = (data ?? []) as Org[];
   const cats = rfq.categories;
   const candidates = all.filter((o) => (o.categories ?? []).some((c) => cats.includes(c)));
@@ -43,7 +80,8 @@ export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: st
 
   const rows = quoteRowsFromPayload(rfq.payload);
   const keys = rows.map(rowKey);
-  const { data: cat } = await sb.from("cro_catalog").select("org_id, item_key, available").in("org_id", candidates.map((o) => o.id)).in("item_key", keys);
+  const { data: cat, error: catError } = await sb.from("cro_catalog").select("org_id, item_key, available").in("org_id", candidates.map((o) => o.id)).in("item_key", keys);
+  if (catError) throw new Error(`기관 카탈로그를 조회하지 못했습니다: ${catError.message}`);
   // 항목마다 조합이 여러 개: 켜진 조합이 하나라도 있으면 그 항목은 수행
   const on = new Map<string, Set<string>>();
   const has = new Map<string, Set<string>>();
@@ -75,18 +113,11 @@ export function defaultReplyBy(rfq: RfqRow): string {
  */
 export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual"): Promise<DistributeResult> {
   const sb = getSupabaseAdmin();
-  const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [], capped: [] };
+  const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   if (!sb || !orgs.length) return res;
-
-  // 월 전달 한도: 약정한 기관은 이번 달 전달 수가 한도에 닿으면 더 보내지 않는다 (전달 1건 = 청구 1건)
-  const cappedOrgs = orgs.filter((o) => o.monthly_cap != null && o.monthly_cap > 0);
-  const usedThisMonth = new Map<string, number>();
-  if (cappedOrgs.length) {
-    const { from, to } = seoulMonthRange();
-    // 청구에서 제외한 전달(허위·중복)은 한도에서도 뺀다
-    const { data: monthInv } = await sb.from("rfq_invites").select("cro_org_id").in("cro_org_id", cappedOrgs.map((o) => o.id)).eq("billable", true).gte("sent_at", `${from}T00:00:00+09:00`).lt("sent_at", `${to}T00:00:00+09:00`);
-    for (const i of monthInv ?? []) if (i.cro_org_id) usedThisMonth.set(i.cro_org_id, (usedThisMonth.get(i.cro_org_id) ?? 0) + 1);
-  }
+  // 마이그레이션이 덜 된 DB 에 새 코드가 배포됐으면 초대를 만들기 전에 멈춘다 (README "배포 순서")
+  await assertSchemaReady(sb);
+  // 기관별 월 전달 한도는 없다 (0020). 청구는 기관이 제출한 견적 기준이라 전달 자체에는 요금이 붙지 않는다
 
   const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id, status").eq("rfq_id", rfq.id);
   if (existingError) throw new Error("기존 배포 현황을 확인하지 못했습니다.");
@@ -98,7 +129,6 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   for (const o of orgs) {
     if (already.has(o.id)) continue;
     if (res.sent >= capacity) { res.skipped.push(o.name); continue; }
-    if (!withinMonthlyCap(o.monthly_cap, usedThisMonth.get(o.id) ?? 0)) { res.capped.push(o.name); continue; }
     const { data: members } = await sb.from("profiles").select("id, email").eq("cro_org_id", o.id);
     const memberIds = (members ?? []).map((m) => m.id as string);
     const memberMails = (members ?? []).map((m) => m.email as string);
@@ -126,7 +156,6 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
       continue;
     }
     already.add(o.id);
-    usedThisMonth.set(o.id, (usedThisMonth.get(o.id) ?? 0) + 1);
     res.sent++;
     res.names.push(o.name);
 
@@ -144,10 +173,23 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
   }
 
   if (res.sent) {
-    const patch: TablesUpdate<"rfq_requests"> = { reply_by: rfq.reply_by || replyBy };
-    if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
-    await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
-    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped });
+    // rfq 는 배포를 시작할 때 읽은 값이다. 메일을 보내는 사이 기관이 제출하고 의뢰자가 선정했을 수 있으므로
+    // 지금도 그 상태일 때만 바꾼다 (조건부 갱신). 조건이 맞지 않으면 아무것도 바꾸지 않는다 (2026-10-18 보안 검토 #5)
+    const now = new Date().toISOString();
+    const steps: { what: string; run: () => PromiseLike<{ error: { message: string } | null }> }[] = [];
+    if (rfq.status === "received") {
+      const moved: TablesUpdate<"rfq_requests"> = { status: "distributed", distributed_at: now };
+      steps.push({ what: "status", run: () => sb.from("rfq_requests").update(moved).eq("id", rfq.id).eq("status", "received") });
+    }
+    // 처음 배포한 시각과 회신 기한은 비어 있을 때만 채운다. 그 사이 운영자가 바꾼 기한을 옛 값으로 덮지 않는다
+    if (!rfq.distributed_at) steps.push({ what: "distributed_at", run: () => sb.from("rfq_requests").update({ distributed_at: now }).eq("id", rfq.id).is("distributed_at", null) });
+    if (!rfq.reply_by) steps.push({ what: "reply_by", run: () => sb.from("rfq_requests").update({ reply_by: replyBy }).eq("id", rfq.id).is("reply_by", null) });
+    for (const st of steps) {
+      // 초대와 메일은 이미 나갔으므로 여기서 던지지 않는다. 대신 크게 남긴다
+      const { error } = await st.run();
+      if (error) captureError(new Error(`배포 뒤 요청 갱신 실패 (${st.what}): ${error.message}`), "distribute:request-update");
+    }
+    await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source });
     const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id);
     if (rfq.user_id) {
       await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 참여 CRO ${count ?? res.sent}곳에 배포했습니다`, body: `회신 기한 ${replyBy} · 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
@@ -204,17 +246,10 @@ export async function resendUnmailedInvites(): Promise<{ tried: number; sent: nu
     out.tried++;
     const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
     if (!rfq || rfq.compared_at || ["selected", "contracting", "closed", "cancelled"].includes(rfq.status)) continue;
-    let to = [inv.cro_email];
-    const mailOpts: InviteMailOpts = { members: 0 };
-    if (inv.cro_org_id) {
-      const [{ data: ms }, { data: org }] = await Promise.all([
-        sb.from("profiles").select("email").eq("cro_org_id", inv.cro_org_id),
-        sb.from("cro_orgs").select("managed").eq("id", inv.cro_org_id).maybeSingle(),
-      ]);
-      to = [...new Set([inv.cro_email, ...(ms ?? []).map((m) => m.email)])];
-      mailOpts.members = (ms ?? []).length;
-      mailOpts.managed = !!org?.managed;
-    }
+    // 받는 사람은 지금의 대표 메일 + 지금 소속 담당자 (배포 당시의 cro_email 이 아님)
+    const t = inv.cro_org_id ? (await orgMailTargets(sb, [inv.cro_org_id])).get(inv.cro_org_id) : undefined;
+    const to = inviteMailTo(inv, t);
+    const mailOpts: InviteMailOpts = { members: t?.members.length ?? 0, managed: !!t?.managed };
     const mailTo = await notificationRecipients(to);
     if (!mailTo.length) continue;
     const ok = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id, mailOpts), replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
@@ -232,24 +267,25 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
   const { orgs, skipped } = await matchOrgs(rfq);
   // 의뢰자가 지명한 기관이 있으면 먼저 보낸다 (기관 수 한도 안에서). 분야가 안 맞아도 의뢰자의 선택을 존중한다
   const nominees = Array.isArray(rfq.payload.nominees) ? (rfq.payload.nominees as string[]) : [];
-  let first: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [], capped: [] };
+  let first: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   let nominated: Org[] = [];
   if (nominees.length) {
     const sb = getSupabaseAdmin();
     // 지명 목록(/api/orgs)에 운영자 관리 기관은 나오지 않는다. 이름이 같아도 여기서 다시 거른다
-    const { data } = sb ? await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).in("name", nominees) : { data: [] };
+    if (!sb) throw new Error("지명 기관을 조회하지 못했습니다: Supabase 환경변수가 없습니다.");
+    const { data, error } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).in("name", nominees);
+    if (error) throw new Error(`지명 기관을 조회하지 못했습니다: ${error.message}`);
     nominated = (data ?? []) as Org[];
     if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated");
   }
   const nominatedIds = new Set(nominated.map((o) => o.id));
   const rest = orgs.filter((o) => !nominatedIds.has(o.id));
-  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [], capped: [] } : await distributeTo(rfq, rest, replyBy, null, true);
+  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [] } : await distributeTo(rfq, rest, replyBy, null, true);
   return {
     sent: first.sent + r.sent,
     mailed: first.mailed + r.mailed,
     names: [...first.names, ...r.names],
     skipped: [...first.skipped, ...r.skipped, ...skipped],
-    capped: [...first.capped, ...r.capped],
     blocked: first.blocked ?? r.blocked,
     matched: orgs.length + nominated.filter((o) => !orgs.some((m) => m.id === o.id)).length,
   };
@@ -269,17 +305,20 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   const out = { rfqs: 0, invites: 0 };
   if (!sb) return out;
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
+  const { data, error } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
+  if (error) throw new Error(`열린 요청을 조회하지 못했습니다: ${error.message}`);
   // 아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 살린다 (기관이 없어 기다리던 요청)
   const fresh = new Date(Date.now() - 30 * 864e5).toISOString();
   let list = (data ?? []).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
   if (orgId) {
     // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
-    const { data: org } = await sb.from("cro_orgs").select("status, categories, managed").eq("id", orgId).maybeSingle();
+    const { data: org, error: orgError } = await sb.from("cro_orgs").select("status, categories, managed").eq("id", orgId).maybeSingle();
+    if (orgError) throw new Error(`기관을 조회하지 못했습니다: ${orgError.message}`);
     // 운영자 관리 기관은 자동 보충하지 않는다 (matchOrgs 와 같은 규칙)
     if (!org || org.status !== "approved" || org.managed) return out;
     const cats = (org.categories ?? []) as string[];
-    const { data: inv } = await sb.from("rfq_invites").select("rfq_id").eq("cro_org_id", orgId);
+    const { data: inv, error: invError } = await sb.from("rfq_invites").select("rfq_id").eq("cro_org_id", orgId);
+    if (invError) throw new Error(`기관의 기존 배포를 조회하지 못했습니다: ${invError.message}`);
     const invited = new Set((inv ?? []).map((i) => i.rfq_id as string));
     list = list.filter((r) => !invited.has(r.id) && r.categories.some((c) => cats.includes(c)));
   }
@@ -307,31 +346,24 @@ type InvitedRow = { id: string; token: string; cro_org_id: string | null; cro_em
  * - 담당자 계정이 있는 기관은 앱 알림과 포털 링크(portalHref, 없으면 /cro/r/{초대}),
  *   계정이 없거나 운영자 관리 기관은 로그인 없는 회신 링크(/q/{token})로 보낸다. /cro 는 로그인이 필요해 막힌 길이 된다.
  * - 운영자 관리 기관의 회신은 운영 역할 주소로 받는다.
+ * - 받는 사람은 지금의 대표 메일과 지금 소속 담당자다 (orgMailTargets). 떠난 담당자의 옛 주소로 새 링크가 가지 않는다.
  */
 export async function notifyInvitedOrgs(invites: InvitedRow[], n: { kind: NotifyKind; title: string; body?: string; portalHref?: string }): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb || !invites.length) return;
-  const orgIds = [...new Set(invites.map((i) => i.cro_org_id).filter((x): x is string => !!x))];
-  let members: { id: string; email: string | null; cro_org_id: string | null }[] = [];
-  let managed = new Set<string>();
-  if (orgIds.length) {
-    const [{ data: ms }, { data: orgs }] = await Promise.all([
-      sb.from("profiles").select("id, email, cro_org_id").in("cro_org_id", orgIds),
-      sb.from("cro_orgs").select("id, managed").in("id", orgIds),
-    ]);
-    members = (ms ?? []) as typeof members;
-    managed = new Set((orgs ?? []).filter((o) => o.managed).map((o) => o.id as string));
-  }
+  const targets = await orgMailTargets(sb, invites.map((i) => i.cro_org_id).filter((x): x is string => !!x));
   const seen = new Set<string>();
   for (const i of invites) {
     const key = i.cro_org_id ?? `mail:${i.cro_email}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const mine = members.filter((m) => !!i.cro_org_id && m.cro_org_id === i.cro_org_id);
-    const isManaged = managed.has(i.cro_org_id ?? "");
+    const t = i.cro_org_id ? targets.get(i.cro_org_id) : undefined;
+    const mine = t?.members ?? [];
+    const isManaged = !!t?.managed;
     const path = replyPath(i, { managed: isManaged, members: mine.length });
     const href = path.startsWith("/cro/") ? n.portalHref ?? path : path;
-    const to = [...new Set([i.cro_email, ...mine.map((m) => m.email)].filter((x): x is string => !!x))];
+    // 지금의 대표 메일 + 지금 소속 담당자. 초대의 cro_email(배포 당시 주소)로는 보내지 않는다
+    const to = inviteMailTo(i, t);
     await notifyUsers(mine.map((m) => m.id), { kind: n.kind, title: n.title, body: n.body, href }, { to, replyTo: inviteReplyTo({ managed: isManaged }) });
   }
 }

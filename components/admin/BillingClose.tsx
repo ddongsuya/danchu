@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** 청구 월 마감·해제 버튼. 마감하면 그 달 전달의 청구 토글이 막힌다 */
+/** 청구 월 마감·해제 버튼. 마감하면 그 달 명세를 저장본으로 고정하고 청구 제외 토글을 막는다 (0020) */
 export function BillingClose({ month, closed }: { month: string; closed: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export function BillingClose({ month, closed }: { month: string; closed: boolean
   }
   return (
     <span style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 13 }}>
-      <span>{closed ? "해제하면 청구 제외를 다시 바꿀 수 있습니다." : "마감하면 이 달 청구 제외를 바꿀 수 없습니다."}</span>
+      <span>{closed ? "해제하면 청구 제외를 다시 바꿀 수 있습니다." : "마감하면 지금 명세를 저장해 고정하고, 청구 제외를 바꿀 수 없습니다."}</span>
       <button type="button" className="b1 bsm" disabled={busy} onClick={go}>{busy ? "…" : "확인"}</button>
       <button type="button" className="b2 bsm" disabled={busy} onClick={() => setArm(false)}>취소</button>
     </span>

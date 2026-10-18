@@ -23,15 +23,21 @@ async function call<T extends { ok: true }, F extends keyof Fns>(fn: F, args: Fn
 }
 
 /* ── 의뢰자 CRO 선택 ── */
-export type SelectQuoteResult = { ok: true; award_id: string; invite_id: string; cro_org_id: string | null; cro_name: string };
-export function selectQuote(rfqId: string, quoteId: string, userId: string) {
-  return call<SelectQuoteResult, "select_quote">("select_quote", { p_rfq_id: rfqId, p_quote_id: quoteId, p_user: userId });
+export type SelectQuoteResult = { ok: true; award_id: string; invite_id: string; cro_org_id: string | null; cro_name: string; revision?: number };
+/**
+ * revision: 선정 확인 화면이 보여 준 견적 판 (cro_quotes.revision). 그 사이 기관이 견적을 고쳤으면 quote_changed 로 거절된다 (0022).
+ * 동시 선정은 요청 행 잠금으로 한 건만 성공하고 나머지는 already_selected.
+ */
+export function selectQuote(rfqId: string, quoteId: string, userId: string, revision: number) {
+  return call<SelectQuoteResult, "select_quote">("select_quote", { p_rfq_id: rfqId, p_quote_id: quoteId, p_user: userId, p_revision: revision });
 }
+export const QUOTE_CHANGED_MESSAGE = "견적이 바뀌었습니다. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.";
 export const SELECT_QUOTE_ERRORS: Record<string, { message: string; status: number }> = {
   not_found: { message: "요청을 찾을 수 없습니다.", status: 404 },
   not_open: { message: "마무리된 요청이라 선택할 수 없습니다.", status: 409 },
   already_selected: { message: "이미 CRO를 선택했습니다.", status: 409 },
   bad_quote: { message: "선택할 수 없는 견적입니다.", status: 400 },
+  quote_changed: { message: QUOTE_CHANGED_MESSAGE, status: 409 },
 };
 
 /* ── CRO 회신 저장·제출 ── */
@@ -70,8 +76,12 @@ export type QuoteItemInput = {
   sample_count: number | null;
 };
 export type SaveQuoteResult = { ok: true; quote_id: string; skipped?: boolean; first?: boolean; total_invites?: number; submitted_invites?: number };
-export function saveQuote(inviteId: string, header: QuoteHeader, items: QuoteItemInput[], submit: boolean, actorId: string | null) {
-  return call<SaveQuoteResult, "save_quote">("save_quote", { p_invite_id: inviteId, p_header: header as unknown as Json, p_items: items as unknown as Json, p_submit: submit, p_actor: actorId });
+/**
+ * token: 화면을 연 링크의 토큰. save_quote 가 잠금을 얻은 뒤 지금 토큰과 같은지, 철회·만료·기관 중지·소속 변경이 없는지 다시 본다 (0021).
+ * 실패 code: closed 선정·마감 · revoked 철회·토큰 재발급 · expired 기한 만료 · declined 회신하지 않음 · org_inactive 기관 중지 · not_member 소속 아님
+ */
+export function saveQuote(inviteId: string, header: QuoteHeader, items: QuoteItemInput[], submit: boolean, actorId: string | null, token: string) {
+  return call<SaveQuoteResult, "save_quote">("save_quote", { p_invite_id: inviteId, p_header: header as unknown as Json, p_items: items as unknown as Json, p_submit: submit, p_actor: actorId, p_token: token });
 }
 
 /* ── CRO 계약 체결 보고 ── */

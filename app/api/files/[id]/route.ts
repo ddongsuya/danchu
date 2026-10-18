@@ -28,20 +28,26 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const token = new URL(req.url).searchParams.get("token") || "";
   let allowed = false;
   // 기관 열람이면 선정 전까지 파일명을 가린다 (화면 라벨과 같은 규칙, CDA 체결과 무관). 의뢰자·운영자는 원본 이름
-  let viaInvite: { id: string; cda_signed_at: string | null } | null = null;
+  let viaInvite: { id: string; cda_signed_at: string | null; cro_org_id: string | null } | null = null;
   if (s) {
     if (s.profile.role === "admin") allowed = true;
-    else if (rfq.user_id === s.userId || rfq.email.toLowerCase() === s.email.toLowerCase()) allowed = true;
+    // 소유는 user_id 로만 (이메일이 같다고 소유자가 아니다)
+    else if (!!rfq.user_id && rfq.user_id === s.userId) allowed = true;
     else if (s.profile.role === "cro" && s.profile.cro_org_id) {
-      const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status").eq("rfq_id", rfq.id).eq("cro_org_id", s.profile.cro_org_id).maybeSingle();
-      allowed = !!inv && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
+      const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status, revoked_at, cro_org_id").eq("rfq_id", rfq.id).eq("cro_org_id", s.profile.cro_org_id).maybeSingle();
+      allowed = !!inv && !inv.revoked_at && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
       if (allowed && inv) viaInvite = inv;
     }
   }
   if (!allowed && token) {
-    const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status").eq("rfq_id", rfq.id).eq("token", token).maybeSingle();
-    allowed = !!inv && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
+    const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status, revoked_at, cro_org_id").eq("rfq_id", rfq.id).eq("token", token).maybeSingle();
+    allowed = !!inv && !inv.revoked_at && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
     if (allowed && inv) viaInvite = inv;
+  }
+  // 참여가 중지·반려된 기관은 초대를 받았어도 첨부를 내려받지 않는다 (제출한 초대는 중지 때 만료되지 않으므로 여기서 막는다)
+  if (allowed && viaInvite?.cro_org_id) {
+    const { data: org } = await sb.from("cro_orgs").select("status").eq("id", viaInvite.cro_org_id).maybeSingle();
+    if (org?.status !== "approved") allowed = false;
   }
   if (!allowed) return NextResponse.json({ error: "열람 권한이 없습니다." }, { status: 403 });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { captureError } from "@/lib/observe";
 import { likeExact } from "@/lib/sql";
 import { normalizeBusinessNo } from "@/lib/request-policy";
 import { findDuplicateOrg } from "@/lib/concierge";
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
     .from("profiles")
     .update({ role: "cro", cro_org_id: existing ? null : orgId, pending_org_id: existing ? orgId : null, phone: s(b, "phone", 40) || null, org_role: existing ? "member" : "owner" })
     .eq("id", created.user.id);
-  if (pe) console.error("signup-cro profile update", pe);
+  if (pe) captureError(pe, "signup-cro:profile-update", { existing: !!existing });
 
   const sent = await sendLoginLink("signup", email);
   await notifyUsers(

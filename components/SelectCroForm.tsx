@@ -8,11 +8,13 @@ import { CheckDisc, CheckMark } from "@/components/app/ui";
 /**
  * 선정 확인. caution 이 있으면(회신 기한 전이거나 아직 회신하지 않은 기관이 있으면) 기한·미회신 수·남은 회신 링크가 닫힌다는 사실을
  * 보여 주고 따로 확인받는다 (lib/reply-window.ts selectionCaution).
+ * revision: 이 화면이 보여 준 견적 판. 그 사이 기관이 견적을 고쳤으면 서버가 409 quote_changed 로 거절한다 (0022).
+ * 그러면 화면을 새로 불러와 바뀐 내용을 보여 주고, 동의를 다시 받는다.
  */
 export function SelectCroForm({
-  no, quoteId, croName, summary, others, contact, caution,
+  no, quoteId, revision, croName, summary, others, contact, caution,
 }: {
-  no: string; quoteId: string; croName: string;
+  no: string; quoteId: string; revision: number; croName: string;
   summary: [string, string][];
   others: { name: string; total: string }[];
   contact: string;
@@ -31,8 +33,16 @@ export function SelectCroForm({
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/rfq/${no}/select`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId }) });
-      const d = (await res.json().catch(() => ({}))) as { error?: string };
+      const res = await fetch(`/api/rfq/${no}/select`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quoteId, revision }) });
+      const d = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+      if (res.status === 409 && d.code === "quote_changed") {
+        // 화면을 연 뒤 견적이 바뀌었다. 새 내용을 불러오고, 바뀐 견적에 다시 동의하게 한다
+        setAgree(false);
+        setEarly(false);
+        setError(d.error || "견적이 바뀌었습니다. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.");
+        router.refresh();
+        return;
+      }
       if (!res.ok) throw new Error(d.error || "선택을 저장하지 못했습니다.");
       setDone(true);
       router.refresh();

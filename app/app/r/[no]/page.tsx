@@ -17,7 +17,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const s = await requireSession("requester");
   const { no } = await params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
   const idx = stageIndex(rfq.status);
   const submitted = d.invites.filter((i) => i.status === "submitted").length;

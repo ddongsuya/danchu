@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:db": "bash scripts/db-test.sh",
+    "check:schema": "node scripts/check-schema.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

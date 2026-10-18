@@ -72,11 +72,6 @@ export function inviteExpiresAt(replyBy: string): Date {
 /** 전달 출처. matched: 분야 자동 매칭 · nominated: 의뢰자 지명 · manual: 운영자 수동 */
 export type InviteSource = "matched" | "nominated" | "manual";
 
-/** 기관의 월 전달 한도 안인지. 한도가 없으면(null) 항상 가능 */
-export function withinMonthlyCap(cap: number | null | undefined, usedThisMonth: number): boolean {
-  return cap == null || cap <= 0 || usedThisMonth < cap;
-}
-
 /** 요청 성격 선택지. 셋 다 정상 요청이며 기관에 그대로 전달한다. 전달 제외 사유가 아니다 */
 export const INTENTS = ["발주 예정", "비교 견적", "예산 검토"] as const;
 export type Intent = (typeof INTENTS)[number];

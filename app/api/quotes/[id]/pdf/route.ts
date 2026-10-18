@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/quotes/[id]/pdf?token=… — CRO 정식 견적서 PDF (서명 URL로 리다이렉트).
  * 허용: 제출한 CRO(계정 또는 토큰) · 운영자 · 요청 소유 의뢰자(제출된 견적만. 비교표는 제출 즉시 보인다, lib/reply-window.ts).
+ * 운영자가 거둔 초대(revoked_at, 0021)의 견적은 운영자만 연다. 소유는 user_id 로만 판단한다.
  */
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -24,14 +25,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const s = await sessionOrNull();
   const token = new URL(req.url).searchParams.get("token") || "";
   let allowed = false;
-  if (s) {
-    if (s.profile.role === "admin") allowed = true;
-    else if (s.profile.role === "cro" && s.profile.cro_org_id && quote.cro_org_id === s.profile.cro_org_id) allowed = true;
-    else if (rfq && quote.status === "submitted" && (rfq.user_id === s.userId || rfq.email.toLowerCase() === s.email.toLowerCase())) allowed = true;
-  }
-  if (!allowed && token) {
-    const { data: inv } = await sb.from("rfq_invites").select("id").eq("id", quote.invite_id).eq("token", token).maybeSingle();
-    allowed = !!inv;
+  if (s?.profile.role === "admin") allowed = true;
+  else {
+    const { data: inv } = await sb.from("rfq_invites").select("id, token, revoked_at").eq("id", quote.invite_id).maybeSingle();
+    if (inv && !inv.revoked_at) {
+      if (s?.profile.role === "cro" && s.profile.cro_org_id && quote.cro_org_id === s.profile.cro_org_id) allowed = true;
+      else if (s && rfq && quote.status === "submitted" && !!rfq.user_id && rfq.user_id === s.userId) allowed = true;
+      else if (token && inv.token === token) allowed = true;
+    }
   }
   if (!allowed) return NextResponse.json({ error: "열람 권한이 없습니다." }, { status: 403 });
 

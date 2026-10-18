@@ -223,6 +223,7 @@
 .tbl th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 10px 12px; border-bottom: 1px solid var(--cline); white-space: nowrap; }
 .tbl td { padding: 12px; border-bottom: 1px solid var(--track); vertical-align: top; }
 .tbl tr:last-child td { border-bottom: 0; }
+.tbl tfoot td { border-top: 1px solid var(--cline); font-weight: 600; }
 .tbl--sticky th:first-child, .tbl--sticky td:first-child { position: sticky; left: 0; background: var(--wh); z-index: 1; }
 /* 좁은 화면에서는 행을 카드처럼 세운다. 셀 라벨은 data-label 로 (가로 스크롤 표는 엄지로 읽기 어렵다) */
 @media (max-width: 639px) {

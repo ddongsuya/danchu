@@ -3,6 +3,7 @@ import type { RfqRow } from "./data";
 import { logEvent, notifyUsers } from "./notify";
 import { notifyInvitedOrgs } from "./distribute";
 import { beforeDeadline, pendingInvites } from "./reply-window";
+import { captureError } from "./observe";
 
 export type CloseRepliesResult = { ok: boolean; count: number; pending: number; message: string; /** 아직 회신하지 않은 기관 이름 (운영자 알림용, 의뢰자·기관에는 보내지 않는다) */ pendingNames?: string[] };
 
@@ -34,13 +35,18 @@ export async function closeReplies(rfq: RfqRow, actorId: string | null, auto = f
   const submitted = (invites ?? []).filter((i) => i.status === "submitted");
 
   // 동시에 cron 과 운영자가 눌러도 한 번만 마감되고 요약도 한 번만 간다
-  const { data: done } = await sb
+  const { data: done, error: doneError } = await sb
     .from("rfq_requests")
     .update({ compared_at: new Date().toISOString(), status: "compared" })
     .eq("id", rfq.id)
     .is("compared_at", null)
     .in("status", ["distributed", "quoted"])
     .select("id");
+  // 저장 오류를 "이미 마감됨"으로 보이게 하지 않는다
+  if (doneError) {
+    captureError(doneError, "compare:close", { rfq: rfq.rfq_no });
+    return { ok: false, count, pending, message: "회신 마감을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  }
   if (!done?.length) return { ok: false, count, pending, message: "이미 회신이 마감된 요청입니다." };
 
   const why = early ? (sponsorRequested ? "기한 전 마감 · 의뢰자 요청" : "기한 전 마감 · 전원 회신") : "";

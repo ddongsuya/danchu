@@ -1,6 +1,5 @@
 import type { Admin } from "./supabase";
 import type { Values } from "./rfq-schema";
-import { likeExact, orValue } from "./sql";
 import { logEvent, notifyUsers, adminEmails, adminUserIds } from "./notify";
 import { notifyInvitedOrgs } from "./distribute";
 import { captureError } from "./observe";
@@ -54,7 +53,8 @@ export async function anonymizeRequests(sb: Admin, rfqIds: string[]): Promise<{ 
     }
   }
 
-  const { data: rows } = await sb.from("rfq_requests").select("id, payload").in("id", rfqIds);
+  const { data: rows, error: rowsError } = await sb.from("rfq_requests").select("id, payload").in("id", rfqIds);
+  if (rowsError) captureError(rowsError, "account:anonymize-read", { count: rfqIds.length });
   for (const r of rows ?? []) {
     const { error } = await sb
       .from("rfq_requests")
@@ -75,18 +75,24 @@ export type DeleteResult =
  * 1) 운영자·계약 진행 중이면 거부
  * 2) 선정 전 요청은 취소하고 회신 중인 기관에 알림
  * 3) 본인 요청서 전부 익명화 (첨부는 미선정 건만 삭제)
- * 4) auth.users 삭제 → profiles·notifications 는 cascade, cro_quotes.submitted_by·rfq_events.actor_id 는 null
+ * 4) auth.users 삭제 → profiles·notifications 는 cascade, cro_quotes.submitted_by·rfq_events.actor_id 는 null.
+ *    기관 담당자였으면 profiles 삭제 트리거가 그 기관의 회신 링크를 모두 새로 발급한다 (0021)
  * 5) 운영자에게 알림
  */
 export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?: string | null; reason: "self" | "admin" }): Promise<DeleteResult> {
   const { data: profile } = await sb.from("profiles").select("id, email, role, name, company, cro_org_id").eq("id", userId).maybeSingle();
   if (!profile) return { ok: false, code: "not_found" };
 
-  const email = profile.email.toLowerCase();
-  const { data: rfqs } = await sb
+  // 본인 요청은 user_id 로만 찾는다. 같은 이메일을 예전에 쓴 다른 계정의 요청을 취소·익명화·첨부 삭제하지 않는다
+  const { data: rfqs, error: rfqError } = await sb
     .from("rfq_requests")
     .select("id, rfq_no, status, user_id")
-    .or(`user_id.eq.${userId},email.ilike.${orValue(likeExact(email))}`);
+    .eq("user_id", userId);
+  // 조회가 실패했는데 "요청 없음"으로 보고 계정을 지우면, 익명화되지 않은 요청이 같은 이메일의 다른 계정에 넘어갈 수 있다
+  if (rfqError) {
+    captureError(rfqError, "account:list-requests", { user: userId });
+    throw new Error("요청 목록을 확인하지 못해 계정을 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.");
+  }
   const mine = rfqs ?? [];
 
   const blocked = deletionBlockedBy(profile.role, mine.map((r) => r.status));
@@ -108,6 +114,10 @@ export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?:
 
   // 3) 익명화
   const { anonymized, filesDeleted } = await anonymizeRequests(sb, mine.map((r) => r.id));
+  // 하나라도 익명화하지 못했으면 계정을 지우지 않는다 (지우면 user_id 가 비워진 채 원래 이메일이 남는다). 다시 시도하면 이어서 처리된다
+  if (anonymized < mine.length) {
+    throw new Error("요청 정보를 모두 정리하지 못해 계정을 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.");
+  }
 
   // 4) 계정 삭제
   const { error } = await sb.auth.admin.deleteUser(userId);

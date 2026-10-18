@@ -71,7 +71,7 @@ describe("청구", () => {
   });
   it("성사수수료는 요율이 없으면 null, 있으면 원 단위 반올림", () => {
     expect(successFee(1_000_000, null)).toBeNull();
-    expect(successFee(1_000_000, 0.05)).toBe(50_000);
-    expect(successFee(333_333, 0.05)).toBe(Math.round(333_333 * 0.05));
+    expect(successFee(1_000_000, 0.03)).toBe(30_000);
+    expect(successFee(333_333, 0.03)).toBe(Math.round(333_333 * 0.03));
   });
 });

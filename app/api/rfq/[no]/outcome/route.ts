@@ -23,7 +23,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
   if (rfq.selected_quote_id) return NextResponse.json({ error: "이미 기관을 선정한 요청입니다." }, { status: 409 });
   if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "이미 마무리된 요청입니다." }, { status: 409 });
 

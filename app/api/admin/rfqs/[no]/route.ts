@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 /**
  * PATCH { croCount?, confidentiality? } — 의뢰자가 잘못 고른 전달 기관 수·기밀 등급을 운영자가 바로잡는다.
- * 종료·취소된 요청은 바꾸지 않는다. 기관 수를 이미 전달한 수보다 줄일 수는 없다 (전달 기록이 청구 근거라서).
+ * 종료·취소된 요청은 바꾸지 않는다. 기관 수를 이미 전달한 수보다 줄일 수는 없다 (이미 보낸 초대는 되돌리지 않는다).
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");

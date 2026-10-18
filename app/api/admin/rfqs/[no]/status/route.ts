@@ -45,10 +45,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     const next = rfq.selected_quote_id ? "selected" : rfq.compared_at ? "compared" : submitted ? "quoted" : rfq.distributed_at ? "distributed" : "received";
     await sb.from("rfq_requests").update({ status: next, closed_at: null }).eq("id", rfq.id);
     if (rfq.status === "cancelled") {
-      // 취소 때 만료시킨 초대를 되살린다 (회신하지 않음 처리한 기관은 그대로 둔다)
+      // 취소 때 만료시킨 초대를 되살린다 (회신하지 않음 처리한 기관, 운영자가 개별로 거둔 초대는 그대로 둔다. DB 트리거도 철회 초대를 expired 로 묶어 둔다, 0021)
       const { data: drafts } = await sb.from("cro_quotes").select("invite_id").eq("rfq_id", rfq.id);
       const withDraft = new Set((drafts ?? []).map((d) => d.invite_id as string));
-      const { data: exp } = await sb.from("rfq_invites").select("id").eq("rfq_id", rfq.id).eq("status", "expired").is("declined_at", null);
+      const { data: exp } = await sb.from("rfq_invites").select("id").eq("rfq_id", rfq.id).eq("status", "expired").is("declined_at", null).is("revoked_at", null);
       for (const i of exp ?? []) await sb.from("rfq_invites").update({ status: withDraft.has(i.id) ? "draft" : "sent" }).eq("id", i.id);
     }
     await logEvent(rfq.id, "note", "다시 열기", `상태 ${next}`, s.userId);

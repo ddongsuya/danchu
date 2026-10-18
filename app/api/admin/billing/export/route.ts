@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { monthRangeOf } from "@/lib/billing";
+import { monthRangeOf, TIER_LABEL } from "@/lib/billing";
+import type { BillingAwardRow, BillingLineRow, BillingSnapshot, BillingSummaryRow } from "@/lib/db-types";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,15 @@ function csvCell(v: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** GET ?month=YYYY-MM — 그 달 전달 기록 CSV (기관 청구서의 원천). 엑셀에서 바로 열리게 BOM 을 붙인다 */
+const seoulDay = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : "");
+/** 미정은 빈칸이 아니라 "미정"으로 적는다 (0 으로 읽히지 않게) */
+const amountOrPending = (v: number | null | undefined) => (v == null ? "미정" : v);
+
+/**
+ * GET ?month=YYYY-MM: 그 달 청구 명세 CSV (0020 기준). 엑셀에서 바로 열리게 BOM 을 붙인다.
+ * 한 행이 청구 항목 하나다. 구분: 견적 회신(처음 제출한 달, 금액 없이 제출했으면 금액이 들어온 달) · 월 구독료 · 성사수수료 정산(체결 확인한 달) · 성사수수료 예상(선정한 달, 합계 미포함)
+ * 마감한 달은 마감 때 저장한 명세를 쓴다.
+ */
 export async function GET(req: Request) {
   const s = await sessionOrNull("admin");
   if (!s) return NextResponse.json({ error: "운영자만 할 수 있습니다." }, { status: 403 });
@@ -19,33 +28,54 @@ export async function GET(req: Request) {
   const month = new URL(req.url).searchParams.get("month") || undefined;
   const r = monthRangeOf(month);
 
-  const { data: invites } = await sb
-    .from("rfq_invites")
-    .select("rfq_no, cro_name, cro_org_id, sent_at, status, source, billable, bill_excluded_reason")
-    .gte("sent_at", `${r.from}T00:00:00+09:00`).lt("sent_at", `${r.to}T00:00:00+09:00`)
-    .order("cro_name").order("sent_at")
-    .limit(5000);
-  const orgIds = [...new Set((invites ?? []).map((i) => i.cro_org_id).filter((x): x is string => !!x))];
-  const { data: orgs } = orgIds.length ? await sb.from("cro_orgs").select("id, per_request_fee").in("id", orgIds) : { data: [] as { id: string; per_request_fee: number | null }[] };
-  const fee = new Map((orgs ?? []).map((o) => [o.id, o.per_request_fee]));
+  const { data: period } = await sb.from("billing_periods").select("snapshot").eq("month", r.from).maybeSingle();
+  let view = (period?.snapshot ?? null) as BillingSnapshot | null;
+  if (!view) {
+    const [{ data: summary, error }, { data: lines }, { data: awards }] = await Promise.all([
+      sb.rpc("billing_summary", { p_from: r.from, p_to: r.to }),
+      sb.rpc("billing_lines", { p_from: r.from, p_to: r.to }),
+      sb.rpc("billing_awards", { p_from: r.from, p_to: r.to }),
+    ]);
+    if (error) return NextResponse.json({ error: "집계 함수를 불러오지 못했습니다. 0020 마이그레이션이 적용됐는지 확인해 주세요." }, { status: 500 });
+    view = { taken_at: new Date().toISOString(), summary: (summary ?? []) as BillingSummaryRow[], lines: (lines ?? []) as BillingLineRow[], awards: (awards ?? []) as BillingAwardRow[] };
+  }
 
   const SOURCE: Record<string, string> = { matched: "매칭", nominated: "지명", manual: "수동" };
-  const STATUS: Record<string, string> = { submitted: "제출", declined: "회신 안 함", sent: "미회신", draft: "작성 중", expired: "만료" };
-  const head = ["기관", "전달일", "요청 번호", "출처", "회신", "청구 대상", "제외 사유", "약정 단가(원)", "청구액(원)"];
+  const head = ["구분", "기관", "일자", "요청 번호", "견적 금액(원)", "계약 금액(원)", "구간", "청구 대상", "제외 사유", "입력 주체", "단가(원) 또는 요율", "청구액(원)", "비고"];
   const lines = [head.join(",")];
-  for (const i of invites ?? []) {
-    const unit = i.cro_org_id ? fee.get(i.cro_org_id) ?? null : null;
-    lines.push([
-      i.cro_name,
-      new Date(i.sent_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }),
-      i.rfq_no,
-      SOURCE[i.source] ?? i.source,
-      STATUS[i.status] ?? i.status,
-      i.billable ? "Y" : "N",
-      i.bill_excluded_reason ?? "",
-      unit ?? "",
-      i.billable && unit != null ? unit : i.billable ? "" : 0,
-    ].map(csvCell).join(","));
+  const push = (cells: unknown[]) => lines.push(cells.map(csvCell).join(","));
+
+  for (const l of view.lines) {
+    const billedAt = l.billing_at ?? l.first_submitted_at;
+    const lateAmount = !!l.billing_at && seoulDay(l.billing_at).slice(0, 7) !== seoulDay(l.first_submitted_at).slice(0, 7);
+    const note = [SOURCE[l.invite_source] ? `전달 ${SOURCE[l.invite_source]}` : "", l.auto ? "예비 견적(자동 회신)" : "", l.tier === "no_amount" ? "금액 미입력, 청구하지 않음" : "", lateAmount ? `처음 제출 ${seoulDay(l.first_submitted_at)}, 금액 입력한 달에 청구` : ""].filter(Boolean).join(" · ");
+    push([
+      "견적 회신",
+      l.org_name,
+      seoulDay(billedAt),
+      l.rfq_no,
+      l.total_amount ?? "",
+      "",
+      TIER_LABEL[l.tier] ?? l.tier,
+      l.billable && l.tier !== "no_amount" ? "Y" : "N",
+      l.bill_excluded_reason ?? "",
+      l.entry_source === "operator" ? "운영자 대리 입력" : "기관",
+      l.chargeable ? amountOrPending(l.per_request_fee) : "",
+      l.chargeable ? amountOrPending(l.fee_due) : 0,
+      note,
+    ]);
+  }
+  for (const o of view.summary) {
+    if (o.monthly_fee == null) continue;
+    push(["월 구독료", o.org_name, r.from, "", "", "", "", "Y", "", "", o.monthly_fee, o.monthly_fee, `1,000만 원 미만 견적 ${o.subscription}건 포함`]);
+  }
+  for (const a of view.awards) {
+    const rate = a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : "미정";
+    if (a.kind === "settlement") {
+      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", "Y", "", "", rate, amountOrPending(a.fee), [`체결일 ${a.contract_date ?? "-"} · 체결 확인한 달에 정산`, a.invite_billable === false ? "견적 청구 제외한 초대" : ""].filter(Boolean).join(" · ")]);
+    } else {
+      push(["성사수수료 예상", a.org_name, seoulDay(a.awarded_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "견적 기준", "N", "", "", rate, "", `안내용, 합계에 넣지 않음 · 예상 ${a.fee == null ? "미정" : a.fee}원`]);
+    }
   }
   const body = "﻿" + lines.join("\r\n");
   return new NextResponse(body, {

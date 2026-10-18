@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo } from "@/lib/notify";
 import { closeReplies } from "@/lib/compare";
-import { distributeOpenRfqs, resendUnmailedInvites } from "@/lib/distribute";
+import { distributeOpenRfqs, inviteMailTo, orgMailTargets, resendUnmailedInvites } from "@/lib/distribute";
 import { loadByInvite } from "@/lib/quote-load";
 import { todaySeoul } from "@/lib/format";
 import { won } from "@/lib/format";
@@ -91,18 +91,11 @@ export async function GET(req: Request) {
       const { data: rfq } = await sb.from("rfq_requests").select("substance, status, compared_at").eq("id", inv.rfq_id).maybeSingle();
       // 운영자가 기한 전에 회신을 마감했거나(compared_at) 선정·종료된 요청에는 "회신해 주세요"를 보내지 않는다
       if (!rfq || repliesClosed(rfq)) continue;
-      let ids: string[] = [];
-      let mails: string[] = [inv.cro_email];
-      let managed = false;
-      if (inv.cro_org_id) {
-        const [{ data: ms }, { data: org }] = await Promise.all([
-          sb.from("profiles").select("id, email").eq("cro_org_id", inv.cro_org_id),
-          sb.from("cro_orgs").select("managed").eq("id", inv.cro_org_id).maybeSingle(),
-        ]);
-        ids = (ms ?? []).map((m) => m.id as string);
-        mails = [...new Set([inv.cro_email, ...(ms ?? []).map((m) => m.email as string)])];
-        managed = !!org?.managed;
-      }
+      // 받는 사람은 지금의 대표 메일 + 지금 소속 담당자. 초대의 cro_email(배포 당시 주소)은 떠난 담당자일 수 있어 쓰지 않는다
+      const t = inv.cro_org_id ? (await orgMailTargets(sb, [inv.cro_org_id])).get(inv.cro_org_id) : undefined;
+      const ids = (t?.members ?? []).map((m) => m.id);
+      const mails = inviteMailTo(inv, t);
+      const managed = !!t?.managed;
       // 담당자 계정이 없는 기관(운영자 관리 포함)은 로그인 없는 회신 링크로. 계정이 있으면 포털 링크 그대로
       const href = replyPath(inv, { managed, members: ids.length });
       // 운영자 관리 기관의 초안은 운영자가 PDF 를 옮겨 적다 저장한 것일 수 있고, 기관은 PDF 를 이미 메일로 보냈을 수 있다. 초안 여부로 문구를 나누지 않는다
@@ -143,7 +136,7 @@ export async function GET(req: Request) {
           const r = rows.find((x) => x.seq === it.seq)!;
           return { seq: it.seq, category: r.category, name: r.name, cond: r.cond, avail: it.avail || null, amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null, weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null, reason: it.reason || null, design: it.design ?? {}, source: it.source ?? "catalog", unit: it.unit ?? "total", unit_price: it.unitPrice ? Number(it.unitPrice) : null, sample_count: it.sampleCount ? Number(it.sampleCount) : null };
         });
-        const saved = await saveQuote(inv.id, { total_amount: total || null, total_weeks: weeks || null, vat: "별도", valid_until: valid, auto: true, start_date: d.common.startDate || null, pay_terms: null, substance_qty: null, report_lang: null, includes: d.common.includes, note: d.note }, items, true, null);
+        const saved = await saveQuote(inv.id, { total_amount: total || null, total_weeks: weeks || null, vat: "별도", valid_until: valid, auto: true, start_date: d.common.startDate || null, pay_terms: null, substance_qty: null, report_lang: null, includes: d.common.includes, note: d.note }, items, true, null, got.token);
         if (!saved.ok) throw new Error(`save_quote ${saved.code}`);
         const q = { id: saved.quote_id };
         const { data: r } = await sb.from("rfq_requests").select("user_id, email").eq("id", inv.rfq_id).maybeSingle();
@@ -185,7 +178,7 @@ export async function GET(req: Request) {
   });
 
   // 4) 회신 마감 14일 뒤에도 선정도 마무리도 없는 요청: 의뢰자에게 한 번 묻는다
-  //    선정 버튼을 누르지 않은 요청이 어디로 갔는지 알아야 전달 명세와 선정률이 맞는다
+  //    선정 버튼을 누르지 않은 요청이 어디로 갔는지 알아야 청구 명세의 선정률과 성사수수료가 맞는다
   await step("outcome-ask", out.errors, async () => {
   const asked = new Date(Date.now() - 14 * 864e5).toISOString();
   const { data: idle } = await sb.from("rfq_requests").select("id, rfq_no, user_id, substance").eq("status", "compared").is("selected_quote_id", null).is("outcome", null).lt("compared_at", asked);
@@ -199,7 +192,8 @@ export async function GET(req: Request) {
   });
 
   // 4-1) 선정 뒤 계약 보고가 없는 수주: 기관에 14·30일 리마인더, 45일에는 운영자·의뢰자에게 진행 여부를 묻는다
-  //      성사수수료는 보고된 계약에만 붙으므로, 보고 누락이 곧 매출 누락이다
+  //      성사수수료는 선정 견적 5,000만 원 이상이 체결(signed)로 확인된 계약에만, 계약 금액 기준으로 붙는다 (0020).
+  //      체결 확인한 달에 정산하므로, 보고 누락이 곧 매출 누락이다
   await step("contract-remind", out.errors, async () => {
     const since = new Date(Date.now() - 14 * 864e5).toISOString();
     // 마지막 단계(45일)에 15일 여유를 둔 60일 창. 미체결로 기록했거나 이미 마지막 단계를 지난 오래된 수주가 창을 채워 새 수주를 밀어내지 않게 한다
@@ -238,7 +232,8 @@ export async function GET(req: Request) {
         if (org?.managed || !ids.length) {
           // 운영자 관리 기관이나 담당자 계정이 없는 기관: 앱 알림을 못 받고 포털도 열 수 없다. 대표 이메일로 계약 진행 상황을 묻고 회신은 운영자가 받는다 (로그인 링크 없음)
           // 선정 메일이 "운영자가 메일로 여쭙겠다"고 안내한 대상과 같다 (app/api/rfq/[no]/select/route.ts)
-          const { data: inv } = !org?.contact_email && a.invite_id ? await sb.from("rfq_invites").select("cro_email").eq("id", a.invite_id).maybeSingle() : { data: null };
+          // 기관 수주는 지금의 대표 메일로만. 초대의 cro_email 은 기관이 없는 예전 초대에만 쓴다 (떠난 담당자 주소일 수 있다)
+          const { data: inv } = !a.cro_org_id && a.invite_id ? await sb.from("rfq_invites").select("cro_email").eq("id", a.invite_id).maybeSingle() : { data: null };
           const to = await notificationRecipients([org?.contact_email || inv?.cro_email || ""].filter(Boolean));
           if (!to.length) continue;
           const m = contractFollowupMail({ rfqNo: rfq.rfq_no, substance: rfq.substance, croName: a.cro_name, days, awardedOn: new Date(a.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) });

@@ -16,7 +16,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const s = await requireSession("requester");
   const { no, quoteId } = await params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   // 제출된 견적은 바로 볼 수 있다 (공개 단계 없음, lib/reply-window.ts). 초안은 아래에서 걸러진다
   const d = await getRfqDetail(rfq);
   const q = d.quotes.find((x) => x.id === quoteId && x.status === "submitted");
@@ -51,7 +51,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
         </div>
         <div className="ph__actions">
           {q.pdf_path && <a href={`/api/quotes/${q.id}/pdf`} className="b2">견적서 원본(PDF)</a>}
-          {selectable && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select`} className="b1">이 CRO 선택</Link>}
+          {selectable && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1">이 CRO 선택</Link>}
           {rfq.selected_quote_id === q.id && <span className="pill pill--ok">선택한 CRO</span>}
         </div>
       </div>
@@ -140,7 +140,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
 
       {selectable && (
         <div className="cta">
-          <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select`} className="b1 blg bfull">이 CRO 선택하기</Link>
+          <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 blg bfull">이 CRO 선택하기</Link>
         </div>
       )}
     </>
