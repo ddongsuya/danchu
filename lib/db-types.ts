@@ -50,10 +50,12 @@ export type Database = {
           outcome_at: string | null;
           anonymized_at: string | null;
           auto_distribute: boolean;
+          /** 기관 전달·접수 메일을 시작한 시각 (첨부 업로드 뒤 한 번) */
+          started_at: string | null;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "started_at"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
@@ -251,8 +253,13 @@ export type Database = {
           fee_exempt_reason: string | null;
           fee_exempt_at: string | null;
           fee_exempt_by: string | null;
+          /** 의뢰자가 계약 보고를 확인한 시각 (7일 뒤 자동 확정이면 confirmed_auto) */
+          requester_confirmed_at: string | null;
+          confirmed_auto: boolean;
+          requester_disputed_at: string | null;
+          requester_dispute_note: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "existing_client_claim" | "existing_client_claimed_at" | "fee_exempt" | "fee_exempt_reason" | "fee_exempt_at" | "fee_exempt_by">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_awards"]["Row"], "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "existing_client_claim" | "existing_client_claimed_at" | "fee_exempt" | "fee_exempt_reason" | "fee_exempt_at" | "fee_exempt_by" | "requester_confirmed_at" | "confirmed_auto" | "requester_disputed_at" | "requester_dispute_note">;
         Update: Partial<Database["public"]["Tables"]["rfq_awards"]["Row"]>;
         Relationships: [
           { foreignKeyName: "rfq_awards_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: true; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
@@ -390,6 +397,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["billing_periods"]["Row"]>;
         Relationships: [];
       };
+      rfq_pending: {
+        Row: {
+          token: string;
+          email: string;
+          payload: Values;
+          files: { name: string; size: number; type: string; path: string }[];
+          created_at: string;
+          expires_at: string;
+          verify_attempts: number;
+          claimed_at: string | null;
+          claimed_rfq_no: string | null;
+          claimed_user: string | null;
+          ip: string | null;
+        };
+        Insert: Ins<Database["public"]["Tables"]["rfq_pending"]["Row"], "files" | "created_at" | "expires_at" | "verify_attempts" | "claimed_at" | "claimed_rfq_no" | "claimed_user" | "ip">;
+        Update: Partial<Database["public"]["Tables"]["rfq_pending"]["Row"]>;
+        Relationships: [];
+      };
       admin_audit: {
         Row: {
           id: string;
@@ -446,7 +471,11 @@ export type BillingSummaryRow = {
   declined: number;
   unanswered: number;
   selected: number;
-  /** 면제된 수주를 뺀 선정 견적 합계 (성사수수료 기준) */
+  /** 면제된 수주를 뺀 선정 견적 합계 (참고용) */
   selected_amount: number;
   exempt: number;
+  /** 이 기간에 계약을 보고한 수주 수 (면제 제외) */
+  contracted: number;
+  /** 이 기간에 보고된 계약금액 합계, VAT 별도 (성사수수료 기준) */
+  contracted_amount: number;
 };

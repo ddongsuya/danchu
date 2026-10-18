@@ -23,7 +23,7 @@ export default async function CroRequest({ params, searchParams }: { params: Pro
         <div className="ph">
           <div>
             <h1>이번 요청은 회신하지 않습니다</h1>
-            <p>처리하면 이 요청은 종료 목록으로 이동합니다.</p>
+            <p>처리하면 종료 목록으로 옮깁니다. 회신 마감 전까지는 되돌릴 수 있습니다.</p>
           </div>
         </div>
         <DeclineForm token={inv.token} backHref={`/cro/r/${id}`} afterHref="/cro" />

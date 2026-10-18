@@ -8,7 +8,7 @@ import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
-/** POST { date, amount, note? } — 선정된 CRO가 계약 체결을 보고한다 → 상태 contracting → 운영자가 종료 처리 */
+/** POST { date, amount, note? } — 선정된 CRO가 계약 체결을 보고한다 → 상태 contracting → 의뢰자 확인(7일 뒤 자동 확정) → 종료 */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull();
   if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
@@ -39,12 +39,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   await logEvent(award.rfq_id, "contract", `${award.cro_name} 계약 체결 ${corrected ? "정정" : "보고"}`, `체결일 ${date} · ${won(amount)}`, s.userId);
   if (corrected) {
+    // 정정하면 의뢰자 확인을 다시 받는다 (이의가 있었다면 그 이의에 대한 답)
+    await getSupabaseAdmin()!.from("rfq_awards").update({ requester_confirmed_at: null, confirmed_auto: false, requester_disputed_at: null, requester_dispute_note: null }).eq("id", id);
+    if (r.user_id) await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용이 정정되었습니다`, body: `체결일 ${date} · ${won(amount)}. 맞는지 요청 화면에서 다시 확인해 주세요.`, href: `/app/r/${r.rfq_no}` });
     await audit({ userId: s.userId, email: s.email }, "award.contract", { type: "rfq_award", id, label: `${r.rfq_no} · ${award.cro_name}` }, { before: { contract_date: award.contract_date, contract_amount: award.contract_amount }, after: { contract_date: date, contract_amount: amount }, note: note || undefined });
     return NextResponse.json({ ok: true, corrected: true });
   }
   if (r?.user_id) {
     const { data: rq } = await getSupabaseAdmin()!.from("rfq_requests").select("email").eq("id", award.rfq_id).maybeSingle();
-    await notifyUsers([r.user_id], { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 보고 내용이 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${r.rfq_no}` }, rq?.email ? { to: [rq.email] } : undefined);
+    await notifyUsers([r.user_id], { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 맞는지 요청 화면에서 확인해 주세요. 7일 안에 답이 없으면 보고 내용대로 마무리합니다.`, href: `/app/r/${r.rfq_no}` }, rq?.email ? { to: [rq.email] } : undefined);
   }
   await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} 계약 체결 보고 · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}`, href: `/admin/awards` }, { to: adminEmails() });
   return NextResponse.json({ ok: true });

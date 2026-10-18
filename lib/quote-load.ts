@@ -22,9 +22,31 @@ export type Loaded = {
   locked: boolean;
   /** 회신하지 않음 처리 */
   declined: boolean;
-  /** 의뢰자가 이미 CRO를 선택해 회신이 닫힘 */
+  /** 회신이 닫힘 (비교표 공개, 선정, 마무리, 초대 취소, 기관 참여 중지) */
   closed: boolean;
+  /** 닫힌 이유. 기관에게 보여 줄 문구는 closedMessage() */
+  closedReason: ClosedReason | null;
 };
+
+export type ClosedReason = "selected" | "ended" | "compared" | "invite_cancelled" | "org_suspended";
+
+/** 닫힌 회신 화면과 저장 거부 응답에 쓰는 문구 */
+export function closedMessage(reason: ClosedReason | null): string {
+  switch (reason) {
+    case "selected":
+      return "의뢰자가 기관을 선정해 이 요청의 회신이 닫혔습니다.";
+    case "ended":
+      return "의뢰자가 요청을 마무리해 회신이 닫혔습니다.";
+    case "compared":
+      return "비교표가 열려 이 요청의 회신이 닫혔습니다. 제출한 견적은 의뢰자가 보고 있습니다.";
+    case "invite_cancelled":
+      return "운영자가 이 기관에 보낸 요청을 취소했습니다. 저장하거나 제출할 수 없습니다.";
+    case "org_suspended":
+      return "기관의 참여가 중지되어 회신할 수 없습니다. hello@danchu.kr로 문의해 주세요.";
+    default:
+      return "이 요청의 회신이 닫혔습니다.";
+  }
+}
 
 /**
  * 의뢰자 표시명과 공개 상태.
@@ -190,11 +212,23 @@ export async function loadByInvite(inv: InviteRow): Promise<Loaded | null> {
     const { data: org } = await sb.from("cro_orgs").select("status").eq("id", inv.cro_org_id).maybeSingle();
     orgSuspended = !!org && org.status !== "approved";
   }
-  const closed = ["selected", "contracting", "closed", "cancelled"].includes(r.status) || !!r.compared_at || orgSuspended;
+  // 운영자가 이 초대만 취소했거나(expired) 요청이 마무리되며 닫힌 초대도 저장·제출하지 않는다 (DB save_quote 도 거부)
+  const closedReason: ClosedReason | null = ["selected", "contracting"].includes(r.status)
+    ? "selected"
+    : ["closed", "cancelled"].includes(r.status)
+      ? "ended"
+      : r.compared_at
+        ? "compared"
+        : orgSuspended
+          ? "org_suspended"
+          : inv.status === "expired"
+            ? "invite_cancelled"
+            : null;
+  const closed = !!closedReason;
 
   return {
     rfq, draft, inviteId: inv.id, rfqId: inv.rfq_id, croName: inv.cro_name, croOrgId: inv.cro_org_id, token: inv.token,
-    expired, locked, declined: inv.status === "declined", closed,
+    expired, locked, declined: inv.status === "declined", closed, closedReason,
   };
 }
 

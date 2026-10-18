@@ -50,13 +50,29 @@ export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: st
     if (r.available !== false) on.set(r.org_id, (on.get(r.org_id) ?? new Set()).add(r.item_key));
   }
   const skipped: string[] = [];
-  const orgs = candidates.filter((o) => {
+  const eligible = candidates.filter((o) => {
     const h = has.get(o.id);
     const allOff = !!h && keys.length > 0 && keys.every((k) => h.has(k) && !on.get(o.id)?.has(k));
     if (allOff) skipped.push(o.name);
     return !allOff;
   });
-  return { orgs, skipped };
+  // 순번: 최근 30일에 덜 받은 기관부터, 같으면 가장 오래전에 받은 기관부터.
+  // 기관 수 한도(3곳·5곳)가 있을 때 늘 같은 기관이 앞자리를 차지하지 않게 한다
+  const since = new Date(Date.now() - 30 * 864e5).toISOString();
+  const { data: recent } = eligible.length ? await sb.from("rfq_invites").select("cro_org_id, sent_at").in("cro_org_id", eligible.map((o) => o.id)).gte("sent_at", since) : { data: [] };
+  return { orgs: orderByTurn(eligible, recent ?? []), skipped };
+}
+
+/** 전달 순번: 최근 받은 횟수가 적은 순 → 마지막으로 받은 시각이 오래된 순 → 이름 순 */
+export function orderByTurn<T extends { id: string; name: string }>(orgs: T[], recent: { cro_org_id: string | null; sent_at: string }[]): T[] {
+  const count = new Map<string, number>();
+  const last = new Map<string, string>();
+  for (const r of recent) {
+    if (!r.cro_org_id) continue;
+    count.set(r.cro_org_id, (count.get(r.cro_org_id) ?? 0) + 1);
+    if ((last.get(r.cro_org_id) ?? "") < r.sent_at) last.set(r.cro_org_id, r.sent_at);
+  }
+  return [...orgs].sort((a, b) => (count.get(a.id) ?? 0) - (count.get(b.id) ?? 0) || (last.get(a.id) ?? "").localeCompare(last.get(b.id) ?? "") || a.name.localeCompare(b.name, "ko"));
 }
 
 /** 회신 기한 기본값: 의뢰자 희망일이 있으면 그 날, 없으면 접수 + 7영업일 */
@@ -71,7 +87,10 @@ export function defaultReplyBy(rfq: RfqRow): string {
  * 기관들에 초대(회신 링크)를 만들고 메일·알림을 보낸다. 이미 초대한 기관은 건너뛴다.
  * 운영자 수동 배포와 접수 시 자동 배포가 함께 쓴다.
  */
-export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual"): Promise<DistributeResult> {
+/** 의뢰자에게 전달 결과를 알리는 방법. none: 호출부가 따로 알린다(접수 메일에 합침) · app: 앱 알림만 · mail: 앱 알림과 메일 */
+export type RequesterNotice = "none" | "app" | "mail";
+
+export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual", notice: RequesterNotice = "mail"): Promise<DistributeResult> {
   const sb = getSupabaseAdmin();
   const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [], capped: [] };
   if (!sb || !orgs.length) return res;
@@ -145,11 +164,11 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
     if (rfq.status === "received") Object.assign(patch, { status: "distributed", distributed_at: new Date().toISOString() });
     await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
     await logEvent(rfq.id, "distributed", `CRO ${res.sent}곳 ${auto ? "자동 " : ""}배포`, `${res.names.join(", ")} · 회신 기한 ${replyBy}${res.capped.length ? ` · 월 한도 제외 ${res.capped.join(", ")}` : ""}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source, capped: res.capped });
-    const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id);
-    if (rfq.user_id) {
-      await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 참여 CRO ${count ?? res.sent}곳에 배포했습니다`, body: `회신 기한 ${replyBy} · 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
-    } else {
-      await notifyUsers([], { kind: "배포", title: `${rfq.rfq_no} 참여 CRO ${res.sent}곳에 배포했습니다`, body: `회신 기한 ${replyBy} · 견적이 도착하면 이메일로 알려 드립니다. 진행 상황은 ${siteUrl()}/signup 에서 같은 이메일로 가입하면 볼 수 있습니다.` }, { to: [rfq.email] });
+    if (notice !== "none") {
+      const { count } = await sb.from("rfq_invites").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id).neq("status", "expired");
+      const n = { kind: "배포" as const, title: `${rfq.rfq_no} 기관 ${res.sent}곳에 더 전달했습니다`, body: `지금까지 ${count ?? res.sent}곳 · 회신 마감 ${replyBy}`, href: `/app/r/${rfq.rfq_no}` };
+      if (rfq.user_id) await notifyUsers([rfq.user_id], n, notice === "mail" ? { to: [rfq.email] } : undefined);
+      else if (notice === "mail") await notifyUsers([], { ...n, body: `${n.body} · 진행 상황은 ${siteUrl()}/signup 에서 같은 이메일로 가입하면 볼 수 있습니다.` }, { to: [rfq.email] });
     }
   }
   return res;
@@ -206,7 +225,8 @@ export async function resendUnmailedInvites(): Promise<{ tried: number; sent: nu
 }
 
 /** 접수 직후 자동 배포. 맞는 기관이 없으면 운영자에게만 알린다. */
-export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { matched: number }> {
+export async function autoDistribute(rfq: RfqRow, opts: { notifyRequester?: boolean } = {}): Promise<DistributeResult & { matched: number }> {
+  const notice: RequesterNotice = opts.notifyRequester === false ? "none" : "mail";
   const replyBy = defaultReplyBy(rfq);
   const { orgs, skipped } = await matchOrgs(rfq);
   // 의뢰자가 지명한 기관이 있으면 먼저 보낸다 (기관 수 한도 안에서). 분야가 안 맞아도 의뢰자의 선택을 존중한다
@@ -217,11 +237,11 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
     const sb = getSupabaseAdmin();
     const { data } = sb ? await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").in("name", nominees) : { data: [] };
     nominated = (data ?? []) as Org[];
-    if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated");
+    if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated", notice);
   }
   const nominatedIds = new Set(nominated.map((o) => o.id));
   const rest = orgs.filter((o) => !nominatedIds.has(o.id));
-  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [], capped: [] } : await distributeTo(rfq, rest, replyBy, null, true);
+  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [], capped: [] } : await distributeTo(rfq, rest, replyBy, null, true, "matched", notice);
   return {
     sent: first.sent + r.sent,
     mailed: first.mailed + r.mailed,
@@ -262,6 +282,8 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   }
   for (const rfq of list) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
+    // 아직 시작하지 않은 요청(첨부 업로드 중)은 startRfq 가 처음 전달을 맡는다
+    if (!rfq.started_at) continue;
     // 운영자가 수동 배포하면서 자동 보충을 끈 요청은 건드리지 않는다
     if (rfq.auto_distribute === false) continue;
     // 회신 기한: 정해져 있으면 그대로(먼저 받은 기관과 같게), 없으면 지금 기준으로 새로 잡는다
@@ -270,7 +292,8 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
     const { orgs } = await matchOrgs(rfq);
     const targets = orgId ? orgs.filter((o) => o.id === orgId) : orgs;
     if (!targets.length) continue;
-    const r = await distributeTo(rfq, targets, replyBy, actorId, true);
+    // 보충 전달은 의뢰자에게 앱 알림만 (메일은 접수 때 한 번이면 충분하다)
+    const r = await distributeTo(rfq, targets, replyBy, actorId, true, "matched", "app");
     if (r.sent) { out.rfqs++; out.invites += r.sent; }
   }
   return out;

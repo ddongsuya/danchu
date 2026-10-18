@@ -17,7 +17,7 @@ export default async function TokenRequest({ params, searchParams }: { params: P
           <div>
             <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{got.rfq.no}</span>
             <h1>이번 요청은 회신하지 않습니다</h1>
-            <p>처리하면 이 요청의 회신 링크가 닫힙니다.</p>
+            <p>회신 마감 전까지는 되돌릴 수 있습니다.</p>
           </div>
         </div>
         <DeclineForm token={token} backHref={`/q/${token}`} afterHref={`/q/${token}`} />

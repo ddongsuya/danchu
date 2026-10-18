@@ -3,9 +3,10 @@ import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { QuoteLineDef } from "@/lib/quote-items";
 import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib/cro-data";
-import { loadQuote as load, type Loaded } from "@/lib/quote-load";
+import { closedMessage, loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
-import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { publishIfAllReplied, replyTally } from "@/lib/compare";
 import { todaySeoul, won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
@@ -23,14 +24,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
   const { token } = await ctx.params;
   const got = await load(token);
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed });
+  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed, closedMessage: got.closed ? closedMessage(got.closedReason) : "" });
 }
 
 /** 저장·제출이 막힌 상태면 그 이유 */
 function blocked(got: Loaded): string {
   if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
   if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
-  if (got.closed) return "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.";
+  if (got.closed) return closedMessage(got.closedReason);
   if (got.declined) return "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.";
   return "";
 }
@@ -159,6 +160,7 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
   const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
   // 토큰 제출은 행위자가 없다. 금전 구속력이 있는 제출이라 누가 보냈는지 IP·브라우저라도 남긴다
   if (submit && r.ok && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
+  if (!r.ok && r.code === "closed") return { error: closedMessage("invite_cancelled"), status: 403 };
   if (!r.ok) return { error: "저장에 실패했습니다.", status: 500 };
   if (r.skipped) return { ok: true, skipped: true };
 
@@ -171,20 +173,29 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
 
   if (submit) {
     const first = r.first ?? true;
-    const done = r.submitted_invites ?? 0;
-    const count = r.total_invites ?? 0;
+    // 운영자가 취소한 초대는 빼고 센다
+    const t = await replyTally(got.rfqId);
+    const done = t.submitted;
+    const count = t.active;
+    const allReplied = count > 0 && t.submitted + t.declined >= count;
     await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null });
-    const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
-    if (rq?.user_id) {
-      // 메일은 첫 견적이 왔을 때와 전원이 회신했을 때만. 그 사이 도착은 앱 알림으로 충분하다
-      const mailWorthy = first && (done === 1 || (count > 0 && done >= count));
-      await notifyUsers(
-        [rq.user_id],
-        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done}/${count}곳 회신 · 비교표는 회신 기한 후 공개됩니다.${done >= count && count > 0 ? " 전달한 기관이 모두 회신해 곧 비교표가 열립니다." : ""}`, href: `/app/r/${got.rfq.no}` },
-        mailWorthy && rq.email ? { to: [rq.email] } : undefined,
-      );
+    if (allReplied) {
+      // 모두 답했으면 마감을 기다리지 않고 비교표를 연다. 의뢰자에게는 비교표 도착 알림·메일이 한 번 간다
+      after(() => publishIfAllReplied(got.rfqId).then(() => undefined).catch((e) => console.error("publish all replied", e)));
+    } else {
+      const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
+      if (rq?.user_id) {
+        // 메일은 첫 견적이 왔을 때만. 그 뒤 도착은 앱 알림, 모두 모이면 비교표 메일
+        const mailWorthy = first && done === 1;
+        await notifyUsers(
+          [rq.user_id],
+          { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${count}곳 중 ${done}곳 회신 · 비교표는 회신 마감 다음 날 오전 9시에 열립니다. 모두 회신하면 바로 열립니다.`, href: `/app/r/${got.rfq.no}` },
+          mailWorthy && rq.email ? { to: [rq.email] } : undefined,
+        );
+      }
     }
-    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
+    // 운영자는 앱 알림만. 메일은 예약 작업이 하루 한 번 모아서 보낸다
+    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` });
   }
   return { ok: true, total, weeks };
 }

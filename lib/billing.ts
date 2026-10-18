@@ -13,8 +13,8 @@ export function monthRangeOf(month: string | undefined): { label: string; from: 
   return { label: `${y}년 ${mm}월`, from, to, prev, next };
 }
 
-/** 성사수수료: 선정 견적 금액 × 기관 요율. 요율이 없으면 null (미정) */
-export function successFee(selectedAmount: number, feeRate: number | null | undefined): number | null {
+/** 성사수수료: 계약 보고 금액(보고한 달 기준) × 기관 요율. 요율이 없으면 null (미정) */
+export function successFee(contractAmount: number, feeRate: number | null | undefined): number | null {
   if (feeRate == null || feeRate < 0) return null;
-  return Math.round(selectedAmount * feeRate);
+  return Math.round(contractAmount * feeRate);
 }

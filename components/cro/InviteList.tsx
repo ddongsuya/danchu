@@ -13,7 +13,7 @@ export type InviteItem = {
   tags: string[];
   replyBy: string;
   expiresAt: string;
-  status: string;      // sent | draft | submitted | declined
+  status: string;      // sent | draft | submitted | declined | expired(운영자 취소·요청 마무리)
   rfqStatus: string;
   total: number | null;
   quoteStatus: string | null;
@@ -26,7 +26,7 @@ type F = (typeof FILTERS)[number];
 function bucket(i: InviteItem): F {
   const expired = new Date(i.expiresAt).getTime() < Date.now();
   const closed = ["compared", "selected", "contracting", "closed", "cancelled"].includes(i.rfqStatus);
-  if (i.status === "declined" || (expired && i.status !== "submitted")) return "종료";
+  if (i.status === "declined" || i.status === "expired" || (expired && i.status !== "submitted")) return "종료";
   if (i.status === "submitted") return closed ? "종료" : "제출";
   if (i.status === "draft") return "작성 중";
   return closed ? "종료" : "신규";
@@ -59,7 +59,7 @@ export function InviteList({ items }: { items: InviteItem[] }) {
           {shown.map((i) => {
             const b = bucket(i);
             const dd = dday(i.replyBy);
-            const pill = b === "제출" ? { cls: "pill--ok", text: "제출 완료" } : b === "종료" ? { cls: "pill--sf", text: i.status === "declined" ? "회신 안 함" : i.status === "submitted" ? "마감" : "만료" } : { cls: dd.n <= 2 ? "pill--err" : "pill--sf", text: `회신 ${dd.label}` };
+            const pill = b === "제출" ? { cls: "pill--ok", text: "제출 완료" } : b === "종료" ? { cls: "pill--sf", text: i.status === "declined" ? "회신 안 함" : i.status === "submitted" ? "마감" : i.status === "expired" ? "취소됨" : ["compared", "selected", "contracting", "closed", "cancelled"].includes(i.rfqStatus) ? "마감" : "만료" } : { cls: dd.n <= 2 ? "pill--err" : "pill--sf", text: `회신 ${dd.label}` };
             const state = b === "제출" ? `제출 · ${won(i.total ?? 0)}` : b === "작성 중" ? "작성 중" : b === "신규" ? "신규" : "";
             const action = b === "제출" ? (["selected", "contracting", "closed"].includes(i.rfqStatus) ? "결과 확인" : "수정") : b === "작성 중" ? "이어서 작성" : b === "신규" ? "요청서 보기" : "보기";
             return (

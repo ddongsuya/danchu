@@ -266,6 +266,7 @@ export function NewRequest({
         const r = await fetch("/api/rfq", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          // 첨부는 아래에서 한 개씩 올리고, 다 올린 뒤 finish() 가 기관 전달을 시작한다
           body: JSON.stringify({ payload, files: [] }),
         });
         const d = await r.json();
@@ -295,16 +296,31 @@ export function NewRequest({
       }
       if (failed.length)
         throw new Error(
-          `요청 ${no}는 접수됐습니다. 업로드 실패: ${failed.join(", ")}. 아래 버튼으로 파일만 다시 올릴 수 있습니다.`,
+          `요청서 ${no}를 저장했습니다. 올리지 못한 첨부: ${failed.join(", ")}. 다시 올리거나, 빠진 첨부 없이 기관에 보낼 수 있습니다.`,
         );
-      clearDraft(userId);
-      router.push(`/app/new/done?no=${encodeURIComponent(no)}`);
+      await finish(no);
     } catch (e) {
       setError(
         e instanceof Error
           ? e.message
           : "처리하지 못했습니다. 다시 시도해 주세요.",
       );
+    } finally {
+      setBusy(false);
+    }
+  };
+  /** 첨부까지 올라간 요청을 기관에 전달하고 완료 화면으로. 시작 호출이 실패해도 요청 화면에서 다시 보내거나 다음 예약 작업(매일 오전 9시)이 시작한다 */
+  const finish = async (no: string) => {
+    await fetch(`/api/rfq/${encodeURIComponent(no)}/start`, { method: "POST" }).catch(() => null);
+    clearDraft(userId);
+    router.push(`/app/new/done?no=${encodeURIComponent(no)}`);
+  };
+  const sendWithoutFailed = async () => {
+    if (!pendingNo || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await finish(pendingNo);
     } finally {
       setBusy(false);
     }
@@ -436,8 +452,9 @@ export function NewRequest({
       </p>
       {pendingNo && (
         <div className="note note--tint">
-          요청 {pendingNo}는 이미 접수됐습니다. 첨부파일만 다시 올립니다.{" "}
-          <Link href={`/app/r/${pendingNo}`}>접수된 요청 보기</Link>
+          요청서 {pendingNo}를 저장했습니다. 첨부가 모두 올라가면 기관에
+          전달합니다.{" "}
+          <Link href={`/app/r/${pendingNo}`}>저장된 요청 보기</Link>
         </div>
       )}
       <fieldset disabled={busy || !!pendingNo} className="request__fieldset">
@@ -780,10 +797,15 @@ export function NewRequest({
             {preview
               ? "검토용 화면 · 제출 불가"
               : busy
-                ? "접수·첨부 처리 중…"
+                ? "보내는 중…"
                 : pendingNo
-                  ? "첨부파일 다시 올리기"
+                  ? "첨부 다시 올리기"
                   : "견적 요청 보내기"}
+          </button>
+        )}
+        {step === 3 && pendingNo && !preview && (
+          <button className="b2" disabled={busy} onClick={sendWithoutFailed}>
+            빠진 첨부 없이 보내기
           </button>
         )}
       </div>

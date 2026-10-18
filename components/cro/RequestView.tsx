@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { Loaded } from "@/lib/quote-load";
+import { closedMessage, endOfDaySeoul, type Loaded } from "@/lib/quote-load";
+import { UndoDecline } from "@/components/cro/DeclineForm";
 import { Lock, StatusPill } from "@/components/app/ui";
 import { won } from "@/lib/format";
 
@@ -57,7 +58,15 @@ export function RequestView({ got, replyHref, declineHref, fileToken }: { got: L
           </span>
         </div>
       )}
-      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.</div>}
+      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>{closedMessage(got.closedReason)}</div>}
+      {got.declined && !got.closed && !got.expired && (
+        <div className="note note--tint" style={{ marginBottom: 16 }}>
+          <span>
+            이번 요청은 회신하지 않음으로 처리했습니다.
+            {Date.now() <= endOfDaySeoul(rfq.replyBy) ? <> 회신 마감({rfq.replyBy}) 전까지는 되돌릴 수 있습니다. <UndoDecline token={got.token} /></> : ""}
+          </span>
+        </div>
+      )}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">

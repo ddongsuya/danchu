@@ -44,3 +44,36 @@ export function DeclineForm({ token, backHref, afterHref }: { token: string; bac
     </div>
   );
 }
+
+/** "회신하지 않음"을 되돌린다. 회신 마감 전, 비교표가 열리기 전에만 보인다 */
+export function UndoDecline({ token }: { token: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <button
+        type="button"
+        className="btxt"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          try {
+            const res = await fetch(`/api/quote/${token}/decline`, { method: "DELETE" });
+            const d = (await res.json().catch(() => ({}))) as { error?: string };
+            if (!res.ok) throw new Error(d.error || "되돌리지 못했습니다.");
+            router.refresh();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "되돌리지 못했습니다.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "되돌리는 중…" : "되돌리고 회신하기"}
+      </button>
+      {error && <span role="alert">{error}</span>}
+    </span>
+  );
+}

@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { REOPEN_DAYS } from "@/lib/request-policy";
 
 const OUTCOMES = ["외부 진행", "보류", "취소"] as const;
 type Outcome = (typeof OUTCOMES)[number];
 const HELP: Record<Outcome, string> = {
   "외부 진행": "단추 밖에서 어느 기관과 진행하기로 했는지 적어 주세요. 전달된 기관이면 이름만 적어도 됩니다.",
-  보류: "지금은 진행하지 않습니다. 같은 요청은 나중에 다시 열 수 있습니다.",
+  보류: `지금은 진행하지 않습니다. 받은 견적이 있으면 ${REOPEN_DAYS}일 안에 이 화면에서 다시 열 수 있습니다.`,
   취소: "시험 계획이 바뀌어 요청을 취소합니다. 회신한 기관에 결과를 안내합니다.",
 };
 

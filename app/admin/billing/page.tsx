@@ -38,7 +38,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const priced = rows.filter((x) => x.per_request_fee != null);
   const totalFee = priced.reduce((a, x) => a + (x.per_request_fee ?? 0) * x.billable, 0);
   const unpriced = rows.length - priced.length;
-  const totalSuccess = rows.reduce((a, x) => a + (successFee(x.selected_amount, rateOf.get(x.org_id)) ?? 0), 0);
+  // 성사수수료: 이 달에 보고된 계약 금액 × 기관 요율 (면제 제외). 선정 견적 합계는 참고용
+  const totalSuccess = rows.reduce((a, x) => a + (successFee(x.contracted_amount ?? 0, rateOf.get(x.org_id)) ?? 0), 0);
 
   return (
     <>
@@ -70,7 +71,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         ) : (
           <table className="tbl">
             <thead>
-              <tr><th>기관</th><th className="tnum">전달</th><th className="tnum">청구</th><th className="tnum">제외</th><th>출처</th><th className="tnum">회신</th><th className="tnum">미회신</th><th className="tnum">선정</th><th className="tnum">선정 견적 합계 (면제 제외)</th><th className="tnum">약정 단가</th><th className="tnum">전달 이용료</th><th className="tnum">성사수수료</th><th className="tnum">월 한도</th></tr>
+              <tr><th>기관</th><th className="tnum">전달</th><th className="tnum">청구</th><th className="tnum">제외</th><th>출처</th><th className="tnum">회신</th><th className="tnum">미회신</th><th className="tnum">선정</th><th className="tnum">선정 견적 합계 (참고)</th><th className="tnum">이 달 계약 보고 (면제 제외)</th><th className="tnum">약정 단가</th><th className="tnum">전달 이용료</th><th className="tnum">성사수수료</th><th className="tnum">월 한도</th></tr>
             </thead>
             <tbody>
               {rows.map((x) => (
@@ -84,9 +85,10 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td className="tnum">{x.unanswered}</td>
                   <td className="tnum">{x.selected}{x.replied ? ` (${Math.round((x.selected / x.replied) * 100)}%)` : ""}</td>
                   <td className="tnum">{x.selected_amount ? won(x.selected_amount) : "-"}{x.exempt ? <div style={{ fontSize: 11, color: "var(--muted)" }}>면제 {x.exempt}건 제외</div> : null}</td>
+                  <td className="tnum">{x.contracted ? `${x.contracted}건 · ${won(x.contracted_amount)}` : "-"}</td>
                   <td className="tnum">{x.per_request_fee ? won(x.per_request_fee) : "-"}</td>
                   <td className="tnum">{x.per_request_fee != null ? won(x.per_request_fee * x.billable) : "-"}</td>
-                  <td className="tnum">{(() => { const f = successFee(x.selected_amount, rateOf.get(x.org_id)); return f == null ? (x.selected ? "요율 미정" : "-") : won(f); })()}</td>
+                  <td className="tnum">{(() => { if (!x.contracted) return "-"; const f = successFee(x.contracted_amount, rateOf.get(x.org_id)); return f == null ? "요율 미정" : won(f); })()}</td>
                   <td className="tnum">{x.monthly_cap ?? "-"}</td>
                 </tr>
               ))}

@@ -131,3 +131,6 @@ export function cleanNominees(raw: unknown, croCount: string | null | undefined,
   }
   return out;
 }
+
+/** "보류"로 마무리한 요청을 의뢰자가 다시 열 수 있는 기간 (일) */
+export const REOPEN_DAYS = 90;

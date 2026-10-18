@@ -94,43 +94,66 @@ export interface MailArgs {
   rfqNo: string;
   values: Values;
   fileNames: string[];
+  /** 접수와 함께 올라간 첨부 수 */
+  fileCount?: number;
+  /** 접수와 함께 전달한 기관 수. 0이면 "전달할 기관을 찾고 있습니다" 안내 */
+  sent?: number;
+  /** 회신 마감일 YYYY-MM-DD */
+  replyBy?: string;
 }
 
-export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Promise<{ requester: boolean; admin: boolean }> {
+/** 'YYYY-MM-DD' 다음 날 (비교표가 열리는 날) */
+function nextDay(ymd: string): string {
+  const d = new Date(`${ymd}T00:00:00+09:00`);
+  d.setDate(d.getDate() + 1);
+  return d.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+const md = (ymd: string) => (/^\d{4}-\d{2}-\d{2}$/.test(ymd) ? `${Number(ymd.slice(5, 7))}월 ${Number(ymd.slice(8, 10))}일` : ymd);
+
+/**
+ * 접수 메일. 기관 전달 결과를 함께 담아 한 통으로 보낸다 (접수 메일과 배포 메일이 따로·거꾸로 가던 것을 합쳤다).
+ * 운영자에게는 요청서 전체를 표로 보낸다.
+ */
+export async function sendRfqMails({ rfqNo, values, fileNames, fileCount, sent, replyBy }: MailArgs): Promise<{ requester: boolean; admin: boolean }> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { requester: false, admin: false };
   const resend = new Resend(key);
 
-  const now = nowSeoul();
   const to = String(values.email || "");
   const name = String(values.name || "");
   const company = String(values.company || "");
   const cats = Array.isArray(values.categories) ? values.categories.join(", ") : "";
   const cda = needsCda(values.confid);
+  const due = String(replyBy || values.replyBy || "");
+  const files = fileCount ?? fileNames.length;
+  const delivered = (sent ?? 0) > 0;
   const shareNote = cda
-    ? "시험 개요는 초대받은 기관에 전달하고, 회사명과 첨부는 기관별 CDA 체결 확인 후 공개합니다."
-    : "입력 내용은 견적 목적으로 참여 CRO에만 전달됩니다.";
+    ? "기관에는 시험 개요만 먼저 전달했습니다. 첨부는 CDA 체결을 확인한 기관에만, 회사명과 연락처는 의뢰자가 선택한 기관에만 공개됩니다."
+    : "회사명과 연락처는 의뢰자가 비교표에서 선택한 기관에만 공개됩니다.";
+  const steps = delivered
+    ? `<li>오늘 · 기관 ${sent}곳에 요청서를 전달했습니다.</li>
+      <li>${esc(md(due))} · 회신 마감</li>
+      <li>${esc(md(nextDay(due)))} 오전 9시 · 비교표 공개. 모든 기관이 회신하면 더 빨리 열립니다.</li>`
+    : `<li>요청 분야에 바로 맞는 참여 기관이 없어 운영자가 직접 전달 기관을 정하고 있습니다.</li>
+      <li>보통 영업일 1~2일 안에 전달 결과를 알려 드립니다.</li>`;
 
   const requesterHtml = wrap(`
-    <h2 style="margin:0 0 12px;font-size:20px">견적 요청이 접수되었습니다</h2>
-    <p>${esc(company)} ${esc(name)} 님, 요청 내용을 확인한 뒤 참여 CRO에 배포합니다.</p>
-    <div style="display:inline-block;background:#FAF3E6;border:1px solid #EAD9B8;border-radius:12px;padding:12px 24px;margin:8px 0 20px">
-      <div style="font-size:12px;font-weight:600;color:#8A5A12;letter-spacing:.04em">RFQ 번호</div>
+    <h2 style="margin:0 0 12px;font-size:20px">${delivered ? `요청서를 접수했고, 기관 ${sent}곳에 전달했습니다` : "요청서를 접수했습니다"}</h2>
+    <p>${esc(company)} ${esc(name)} 님, 보내 주신 내용 그대로 접수했습니다.${files ? ` 첨부 ${files}개도 함께 올라갔습니다.` : ""}</p>
+    <div style="display:inline-block;background:#F5F5F7;border-radius:12px;padding:12px 24px;margin:8px 0 20px">
+      <div style="font-size:12px;font-weight:600;color:#6E6E73">접수 번호</div>
       <div style="font-size:22px;font-weight:700">${esc(rfqNo)}</div>
     </div>
-    <h3 style="font-size:16px;margin:0 0 8px">다음 단계</h3>
-    <ol style="padding-left:20px;margin:0 0 20px">
-      <li>시험 분야가 맞는 기관에 요청 전달. 실제 전달 수는 앱에서 확인할 수 있습니다.</li>
-      <li>견적 회신 기한: ${esc(String(values.replyBy || "앱에서 확인"))}</li>
-      <li>기한 이후 회신이 있으면 비교표 공개. 앱 안의 알림으로 안내합니다.</li>
-    </ol>
+    <h3 style="font-size:16px;margin:0 0 8px">다음 일정</h3>
+    <ol style="padding-left:20px;margin:0 0 20px">${steps}</ol>
+    <p style="font-size:14px;color:#6F6A63">그 사이에 하실 일은 없습니다. 첫 견적이 도착할 때와 비교표가 열릴 때 다시 메일로 알려 드립니다.</p>
     <p style="font-size:14px;color:#6F6A63">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
-    <p style="font-size:14px;color:#6F6A63">의뢰자 무료 · ${shareNote}</p>`);
+    <p style="font-size:14px;color:#6F6A63">의뢰자는 비용이 들지 않습니다. ${shareNote}</p>`);
 
   const adminHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">[단추] 새 RFQ 접수 ${esc(rfqNo)}</h2>
     <p><b>${esc(company)}</b> · ${esc(name)} · <a href="mailto:${esc(to)}">${esc(to)}</a> · ${esc(String(values.phone || ""))}</p>
-    <p>제출 단계: ${esc(String(values.submittedStep || 1))} / 첨부: ${fileNames.length ? esc(fileNames.join(", ")) : "없음"}</p>
+    <p>첨부: ${files ? `${files}개` : "없음"} · 전달: ${delivered ? `${sent}곳` : "아직 없음"}</p>
     ${renderValuesTable(values)}`);
 
   const results = { requester: false, admin: false };
@@ -139,7 +162,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     const r = await resend.emails.send({
       from: FROM,
       to,
-      subject: `[단추] 견적 요청 접수 - ${rfqNo}`,
+      subject: delivered ? `[단추] ${rfqNo} 접수 · 기관 ${sent}곳에 전달했습니다` : `[단추] ${rfqNo} 접수 · 전달할 기관을 찾고 있습니다`,
       html: requesterHtml,
     });
     results.requester = !r.error;

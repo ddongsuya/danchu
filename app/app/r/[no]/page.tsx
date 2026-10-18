@@ -1,13 +1,15 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
-import { needsCda, confidentialAccess } from "@/lib/request-policy";
+import { ContractConfirm, ReopenRequest, StartNow } from "@/components/app/RequestActions";
+import { needsCda, REOPEN_DAYS } from "@/lib/request-policy";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { STAGES, stageIndex, statusLabel, statusTone, INVITE_LABEL } from "@/lib/status";
 import { CheckMark, Crumb, StatusPill } from "@/components/app/ui";
-import { md, mdhm, ymd } from "@/lib/format";
+import { md, mdhm, won, ymd } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +21,25 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
   const idx = stageIndex(rfq.status);
+  // 운영자가 취소한 초대는 목록과 숫자에서 뺀다
+  const invites = d.invites.filter((i) => i.status !== "expired" || ["closed", "cancelled"].includes(rfq.status));
+  const active = d.invites.filter((i) => i.status !== "expired");
   const submitted = d.invites.filter((i) => i.status === "submitted").length;
+  // 기관 이름은 비교표가 열린 뒤에만. 그 전에는 순서 번호로 (어느 기관이 회신하지 않는지도 미리 알리지 않는다)
+  const named = !!rfq.compared_at;
   const canCompare = !!rfq.compared_at && submitted > 0;
   const p = rfq.payload;
   const labels = labelMap();
+  // 선정한 기관의 연락처 (선정 순간 서로 주고받는다)
+  let croContact: { name: string; email: string; phone: string } | null = null;
+  if (d.award?.cro_org_id) {
+    const { data: org } = await getSupabaseAdmin()!.from("cro_orgs").select("contact_name, contact_email, contact_phone").eq("id", d.award.cro_org_id).maybeSingle();
+    if (org && (org.contact_email || org.contact_phone)) croContact = { name: org.contact_name ?? "", email: org.contact_email ?? "", phone: org.contact_phone ?? "" };
+  }
+  const reported = d.award?.contract_reported_at ?? null;
+  const needsConfirm = !!(d.award && reported && !d.award.requester_confirmed_at && !d.award.requester_disputed_at && rfq.status === "contracting");
+  const autoOn = reported ? ymd(new Date(new Date(reported).getTime() + 7 * 864e5).toISOString()) : "";
+  const reopenUntil = rfq.outcome === "보류" && rfq.status === "closed" && rfq.outcome_at && submitted > 0 && Date.now() - new Date(rfq.outcome_at).getTime() <= REOPEN_DAYS * 864e5 ? ymd(new Date(new Date(rfq.outcome_at).getTime() + REOPEN_DAYS * 864e5).toISOString()) : "";
   const chips = [
     ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
     rfq.cro_count ? `CRO ${rfq.cro_count}` : "",
@@ -78,7 +95,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                     <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                       <span className={`tl__t${state ? "" : " tl__t--off"}`}>{st.label}</span>
                       {state === 1 && <span className="tl__d">{st.desc}</span>}
-                      {st.key === "quoted" && state >= 1 && d.invites.length > 0 && <span className="tl__d">{submitted}/{d.invites.length}곳 회신</span>}
+                      {st.key === "quoted" && state >= 1 && active.length > 0 && <span className="tl__d">{active.length}곳 중 {submitted}곳 회신</span>}
                     </div>
                     <span className="tl__when tnum">{when ? mdhm(when) : state === 1 && st.key === "quoted" && rfq.reply_by ? `기한 ${md(rfq.reply_by)}` : ""}</span>
                   </div>
@@ -94,23 +111,34 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               <h2>회신 현황</h2>
               <span>{rfq.reply_by ? `회신 기한 ${md(rfq.reply_by)}` : ""}</span>
             </div>
-            {d.invites.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 전달된 기관이 없습니다. 시험 분야가 맞는 기관을 확인하고 있습니다.</p>
+            {invites.length === 0 ? (
+              <div style={{ fontSize: 14, color: "var(--muted)" }}>
+                {!rfq.started_at ? (
+                  <>
+                    아직 기관에 보내지 않았습니다. 첨부를 다시 올린 뒤 보내거나, 지금 있는 첨부로 바로 보낼 수 있습니다.
+                    {rfq.status === "received" && <StartNow no={rfq.rfq_no} />}
+                  </>
+                ) : (
+                  "요청 분야에 바로 맞는 참여 기관이 없어 운영자가 직접 전달 기관을 정하고 있습니다. 보통 영업일 1~2일 안에 결과를 알려 드립니다."
+                )}
+              </div>
             ) : (
               <div className="stack" style={{ gap: 8 }}>
-                {d.invites.map((i) => (
+                {invites.map((i, n) => (
                   <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: i.status === "submitted" ? "var(--brand)" : "var(--dash)" }} />
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{rfq.compared_at || i.status !== "submitted" ? i.cro_name : "회신 CRO"}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{named ? i.cro_name : `기관 ${n + 1}`}</span>
                     </div>
                     <span style={{ fontSize: 13, color: i.status === "submitted" ? "var(--ink)" : "var(--muted)" }}>{INVITE_LABEL[i.status] ?? i.status}</span>
                   </div>
                 ))}
               </div>
             )}
-            {submitted > 0 && !rfq.compared_at && (
-              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>회신 기한이 지난 뒤 비교표가 공개됩니다. 공개되면 앱 안의 알림으로 알려 드립니다.</p>
+            {invites.length > 0 && !rfq.compared_at && !["closed", "cancelled"].includes(rfq.status) && (
+              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
+                {rfq.reply_by ? `비교표는 ${md(rfq.reply_by)} 회신 마감 다음 날 오전 9시에 열립니다. ` : ""}모든 기관이 회신하면 바로 열립니다. 기관 이름은 비교표에서 함께 보입니다.
+              </p>
             )}
           </div>
 
@@ -119,17 +147,36 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             <div className="note" style={{ flexDirection: "column", gap: 4 }}>
               <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>
               {rfq.outcome_note && <span>{rfq.outcome_note}</span>}
+              {reopenUntil && <ReopenRequest no={rfq.rfq_no} until={reopenUntil} />}
             </div>
           )}
           {d.award && (
             <div className="note note--ok" style={{ flexDirection: "column", gap: 4 }}>
-              <b>{d.award.cro_name} 선택 · {ymd(d.award.awarded_at)}</b>
+              <b>{d.award.cro_name} 선정 · {ymd(d.award.awarded_at)}</b>
               <span>
-                {d.award.contract_reported_at
-                  ? `계약 체결 보고 · ${d.award.contract_date ? ymd(d.award.contract_date) : ""}`
-                  : "선택한 기관에 연락처를 전달했습니다. 계약은 기관과 직접 진행합니다."}
+                {d.award.requester_confirmed_at
+                  ? `계약 체결 · ${d.award.contract_date ? ymd(d.award.contract_date) : ""} · ${won(d.award.contract_amount ?? 0)}${d.award.confirmed_auto ? " (보고 7일 뒤 자동 확정)" : ""}`
+                  : d.award.requester_disputed_at
+                    ? "계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있습니다."
+                    : reported
+                      ? "기관이 계약 체결을 보고했습니다. 아래에서 내용을 확인해 주세요."
+                      : "서로 연락처를 주고받았습니다. 계약은 기관과 직접 진행합니다."}
               </span>
+              {croContact && (
+                <span>
+                  기관 담당 {[croContact.name, croContact.email, croContact.phone].filter(Boolean).join(" · ")}
+                </span>
+              )}
             </div>
+          )}
+          {needsConfirm && d.award && (
+            <ContractConfirm
+              no={rfq.rfq_no}
+              cro={d.award.cro_name}
+              date={d.award.contract_date ? ymd(d.award.contract_date) : "-"}
+              amount={won(d.award.contract_amount ?? 0)}
+              autoOn={autoOn}
+            />
           )}
 
           <div className="card card--rows">
