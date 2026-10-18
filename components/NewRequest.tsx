@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -21,8 +21,10 @@ import {
   loadDraft,
   saveDraft,
   type Draft,
+  type GuestContact,
 } from "@/components/app/AppState";
 import { retryAttachment } from "@/components/app/AttachmentRetry";
+import { GuestVerify } from "@/components/GuestVerify";
 import { PRESETS, presetItems } from "@/lib/presets";
 import { DesignHints } from "@/components/guide/DesignHints";
 import { requestChecks } from "@/lib/design-guide";
@@ -63,14 +65,21 @@ const sameFile = (a: FileMeta, b: FileMeta) =>
   a.name === b.name && a.size === b.size;
 const initial = (): Values => ({ ...DEFAULT_VALUES });
 
+/** 로그인 전 요청서의 임시 저장 자리 */
+const GUEST = "guest";
+const EMPTY_CONTACT: GuestContact = { email: "", company: "", name: "", phone: "" };
+
 export function NewRequest({
   contact,
   userId,
   preview = false,
+  guest = false,
 }: {
   contact: Contact;
   userId: string;
   preview?: boolean;
+  /** 로그인 전 방문자. 보내기를 누르면 같은 화면에서 이메일을 확인하고 쓴 요청서를 그대로 접수한다 */
+  guest?: boolean;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<"start" | "advisor" | "edit">("start");
@@ -87,12 +96,38 @@ export function NewRequest({
   const [preset, setPreset] = useState("");
   const [undo, setUndo] = useState<Values | null>(null);
   const [editingReview, setEditingReview] = useState(false);
+  // 로그인 전: 담당자 정보와 인증 창
+  const [guestContact, setGuestContact] = useState<GuestContact>(EMPTY_CONTACT);
+  const [pendingToken, setPendingToken] = useState<string>();
+  // 인증번호를 받은 뒤 요청서를 고치면 맡겨 둔 내용과 달라진다. 그때는 번호를 새로 받는다
+  const [tokenSig, setTokenSig] = useState("");
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [notice, setNotice] = useState("");
   const title = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    setResume(loadDraft(userId));
-    setReady(true);
-  }, [userId]);
+    let alive = true;
+    (async () => {
+      const own = loadDraft(userId);
+      // 로그인 전에 쓰던 요청서가 있으면 로그인 뒤에도 이어서 쓸 수 있게 한다
+      let draft = own ?? (guest ? null : loadDraft(GUEST));
+      // 인증번호를 받아 둔 요청서가 메일 버튼으로 이미 접수됐으면 이어 쓰기를 권하지 않는다
+      if (draft?.pendingToken) {
+        const r = await fetch(`/api/rfq/pending/status?token=${encodeURIComponent(draft.pendingToken)}`).then((x) => x.json()).catch(() => null);
+        if (r?.claimed) {
+          clearDraft(own ? userId : GUEST);
+          if (guest) setNotice(`메일의 버튼으로 요청서 ${r.rfqNo}를 이미 접수했습니다. 로그인하면 진행 상황을 볼 수 있습니다.`);
+          draft = null;
+        }
+      }
+      if (!alive) return;
+      setResume(draft);
+      setReady(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [userId, guest]);
   useEffect(() => {
     if (!ready || phase !== "edit") return;
     const ok = saveDraft(userId, {
@@ -105,6 +140,7 @@ export function NewRequest({
         ...files.map(({ name, size }) => ({ name, size })),
       ],
       pendingNo,
+      ...(guest ? { contact: guestContact, pendingToken } : {}),
       updatedAt: new Date().toISOString(),
     });
     setSaveState(
@@ -112,7 +148,7 @@ export function NewRequest({
         ? "이 브라우저에 임시 저장됨"
         : "임시 저장하지 못했습니다. 이 화면을 닫지 말고 다시 시도해 주세요.",
     );
-  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo]);
+  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, guest, guestContact, pendingToken]);
   useEffect(() => {
     if (phase === "edit") title.current?.focus();
   }, [phase, step]);
@@ -195,6 +231,7 @@ export function NewRequest({
     setFiles([]);
     setMissingFiles([]);
     setPendingNo(undefined);
+    setPendingToken(undefined);
     setResume(null);
     setPhase("edit");
     go(0);
@@ -226,7 +263,12 @@ export function NewRequest({
       const f = wiz.fields.find((f) => f.id === id)!;
       return field({ ...f, help: f.help || wiz.sub });
     });
-  const contactOk = !!(contact.company && contact.name && contact.email);
+  // 로그인 전에는 담당자 정보를 보내기 직전 확인 창에서 받는다
+  const contactOk = guest || !!(contact.company && contact.name && contact.email);
+  const sig = useMemo(
+    () => JSON.stringify([values, files.map((f) => [f.name, f.size])]),
+    [values, files],
+  );
   const checks = requestChecks(values);
   const submit = async () => {
     if (busy || preview) return;
@@ -236,7 +278,10 @@ export function NewRequest({
       source: "app",
       submittedStep: "2",
     };
-    const invalid = validateRequired(payload);
+    // 로그인 전에는 담당자 칸을 아직 받지 않았으니 요청 내용만 본다
+    const invalid = validateRequired(
+      guest ? { ...payload, company: "-", name: "-", email: "check@danchu.kr" } : payload,
+    );
     if (invalid) {
       const missing = WIZ.flatMap((w) => w.fields).find(
         (f) => f.required && !filled(values, f.id),
@@ -256,6 +301,10 @@ export function NewRequest({
     }
     if (missingFiles.length) {
       setError("저장된 첨부파일을 다시 선택하거나 목록에서 제외해 주세요.");
+      return;
+    }
+    if (guest) {
+      setVerifyOpen(true);
       return;
     }
     setBusy(true);
@@ -356,6 +405,11 @@ export function NewRequest({
         <p className="request__lead">
           필요한 시험을 선택하고, 알고 있는 조건만 입력하세요.
         </p>
+        {notice && (
+          <p className="note note--tint" role="status">
+            {notice}
+          </p>
+        )}
         {resume && (
           <section className="request__resume">
             <h2>작성 중인 요청이 있습니다</h2>
@@ -372,8 +426,12 @@ export function NewRequest({
                 onClick={() => {
                   setValues(resume.values);
                   setStep(resume.q);
-                  setPendingNo(resume.pendingNo);
+                  setPendingNo(guest ? undefined : resume.pendingNo);
                   setMissingFiles(resume.files);
+                  if (guest) {
+                    setGuestContact(resume.contact ?? EMPTY_CONTACT);
+                    setPendingToken(resume.pendingToken);
+                  } else if (resume.contact) clearDraft(GUEST);
                   setPhase("edit");
                 }}
               >
@@ -388,6 +446,7 @@ export function NewRequest({
                     )
                   ) {
                     clearDraft(userId);
+                    if (!guest) clearDraft(GUEST);
                     start();
                   }
                 }}
@@ -417,7 +476,7 @@ export function NewRequest({
   return (
     <div className="request">
       <div className="request__top">
-        <Link className="crumb" href="/app">
+        <Link className="crumb" href={guest ? "/" : "/app"}>
           닫기
         </Link>
         <span role="status" className="fld__help">
@@ -592,19 +651,38 @@ export function NewRequest({
         )}
         {step === 3 && (
           <>
-            <section className="request__section">
-              <h2>담당자</h2>
-              <p>
-                {contact.company} · {contact.name}
-              </p>
-              <p>{contact.email}</p>
-              {preview ? <p>체험 화면에서는 예시 담당자 정보가 표시됩니다.</p> : <Link href="/app/profile">담당자 정보 수정</Link>}
-              {!contactOk && (
-                <p role="alert">
-                  회사·기관명과 성명을 프로필에서 입력해 주세요.
+            {guest ? (
+              <section className="request__section">
+                <h2>담당자</h2>
+                {guestContact.email ? (
+                  <>
+                    <p>
+                      {guestContact.company} · {guestContact.name}
+                    </p>
+                    <p>{guestContact.email}</p>
+                  </>
+                ) : (
+                  <p className="fld__help">
+                    보내기를 누르면 이메일과 담당자 정보를 묻고, 메일로 받은
+                    번호를 확인합니다. 쓰신 요청서는 그대로 둡니다.
+                  </p>
+                )}
+              </section>
+            ) : (
+              <section className="request__section">
+                <h2>담당자</h2>
+                <p>
+                  {contact.company} · {contact.name}
                 </p>
-              )}
-            </section>
+                <p>{contact.email}</p>
+                {preview ? <p>체험 화면에서는 예시 담당자 정보가 표시됩니다.</p> : <Link href="/app/profile">담당자 정보 수정</Link>}
+                {!contactOk && (
+                  <p role="alert">
+                    회사·기관명과 성명을 프로필에서 입력해 주세요.
+                  </p>
+                )}
+              </section>
+            )}
             {[0, 1, 2].map((section) => {
               const ids =
                 section === 0
@@ -809,6 +887,26 @@ export function NewRequest({
           </button>
         )}
       </div>
+      {guest && (verifyOpen || pendingToken) && (
+        <GuestVerify
+          open={verifyOpen}
+          values={{ ...values, source: "app", submittedStep: "2" }}
+          files={files}
+          contact={guestContact}
+          onContact={setGuestContact}
+          token={pendingToken && tokenSig === sig ? pendingToken : undefined}
+          onToken={(t) => {
+            setPendingToken(t);
+            setTokenSig(sig);
+          }}
+          onClose={() => setVerifyOpen(false)}
+          onDone={(no) => {
+            clearDraft(GUEST);
+            // 새 로그인 세션으로 화면 전체를 다시 그린다
+            window.location.assign(`/app/new/done?no=${encodeURIComponent(no)}`);
+          }}
+        />
+      )}
     </div>
   );
 }

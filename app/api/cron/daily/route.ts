@@ -272,6 +272,18 @@ export async function GET(req: Request) {
     out.digest = await sendMail({ to, subject: `[단추] ${today} 하루 요약${attention.length ? ` · 확인할 일 ${attention.length}건` : ""}`, html });
   });
 
+  // 5-0) 보내기 직전 가입에서 인증하지 않고 끝난 임시 요청서(7일)와 첨부, 접수로 바뀐 지 30일 지난 임시 기록 정리
+  await step("pending-cleanup", out.errors, async () => {
+    const now = new Date().toISOString();
+    const { data: stale } = await sb.from("rfq_pending").select("token, files").is("claimed_at", null).lt("expires_at", now).limit(200);
+    for (const p of stale ?? []) {
+      const paths = (p.files ?? []).map((f) => f.path).filter(Boolean);
+      if (paths.length) await sb.storage.from("rfq-files").remove(paths);
+      await sb.from("rfq_pending").delete().eq("token", p.token);
+    }
+    await sb.from("rfq_pending").delete().not("claimed_rfq_no", "is", null).lt("claimed_at", new Date(Date.now() - 30 * 864e5).toISOString());
+  });
+
   // 5) 보존기간 정리: 접속 기록 90일, 요청서 3년, 읽은 알림 180일 (개인정보처리방침 3항)
   await step("retention", out.errors, async () => {
     out.retention = await runRetention(sb);

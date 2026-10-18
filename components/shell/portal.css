@@ -405,3 +405,11 @@
 .pt .grid2 > *, .pt .numin, .pt .stack { min-width: 0; }
 .pt .numin input { min-width: 0; }
 @media (min-width: 640px) { .pt .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── 로그인 전 요청서 (GuestShell) ── 메뉴 없이 상단 바만 */
+.pt--guest .pt__top { display: block; }
+.pt--guest .pt__topin { max-width: 1080px; margin: 0 auto; }
+.pt--guest .pt__topin > .pt__brand { display: flex; }
+.pt--guest .pt__main { padding-bottom: calc(48px + var(--bot)); }
+.pt .pt__guest-login { font-size: 14px; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .pt .pt__guest-login:hover { color: var(--ink); text-decoration: underline; } }

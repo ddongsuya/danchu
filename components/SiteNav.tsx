@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/lib/use-me";
-import { REQUEST_HREF, SIGNUP_HREF } from "@/components/RfqLink";
+import { GUEST_REQUEST_HREF, REQUEST_HREF } from "@/components/RfqLink";
 
 export const SITE_LINKS: [string, string][] = [
   ["/about", "서비스 소개"],
@@ -42,7 +42,7 @@ export function SiteNav() {
     };
   }, [open]);
 
-  const requestHref = loading ? REQUEST_HREF : !me ? SIGNUP_HREF : me.role === "requester" ? REQUEST_HREF : me.to;
+  const requestHref = loading ? REQUEST_HREF : !me ? GUEST_REQUEST_HREF : me.role === "requester" ? REQUEST_HREF : me.to;
   const on = (href: string) => pathname === href;
 
   return (

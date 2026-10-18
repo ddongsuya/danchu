@@ -21,6 +21,7 @@ create table if not exists public.rfq_pending (
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default now() + interval '7 days',
   verify_attempts int not null default 0,
+  verify_type text,                    -- generateLink 가 돌려준 인증 종류 (signup | magiclink)
   claimed_at timestamptz,
   claimed_rfq_no text,
   claimed_user uuid references auth.users(id) on delete set null,

@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { defaultReplyBy } from "@/lib/distribute";
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
+import { StartNow } from "@/components/app/RequestActions";
 import { needsCda } from "@/lib/request-policy";
 export const dynamic = "force-dynamic";
 
@@ -56,9 +57,14 @@ export default async function Done({
             </li>
           </ol>
         ) : !rfq.started_at ? (
-          <p>
-            기관에 전달하고 있습니다. 끝나면 결과를 메일로 알려 드립니다.
-          </p>
+          <div>
+            <p>
+              {missing.length
+                ? "첨부 일부가 올라가지 않아 아직 기관에 보내지 않았습니다. 아래에서 다시 올리거나, 지금 있는 첨부로 바로 보낼 수 있습니다."
+                : "기관에 보내는 중 문제가 생겼습니다. 다시 보내 주세요."}
+            </p>
+            <StartNow no={rfq.rfq_no} />
+          </div>
         ) : (
           <p>
             요청 분야에 바로 맞는 참여 기관이 없어 운영자가 직접 전달 기관을

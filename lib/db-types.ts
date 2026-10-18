@@ -406,12 +406,13 @@ export type Database = {
           created_at: string;
           expires_at: string;
           verify_attempts: number;
+          verify_type: string | null;
           claimed_at: string | null;
           claimed_rfq_no: string | null;
           claimed_user: string | null;
           ip: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_pending"]["Row"], "files" | "created_at" | "expires_at" | "verify_attempts" | "claimed_at" | "claimed_rfq_no" | "claimed_user" | "ip">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_pending"]["Row"], "files" | "created_at" | "expires_at" | "verify_attempts" | "verify_type" | "claimed_at" | "claimed_rfq_no" | "claimed_user" | "ip">;
         Update: Partial<Database["public"]["Tables"]["rfq_pending"]["Row"]>;
         Relationships: [];
       };

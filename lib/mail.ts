@@ -66,6 +66,24 @@ export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: st
   });
 }
 
+/**
+ * 보내기 직전 가입의 인증 메일. 6자리 번호(화면에 입력)와 버튼(누르면 같은 요청서가 접수된다)을 함께 보낸다.
+ * 번호와 버튼은 같은 일회용 토큰이라 어느 쪽을 쓰든 한 번만 통한다.
+ */
+export async function sendCodeMail(to: string, code: string, link: string): Promise<boolean> {
+  return sendMail({
+    to,
+    subject: `[단추] 인증번호 ${code}`,
+    html: mailWrap(`
+      <h2 style="margin:0 0 12px;font-size:20px">요청서를 보내기 전에 이메일을 확인합니다</h2>
+      <p>요청서 화면에 아래 번호를 입력해 주세요. 확인이 끝나면 쓰신 요청서가 바로 접수됩니다.</p>
+      <div style="display:inline-block;background:#F5F5F7;border-radius:12px;padding:14px 26px;margin:8px 0 20px;font-size:30px;font-weight:700;letter-spacing:.18em">${esc(code)}</div>
+      <p>화면을 닫았다면 아래 버튼을 눌러도 같은 요청서가 접수됩니다.</p>
+      <p style="margin:24px 0">${BTN(link, "인증하고 요청서 보내기")}</p>
+      <p style="font-size:13px;color:#6F6A63">번호와 버튼은 1시간 동안 유효하고, 한 번만 쓸 수 있습니다. 요청하지 않았다면 이 메일은 무시하세요. 계정도 요청서도 만들어지지 않습니다.</p>`),
+  });
+}
+
 function fmt(v: unknown): string {
   if (Array.isArray(v)) return v.join(", ");
   if (typeof v === "boolean") return v ? "예" : "아니오";
