@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listAllAwards } from "@/lib/data";
-import { statusLabel, statusTone } from "@/lib/status";
+import { contractConfirmState, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { won, ymd } from "@/lib/format";
 import { FeeExemptForm } from "@/components/admin/FeeExemptForm";
@@ -35,7 +35,7 @@ export default async function AdminAwards() {
                   <td data-label="의뢰자">{a.rfq?.company}</td>
                   <td data-label="선정 CRO" style={{ fontWeight: 600 }}>{a.cro_name}</td>
                   <td className="tnum" data-label="선정일">{ymd(a.awarded_at)}</td>
-                  <td className="tnum" data-label="계약 보고">{a.contract_reported_at ? <>{a.contract_date} · <b>{won(a.contract_amount ?? 0)}</b>{a.contract_note ? <div style={{ fontSize: 12, color: "var(--muted)" }}>{a.contract_note}</div> : null}</> : <span style={{ color: "var(--muted)" }}>대기</span>}</td>
+                  <td className="tnum" data-label="계약 보고">{a.contract_reported_at ? <>{a.contract_date} · <b>{won(a.contract_amount ?? 0)}</b>{a.contract_note ? <div style={{ fontSize: 12, color: "var(--muted)" }}>{a.contract_note}</div> : null}{(() => { const c = contractConfirmState(a); return c ? <div style={{ fontSize: 12, color: c.tone === "warn" ? "var(--warn)" : "var(--muted)", fontWeight: c.tone === "warn" ? 600 : 400 }}>{c.label}</div> : null; })()}</> : <span style={{ color: "var(--muted)" }}>대기</span>}</td>
                   <td data-label="성사수수료"><FeeExemptForm awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} /></td>
                   <td data-label="상태"><StatusPill tone={statusTone(a.rfq?.status)}>{statusLabel(a.rfq?.status)}</StatusPill></td>
                 </tr>

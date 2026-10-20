@@ -57,7 +57,21 @@ describe("보내기 직전 가입", () => {
 describe("상태 문구", () => {
   it("취소된 초대와 단계 이름", () => {
     expect(INVITE_LABEL.expired).toBe("취소됨");
-    expect(STAGES.map((s) => s.label)).toContain("비교표 열림");
+    expect(STAGES.map((s) => s.label)).toEqual(["접수", "기관 전달", "견적 도착", "비교표 공개", "기관 선택", "계약 진행", "계약 완료"]);
     for (const s of STAGES) expect(`${s.label}${s.desc}`).not.toMatch(/[—–]/);
+  });
+});
+
+describe("단계 이름은 디자인과 같다", () => {
+  it("선정 없이 마친 요청은 계약 완료가 아니라 마무리", async () => {
+    const { statusLabel, contractConfirmState } = await import("@/lib/status");
+    expect(statusLabel("closed")).toBe("계약 완료");
+    expect(statusLabel("closed", "보류")).toBe("마무리");
+    expect(statusLabel("cancelled", "취소")).toBe("취소");
+    const base = { contract_reported_at: "2026-10-01T00:00:00Z", requester_confirmed_at: null, confirmed_auto: false, requester_disputed_at: null, requester_dispute_note: null };
+    expect(contractConfirmState({ ...base, contract_reported_at: null })).toBeNull();
+    expect(contractConfirmState(base)?.label).toContain("2026-10-08 자동 확정");
+    expect(contractConfirmState({ ...base, requester_disputed_at: "x", requester_dispute_note: "금액이 다름" })?.tone).toBe("warn");
+    expect(contractConfirmState({ ...base, requester_confirmed_at: "x", confirmed_auto: true })?.label).toContain("자동 확정");
   });
 });

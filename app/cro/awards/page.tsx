@@ -6,6 +6,7 @@ import { ExemptClaim } from "@/components/cro/ExemptClaim";
 import { addBusinessDays } from "@/lib/dates";
 import { EXEMPT_CLAIM_BUSINESS_DAYS } from "@/lib/request-policy";
 import { ymd, won } from "@/lib/format";
+import { contractConfirmState } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function CroAwards() {
                   <span className="kv__k">보고</span>
                   <span className="kv__v" style={{ fontWeight: 500 }}>
                     체결일 {a.contract_date} · {won(a.contract_amount ?? 0)}{a.contract_note ? ` · ${a.contract_note}` : ""}
+                    {contractConfirmState(a) && <span style={{ display: "block", color: "var(--muted)" }}>{contractConfirmState(a)!.label}</span>}
                   </span>
                 </div>
               )}

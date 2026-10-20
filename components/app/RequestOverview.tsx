@@ -8,7 +8,7 @@ import { statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { md } from "@/lib/format";
 
-export type RequestListItem = Pick<RfqSummary, "id" | "rfq_no" | "status" | "substance" | "categories" | "invites" | "submitted" | "reply_by" | "created_at">;
+export type RequestListItem = Pick<RfqSummary, "id" | "rfq_no" | "status" | "substance" | "categories" | "invites" | "submitted" | "reply_by" | "created_at"> & { outcome?: string | null };
 const FILTERS = ["전체", "진행 중", "견적 도착", "종료"] as const;
 
 export function RequestOverview({ name, list }: { name: string; list: RequestListItem[] }) {
@@ -36,7 +36,7 @@ export function RequestOverview({ name, list }: { name: string; list: RequestLis
         <p className="sr-only" role="status">{filtered.length}건의 요청</p>
         {list.length === 0 ? <div className="request-empty"><FileText size={42} weight="light" aria-hidden="true" /><h3>첫 번째 연구의 단추를 채워보세요.</h3><p>시험 항목을 입력하면 수행 분야가 맞는 기관에 전달합니다.</p><Link href="/app/new" className="b1">견적 요청하기 <ArrowUpRight size={17} aria-hidden="true" /></Link></div> : filtered.length === 0 ? <div className="request-empty"><MagnifyingGlass size={36} weight="light" aria-hidden="true" /><h3>일치하는 요청이 없습니다</h3><p>다른 검색어를 입력하거나 상태 필터를 변경해 주세요.</p><button type="button" className="b2" onClick={() => { setSearch(""); setFilter("전체"); }}>전체 요청 보기</button></div> : <>
           <div className="request-table-head" aria-hidden="true"><span>시험물질 · 요청 번호</span><span>진행 상태</span><span>기관 회신</span><span>회신 기한</span></div>
-          <div className="request-rows">{filtered.map((r) => <Link href={`/app/r/${r.rfq_no}`} key={r.id} className="request-row"><div className="request-row__title"><small>{r.rfq_no}</small><h3>{r.substance}</h3><p>{r.categories.join(" · ")}</p></div><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status)}</StatusPill><div className="request-row__replies"><b>{r.submitted}</b><span> / {r.invites}곳</span></div><div className="request-row__date"><span>{r.reply_by ? md(r.reply_by) : "미정"}</span><ArrowUpRight size={17} aria-hidden="true" /></div></Link>)}</div>
+          <div className="request-rows">{filtered.map((r) => <Link href={`/app/r/${r.rfq_no}`} key={r.id} className="request-row"><div className="request-row__title"><small>{r.rfq_no}</small><h3>{r.substance}</h3><p>{r.categories.join(" · ")}</p></div><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill><div className="request-row__replies"><b>{r.submitted}</b><span> / {r.invites}곳</span></div><div className="request-row__date"><span>{r.reply_by ? md(r.reply_by) : "미정"}</span><ArrowUpRight size={17} aria-hidden="true" /></div></Link>)}</div>
         </>}
       </section>
       <div className="request-help"><span>시험 항목을 정하기 어려우신가요?</span><Link href="/guide">시험 가이드 살펴보기 <ArrowUpRight size={16} aria-hidden="true" /></Link></div>

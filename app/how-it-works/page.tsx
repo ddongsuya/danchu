@@ -64,20 +64,20 @@ const CMP_ROWS: { th: string; sub?: string; sec?: boolean; c: Cell[] }[] = [
 
 /* 진행 단계별로 의뢰자와 기관이 보는 것. lib/status.ts 와 배포·알림 규칙 */
 const FLOW_R: Record<string, string> = {
-  received: "요청 번호가 발급되고 접수 메일이 갑니다",
-  distributed: "몇 곳에 배포됐는지 확인합니다",
-  quoted: "도착한 회신 수만 보이고, 기관명은 기한 전까지 가려집니다",
-  compared: "기한 다음 날 비교표가 열립니다. 정렬 기준은 총액·기간·착수일 중 고릅니다",
-  selected: "고른 기관에만 회사명과 담당자 연락처가 공개됩니다",
+  received: "요청 번호가 발급되고, 첨부까지 올라가면 접수와 전달 결과를 메일 한 통으로 알려 드립니다",
+  distributed: "몇 곳에 전달됐는지 확인합니다",
+  quoted: "도착한 회신 수만 보이고, 기관명은 비교표가 열릴 때까지 가려집니다",
+  compared: "기한 다음 날 오전 9시, 또는 모든 기관이 회신하면 바로 비교표가 열립니다. 정렬 기준은 총액·기간·착수일 중 고릅니다",
+  selected: "고른 기관과 회사명·담당자 연락처를 서로 주고받습니다",
   contracting: "기관과 직접 계약합니다. 단추는 조건에 관여하지 않습니다",
-  closed: "계약이 보고되면 요청이 종료됩니다",
+  closed: "기관이 보고한 계약 내용을 확인합니다. 7일 안에 이의가 없으면 요청을 마칩니다",
 };
 const FLOW_C: Record<string, string> = {
   received: "",
   distributed: "수행 분야가 맞는 기관에 요청서 링크가 갑니다. 회사명과 연락처는 가려지고, CDA 요청이면 첨부도 가려집니다",
-  quoted: "기한 이틀 전과 당일에 알림. 기한 전까지 수정할 수 있고, 다른 기관의 회신은 볼 수 없습니다",
+  quoted: "기한 이틀 전과 당일에 알림. 비교표가 열리기 전까지 수정할 수 있고, 다른 기관의 회신은 볼 수 없습니다",
   compared: "",
-  selected: "선택된 기관은 의뢰자 연락처를, 그 외 기관은 결과만 받습니다",
+  selected: "선택된 기관은 의뢰자와 연락처를 주고받고, 그 외 기관은 결과만 받습니다",
   contracting: "체결일과 계약금액을 보고합니다",
   closed: "",
 };
@@ -202,7 +202,7 @@ export default function HowItWorks() {
                   <div key={s.key} className={FLOW_C[s.key] ? "flow__c" : "flow__none"} data-who="기관 화면" role="cell">{FLOW_C[s.key] || "·"}</div>
                 ))}
               </div>
-              <p className="small muted">회신 기한이 지나기 전에는 의뢰자에게도 기관명이 보이지 않고, 기관은 언제나 다른 기관의 회신을 볼 수 없습니다.</p>
+              <p className="small muted">비교표가 열리기 전에는 의뢰자에게도 기관명이 보이지 않고, 기관은 언제나 다른 기관의 회신을 볼 수 없습니다.</p>
             </div>
           </div>
         </section>

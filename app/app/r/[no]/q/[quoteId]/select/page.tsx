@@ -34,8 +34,8 @@ export default async function SelectCro({ params }: { params: Promise<{ no: stri
       <div className="ph">
         <div>
           <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{rfq.rfq_no}</span>
-          <h1>{q.cro_name}과 진행할까요?</h1>
-          <p>선택하면 CRO에 회사명과 담당자 연락처가 공개되고 계약은 직접 진행합니다. 단추는 조건에 관여하지 않습니다.</p>
+          <h1>이 기관과 진행할까요?</h1>
+          <p>선택하면 이 기관과 서로 연락처를 주고받습니다. 계약은 기관과 직접 맺고, 단추는 조건에 관여하지 않습니다.</p>
         </div>
       </div>
       <SelectCroForm

@@ -44,7 +44,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
           <h1>{rfq.substance} · {rfq.company}</h1>
           <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "-"}{Array.isArray(p.nominees) && p.nominees.length ? ` · 지명 ${(p.nominees as string[]).join(", ")}` : ""}</p>
           <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status)}</StatusPill>
+            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
             {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
             {d.files.length > 0 && <span className="tag">첨부 {d.files.length}</span>}
           </div>

@@ -99,7 +99,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     <div style={{ fontWeight: 600 }}>{r.substance}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.categories.join(" · ")}{needsCda(r.confidentiality) ? " · CDA" : ""}</div>
                   </td>
-                  <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status)}</StatusPill></td>
+                  <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill></td>
                   <td className="tnum" data-label="회신">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
                   <td className="tnum" data-label="회신 기한">{r.reply_by ? md(r.reply_by) : "-"}</td>
                   <td className="tnum" data-label="접수일">{ymd(r.created_at)}</td>

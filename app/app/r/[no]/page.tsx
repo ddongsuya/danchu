@@ -7,7 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
-import { STAGES, stageIndex, statusLabel, statusTone, INVITE_LABEL } from "@/lib/status";
+import { ENDED_LABEL, STAGES, statusLabel, statusTone, INVITE_LABEL } from "@/lib/status";
 import { CheckMark, Crumb, StatusPill } from "@/components/app/ui";
 import { md, mdhm, won, ymd } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
@@ -20,7 +20,11 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
-  const idx = stageIndex(rfq.status);
+  // 기관을 고르지 않고 마친 요청은 선택·계약 단계를 건너뛰고 "마무리"로 끝난다
+  const stages = rfq.outcome && rfq.status === "closed"
+    ? STAGES.filter((s) => s.key !== "selected" && s.key !== "contracting").map((s) => (s.key === "closed" ? { ...s, label: ENDED_LABEL, desc: "기관을 고르지 않고 요청을 마쳤습니다" } : s))
+    : STAGES;
+  const idx = Math.max(0, stages.findIndex((s) => s.key === rfq.status));
   // 운영자가 취소한 초대는 목록과 숫자에서 뺀다
   const invites = d.invites.filter((i) => i.status !== "expired" || ["closed", "cancelled"].includes(rfq.status));
   const active = d.invites.filter((i) => i.status !== "expired");
@@ -67,7 +71,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
           <h1>{rfq.substance}</h1>
           <p>{rfq.categories.join(" · ")}</p>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status)}</StatusPill>
+            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
             {chips.map((c) => (
               <span key={c} className="tag">{c}</span>
             ))}
@@ -82,14 +86,14 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         <div className="card" style={{ padding: "20px 20px 8px" }}>
           <h2 style={{ marginBottom: 16, fontSize: 16, fontWeight: 700 }}>진행 상태</h2>
           <div className="tl">
-            {STAGES.map((st, i) => {
+            {stages.map((st, i) => {
               const state = i < idx ? 2 : i === idx ? 1 : 0;
               const when = whenOf[st.key];
               return (
                 <div key={st.key} className="tl__row">
                   <div className="tl__rail">
                     <span className={`tl__dot${state === 2 ? " tl__dot--done" : state === 1 ? " tl__dot--now" : ""}`}>{state === 2 && <CheckMark size={12} />}</span>
-                    {i < STAGES.length - 1 && <span className={`tl__line${state === 2 ? " tl__line--done" : ""}`} />}
+                    {i < stages.length - 1 && <span className={`tl__line${state === 2 ? " tl__line--done" : ""}`} />}
                   </div>
                   <div className="tl__body">
                     <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>

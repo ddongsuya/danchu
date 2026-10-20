@@ -40,8 +40,8 @@ export function SelectCroForm({
     return (
       <div className="card rise-in" style={{ padding: "36px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
         <CheckDisc size={64} />
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>{croName}을 선택했습니다</h2>
-        <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 360 }}>선택한 기관에 연락처를 전달했습니다. 기관과 직접 계약을 진행하고 요청 상세에서 진행 상황을 확인하세요.</p>
+        <h2 style={{ fontSize: 22, fontWeight: 700 }}>선택을 마쳤습니다</h2>
+        <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 360 }}>{croName} · 서로 연락처를 주고받았습니다. 기관 담당자 연락처는 요청 상세에 있습니다. 계약을 맺고 기관이 보고하면 그 내용을 확인해 주세요.</p>
         <Link href={`/app/r/${no}`} className="b1" style={{ marginTop: 8 }}>진행 상태 보기</Link>
       </div>
     );
@@ -62,13 +62,13 @@ export function SelectCroForm({
       </div>
 
       <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
-        <b style={{ fontWeight: 600 }}>CRO에 공개되는 연락처</b>
+        <b style={{ fontWeight: 600 }}>이 기관에 공개되는 우리 연락처</b>
         <span>{contact}</span>
       </div>
 
       {others.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>선택하지 않은 CRO에는 결과만 안내됩니다</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>선택하지 않은 기관에는 결과만 안내됩니다</div>
           {others.map((o) => (
             <div key={o.name} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "12px 16px", border: "1px solid var(--cline)", borderRadius: 12, fontSize: 14, background: "var(--wh)" }}>
               <span>{o.name}</span>
@@ -82,7 +82,7 @@ export function SelectCroForm({
         <span className="chkcard__box">
           <CheckMark />
         </span>
-        <span>견적서 원본(PDF) 견적서를 확인했고, 선택한 CRO에 회사명과 담당자 연락처가 공개되는 것에 동의합니다.</span>
+        <span>견적서 원본(PDF)을 확인했고, 이 기관과 회사명·담당자 연락처를 서로 주고받는 것에 동의합니다.</span>
       </button>
 
       {error && <p className="note note--err" role="alert">{error}</p>}
