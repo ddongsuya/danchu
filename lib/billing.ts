@@ -156,9 +156,12 @@ export function statementDigest(rows: StatementRowLike[]): string {
 
 /**
  * 마감한 달 (2026-10-20 결정, 0024). 마감한 달의 명세는 고정하고 다시 열지 않는다 (기관 이용 조건 "마감한 달의 명세는 고정, 다시 청구하지 않음").
- * 바로잡을 금액은 다음 열린 달의 조정 항목으로 넣는다. 화면·API 가 같은 문구를 쓴다
+ * 조정 항목은 돌려드리는 금액(음수)만 넣는다 (2026-10-21 결정, 0026). 적게 받은 금액은 다시 청구하지 않는다. 화면·API 가 같은 문구를 쓴다
  */
-export const CLOSED_MONTH_NOTE = "마감한 달은 다시 열 수 없습니다. 바로잡을 금액은 다음 달 명세에 조정 항목으로 넣습니다.";
+export const CLOSED_MONTH_NOTE = "마감한 달은 다시 열 수 없습니다. 돌려드릴 금액은 다음 달 명세에 조정 항목으로 넣고, 적게 받은 금액은 다시 청구하지 않습니다.";
+
+/** 조정 항목은 돌려드리는 금액만 (2026-10-21 결정, 0026 billing_adjustments_credit_only) */
+export const ADJUSTMENT_CREDIT_ONLY_NOTE = "조정 항목은 돌려드릴 금액만 넣을 수 있습니다. 마감한 달은 다시 청구하지 않으므로, 적게 받은 금액은 받지 않습니다.";
 
 /** 조정 금액 한도 (원, 절댓값). 잘못 친 자릿수를 막는다 */
 export const ADJUSTMENT_MAX_ABS = 10_000_000_000;

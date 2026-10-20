@@ -38,7 +38,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{rfq.rfq_no} · 제출 {ymd(q.submitted_at)}</span>
           <h1>{q.cro_name}</h1>
           {q.auto && <p className="note note--warn">기관 확인 전 예비 견적입니다. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
-          {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용에 오류가 있으면 단추가 바로잡고 알려 드립니다.</p>}
+          {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려 드립니다.</p>}
           {!quoteSelectable(q) && <Link href={`/app/support?rfq=${rfq.rfq_no}`}>정식 견적·유효기간 확인 요청</Link>}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
             <div>

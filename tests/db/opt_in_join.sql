@@ -126,6 +126,9 @@ declare
   old_tok text := pg_temp.tok(i_rev);
   rq_closed uuid := pg_temp.t_offer('T-JOIN-CLOSED', '전체');
   i_closed uuid := pg_temp.t_invite(rq_closed, o, now(), false);
+  -- 취소 경로는 따로 (0026 부터 열린 비교표의 compared_at 은 비울 수 없다)
+  rq_cancel uuid := pg_temp.t_offer('T-JOIN-CANCEL', '전체');
+  i_cancel uuid := pg_temp.t_invite(rq_cancel, o, now(), false);
 begin
   perform public.revoke_invite(i_rev, '잘못 보낸 기관');
   perform pg_temp.t_eq(public.join_offer(i_rev, old_tok, null, 'token', 'v1', null, null)->>'code', 'revoked', '취소한 초대: 옛 링크');
@@ -171,8 +174,8 @@ begin
   -- 마감·선정된 요청
   update public.rfq_requests set compared_at = now() where id = rq_closed;
   perform pg_temp.t_eq(pg_temp.j(i_closed), 'closed', '회신 마감 뒤 참여 불가');
-  update public.rfq_requests set compared_at = null, status = 'cancelled' where id = rq_closed;
-  perform pg_temp.t_eq(pg_temp.j(i_closed), 'closed', '취소된 요청');
+  update public.rfq_requests set status = 'cancelled' where id = rq_cancel;
+  perform pg_temp.t_eq(pg_temp.j(i_cancel), 'closed', '취소된 요청');
 end $$;
 
 -- 4) 참여 전 견적 저장 차단 (기관·운영자 대리 입력 모두), 참여 뒤 운영자 대리 입력은 가능

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-/* 실시간 비교 (2026-10-17): 견적 알림, 회신 마감(compared_at), 기한 연장으로 다시 열기 */
+/* 비교표 공개 (2026-10-20 결정 1) · 기한 전 마감 없음 (2026-10-21 결정 2) · 열린 비교표 고정 (결정 3): 견적 알림, 회신 마감(compared_at), 기한 변경 */
 type Q = { table: string; op: "select" | "insert" | "update" | "delete"; payload?: unknown; filters: [string, unknown][] };
 const fx = vi.hoisted(() => ({
   session: null as null | { userId: string; email: string; profile: { role: string } },
@@ -157,7 +159,9 @@ describe("견적 제출 알림: 비교표가 열리기 전에는 진행 현황�
 });
 
 describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
-  const rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", substance: "ABC-1", status: "quoted", compared_at: null, reply_by: "2099-01-10", user_id: "sponsor-1", email: "sponsor@example.com" } as unknown as RfqRow;
+  // 기본은 회신 기한이 지난 요청 (예약 작업이 여는 경우). 기한 전 요청은 early
+  const rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", substance: "ABC-1", status: "quoted", compared_at: null, reply_by: "2026-01-10", user_id: "sponsor-1", email: "sponsor@example.com" } as unknown as RfqRow;
+  const early = { ...rfq, reply_by: "2099-01-10" } as unknown as RfqRow;
   const db = (closedNow: boolean) => (q: Q) => {
     if (q.table === "cro_quotes") return { data: null, error: null, count: 2 };
     if (q.table === "rfq_invites")
@@ -191,66 +195,59 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     expect(r.ok).toBe(false);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
   });
-  it("기한 전 마감은 미회신 기관이 있으면 의뢰자 요청 없이는 거절한다 (약관 제4조7항)", async () => {
+  const ctxNo = { params: Promise.resolve({ no: "DC-2026-0001" }) };
+  it("의뢰자 요청 기한 전 마감은 없다: { sponsorRequested: true } 를 보내도 409 이고 아무것도 바꾸지 않는다 (2026-10-21 결정 2)", async () => {
     fx.session = admin;
-    fx.rfq = rfq;
+    fx.rfq = early;
     fx.respond = db(true);
-    const r = await closeRoute(json({}), { params: Promise.resolve({ no: "DC-2026-0001" }) });
-    expect(r.status).toBe(400);
-    expect((await r.json()).error).toContain("의뢰자가 마감을 요청한 경우");
-    expect(fx.calls.some((c) => c.table === "rfq_requests" && c.op === "update")).toBe(false);
+    const r = await closeRoute(json({ sponsorRequested: true }), ctxNo);
+    expect(r.status).toBe(409);
+    const d = await r.json();
+    expect(d.code).toBe("early_close_removed");
+    expect(d.error).toContain("회신 기한 전에는 회신을 마감할 수 없습니다");
+    expect(d.error).not.toContain("의뢰자");
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
+    expect(fx.audit).not.toHaveBeenCalled();
   });
-  it("의뢰자 요청으로 기한 전에 마감하면 미회신 기관과 제출 기관 모두에 기관마다 알린다", async () => {
+  it("참여한 기관이 모두 제출했어도 기한 전 운영자 마감은 409 다 (참여 마감 뒤 전원 제출은 DB 가 연다)", async () => {
     fx.session = admin;
-    fx.rfq = rfq;
-    fx.respond = db(true);
-    const r = await closeRoute(json({ sponsorRequested: true }), { params: Promise.resolve({ no: "DC-2026-0001" }) });
-    expect(r.status).toBe(200);
-    const toC = calls().filter((c) => c[2]?.to.includes("c@example.com"));
-    expect(toC).toHaveLength(1);
-    expect(toC[0][1].title).toContain("회신이 마감되었습니다");
-    const toA = calls().filter((c) => c[2]?.to.includes("a@example.com"));
-    expect(toA).toHaveLength(1);
-    expect(toA[0][1].title).toContain("견적 수정이 닫혔습니다");
-    // 기관마다 따로: 한 통에 다른 기관 주소가 섞이지 않는다
-    expect(calls().some((c) => c[2]?.to.includes("a@example.com") && c[2]?.to.includes("b@example.com"))).toBe(false);
-    // 참여 결정 전 기관에는 시험물질명 없이 참여 안내가 마감되었다고만 알린다
-    const toD = calls().filter((c) => c[2]?.to.includes("d@example.com"));
-    expect(toD).toHaveLength(1);
-    expect(toD[0][1].title).toContain("참여 안내가 마감되었습니다");
-    expect(`${toD[0][1].title} ${toD[0][1].body}`).not.toContain("ABC-1");
-    expect(fx.logEvent.mock.calls[0][3]).toContain("의뢰자 요청");
-    expect(fx.audit).toHaveBeenCalledWith(expect.anything(), "rfq.close_replies", expect.anything(), expect.objectContaining({ after: expect.objectContaining({ sponsor_requested: true }) }));
-  });
-  it("참여한 기관이 모두 제출했으면 참여 결정 전 안내가 남아 있어도 기한 전에 마감할 수 있다", async () => {
-    fx.session = admin;
-    fx.rfq = rfq;
+    fx.rfq = early;
     fx.respond = (q) => {
       if (q.table === "rfq_invites") return { data: [
         { id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "a@example.com", status: "submitted", joined_at: "2026-10-02T00:00:00Z" },
-        { id: "i4", token: "tok_aaaaaaa4", cro_org_id: null, cro_email: "d@example.com", status: "sent", joined_at: null },
       ], error: null };
       return db(true)(q);
     };
-    const r = await closeRoute(json({}), { params: Promise.resolve({ no: "DC-2026-0001" }) });
-    expect(r.status).toBe(200);
-    expect(fx.logEvent.mock.calls[0][3]).toContain("전원 회신");
+    expect((await closeRoute(json({}), ctxNo)).status).toBe(409);
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
   });
-  it("전원 회신했으면 기한 전이라도 의뢰자 요청 없이 마감하고 제출 기관에 알린다", async () => {
+  it("closeReplies 도 기한 전이면 열지 않는다 (예약 작업·운영자 공통)", async () => {
+    fx.respond = db(true);
+    const r = await closeReplies(early, "admin-1", false);
+    expect(r.ok).toBe(false);
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+  });
+  it("회신 기한이 지난 요청은 운영자가 예약 작업보다 먼저 열 수 있다. 기관에는 앱 알림만, 메일은 의뢰자에게만", async () => {
     fx.session = admin;
     fx.rfq = rfq;
-    fx.respond = (q) => {
-      if (q.table === "rfq_invites") return { data: [
-        { id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "a@example.com", status: "submitted" },
-        { id: "i2", token: "tok_aaaaaaa2", cro_org_id: null, cro_email: "b@example.com", status: "declined" },
-      ], error: null };
-      return db(true)(q);
-    };
-    const r = await closeRoute(json({}), { params: Promise.resolve({ no: "DC-2026-0001" }) });
+    fx.respond = db(true);
+    const r = await closeRoute(json({}), ctxNo);
     expect(r.status).toBe(200);
-    expect(calls().filter((c) => c[2]?.to.includes("a@example.com"))).toHaveLength(1);
-    expect(calls().some((c) => c[2]?.to.includes("b@example.com"))).toBe(false);
+    const up = fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update");
+    expect(up?.payload).toMatchObject({ status: "compared" });
+    expect(calls().some((c) => c[2]?.to.some((t) => t !== "sponsor@example.com"))).toBe(false);
+    expect(fx.audit).toHaveBeenCalledWith(expect.anything(), "rfq.close_replies", expect.anything(), expect.objectContaining({ after: expect.not.objectContaining({ sponsor_requested: expect.anything() }) }));
+  });
+  it("의뢰자 요청 마감 코드와 화면 조작이 남아 있지 않다", () => {
+    const src = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+    for (const f of ["lib/compare.ts", "app/api/admin/rfqs/[no]/close-replies/route.ts", "components/admin/AdminActions.tsx"]) {
+      const code = src(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+      expect(code).not.toMatch(/sponsorRequested|sponsor_requested/);
+      expect(code).not.toMatch(/제4조\s*제?7항|4조7항/);
+    }
+    // 운영자 마감 버튼은 회신 기한이 지난 요청에서만 보인다
+    expect(src("components/admin/AdminActions.tsx")).toMatch(/canClose = [^;]*!early/);
   });
   it("제출된 견적이 없으면 마감하지 않는다", async () => {
     fx.respond = (q) => (q.table === "cro_quotes" ? { data: null, error: null, count: 0 } : { data: [], error: null });
@@ -260,13 +257,37 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
   });
 });
 
-describe("기한 연장으로 마감된 회신을 다시 연다", () => {
+describe("열린 비교표는 다시 열지 않고 회신 기한도 바꾸지 않는다 (2026-10-21 결정 3)", () => {
   const ctx = { params: Promise.resolve({ no: "DC-2026-0001" }) };
-  it("compared_at 을 비우고 견적 도착으로 되돌리며, 제출한 기관의 기한도 늘린다", async () => {
+  const opened = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "compared", compared_at: "2026-10-11T00:00:00Z", selected_quote_id: null, reply_by: "2026-10-10", distributed_at: "2026-10-01T00:00:00Z", substance: "ABC-1", user_id: "sponsor-1" };
+  it("비교표가 열린 요청의 기한 연장은 409 이고 분명한 한국어 안내를 준다. 요청·초대를 바꾸지 않고 아무에게도 알리지 않는다", async () => {
     fx.session = admin;
-    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "compared", compared_at: "2026-10-11T00:00:00Z", selected_quote_id: null, reply_by: "2026-10-10", distributed_at: "2026-10-01T00:00:00Z", substance: "ABC-1", user_id: "sponsor-1" };
+    fx.rfq = opened;
+    fx.respond = (q) => (q.table === "rfq_requests" && q.op === "update" ? { data: [{ id: "rfq-1" }], error: null } : { data: [], error: null });
+    const r = await changeDeadline(json({ replyBy: "2099-01-05" }), ctx);
+    expect(r.status).toBe(409);
+    const d = await r.json();
+    expect(d.code).toBe("compare_locked");
+    expect(d.error).toBe("비교표가 열린 요청은 회신 기한을 바꾸거나 회신을 다시 열 수 없습니다. 받은 견적으로 선정하시거나, 더 받아야 하면 새 요청으로 보내 주세요.");
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+    expect(fx.notifyUsers).not.toHaveBeenCalled();
+    expect(fx.audit).not.toHaveBeenCalled();
+  });
+  it("같은 기한으로 다시 열기(compared_at 비우기)도 409", async () => {
+    fx.session = admin;
+    fx.rfq = { ...opened, reply_by: "2099-01-05", compared_at: "2098-12-20T00:00:00Z" };
+    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(409);
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+  });
+  it("보류·종료 뒤에도 비교표가 열린 요청이면 409 (상태보다 compared_at 을 먼저 본다)", async () => {
+    fx.session = admin;
+    fx.rfq = { ...opened, status: "closed" };
+    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(409);
+  });
+  it("열리기 전에는 기한을 늘릴 수 있다. compared_at 을 건드리지 않고, 조건부 갱신으로 그 사이 열린 요청은 바꾸지 않는다", async () => {
+    fx.session = admin;
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "quoted", compared_at: null, selected_quote_id: null, reply_by: "2026-10-10", distributed_at: "2026-10-01T00:00:00Z", substance: "ABC-1", user_id: "sponsor-1" };
     fx.respond = (q) => {
-      if (q.table === "cro_quotes") return { data: null, error: null, count: 1 };
       if (q.table === "rfq_invites" && q.op === "select") return { data: [{ id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "a@example.com", status: "submitted" }], error: null };
       if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
       return { data: [], error: null };
@@ -274,53 +295,32 @@ describe("기한 연장으로 마감된 회신을 다시 연다", () => {
     const r = await changeDeadline(json({ replyBy: "2099-01-05" }), ctx);
     expect(r.status).toBe(200);
     const up = fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update");
-    expect(up?.payload).toEqual({ reply_by: "2099-01-05", compared_at: null, status: "quoted" });
+    expect(up?.payload).toEqual({ reply_by: "2099-01-05" });
+    expect(up?.filters).toContainEqual(["is:compared_at", null]);
+    expect(up?.filters).toContainEqual(["is:selected_quote_id", null]);
     const inv = fx.calls.find((c) => c.table === "rfq_invites" && c.op === "update");
     expect(inv?.payload).toMatchObject({ reply_by: "2099-01-05" });
-    expect(calls().some((c) => c[2]?.to.includes("a@example.com"))).toBe(true);
+    expect(calls().find((c) => c[2]?.to.includes("a@example.com"))?.[1].body).toContain("비교표가 열리면 수정과 다시 제출은 닫힙니다");
   });
-  it("다시 열면 지난 참여 결정 기한을 오늘부터 다시 잡는다 (곧바로 다시 열리지 않게)", async () => {
+  it("그 사이 비교표가 열렸으면(조건부 갱신 0건) 409 이고 초대 기한을 늘리지 않는다", async () => {
     fx.session = admin;
-    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "compared", compared_at: "2026-10-11T00:00:00Z", selected_quote_id: null, reply_by: "2026-10-10", join_by: "2026-10-03T14:59:59.000Z", distributed_at: "2026-10-01T00:00:00Z", substance: "ABC-1", user_id: "sponsor-1" };
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "quoted", compared_at: null, selected_quote_id: null, reply_by: "2099-01-01", substance: "ABC-1", user_id: "sponsor-1" };
     fx.respond = (q) => {
-      if (q.table === "cro_quotes") return { data: null, error: null, count: 2 };
-      if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
+      if (q.table === "rfq_requests" && q.op === "update") return { data: [], error: null };
       return { data: [], error: null };
     };
-    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(200);
-    const payload = fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update")?.payload as Record<string, unknown>;
-    expect(payload).toMatchObject({ compared_at: null, status: "quoted" });
-    expect(new Date(payload.join_by as string).getTime()).toBeGreaterThan(Date.now());
-  });
-  it("기한 전에 마감한 요청은 같은 기한으로 다시 열 수 있다", async () => {
-    fx.session = admin;
-    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "compared", compared_at: "2098-12-20T00:00:00Z", selected_quote_id: null, reply_by: "2099-01-05", distributed_at: "2098-12-01T00:00:00Z", substance: "ABC-1", user_id: "sponsor-1" };
-    fx.respond = (q) => {
-      if (q.table === "cro_quotes") return { data: null, error: null, count: 1 };
-      if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
-      return { data: [], error: null };
-    };
-    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(200);
-    expect(fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update")?.payload).toMatchObject({ compared_at: null, status: "quoted" });
+    const r = await changeDeadline(json({ replyBy: "2099-01-05" }), ctx);
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("그 사이 비교표가 열렸거나");
+    expect(fx.calls.some((c) => c.table === "rfq_invites" && c.op === "update")).toBe(false);
+    expect(fx.notifyUsers).not.toHaveBeenCalled();
   });
   it("열린 요청에 같은 기한을 다시 넣으면 거절한다", async () => {
     fx.session = admin;
     fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "quoted", compared_at: null, selected_quote_id: null, reply_by: "2099-01-05" };
     expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(400);
   });
-  it("그 사이 의뢰자가 선정해 요청 행이 바뀌지 않았으면 초대 기한을 늘리지 않고 아무에게도 알리지 않는다", async () => {
-    fx.session = admin;
-    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "quoted", compared_at: null, selected_quote_id: null, reply_by: "2099-01-01", substance: "ABC-1", user_id: "sponsor-1" };
-    fx.respond = (q) => {
-      if (q.table === "rfq_requests" && q.op === "update") return { data: [], error: null };
-      if (q.table === "rfq_invites" && q.op === "select") return { data: [{ id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "a@example.com", status: "submitted" }], error: null };
-      return { data: [], error: null };
-    };
-    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(409);
-    expect(fx.calls.some((c) => c.table === "rfq_invites" && c.op === "update")).toBe(false);
-    expect(fx.notifyUsers).not.toHaveBeenCalled();
-  });
-  it("선정한 요청은 다시 열지 않는다", async () => {
+  it("선정한 요청은 기한을 바꾸지 않는다", async () => {
     fx.session = admin;
     fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "selected", compared_at: null, selected_quote_id: "q1", reply_by: "2026-10-10" };
     expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(400);
@@ -390,7 +390,7 @@ describe("참여 결정 기한 연장 (운영자, 요청마다 한 번, 0023)", 
     fx.rfq = { ...base, join_by: null };
     expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(400);
     fx.rfq = { ...base, status: "compared", compared_at: "2099-01-21T00:00:00Z" };
-    expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(400);
+    expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(409);
   });
   it("그 사이 다른 운영자가 먼저 늘렸으면 409 이고 아무에게도 알리지 않는다", async () => {
     fx.session = admin;

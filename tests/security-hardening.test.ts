@@ -291,12 +291,28 @@ describe("검사 직후 철회·재발급 경합: save_quote 가 잠금 뒤 거�
 describe("운영자 초대 취소", () => {
   it("revoke_invite RPC 로 거두고, 그 사이 제출됐으면 409", async () => {
     fx.session = admin();
+    fx.tables.rfq_invites = [invite({ joined_at: null })];
     fx.rpc.mockResolvedValueOnce({ data: { ok: true, status: "sent" }, error: null });
     expect((await cancelInvite(json({ reason: "잘못 보냄" }), ctx({ id: INV }))).status).toBe(200);
     expect(fx.rpc).toHaveBeenCalledWith("revoke_invite", { p_invite_id: INV, p_reason: "잘못 보냄" });
     expect(fx.calls.some((c) => c.table === "rfq_invites" && c.op === "update")).toBe(false);
     fx.rpc.mockResolvedValueOnce({ data: { ok: false, code: "not_open" }, error: null });
     expect((await cancelInvite(json({}), ctx({ id: INV }))).status).toBe(409);
+  });
+  it("참여한 초대(참여 기록·작성 중)는 비교표가 열리기 전 취소할 수 없다 (2026-10-21 결정 2, 운영자 조기 마감 없음)", async () => {
+    fx.session = admin();
+    for (const over of [{ status: "sent" }, { status: "draft", joined_at: null }]) {
+      fx.tables.rfq_invites = [invite(over)];
+      const r = await cancelInvite(json({ reason: "의뢰자가 빨리 보고 싶어 함" }), ctx({ id: INV }));
+      expect(r.status).toBe(409);
+      expect(((await r.json()) as { code?: string }).code).toBe("joined");
+    }
+    expect(fx.rpc).not.toHaveBeenCalled();
+    // 비교표가 열린 뒤에는 거둘 수 있다 (비교표 공개에 영향이 없다)
+    fx.tables.rfq_requests[0].compared_at = "2026-10-11T00:00:00Z";
+    fx.tables.rfq_invites = [invite()];
+    fx.rpc.mockResolvedValueOnce({ data: { ok: true, status: "sent" }, error: null });
+    expect((await cancelInvite(json({}), ctx({ id: INV }))).status).toBe(200);
   });
 });
 

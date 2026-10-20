@@ -94,7 +94,7 @@ export function CompareBoard({
           <>
             {quoteKindLabel({ auto: c.auto, entry_source: c.operator ? "operator" : "cro" })}
             {c.operator && !c.auto && (
-              <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 같은 양식으로 옮겨 정리했습니다. 금액·조건이 다르면 PDF 원본이 우선하며, 옮겨 적은 내용에 오류가 있으면 단추가 바로잡습니다.</p>
+              <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 같은 양식으로 옮겨 정리했습니다. 금액·조건이 다르면 PDF 원본이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려 드립니다.</p>
             )}
           </>
         ),

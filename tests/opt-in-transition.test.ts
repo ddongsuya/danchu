@@ -31,7 +31,7 @@ function fakeDb() {
     });
     return b;
   };
-  return { from: builder, rpc: async () => ({ data: 25, error: null }) };
+  return { from: builder, rpc: async () => ({ data: 26, error: null }) };
 }
 
 vi.mock("@/lib/supabase", () => ({ getSupabaseAdmin: () => fakeDb() }));

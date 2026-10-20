@@ -143,7 +143,7 @@ export async function GET(req: Request) {
       const { data: done } = await sb.from("invite_reminders").select("invite_id").eq("invite_id", inv.id).eq("kind", kind).maybeSingle();
       if (done) continue;
       const { data: rfq } = await sb.from("rfq_requests").select("substance, status, compared_at").eq("id", inv.rfq_id).maybeSingle();
-      // 운영자가 기한 전에 회신을 마감했거나(compared_at) 선정·종료된 요청에는 "회신해 주세요"를 보내지 않는다
+      // 비교표가 열렸거나(compared_at) 선정·종료된 요청에는 "회신해 주세요"를 보내지 않는다
       if (!rfq || repliesClosed(rfq)) continue;
       // 받는 사람은 지금의 대표 메일 + 지금 소속 담당자. 초대의 cro_email(배포 당시 주소)은 떠난 담당자일 수 있어 쓰지 않는다
       const t = inv.cro_org_id ? (await orgMailTargets(sb, [inv.cro_org_id])).get(inv.cro_org_id) : undefined;
@@ -177,8 +177,9 @@ export async function GET(req: Request) {
     const r = await closeReplies(rfq, null, true);
     if (r.ok) {
       out.compared++;
-      // 참여했지만 내지 않은 기관 이름을 적는다 (운영자 앱 알림만, 하루 요약 메일에 모인다). 운영자 관리 기관이 기한 당일 늦게 PDF 를 보냈다면 기한을 늘려 다시 연 뒤 옮겨 적어야 한다
-      const names = r.pendingNames?.length ? `미회신: ${r.pendingNames.join(", ")}. 견적서 PDF가 메일로 와 있다면 기한을 늘려 다시 연 뒤 옮겨 적어 주세요.` : undefined;
+      // 참여했지만 내지 않은 기관 이름을 적는다 (운영자 앱 알림만, 하루 요약 메일에 모인다).
+      // 비교표가 열린 뒤에는 다시 열거나 기한을 늘릴 수 없으므로(2026-10-21 결정 3) 늦게 온 견적서 PDF 는 옮겨 적지 않는다
+      const names = r.pendingNames?.length ? `미회신: ${r.pendingNames.join(", ")}. 비교표가 열린 뒤 도착한 견적서 PDF는 비교표에 옮겨 적지 않습니다.` : undefined;
       await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 비교표 공개 · 견적 ${r.count}건${r.pending ? ` · 미회신 ${r.pending}곳` : ""}`, body: names, href: `/admin/r/${rfq.rfq_no}` });
     } else if (!r.count) {
       // 회신이 하나도 없으면 열지 않고(늦은 회신을 받을 수 있게) 운영자에게 판단을 넘긴다. 같은 기한에는 한 번만 (기한을 늘렸다 다시 지나면 다시 알린다)

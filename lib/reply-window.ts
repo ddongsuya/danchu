@@ -4,10 +4,11 @@
  * - rfq_requests.compared_at 은 "비교표가 열린 시각"이다. 열리기 전 의뢰자에게는 진행 숫자(참여 n곳, 제출 m곳)와
  *   의뢰자가 지명한 기관의 이름·참여 여부만 보인다. 일반 기관의 이름·금액·견적은 열릴 때 함께 공개한다.
  * - 비교표는 참여한 기관(철회 제외)이 모두 제출하고 더 참여할 수 없을 때(자리가 찼거나 참여 결정 기한이 지남),
- *   또는 회신 기한 다음 날 cron 이 연다 (제출 0건이면 열지 않는다). 운영자의 "회신 마감"도 같은 일을 한다 (lib/compare.ts).
+ *   또는 회신 기한 다음 날 cron 이 연다 (제출 0건이면 열지 않는다). 운영자의 "회신 마감"은 기한이 지난 요청에서만 같은 일을 한다 (lib/compare.ts).
+ *   의뢰자 요청이나 운영자 판단으로 기한 전에 여는 길은 없다 (2026-10-21 결정 2). 급한 의뢰자는 접수 때 회신 기한을 짧게 정한다.
  * - 기관은 비교표가 열리기 전까지 제출한 견적을 고칠 수 있다. 열리면 모든 회신이 닫히므로, 의뢰자가 보는 견적은 더 바뀌지 않는다.
  * - 선정은 비교표가 열린 뒤에만 한다 (0025 select_quote 는 열리기 전이면 not_compared). 기한 전 선정 단계는 없다.
- * - 운영자가 기한을 늘려 다시 열면 compared_at 이 비워지고, 의뢰자 화면은 다시 숫자만 보인다.
+ * - 한 번 열린 비교표는 다시 열지 않고 회신 기한도 늘리지 않는다 (2026-10-21 결정 3, 0026 트리거). 보류 뒤 다시 열어도 처음 열린 시각(compared_at)을 그대로 둔다.
  */
 
 import { occupiesSeat, type JoinFields } from "./request-policy";
@@ -21,6 +22,9 @@ export function endOfDaySeoul(ymd: string): number {
 export function beforeDeadline(replyBy: string | null | undefined, now = Date.now()): boolean {
   return !!replyBy && now <= endOfDaySeoul(replyBy);
 }
+
+/** 비교표가 열린 요청의 회신 기한 변경·다시 열기를 거절하는 문구 (2026-10-21 결정 3). 라우트와 운영자 화면이 같이 쓴다 */
+export const COMPARE_LOCKED_DEADLINE = "비교표가 열린 요청은 회신 기한을 바꾸거나 회신을 다시 열 수 없습니다. 받은 견적으로 선정하시거나, 더 받아야 하면 새 요청으로 보내 주세요.";
 
 const CLOSED_STATUSES = ["selected", "contracting", "closed", "cancelled"];
 

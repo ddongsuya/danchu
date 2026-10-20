@@ -8,5 +8,5 @@ export default async function TokenReplyDone({ params, searchParams }: { params:
   const { token } = await params;
   const { t, w } = await searchParams;
   const got = await loadQuote(token, await viewerLoadOpts());
-  return <ReplyDone no={got?.rfq.no ?? ""} replyBy={got?.rfq.replyBy} total={Number(t || 0)} weeks={w} editHref={`/q/${token}/reply`} backHref={`/q/${token}`} backLabel="요청서 보기" />;
+  return <ReplyDone no={got?.rfq.no ?? ""} replyBy={got?.rfq.replyBy} total={Number(t || 0)} weeks={w} editHref={`/q/${token}/reply`} backHref={`/q/${token}`} backLabel="요청서 보기" closed={!!got?.closed} />;
 }

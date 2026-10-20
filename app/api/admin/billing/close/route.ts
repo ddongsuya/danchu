@@ -10,7 +10,7 @@ export const runtime = "nodejs";
  * POST { month: 'YYYY-MM', closed: true, note? }: 청구 월 마감.
  * 마감하면 그 달 명세를 저장본(billing_periods.snapshot)으로 고정하고 청구 제외 토글이 막힌다 (close_billing_month).
  * 마감한 달은 다시 열 수 없다 (2026-10-20 결정, 0024). closed: false(마감 해제)는 409 로 거절하고, DB 트리거도 삭제를 막는다.
- * 바로잡을 금액은 다음 열린 달에 조정 항목(/api/admin/billing/adjustments)으로 넣는다.
+ * 돌려드릴 금액은 다음 열린 달에 조정 항목(/api/admin/billing/adjustments)으로 넣는다. 적게 받은 금액은 다시 청구하지 않는다 (0026).
  */
 export async function POST(req: Request) {
   const s = await sessionOrNull("admin");

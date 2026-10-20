@@ -111,7 +111,7 @@ const visible = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, "").replace(
 
 describe("참여 선택형 공개 문구", () => {
   it("기관 조건 판은 한 곳에서 정하고 기관 안내 문서가 같은 값을 보여 준다", () => {
-    expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-20b");
+    expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-21");
     // 시범 판은 pilot- 으로 시작해야 청구 함수가 무료로 본다 (0023 billing_lines)
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
     const forCro = src("app/for-cro/page.tsx");
@@ -120,7 +120,7 @@ describe("참여 선택형 공개 문구", () => {
     expect(forCro).not.toMatch(/pilot-20\d\d-/);
     expect(src("components/cro/JoinPanel.tsx")).toContain("/for-cro#cro-terms");
   });
-  it("약관을 바꿨으므로 의뢰자 동의 판도 올렸다", () => expect(CONSENT_VERSION).toBe("2026-10-20"));
+  it("약관을 바꿨으므로 의뢰자 동의 판도 올렸다", () => expect(CONSENT_VERSION).toBe("2026-10-21"));
   it("약관 제4조는 참여 안내와 참여한 요청에 제출한 견적으로 설명한다", () => {
     const terms = visible(src("app/terms/page.tsx"));
     for (const s of ["참여 안내", "참여한 요청에 제출한 견적", "지명 기관에만 안내", "참여 결정 기한", "참여를 철회", "대신하여 참여를"]) expect(terms).toContain(s);

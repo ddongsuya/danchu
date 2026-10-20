@@ -5,9 +5,15 @@ import { parseAdjustmentAmount } from "@/lib/billing";
 
 type Field = "orgId" | "amount" | "reason" | "correctsMonth";
 
+/** 입력한 금액을 돌려드리는 금액(음수)으로. -를 붙였든 안 붙였든 같은 금액으로 본다. 잘못된 값이면 null */
+function creditAmount(v: string): number | null {
+  const n = parseAdjustmentAmount(v);
+  return n == null ? null : -Math.abs(n);
+}
+
 /**
  * 청구 조정 항목 넣기 (0024). 열린 달 명세에만 보인다. 마감한 달을 바로잡는 금액은 이 달에 조정 항목으로 넣는다.
- * 금액은 원 단위(돌려줄 금액은 앞에 -), 사유는 필수, 바로잡는 달은 이 달보다 앞선 마감한 달 중에서 고른다 (선택, 기본은 지정하지 않음).
+ * 금액은 돌려드릴 금액만 원 단위로 적는다(양수로 적으면 돌려드리는 금액으로 보낸다, 2026-10-21 결정), 사유는 필수, 바로잡는 달은 이 달보다 앞선 마감한 달 중에서 고른다 (선택, 기본은 지정하지 않음).
  * 이 달을 마감하면 넣은 항목은 바꾸거나 지울 수 없다
  */
 export function BillingAdjustmentForm({ month, orgs, closedMonths }: { month: string; orgs: { id: string; name: string }[]; closedMonths: string[] }) {
@@ -25,7 +31,7 @@ export function BillingAdjustmentForm({ month, orgs, closedMonths }: { month: st
   const check = (): Partial<Record<Field, string>> => {
     const e: Partial<Record<Field, string>> = {};
     if (!orgId) e.orgId = "기관을 골라 주세요.";
-    if (parseAdjustmentAmount(amount) == null) e.amount = "원 단위 숫자로 적어 주세요. 돌려줄 금액은 앞에 -를 붙이고, 0원은 넣을 수 없습니다.";
+    if (creditAmount(amount) == null) e.amount = "돌려드릴 금액을 원 단위 숫자로 적어 주세요. 0원은 넣을 수 없습니다.";
     if (!reason.trim()) e.reason = "조정 사유를 적어 주세요.";
     else if (reason.trim().length > 300) e.reason = "300자 안으로 적어 주세요.";
     return e;
@@ -43,7 +49,7 @@ export function BillingAdjustmentForm({ month, orgs, closedMonths }: { month: st
       const r = await fetch("/api/admin/billing/adjustments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month, orgId, amount: parseAdjustmentAmount(amount), reason: reason.trim(), correctsMonth: corrects || null }),
+        body: JSON.stringify({ month, orgId, amount: creditAmount(amount), reason: reason.trim(), correctsMonth: corrects || null }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string; field?: Field | "month" };
       if (!r.ok) {
@@ -77,9 +83,9 @@ export function BillingAdjustmentForm({ month, orgs, closedMonths }: { month: st
           {err("orgId")}
         </div>
         <div className="fld">
-          <label className="fld__lab" htmlFor="adj-amount">금액 (원)</label>
-          <input id="adj-amount" className="inp tnum" inputMode="text" autoComplete="off" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="예: -120000" aria-invalid={!!errs.amount || undefined} aria-describedby={desc("amount", "adj-amount-help")} />
-          <span id="adj-amount-help" className="fld__help">더 받을 금액은 그대로, 돌려줄 금액은 앞에 -를 붙입니다.</span>
+          <label className="fld__lab" htmlFor="adj-amount">돌려드릴 금액 (원)</label>
+          <input id="adj-amount" className="inp tnum" inputMode="text" autoComplete="off" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="예: 120000" aria-invalid={!!errs.amount || undefined} aria-describedby={desc("amount", "adj-amount-help")} />
+          <span id="adj-amount-help" className="fld__help">조정 항목은 돌려드릴 금액만 넣습니다. 적게 받은 금액은 다시 청구하지 않습니다.</span>
           {err("amount")}
         </div>
         <div className="fld">

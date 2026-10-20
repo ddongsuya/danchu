@@ -28,7 +28,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { data: quote } = await sb.from("cro_quotes").select("first_submitted_at, billing_at").eq("invite_id", id).maybeSingle();
   const monthFirst = new Date(quote?.billing_at ?? quote?.first_submitted_at ?? inv.sent_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }).slice(0, 7) + "-01";
   const { data: closed } = await sb.from("billing_periods").select("month").eq("month", monthFirst).maybeSingle();
-  if (closed) return NextResponse.json({ error: `${monthFirst.slice(0, 7)}은 청구를 마감해 바꿀 수 없습니다. 마감한 달은 다시 열 수 없으니, 바로잡을 금액은 청구 명세에서 다음 열린 달에 조정 항목으로 넣어 주세요.` }, { status: 409 });
+  if (closed) return NextResponse.json({ error: `${monthFirst.slice(0, 7)}은 청구를 마감해 바꿀 수 없습니다. 마감한 달은 다시 열 수 없으니, 돌려드릴 금액은 청구 명세에서 다음 열린 달에 조정 항목으로 넣어 주세요. 적게 받은 금액은 다시 청구하지 않습니다.` }, { status: 409 });
   const { error } = await sb.from("rfq_invites").update({ billable: b.billable, bill_excluded_reason: b.billable ? null : reason }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   await logEvent(inv.rfq_id, "billing", b.billable ? `${inv.cro_name} 견적 청구 복원` : `${inv.cro_name} 견적 청구 제외`, b.billable ? undefined : reason, s.userId, { inviteId: id, billable: b.billable });

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * 운영자 진행 관리. "회신 마감"은 compared_at 을 채워 남은 회신 링크를 닫는다 (비교표 공개 단계는 없다, lib/reply-window.ts).
- * 기한 다음 날 cron 이 같은 일을 하므로, 기한 전에 닫아야 할 때만 쓴다(전원 회신 또는 의뢰자 요청). 다시 열려면 회신 기한을 늘린다.
+ * 운영자 진행 관리. "회신 마감"은 compared_at 을 채워 비교표를 열고 남은 회신 링크를 닫는다 (lib/reply-window.ts).
+ * 회신 기한이 지난 요청에서만 보인다. 다음 날 예약 작업이 같은 일을 하므로 그보다 먼저 열 때만 쓴다.
+ * 기한 전 마감(의뢰자 요청 포함)은 없다 (2026-10-21 결정 2). 열린 비교표는 다시 열 수 없다 (결정 3).
  */
 export function AdminActions({ no, status, submitted, pending, early, closed, note: initialNote, award }: { no: string; status: string; submitted: number; pending: number; early: boolean; closed: boolean; note: string; award: { cro: string; at: string; contract: string } | null }) {
   const router = useRouter();
@@ -31,18 +32,15 @@ export function AdminActions({ no, status, submitted, pending, early, closed, no
     }
   };
   const done = status === "closed" || status === "cancelled";
-  // 기한 전 마감은 참여한 기관이 모두 제출했거나 의뢰자가 요청한 경우만 (약관 제4조7항). 미회신 기관이 있으면 의뢰자 요청으로 기록한다
-  const closeConfirm = !early
-    ? `견적 ${submitted}건으로 회신을 마감할까요?${pending ? ` 참여했지만 제출하지 않은 ${pending}곳의 회신 링크도 닫힙니다.` : ""} 의뢰자에게 요약을 보냅니다. 다시 열려면 기한을 늘려 주세요.`
-    : pending
-      ? `아직 회신 기한 전이고 참여했지만 제출하지 않은 기관이 ${pending}곳 있습니다. 기한 전 마감은 의뢰자가 요청한 경우에만 할 수 있습니다. 의뢰자의 마감 요청을 받았습니까? 확인을 누르면 의뢰자 요청으로 기록하고 견적 ${submitted}건으로 회신을 마감합니다. 이 요청의 모든 기관에 마감을 알리고 의뢰자에게 요약을 보냅니다. 다시 열려면 기한을 늘려 주세요.`
-      : `견적 ${submitted}건으로 회신을 마감할까요? 아직 회신 기한 전이지만 참여한 기관이 모두 제출했습니다. 제출한 기관에 마감을 알리고 의뢰자에게 요약을 보냅니다. 다시 열려면 기한을 늘려 주세요.`;
+  // 기한이 지난 요청만 마감한다. 기한 전에는 참여가 마감된 뒤 참여한 기관이 모두 제출하면 DB 가 연다 (2026-10-21 결정 2)
+  const closeConfirm = `견적 ${submitted}건으로 회신을 마감하고 비교표를 열까요?${pending ? ` 참여했지만 제출하지 않은 ${pending}곳의 회신 링크도 닫힙니다.` : ""} 의뢰자에게 요약을 보냅니다. 열린 비교표는 다시 닫거나 회신 기한을 늘릴 수 없습니다.`;
+  const canClose = !done && !closed && !early && ["distributed", "quoted"].includes(status);
 
   return (
     <div className="stack" style={{ gap: 12 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {!done && !closed && ["distributed", "quoted"].includes(status) && (
-          <button type="button" className="b1" disabled={submitted === 0 || !!busy} title={submitted === 0 ? "제출된 견적이 있어야 마감할 수 있습니다" : undefined} onClick={() => call("close-replies", `/api/admin/rfqs/${no}/close-replies`, { sponsorRequested: early && pending > 0 }, closeConfirm)}>
+        {canClose && (
+          <button type="button" className="b1" disabled={submitted === 0 || !!busy} title={submitted === 0 ? "제출된 견적이 있어야 마감할 수 있습니다" : undefined} onClick={() => call("close-replies", `/api/admin/rfqs/${no}/close-replies`, {}, closeConfirm)}>
             {busy === "close-replies" ? "처리 중…" : `회신 마감 (견적 ${submitted}건)`}
           </button>
         )}
@@ -56,6 +54,9 @@ export function AdminActions({ no, status, submitted, pending, early, closed, no
           <button type="button" className="b2" disabled={!!busy} onClick={() => call("reopen", `/api/admin/rfqs/${no}/status`, { status: "reopen" })}>다시 열기</button>
         )}
       </div>
+      {!done && !closed && early && ["distributed", "quoted"].includes(status) && (
+        <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>회신 기한 전에는 마감하지 않습니다. 비교표는 참여가 마감된 뒤 참여한 기관이 모두 제출하면 바로 열리고, 그렇지 않으면 회신 기한 다음 날 열립니다.</p>
+      )}
       {award && (
         <div className="note note--ok" style={{ flexDirection: "column", gap: 2 }}>
           <b style={{ fontWeight: 600 }}>{award.cro} 선정 · {award.at}</b>

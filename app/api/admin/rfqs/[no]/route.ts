@@ -12,6 +12,8 @@ export const runtime = "nodejs";
 /**
  * PATCH { croCount?, confidentiality? } — 의뢰자가 잘못 고른 전달 기관 수·기밀 등급을 운영자가 바로잡는다.
  * 종료·취소된 요청은 바꾸지 않는다. 자리 수를 이미 참여한 기관 수(참여·작성 중·제출)보다 줄일 수는 없다 (0023: 안내는 자리 수와 무관).
+ * 참여 안내를 보낸 뒤(distributed_at)에는 비교표가 열리기 전 자리 수를 줄일 수 없다 (409). 줄이면 참여가 일찍 마감되어
+ * 기한 전에 비교표가 열릴 수 있어서다 (2026-10-21 결정 2: 운영자 조기 마감 없음). 늘리기는 된다.
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");
@@ -26,6 +28,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
   if (b.croCount !== undefined) {
     if (!(CRO_COUNT_OPTIONS as readonly string[]).includes(b.croCount as string)) return NextResponse.json({ error: "전달 기관 수 값이 올바르지 않습니다." }, { status: 400 });
     patch.cro_count = b.croCount as string;
+    if (rfq.distributed_at && !rfq.compared_at && invitationLimit(patch.cro_count) < invitationLimit(rfq.cro_count)) {
+      return NextResponse.json({ error: "참여 안내를 보낸 뒤에는 자리 수를 줄일 수 없습니다. 자리를 줄이면 참여가 일찍 마감되어 회신 기한 전에 비교표가 열릴 수 있습니다.", code: "seat_shrink" }, { status: 409 });
+    }
   }
   if (b.confidentiality !== undefined) {
     if (!(CONFIDENTIALITY_OPTIONS as readonly string[]).includes(b.confidentiality as string)) return NextResponse.json({ error: "기밀 등급 값이 올바르지 않습니다." }, { status: 400 });
@@ -39,7 +44,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
     // 자리 수는 DB 함수가 요청 행을 잠그고 참여 수를 센 뒤 바꾼다 (동시 참여와 겹쳐도 참여 수 > 자리 수가 되지 않는다)
     const r = await setSeatCount(rfq.id, patch.cro_count);
     if (!r.ok) {
-      if (r.code === "too_few") return NextResponse.json({ error: `이미 ${r.used ?? "여러"}곳이 참여해 그보다 적게 줄일 수 없습니다. 필요하면 초대를 개별로 취소하세요.` }, { status: 409 });
+      if (r.code === "too_few") return NextResponse.json({ error: `이미 ${r.used ?? "여러"}곳이 참여해 그보다 적게 줄일 수 없습니다. 기관이 철회를 알려 오면 회신 링크 화면에서 철회로 기록해 주세요.` }, { status: 409 });
       if (r.code === "closed") return NextResponse.json({ error: "종료·취소된 요청은 바꿀 수 없습니다." }, { status: 409 });
       return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
     }

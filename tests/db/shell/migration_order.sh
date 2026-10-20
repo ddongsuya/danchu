@@ -7,6 +7,7 @@
 #  5) 0024 는 0023 없이 적용하면 멈추고 아무것도 바꾸지 않으며, 끝나지 않은 달이 마감돼 있어도 멈추고,
 #     0023 다음에 적용하면 판이 24 가 된다.
 #  6) 0025 는 0024 없이 적용하면 멈추고 아무것도 바꾸지 않으며, 0024 다음에 적용하면 판이 25 가 된다.
+#  7) 0026 은 0025 없이 적용하면 멈추고 아무것도 바꾸지 않으며, 0025 다음에 적용하면 판이 26 이 된다.
 # 별도 데이터베이스(danchu_order)를 만들어 쓰고 지운다. scripts/db-test.sh 가 PSQL·ROOT·PG* 환경을 넘겨 부른다.
 set -uo pipefail
 DB=danchu_order
@@ -54,6 +55,11 @@ V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "23" ]] || fail "판은 23 이어야 합니다 (실제 $V)"
 echo "  0022 → 0023: 판 23"
 
+if q -d "$DB" -f "$ROOT/supabase/migrations/0026_compare_lock.sql" >"$TMPD/out" 2>&1; then fail "0025 없이 0026 이 적용되면 안 됩니다"; fi
+grep -q "0019 부터 0025 까지 순서대로" "$TMPD/out" || fail "0026 의 멈춤 메시지가 다릅니다: $(cat "$TMPD/out")"
+[[ "$(q -d "$DB" -c "select count(*) from pg_trigger where tgname = 'rfq_requests_compare_lock'")" == "0" ]] || fail "멈춘 0026 이 트리거를 만들었습니다"
+echo "  0026 을 0025 없이 적용: 멈춤 (0019~0025 필요), 바뀐 것 없음"
+
 if q -d "$DB" -f "$ROOT/supabase/migrations/0025_flow_redesign.sql" >"$TMPD/out" 2>&1; then fail "0024 없이 0025 가 적용되면 안 됩니다"; fi
 grep -q "0019 부터 0024 까지 순서대로" "$TMPD/out" || fail "0025 의 멈춤 메시지가 다릅니다: $(cat "$TMPD/out")"
 [[ "$(q -d "$DB" -c "select count(*) from information_schema.columns where table_name = 'rfq_requests' and column_name = 'started_at'")" == "0" ]] || fail "멈춘 0025 가 일부를 바꿨습니다"
@@ -77,3 +83,9 @@ q -d "$DB" -f "$ROOT/supabase/migrations/0025_flow_redesign.sql" >"$TMPD/out" 2>
 V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "25" ]] || fail "판은 25 여야 합니다 (실제 $V)"
 echo "  0024 → 0025: 판 25"
+
+q -d "$DB" -f "$ROOT/supabase/migrations/0026_compare_lock.sql" >"$TMPD/out" 2>&1 || { cat "$TMPD/out" >&2; fail "0026 적용 실패"; }
+V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
+[[ "$V" == "26" ]] || fail "판은 26 이어야 합니다 (실제 $V)"
+[[ "$(q -d "$DB" -c "select count(*) from pg_trigger where tgname in ('rfq_requests_compare_lock', 'cro_quotes_compare_lock', 'cro_quote_items_compare_lock', 'cro_quote_addons_compare_lock')")" == "4" ]] || fail "0026 트리거 4개가 있어야 합니다"
+echo "  0025 → 0026: 판 26, 열린 비교표 고정 트리거 4개"

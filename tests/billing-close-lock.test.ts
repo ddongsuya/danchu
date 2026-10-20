@@ -39,7 +39,7 @@ vi.mock("@/lib/audit", async (orig) => ({ ...(await orig<typeof import("@/lib/au
 
 import {
   ADJUSTMENT_MAX_ABS, CLOSED_MONTH_NOTE, REFERENCE_LABEL, REFERENCE_PER_QUOTE_FEE, REFERENCE_SUCCESS_RATE, REFERENCE_UNIT_LABEL,
-  adjustmentsByOrg, countsForReference, parseAdjustmentAmount, rateLabel, referenceForOrg, referenceRate, referenceTotals, referenceUnit, signedWon,
+  ADJUSTMENT_CREDIT_ONLY_NOTE, adjustmentsByOrg, countsForReference, parseAdjustmentAmount, rateLabel, referenceForOrg, referenceRate, referenceTotals, referenceUnit, signedWon,
 } from "@/lib/billing";
 import { comma } from "@/lib/format";
 import { POST as closeRoute } from "@/app/api/admin/billing/close/route";
@@ -66,7 +66,7 @@ describe("마감 라우트: 마감한 달은 다시 열 수 없다", () => {
     expect(r.status).toBe(409);
     const d = (await r.json()) as { error: string; code: string };
     expect(d.code).toBe("reopen_refused");
-    expect(d.error).toBe("마감한 달은 다시 열 수 없습니다. 바로잡을 금액은 다음 달 명세에 조정 항목으로 넣습니다.");
+    expect(d.error).toBe("마감한 달은 다시 열 수 없습니다. 돌려드릴 금액은 다음 달 명세에 조정 항목으로 넣고, 적게 받은 금액은 다시 청구하지 않습니다.");
     expect(d.error).toBe(CLOSED_MONTH_NOTE);
     expect(fx.rpc).not.toHaveBeenCalled();
     expect(fx.from).toEqual([]);
@@ -145,6 +145,23 @@ describe("조정 항목 라우트", () => {
       { type: "billing_period", id: null, label: "2026-10" },
       { after: { adjustment_id: "adj-1", org_id: ORG, org_name: "시험기관", amount: -120000, corrects_month: "2026-09" }, note: ok.reason },
     );
+  });
+  it("더 받는 조정(양수)은 400 credit_only, DB 를 부르지 않는다 (2026-10-21 결정)", async () => {
+    for (const amount of [5000, "+5,000", "120000"]) {
+      const r = await adjustRoute(post({ ...ok, amount }));
+      expect(r.status, String(amount)).toBe(400);
+      const d = (await r.json()) as { code: string; field: string; error: string };
+      expect(d.code).toBe("credit_only");
+      expect(d.field).toBe("amount");
+      expect(d.error).toBe(ADJUSTMENT_CREDIT_ONLY_NOTE);
+    }
+    expect(fx.rpc).not.toHaveBeenCalled();
+  });
+  it("DB 가 credit_only 를 돌려주면 400", async () => {
+    fx.rpc.mockImplementation(async () => ({ data: { ok: false, code: "credit_only" }, error: null }));
+    const r = await adjustRoute(post(ok));
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as { code: string }).code).toBe("credit_only");
   });
   it("바로잡는 달을 비우면 null", async () => {
     fx.rpc.mockImplementation(async () => ({ data: { ok: true, id: "adj-2" }, error: null }));

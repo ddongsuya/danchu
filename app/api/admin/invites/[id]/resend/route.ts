@@ -15,7 +15,7 @@ function relinkMail(rfqNo: string, replyBy: string, token: string) {
   const link = `${siteUrl()}/q/${token}`;
   return {
     subject: `[단추] ${rfqNo} 회신 링크가 새로 발급되었습니다`,
-    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크가 새로 발급되었습니다 · ${esc(rfqNo)}</h2><p>기관 담당자 변경으로 이 요청의 회신 링크를 새로 만들었습니다. 이전 메일의 링크는 더 쓸 수 없습니다.<br>제출한 견적은 그대로 남아 있고, 회신 기한(${esc(replyBy)}) 안에서는 아래 링크로 보고 고칠 수 있습니다.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
+    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크가 새로 발급되었습니다 · ${esc(rfqNo)}</h2><p>기관 담당자 변경으로 이 요청의 회신 링크를 새로 만들었습니다. 이전 메일의 링크는 더 쓸 수 없습니다.<br>제출한 견적은 그대로 남아 있고, 비교표가 열리기 전이면 회신 기한(${esc(replyBy)}) 안에서 아래 링크로 보고 고칠 수 있습니다. 비교표가 열린 뒤에는 보기만 할 수 있습니다.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
   };
 }
 
@@ -46,9 +46,10 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!inv) return NextResponse.json({ error: "전달 기록을 찾을 수 없습니다." }, { status: 404 });
   if (inv.revoked_at) return NextResponse.json({ error: "운영자가 거둔 초대입니다. 다시 보낼 수 없습니다." }, { status: 409 });
   if (!["sent", "draft", "submitted"].includes(inv.status)) return NextResponse.json({ error: "불참·철회했거나 닫힌 초대에는 다시 보낼 수 없습니다." }, { status: 409 });
-  if (new Date(inv.expires_at).getTime() < Date.now()) return NextResponse.json({ error: "회신 링크가 만료되었습니다. 회신 기한을 늘린 뒤 다시 보내 주세요." }, { status: 409 });
   const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
+  // 비교표가 열린 요청은 기한을 늘릴 수 없으니 "늘린 뒤 다시 보내라"고 안내하지 않는다 (2026-10-21 결정 3)
+  if (new Date(inv.expires_at).getTime() < Date.now()) return NextResponse.json({ error: rfq.compared_at ? "비교표가 열린 요청이라 만료된 링크를 다시 열 수 없습니다." : "회신 링크가 만료되었습니다. 회신 기한을 늘린 뒤 다시 보내 주세요." }, { status: 409 });
 
   // 기관 초대는 지금의 기관 대표 메일로만 보낸다. 초대 행의 주소도 맞춰 둔다
   const { data: org } = inv.cro_org_id ? await sb.from("cro_orgs").select("contact_email, managed, status").eq("id", inv.cro_org_id).maybeSingle() : { data: null };

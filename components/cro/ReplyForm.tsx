@@ -339,7 +339,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 
@@ -490,7 +490,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             </div>
             {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
             {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
-            {!readOnly && <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>제출하면 견적이 바로 의뢰자 비교표에 기관명과 함께 보입니다. 회신 기한까지 고칠 수 있지만, 의뢰자가 그 전에 선정하거나 회신이 마감되면 고칠 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
+            {!readOnly && <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
             <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
               {busy ? "제출 중…" : blockedLabel}
             </button>

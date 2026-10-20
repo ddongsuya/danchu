@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
-import { parseAdjustmentAmount } from "@/lib/billing";
+import { ADJUSTMENT_CREDIT_ONLY_NOTE, parseAdjustmentAmount } from "@/lib/billing";
 
 export const runtime = "nodejs";
 
@@ -11,7 +11,7 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
  * POST { month: 'YYYY-MM', orgId, amount, reason, correctsMonth?: 'YYYY-MM' }: 청구 조정 항목 넣기 (0024 add_billing_adjustment).
- * 열린 달에만 넣는다. 금액은 원 단위 정수(돌려주면 음수, 0 은 안 됨), 사유는 필수,
+ * 열린 달에만 넣는다. 금액은 원 단위 정수로, 돌려드리는 금액(음수)만 된다 (2026-10-21 결정, 0026). 0 과 양수는 안 됨. 사유는 필수,
  * 바로잡는 달은 적용 월보다 앞선 마감한 달만. 그 달을 마감하면 바꾸거나 지울 수 없다 (DB 트리거).
  */
 export async function POST(req: Request) {
@@ -24,7 +24,8 @@ export async function POST(req: Request) {
   const orgId = typeof b.orgId === "string" && UUID.test(b.orgId) ? b.orgId : "";
   if (!orgId) return NextResponse.json({ error: "기관을 골라 주세요.", field: "orgId" }, { status: 400 });
   const amount = parseAdjustmentAmount(b.amount);
-  if (amount == null) return NextResponse.json({ error: "금액을 원 단위 숫자로 적어 주세요. 돌려줄 금액은 앞에 -를 붙이고, 0원은 넣을 수 없습니다.", field: "amount" }, { status: 400 });
+  if (amount == null) return NextResponse.json({ error: "돌려드릴 금액을 원 단위 숫자로 적어 주세요. 0원은 넣을 수 없습니다.", field: "amount" }, { status: 400 });
+  if (amount > 0) return NextResponse.json({ error: ADJUSTMENT_CREDIT_ONLY_NOTE, code: "credit_only", field: "amount" }, { status: 400 });
   const reason = typeof b.reason === "string" ? b.reason.trim() : "";
   if (!reason) return NextResponse.json({ error: "조정 사유를 적어 주세요.", field: "reason" }, { status: 400 });
   if (reason.length > 300) return NextResponse.json({ error: "사유는 300자 안으로 적어 주세요.", field: "reason" }, { status: 400 });
@@ -53,6 +54,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "기관을 찾을 수 없습니다.", code: "not_found", field: "orgId" }, { status: 404 });
       case "amount":
         return NextResponse.json({ error: "0원은 넣을 수 없습니다.", code: "amount", field: "amount" }, { status: 400 });
+      case "credit_only":
+        return NextResponse.json({ error: ADJUSTMENT_CREDIT_ONLY_NOTE, code: "credit_only", field: "amount" }, { status: 400 });
       case "reason":
         return NextResponse.json({ error: "조정 사유를 적어 주세요.", code: "reason", field: "reason" }, { status: 400 });
       default:

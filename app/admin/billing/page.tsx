@@ -19,7 +19,7 @@ const cardHead = { padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, colo
 /**
  * 월별 청구 명세 (0020 기준). 청구 단위는 기관이 제출한 견적 1건이고, 그 견적을 처음 제출한 달에 한 번 센다.
  * 1,000만 원 미만은 월 구독료, 1,000만 원 이상은 건당 이용료, 선정 견적 5,000만 원 이상이 체결되면 계약 금액 기준 성사수수료.
- * 마감한 달은 마감 때 저장한 명세(billing_periods.snapshot)를 보여 준다. 마감한 달은 다시 열 수 없고(0024), 바로잡을 금액은
+ * 마감한 달은 마감 때 저장한 명세(billing_periods.snapshot)를 보여 준다. 마감한 달은 다시 열 수 없고(0024), 돌려드릴 금액은
  * 다음 열린 달에 조정 항목으로 넣는다. 시범 기간 참고 수치("유료였다면")는 따로 보여 주고 합계에 넣지 않는다.
  * 아래 표는 우회 거래의 신호도 보여 준다: 기관별 선정률이 유독 낮거나, 의뢰자가 선정 없이 마무리한 요청이 특정 기관에 몰리면 확인한다.
  */
@@ -160,7 +160,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
 
       <section className="card billadj-card" aria-labelledby="adj-head" style={{ marginBottom: 20 }}>
-        <h2 id="adj-head" style={{ ...cardHead, margin: 0 }}>조정 항목 · 마감한 달을 바로잡는 금액. 이 달 합계에 들어갑니다</h2>
+        <h2 id="adj-head" style={{ ...cardHead, margin: 0 }}>조정 항목 · 마감한 달에서 돌려드릴 금액. 이 달 합계에서 뺍니다</h2>
         {adjFailed ? (
           <p className="note note--warn" role="alert" style={{ margin: "0 16px 12px" }}>조정 항목을 불러오지 못했습니다. 새로고침해 주세요.</p>
         ) : adjustments.length === 0 ? (
@@ -185,7 +185,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         )}
         <div className="billadj-card__foot">
           {closed ? (
-            <p style={{ ...muted, fontSize: 13, margin: 0 }}>이 달은 마감해 조정 항목을 더 넣거나 바꿀 수 없습니다. 바로잡을 금액은 <Link href="/admin/billing">열린 달 명세</Link>에서 넣어 주세요.</p>
+            <p style={{ ...muted, fontSize: 13, margin: 0 }}>이 달은 마감해 조정 항목을 더 넣거나 바꿀 수 없습니다. 돌려드릴 금액은 <Link href="/admin/billing">열린 달 명세</Link>에서 넣어 주세요.</p>
           ) : (
             <BillingAdjustmentForm month={r.from.slice(0, 7)} orgs={(orgRows ?? []) as { id: string; name: string }[]} closedMonths={closedMonths} />
           )}

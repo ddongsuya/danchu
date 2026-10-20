@@ -103,23 +103,23 @@ begin
   perform public.close_billing_month(closed_m, null, '');
   perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ADJ-1'), o), 20000000);
 
-  res := public.add_billing_adjustment(o, closed_m, 50000, '지난달 중복 청구', null, null);
+  res := public.add_billing_adjustment(o, closed_m, -50000, '지난달 중복 청구', null, null);
   perform pg_temp.t_eq(res->>'code', 'closed', '마감한 달에는 조정 항목을 넣을 수 없다');
-  perform pg_temp.t_raises(format('insert into public.billing_adjustments (org_id, month, amount, reason) values (%L, %L, 1000, %L)', o, closed_m, '직접'), 'billing_month_closed%', '직접 넣어도 마감한 달은 거절');
+  perform pg_temp.t_raises(format('insert into public.billing_adjustments (org_id, month, amount, reason) values (%L, %L, -1000, %L)', o, closed_m, '직접'), 'billing_month_closed%', '직접 넣어도 마감한 달은 거절');
 
   perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, 0, '사유', null, null)->>'code', 'amount', '0원 거절');
-  perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, 1000, '   ', null, null)->>'code', 'reason', '사유 없으면 거절');
-  perform pg_temp.t_eq(public.add_billing_adjustment(gen_random_uuid(), open_m, 1000, '사유', null, null)->>'code', 'not_found', '없는 기관 거절');
-  perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, 1000, '사유', pg_temp.t_month(-2), null)->>'code', 'corrects', '바로잡는 달이 마감되지 않았으면 거절');
-  perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, 1000, '사유', open_m, null)->>'code', 'corrects', '바로잡는 달은 적용 월보다 앞서야 한다');
-  perform pg_temp.t_raises(format('insert into public.billing_adjustments (org_id, month, amount, reason) values (%L, %L, 1000, %L)', o, open_m, ''), '%billing_adjustments_reason_chk%', '빈 사유는 제약이 막는다');
-  perform pg_temp.t_raises(format('insert into public.billing_adjustments (org_id, month, amount, reason) values (%L, %L, 1000, %L)', o, open_m + 3, '1일 아님'), '%billing_adjustments_month_chk%', '적용 월은 1일');
+  perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, -1000, '   ', null, null)->>'code', 'reason', '사유 없으면 거절');
+  perform pg_temp.t_eq(public.add_billing_adjustment(gen_random_uuid(), open_m, -1000, '사유', null, null)->>'code', 'not_found', '없는 기관 거절');
+  perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, -1000, '사유', pg_temp.t_month(-2), null)->>'code', 'corrects', '바로잡는 달이 마감되지 않았으면 거절');
+  perform pg_temp.t_eq(public.add_billing_adjustment(o, open_m, -1000, '사유', open_m, null)->>'code', 'corrects', '바로잡는 달은 적용 월보다 앞서야 한다');
+  perform pg_temp.t_raises(format('insert into public.billing_adjustments (org_id, month, amount, reason) values (%L, %L, -1000, %L)', o, open_m, ''), '%billing_adjustments_reason_chk%', '빈 사유는 제약이 막는다');
+  perform pg_temp.t_raises(format('insert into public.billing_adjustments (org_id, month, amount, reason) values (%L, %L, -1000, %L)', o, open_m + 3, '1일 아님'), '%billing_adjustments_month_chk%', '적용 월은 1일');
 
   res := public.add_billing_adjustment(o, open_m + 9, -120000, '지난달 건당 이용료 중복분 돌려줌', closed_m, null);
   perform pg_temp.t_eq(res->>'ok', 'true', '열린 달에 조정 (달 중간 날짜도 1일로)');
   perform pg_temp.t_eq((select month from public.billing_adjustments where id = (res->>'id')::uuid), open_m, '적용 월은 1일');
   perform pg_temp.t_eq((select corrects_month from public.billing_adjustments where id = (res->>'id')::uuid), closed_m, '바로잡는 마감 월');
-  res := public.add_billing_adjustment(only_adj, open_m, 70000, '지난달 누락분', null, null);
+  res := public.add_billing_adjustment(only_adj, open_m, -70000, '지난달 중복분 돌려드림', null, null);
   perform pg_temp.t_eq(res->>'ok', 'true', '견적 없는 기관에도 조정');
 
   select * into s from public.billing_summary(open_m, pg_temp.t_month(1)) where org_id = o;
@@ -127,7 +127,7 @@ begin
   perform pg_temp.t_eq(s.total_due, 180000::bigint, '합계 = 300,000 - 120,000');
   select * into s from public.billing_summary(open_m, pg_temp.t_month(1)) where org_id = only_adj;
   perform pg_temp.t_assert(found, '조정만 있는 기관도 명세에 나온다');
-  perform pg_temp.t_eq(s.total_due, 70000::bigint, '조정만');
+  perform pg_temp.t_eq(s.total_due, -70000::bigint, '조정만 (돌려드림)');
   perform pg_temp.t_eq((select count(*) from public.billing_adjustment_lines(open_m, pg_temp.t_month(1)))::int, 2, '조정 내역 2건');
   perform pg_temp.t_eq((select count(*) from public.billing_adjustment_lines(closed_m, open_m))::int, 0, '지난달에는 조정 없음');
   -- 지난달 마감 저장본은 조정과 상관없이 그대로
@@ -143,21 +143,21 @@ declare
   snap jsonb;
 begin
   perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ADJ-2'), o, pg_temp.t_mid(-2)), 20000000, pg_temp.t_mid(-2));
-  a := (public.add_billing_adjustment(o, m, 10000, '처음 사유', null, null)->>'id')::uuid;
-  update public.billing_adjustments set amount = 25000, reason = '고친 사유' where id = a;
-  perform pg_temp.t_eq((select amount from public.billing_adjustments where id = a), 25000::bigint, '열린 달 조정은 고칠 수 있다');
+  a := (public.add_billing_adjustment(o, m, -10000, '처음 사유', null, null)->>'id')::uuid;
+  update public.billing_adjustments set amount = -25000, reason = '고친 사유' where id = a;
+  perform pg_temp.t_eq((select amount from public.billing_adjustments where id = a), -25000::bigint, '열린 달 조정은 고칠 수 있다');
 
   perform public.close_billing_month(m, null, '');
   select snapshot into snap from public.billing_periods where month = m;
-  perform pg_temp.t_eq((select (x->>'total_due')::bigint from jsonb_array_elements(snap->'summary') x where x->>'org_id' = o::text), 325000::bigint, '저장본 합계에 조정 포함');
-  perform pg_temp.t_eq((select count(*) from jsonb_array_elements(snap->'adjustments') x where x->>'org_id' = o::text and (x->>'amount')::bigint = 25000 and x->>'reason' = '고친 사유')::int, 1, '저장본에 조정 항목');
+  perform pg_temp.t_eq((select (x->>'total_due')::bigint from jsonb_array_elements(snap->'summary') x where x->>'org_id' = o::text), 275000::bigint, '저장본 합계에 조정 포함');
+  perform pg_temp.t_eq((select count(*) from jsonb_array_elements(snap->'adjustments') x where x->>'org_id' = o::text and (x->>'amount')::bigint = -25000 and x->>'reason' = '고친 사유')::int, 1, '저장본에 조정 항목');
 
-  perform pg_temp.t_raises(format('update public.billing_adjustments set amount = 1 where id = %L', a), 'billing_month_closed%', '마감한 달 조정 금액 변경 거절');
+  perform pg_temp.t_raises(format('update public.billing_adjustments set amount = -1 where id = %L', a), 'billing_month_closed%', '마감한 달 조정 금액 변경 거절');
   perform pg_temp.t_raises(format('update public.billing_adjustments set reason = %L where id = %L', 'x', a), 'billing_month_closed%', '마감한 달 조정 사유 변경 거절');
   perform pg_temp.t_raises(format('update public.billing_adjustments set month = %L where id = %L', pg_temp.t_month(0), a), 'billing_month_closed%', '마감한 달 조정을 다른 달로 옮기기 거절');
   perform pg_temp.t_raises(format('delete from public.billing_adjustments where id = %L', a), 'billing_month_closed%', '마감한 달 조정 삭제 거절');
   perform pg_temp.t_raises('truncate public.billing_adjustments', 'billing_month_closed%', '조정 항목 표 비우기 거절');
-  perform pg_temp.t_eq(public.add_billing_adjustment(o, m, 5000, '마감 뒤', null, null)->>'code', 'closed', '마감 뒤 같은 달에 더 넣을 수 없다');
+  perform pg_temp.t_eq(public.add_billing_adjustment(o, m, -5000, '마감 뒤', null, null)->>'code', 'closed', '마감 뒤 같은 달에 더 넣을 수 없다');
 end $$;
 
 -- 5) 참고 수치: 시범 판·legacy 견적과 체결만, 기관 약정 값이 있으면 그 값, 없으면 참고 단가. 합계에는 넣지 않는다
@@ -264,7 +264,7 @@ begin
   perform pg_temp.t_eq((select count(*) from public.billing_adjustments), b.adj_n, '재적용 뒤 조정 항목 수 그대로');
   perform pg_temp.t_eq((select sum(amount) from public.billing_adjustments), b.adj_sum, '재적용 뒤 조정 금액 그대로');
   perform pg_temp.t_raises(format('delete from public.billing_periods where month = %L', b.month), 'billing_month_locked%', '재적용 뒤에도 마감 해제 거절');
-  perform pg_temp.t_eq(public.add_billing_adjustment((select org_id from public.billing_adjustments limit 1), b.month, 1000, '마감한 달', null, null)->>'code', 'closed', '재적용 뒤에도 마감한 달 조정 거절');
+  perform pg_temp.t_eq(public.add_billing_adjustment((select org_id from public.billing_adjustments limit 1), b.month, -1000, '마감한 달', null, null)->>'code', 'closed', '재적용 뒤에도 마감한 달 조정 거절');
   perform pg_temp.t_eq(public.danchu_schema_version(), 24, '스키마 판 24');
   perform pg_temp.t_eq((select count(*) from pg_trigger where tgname in ('billing_periods_guard', 'billing_periods_no_truncate', 'billing_adjustments_guard', 'billing_adjustments_no_truncate') and not tgisinternal)::int, 4, '보호 트리거 4개 (중복 없음)');
 end $$;

@@ -127,7 +127,7 @@ export function marksOpened(role: string | null | undefined): boolean {
 /**
  * 회신 링크를 여는 사람에 따른 불러오기 옵션 (lib/quote-load.ts LoadOpts).
  * 운영자는 기관 열람으로 남기지 않고, 회신 마감 전이면 회신 기한·링크 만료와 관계없이 대리 입력한 견적을 고칠 수 있다.
- * 기한 날 늦게 온 PDF 를 옮겨 적거나 오타를 고칠 때 기한 잠금이 막으면 안 된다. 마감 뒤에 받은 PDF 는 운영자가 기한을 늘려 다시 연 뒤 입력한다.
+ * 기한 날 늦게 온 PDF 를 옮겨 적거나 오타를 고칠 때 기한 잠금이 막으면 안 된다. 비교표가 열린 뒤에 받은 PDF 는 옮겨 적지 않는다 (다시 열기·기한 연장 없음, 2026-10-21 결정 3, 0026).
  */
 export function loadOptsFor(role: string | null | undefined): { markOpened: boolean; operator: boolean } {
   return { markOpened: marksOpened(role), operator: role === "admin" };

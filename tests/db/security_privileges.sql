@@ -187,5 +187,5 @@ begin
   v := public.danchu_schema_version();
   reset role;
   perform pg_temp.t_eq(res->>'code', 'not_found', 'service_role 은 select_quote 를 실행한다');
-  perform pg_temp.t_eq(v, 25, 'service_role 은 스키마 판을 읽는다');
+  perform pg_temp.t_eq(v, 26, 'service_role 은 스키마 판을 읽는다');
 end $$;

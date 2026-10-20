@@ -59,7 +59,7 @@ export type Database = {
           ip: string | null;
           user_id: string | null;
           distributed_at: string | null;
-          /** 회신 마감 시각 (0019). 비교표 공개 여부가 아니다. lib/reply-window.ts */
+          /** 비교표가 열린 시각 (0025). 한 번 채우면 비우거나 바꿀 수 없고, 그 뒤에는 reply_by 도 바꿀 수 없다 (0026 트리거 rfq_requests_compare_lock) */
           compared_at: string | null;
           selected_quote_id: string | null;
           closed_at: string | null;

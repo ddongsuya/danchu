@@ -21,7 +21,7 @@ export const runtime = "nodejs";
  *   overrideNomineesOnly: true 와 사유(overrideReason)가 없으면 409. 보내면 감사 기록(rfq.distribute_override)에 사유를 남긴다.
  */
 const BLOCKED_MSG = {
-  request_not_open: "회신이 마감되었거나 선정이 끝난 요청이라 참여 안내를 더 보낼 수 없습니다. 회신 마감 뒤라면 회신 기한을 늘려 다시 연 다음 안내해 주세요.",
+  request_not_open: "비교표가 열렸거나 선정이 끝난 요청이라 참여 안내를 더 보낼 수 없습니다. 열린 비교표는 다시 열 수 없으니, 더 받아야 하면 새 요청으로 안내해 주세요.",
   // 운영자 수동 안내(manual)는 막히지 않는다. 자동 매칭 안내만 해당 (0023)
   nominees_only: "의뢰자가 지명 기관에만 안내하도록 고른 요청입니다. 자동 매칭 안내는 보내지 않습니다.",
 };
