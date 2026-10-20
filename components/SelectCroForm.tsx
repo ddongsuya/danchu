@@ -97,9 +97,9 @@ export function SelectCroForm({
 
       {caution && (
         <div className="note note--warn" role="note" style={{ flexDirection: "column", gap: 6 }}>
-          <b style={{ fontWeight: 600 }}>{caution.early ? "아직 회신 기한 전입니다" : "아직 회신하지 않은 기관이 있습니다"}</b>
+          <b style={{ fontWeight: 600 }}>{caution.early ? "아직 회신 기한 전입니다" : "참여했지만 아직 제출하지 않은 기관이 있습니다"}</b>
           <span>
-            회신 기한 {caution.replyBy ?? "미정"} · 아직 회신하지 않은 기관 {caution.pending}곳.
+            회신 기한 {caution.replyBy ?? "미정"} · 참여했지만 아직 제출하지 않은 기관 <span className="tnum">{caution.pending}곳</span>.
             {" "}지금 선정하면 남은 회신 링크가 닫혀 더는 견적을 받지 않고, 이미 제출한 기관도 견적을 고칠 수 없습니다.
           </span>
         </div>

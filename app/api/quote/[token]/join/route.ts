@@ -69,5 +69,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
     // 운영자에게는 앱 알림만 (참여는 자주 일어나는 일이라 메일은 보내지 않는다)
     await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 참여 · ${got.croName}`, href: `/admin/r/${got.rfq.no}` });
   }
-  return NextResponse.json({ ok: true, already: !!r.already, seats: r.seats });
+  // 자리 현황 원본(참여 수·지명 수)은 돌려주지 않는다. 화면은 새로 고쳐 기관용 표시(seatsLabel)로 다시 읽는다
+  return NextResponse.json({ ok: true, already: !!r.already });
 }

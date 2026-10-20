@@ -4,7 +4,8 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
 import { logEvent } from "@/lib/notify";
 import { audit, diffFields } from "@/lib/audit";
-import { CONFIDENTIALITY_OPTIONS, CRO_COUNT_OPTIONS, invitationLimit, occupiesSeat } from "@/lib/request-policy";
+import { CONFIDENTIALITY_OPTIONS, CRO_COUNT_OPTIONS, invitationLimit } from "@/lib/request-policy";
+import { setSeatCount } from "@/lib/rpc";
 
 export const runtime = "nodejs";
 
@@ -33,14 +34,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
   if (!Object.keys(patch).length) return NextResponse.json({ error: "바꿀 항목이 없습니다." }, { status: 400 });
 
   const sb = getSupabaseAdmin()!;
-  if (patch.cro_count) {
-    const { data: inv } = await sb.from("rfq_invites").select("status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id);
-    const used = (inv ?? []).filter(occupiesSeat).length;
-    if (used > invitationLimit(patch.cro_count)) return NextResponse.json({ error: `이미 ${used}곳이 참여해 그보다 적게 줄일 수 없습니다. 필요하면 초대를 개별로 취소하세요.` }, { status: 409 });
-  }
   const before = { cro_count: rfq.cro_count, confidentiality: rfq.confidentiality };
-  const { error } = await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
-  if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  if (patch.cro_count) {
+    // 자리 수는 DB 함수가 요청 행을 잠그고 참여 수를 센 뒤 바꾼다 (동시 참여와 겹쳐도 참여 수 > 자리 수가 되지 않는다)
+    const r = await setSeatCount(rfq.id, patch.cro_count);
+    if (!r.ok) {
+      if (r.code === "too_few") return NextResponse.json({ error: `이미 ${r.used ?? "여러"}곳이 참여해 그보다 적게 줄일 수 없습니다. 필요하면 초대를 개별로 취소하세요.` }, { status: 409 });
+      if (r.code === "closed") return NextResponse.json({ error: "종료·취소된 요청은 바꿀 수 없습니다." }, { status: 409 });
+      return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+    }
+  }
+  if (patch.confidentiality) {
+    const { error } = await sb.from("rfq_requests").update({ confidentiality: patch.confidentiality }).eq("id", rfq.id);
+    if (error) return NextResponse.json({ error: patch.cro_count ? "자리 수는 바꿨지만 기밀 등급을 저장하지 못했습니다." : "저장하지 못했습니다." }, { status: 500 });
+  }
   const changed = diffFields(before, { ...before, ...patch });
   const label = [patch.cro_count && `전달 기관 수 ${rfq.cro_count ?? "-"} → ${patch.cro_count}`, patch.confidentiality && `기밀 등급 ${rfq.confidentiality ?? "일반"} → ${patch.confidentiality}`].filter(Boolean).join(" · ");
   await logEvent(rfq.id, "terms", "요청 조건 변경", label, s.userId, patch);

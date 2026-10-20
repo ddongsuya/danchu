@@ -54,7 +54,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
       <div className="ph">
         <div>
           <h1>CRO 기관</h1>
-          <p>가입 신청을 검토하고 승인합니다. 아직 가입하지 않은 기관은 운영자 관리 기관으로 직접 추가합니다. 참여 중인 기관에만 요청서가 배포됩니다.</p>
+          <p>가입 신청을 검토하고 승인합니다. 아직 가입하지 않은 기관은 운영자 관리 기관으로 직접 추가합니다. 승인된 기관에만 참여 안내가 갑니다.</p>
         </div>
         <div className="ph__actions">
           <Link href="/admin/cros" className={`b2 bsm`} aria-pressed={!status}>전체</Link>

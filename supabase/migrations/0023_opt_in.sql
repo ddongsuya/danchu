@@ -7,7 +7,7 @@
 --    참여는 rfq_invites.joined_at 으로 구분한다. sent + joined_at 없음 = 참여 결정 전, sent + joined_at = 참여(작성 전).
 -- 2) 참여 기록: joined_at(시각), join_channel(portal 기관 포털 · token 회신 링크 · legacy 전환 전 견적), join_actor(누른 사람 또는 토큰),
 --    join_user_id(로그인한 담당자), join_terms_version(그때 보여 준 이용 조건 판), join_ip, join_ua.
---    참여는 join_offer() 로만 기록한다. 한 번 기록하면 바꾸거나 지울 수 없다 (계정 삭제로 join_user_id 가 비는 것만 허용).
+--    참여는 join_offer() 로만 기록한다. 한 번 기록하면 바꾸거나 지울 수 없다 (계정 삭제로 join_user_id 가 비는 것과 90일 뒤 join_ip·join_ua 를 비우는 것만 허용, 아래 9).
 --    운영자(profiles.role = admin)는 기관 대신 참여를 누를 수 없다. 관리 기관(계정 없음)은 기관이 회신 링크(token)에서 직접 누른다.
 -- 3) 자리: 의뢰자가 고른 3곳·5곳·전체는 "보낼 곳"이 아니라 "참여 자리"다. 자리에 세는 것은 참여·작성 중·제출이다
 --    (철회·불참·취소·만료는 세지 않는다). join_offer 가 요청 행을 잠그고 세므로 동시에 눌러도 자리를 넘지 않는다.
@@ -28,10 +28,17 @@
 --    legacy 는 기관이 조건에 동의하고 누른 기록이 아니므로 유료 전환 뒤에도 청구하지 않는다. 열려 있던 sent 초대는 참여를 다시 묻는다.
 --    성사수수료도 같은 조건이다: 선정된 견적의 초대에 참여 기록이 없으면 명세 합계에 넣지 않는다 (행은 보여 주고 표시만 한다).
 --    운영자 청구 제외(rfq_invites.billable = false)는 지금처럼 따로 적용한다.
---    시범운영 중 참여한 요청은 끝까지 무료라는 원칙(약관)은 join_terms_version 으로 가린다. 유료 조건 판이 생기면 그 판으로 참여한 견적만 청구한다
---    (판 구분은 유료 전환 때 추가한다. 지금은 시범운영이라 명세는 참고 집계다).
+--    시범운영 중 참여한 요청은 끝까지 무료라는 원칙(약관)은 join_terms_version 으로 가린다: 판 이름이 pilot- 으로 시작하면
+--    (lib/request-policy.ts CRO_TERMS_VERSION) 청구하지 않는다 (join_status = pilot). 유료 조건 판은 pilot- 이 아닌 이름으로 만든다.
 -- 8) rfq_requests.join_by: 참여 결정 기한(앱이 접수 때 정한다. 안내 뒤 2영업일, 회신 기한이 5영업일 안이면 1영업일).
 --    rfq_requests.nominees_only: 의뢰자가 "지명 기관에만 안내"를 고른 요청. 자동 매칭 안내(source = matched)는 넣지 않는다.
+--    rfq_requests.join_by_extended_at: 운영자가 참여 결정 기한을 한 번 늘린 시각 (설계 규칙표 "운영자 권한": 참여 결정 기한 1회 연장).
+-- 9) 검토 반영 (2026-10-20 설계·보안 검토):
+--    - 참여 기록 보호 예외를 좁힌다: join_user_id 는 계정이 실제로 지워졌을 때만(auth_user_exists), join_ip·join_ua 는 참여 90일 뒤 비우기만
+--      (개인정보처리방침 접속 기록 3개월, lib/retention.ts). 나머지 참여 기록은 그대로 영구 보관
+--    - 시범 판(join_terms_version 이 pilot- 으로 시작)으로 참여한 요청은 청구하지 않는다 (위 7)
+--    - set_seat_count(): 운영자 자리 수 변경을 요청 행 잠금 안에서 (동시 참여와 겹쳐 참여 수 > 자리 수가 되지 않게)
+--    - save_quote 결과에 joined_invites(자리를 차지한 참여 기관 수). 의뢰자 알림은 이 수만 쓴다 (안내 수·불참 수 비공개)
 --
 -- 배포 순서: 이 파일과 2단계 코드(참여 화면·join 라우트)를 함께 배포한다. 이 파일만 먼저 적용하면 열린 sent 초대에서
 -- 견적 저장이 not_joined 로 거절된다 (작성 중·제출 초대는 legacy 로 참여 처리되어 그대로 저장된다).
@@ -61,6 +68,7 @@ alter table public.rfq_invites add column if not exists withdrawn_at timestamptz
 
 alter table public.rfq_requests add column if not exists join_by timestamptz;
 alter table public.rfq_requests add column if not exists nominees_only boolean not null default false;
+alter table public.rfq_requests add column if not exists join_by_extended_at timestamptz;
 
 comment on column public.rfq_invites.joined_at is '기관이 참여하기를 누른 시각 (0023). 비어 있으면 참여 결정 전. join_offer() 로만 채우고 바꿀 수 없다. 견적 저장과 청구의 조건';
 comment on column public.rfq_invites.join_channel is '참여 경로 (0023). portal 기관 포털 · token 회신 링크 · legacy 0023 전 작성 중·제출(청구하지 않음)';
@@ -69,6 +77,7 @@ comment on column public.rfq_invites.join_user_id is '참여를 누른 담당자
 comment on column public.rfq_invites.join_terms_version is '참여할 때 보여 준 이용 조건 판 (0023). legacy 는 비어 있다';
 comment on column public.rfq_invites.withdrawn_at is '참여 뒤 제출 전에 철회한 시각 (0023). 상태는 declined. 자리를 비운다';
 comment on column public.rfq_requests.join_by is '참여 결정 기한 (0023). 이때까지 결정하지 않은 지명 기관 수만큼 자리를 비워 둔다';
+comment on column public.rfq_requests.join_by_extended_at is '운영자가 참여 결정 기한을 늘린 시각 (0023). 연장은 요청마다 한 번만 (앱이 이 열이 비어 있을 때만 조건부로 바꾼다)';
 comment on column public.rfq_requests.nominees_only is '지명 기관에만 안내 (0023). 켜져 있으면 자동 매칭 안내(source = matched)를 만들지 않는다';
 
 -- ─────────────────────────────────────────────
@@ -111,12 +120,28 @@ create index if not exists rfq_invites_joined_idx on public.rfq_invites (rfq_id)
 -- ─────────────────────────────────────────────
 -- 3) 참여 기록 보호: join_offer()·withdraw_offer() (또는 위 전환)만 쓴다. 한 번 쓴 기록은 바꾸지 않는다
 --    쓰기 표식(danchu.opt_in_write)은 두 함수가 같은 트랜잭션 안에서만 켠다
+--    예외 두 가지
+--    - join_user_id: 계정이 실제로 지워졌을 때(auth.users 에 없음, FK on delete set null)만 비울 수 있다. 앱 코드가 "누른 사람"을 지우지 못한다
+--    - join_ip·join_ua: 개인정보처리방침의 접속 기록 보존 기간(3개월)이 지난 참여 기록에서만 비울 수 있다 (lib/retention.ts 가 매일 비운다).
+--      시각·경로·누른 사람(또는 링크 지문)·조건 판은 계속 남는다
 -- ─────────────────────────────────────────────
+
+-- 계정이 아직 있는지 (트리거가 auth 스키마를 직접 읽지 않도록 정의자 권한으로 둔다)
+create or replace function public.auth_user_exists(p_user uuid)
+returns boolean
+language sql volatile
+security definer set search_path = public
+as $$ select exists (select 1 from auth.users u where u.id = p_user) $$;
+revoke execute on function public.auth_user_exists(uuid) from public, anon, authenticated;
+
 create or replace function public.rfq_invites_guard_join()
 returns trigger
 language plpgsql
 as $$
-declare v_writer boolean := coalesce(current_setting('danchu.opt_in_write', true), '') = 'on';
+declare
+  v_writer boolean := coalesce(current_setting('danchu.opt_in_write', true), '') = 'on';
+  v_old_ip text;
+  v_old_ua text;
 begin
   if tg_op = 'INSERT' then
     if (new.joined_at is not null or new.join_channel is not null or new.join_actor is not null or new.join_user_id is not null
@@ -127,14 +152,21 @@ begin
     return new;
   end if;
 
-  -- 계정 삭제(auth.users on delete set null)로 담당자 계정만 비워지는 것은 허용한다
-  if old.join_user_id is not null and new.join_user_id is null then
+  -- 계정 삭제(auth.users on delete set null)로 담당자 계정만 비워지는 것은 허용한다. 계정이 남아 있으면 비울 수 없다
+  if old.join_user_id is not null and new.join_user_id is null and not public.auth_user_exists(old.join_user_id) then
     new.join_user_id := null;
   elsif new.join_user_id is distinct from old.join_user_id and not (old.joined_at is null and v_writer) then
     raise exception 'join_record_protected: 참여 기록은 바꿀 수 없습니다';
   end if;
+  -- 접속 기록(IP·브라우저)은 보존 기간(3개월)이 지나면 비울 수만 있다 (다른 값으로 바꾸거나 기간 안에 지우지 못한다)
+  v_old_ip := old.join_ip;
+  v_old_ua := old.join_ua;
+  if old.joined_at is not null and old.joined_at < now() - interval '90 days' then
+    if new.join_ip is null then v_old_ip := null; end if;
+    if new.join_ua is null then v_old_ua := null; end if;
+  end if;
   if (new.joined_at, new.join_channel, new.join_actor, new.join_terms_version, new.join_ip, new.join_ua)
-     is distinct from (old.joined_at, old.join_channel, old.join_actor, old.join_terms_version, old.join_ip, old.join_ua) then
+     is distinct from (old.joined_at, old.join_channel, old.join_actor, old.join_terms_version, v_old_ip, v_old_ua) then
     if old.joined_at is not null then
       raise exception 'join_record_protected: 참여 기록은 바꿀 수 없습니다';
     end if;
@@ -403,6 +435,36 @@ $$;
 revoke execute on function public.withdraw_offer(uuid, text, uuid, text) from public, anon, authenticated;
 
 -- ─────────────────────────────────────────────
+-- 7-1) 자리 수 바꾸기 (운영자가 의뢰자의 잘못 고른 자리 수를 바로잡을 때).
+--      join_offer 와 같이 요청 행을 잠그고 센다. 잠금 밖에서 세면 그 사이 들어온 참여로 참여 수가 자리 수를 넘을 수 있다
+--      실패 code: bad_value · not_found · closed 종료·취소 · too_few 이미 참여한 기관 수보다 적게 줄임(used 를 함께 돌려준다)
+-- ─────────────────────────────────────────────
+create or replace function public.set_seat_count(p_rfq_id uuid, p_cro_count text)
+returns jsonb
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  r public.rfq_requests%rowtype;
+  v_cap int;
+  v_used int;
+begin
+  if p_cro_count is null or p_cro_count not in ('3곳', '5곳', '전체') then return jsonb_build_object('ok', false, 'code', 'bad_value'); end if;
+  select * into r from public.rfq_requests where id = p_rfq_id for update;
+  if not found then return jsonb_build_object('ok', false, 'code', 'not_found'); end if;
+  if r.status in ('closed', 'cancelled') then return jsonb_build_object('ok', false, 'code', 'closed'); end if;
+  v_cap := case p_cro_count when '전체' then null when '5곳' then 5 else 3 end;
+  select count(*) into v_used from public.rfq_invites i
+   where i.rfq_id = r.id and i.revoked_at is null and i.withdrawn_at is null and i.status in ('sent', 'draft', 'submitted')
+     and (i.joined_at is not null or i.status in ('draft', 'submitted'));
+  if v_cap is not null and v_used > v_cap then return jsonb_build_object('ok', false, 'code', 'too_few', 'used', v_used); end if;
+  update public.rfq_requests set cro_count = p_cro_count where id = r.id;
+  return jsonb_build_object('ok', true, 'used', v_used, 'before', r.cro_count);
+end;
+$$;
+revoke execute on function public.set_seat_count(uuid, text) from public, anon, authenticated;
+
+-- ─────────────────────────────────────────────
 -- 8) 회신 저장·제출: 참여 기록이 없으면 not_joined (운영자 대리 입력 포함). 철회한 초대는 withdrawn. 나머지는 0022 와 같다
 -- ─────────────────────────────────────────────
 create or replace function public.save_quote(p_invite_id uuid, p_header jsonb, p_items jsonb, p_submit boolean, p_actor uuid, p_token text)
@@ -417,6 +479,7 @@ declare
   v_prev_status text;
   v_total int;
   v_done int;
+  v_joined int;
   v_source text := case when p_header->>'entry_source' = 'operator' then 'operator' else 'cro' end;
   v_role text;
   v_actor_org uuid;
@@ -517,10 +580,15 @@ begin
     update public.rfq_requests set status = 'quoted' where id = inv.rfq_id and status in ('received', 'distributed');
   end if;
 
-  select count(*), count(*) filter (where status = 'submitted') into v_total, v_done from public.rfq_invites where rfq_id = inv.rfq_id;
+  select count(*), count(*) filter (where status = 'submitted'),
+         count(*) filter (where revoked_at is null and withdrawn_at is null and status in ('sent', 'draft', 'submitted')
+                            and (joined_at is not null or status in ('draft', 'submitted')))
+    into v_total, v_done, v_joined from public.rfq_invites where rfq_id = inv.rfq_id;
 
+  -- total_invites 는 안내한 초대 전부(운영자 알림용). 의뢰자에게는 joined_invites(자리를 차지한 참여 기관 수)만 쓴다.
+  -- 안내 수·불참 수는 의뢰자에게 알리지 않는다 (설계 규칙표 "불참")
   return jsonb_build_object('ok', true, 'quote_id', v_quote, 'first', coalesce(v_prev_status, '') <> 'submitted',
-                            'total_invites', v_total, 'submitted_invites', v_done);
+                            'total_invites', v_total, 'submitted_invites', v_done, 'joined_invites', v_joined);
 end;
 $$;
 revoke execute on function public.save_quote(uuid, jsonb, jsonb, boolean, uuid, text) from public, anon, authenticated;
@@ -528,6 +596,8 @@ revoke execute on function public.save_quote(uuid, jsonb, jsonb, boolean, uuid, 
 -- ─────────────────────────────────────────────
 -- 9) 청구: 참여 기록(portal·token)이 있는 초대의 견적만. 반환 열이 늘어 지우고 다시 만든다
 --    join_status: joined 참여 기록 있음 · legacy 0023 전 견적(청구하지 않음) · not_joined 참여 기록 없음(청구하지 않음)
+--                 pilot 시범운영 조건 판(pilot-…)으로 참여(청구하지 않음. 약관 제5조 "시범운영 기간에 참여한 요청은 그 뒤에도 무료")
+--    시범 판으로 참여한 요청은 유료 전환 뒤에 제출하거나 수주해도 건당 이용료·성사수수료를 매기지 않는다 (아래 j.ok, billing_awards ijoined)
 --    billable 은 지금처럼 운영자 청구 제외 여부(rfq_invites.billable)다. 청구 여부는 chargeable·fee_due 와 billing_summary 가 둘을 함께 본다
 -- ─────────────────────────────────────────────
 drop function if exists public.billing_lines(date, date);
@@ -555,8 +625,9 @@ as $$
   join public.rfq_invites i on i.id = q.invite_id
   join public.cro_orgs o on o.id = coalesce(q.cro_org_id, i.cro_org_id)
   cross join lateral (
-    select case when i.joined_at is null then 'not_joined' when i.join_channel = 'legacy' then 'legacy' else 'joined' end as status,
-           (i.joined_at is not null and i.join_channel in ('portal', 'token')) as ok
+    select case when i.joined_at is null then 'not_joined' when i.join_channel = 'legacy' then 'legacy'
+                when coalesce(i.join_terms_version, '') like 'pilot-%' then 'pilot' else 'joined' end as status,
+           (i.joined_at is not null and i.join_channel in ('portal', 'token') and coalesce(i.join_terms_version, '') not like 'pilot-%') as ok
   ) j
   where q.status = 'submitted'
     and q.first_submitted_at is not null
@@ -581,7 +652,7 @@ as $$
   with a as (
     select a.*, coalesce(a.fee_basis_amount, q.total_amount) as basis, r.rfq_no as no,
            o.id as oid, o.name as oname, o.fee_rate as rate, coalesce(i.billable, true) as ibill,
-           coalesce(i.joined_at is not null and i.join_channel in ('portal', 'token'), false) as ijoined
+           coalesce(i.joined_at is not null and i.join_channel in ('portal', 'token') and coalesce(i.join_terms_version, '') not like 'pilot-%', false) as ijoined
     from public.rfq_awards a
     join public.rfq_requests r on r.id = a.rfq_id
     left join public.cro_quotes q on q.id = a.quote_id
@@ -734,9 +805,12 @@ revoke execute on function public.danchu_schema_version() from public, anon, aut
 -- ─────────────────────────────────────────────
 revoke execute on function public.rfq_invites_guard_join() from public, anon, authenticated;
 revoke execute on function public.cro_quotes_require_join() from public, anon, authenticated;
+revoke execute on function public.auth_user_exists(uuid) from public, anon, authenticated;
 grant execute on function public.join_offer(uuid, text, uuid, text, text, text, text) to service_role;
 grant execute on function public.withdraw_offer(uuid, text, uuid, text) to service_role;
 grant execute on function public.offer_seat_state(uuid) to service_role;
+grant execute on function public.auth_user_exists(uuid) to service_role;
+grant execute on function public.set_seat_count(uuid, text) to service_role;
 grant execute on function public.business_days_before(date, int) to service_role;
 grant execute on function public.save_quote(uuid, jsonb, jsonb, boolean, uuid, text) to service_role;
 grant execute on function public.billing_summary(date, date) to service_role;

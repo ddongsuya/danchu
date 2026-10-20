@@ -10,6 +10,11 @@ import { readSchemaStatus } from "@/lib/schema-version";
 import { sentryEnabled } from "@/lib/observe";
 import { SearchBox } from "@/components/admin/SearchBox";
 import { Pager } from "@/components/admin/Pager";
+import { OptInTransition, type TransitionRow } from "@/components/admin/OptInTransition";
+import { planOptInTransition } from "@/lib/opt-in-transition";
+import { getSupabaseAdmin } from "@/lib/supabase";
+import { todaySeoul } from "@/lib/format";
+import { captureError } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +27,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
   const [{ list, hasMore }, counts, schema] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus()]);
   const href = (p: number) => `/admin?${new URLSearchParams({ ...(status ? { status } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
+  const transition = schema.ok ? await transitionRows() : [];
   const missingEnv = missingProdEnv();
   const noSentry = process.env.NODE_ENV === "production" && !sentryEnabled();
   const todo = {
@@ -41,6 +47,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           {noSentry && <div>오류 모니터링(SENTRY_DSN)이 꺼져 있습니다. 서버 오류가 어디에도 기록되지 않습니다.</div>}
         </div>
       )}
+      {transition.length > 0 && <OptInTransition rows={transition} />}
       <div className="ph">
         <div>
           <h1>접수 현황</h1>
@@ -115,4 +122,17 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <p style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>단계: {STAGES.map((s) => s.label).join(" → ")}</p>
     </>
   );
+}
+
+/** 참여 선택형 전환이 남은 열린 요청 (0023 적용 뒤 한 번 실행, lib/opt-in-transition.ts). 읽지 못하면 카드를 숨기고 오류만 남긴다 */
+async function transitionRows(): Promise<TransitionRow[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  try {
+    const plan = await planOptInTransition(sb, todaySeoul());
+    return plan.requests.map((r) => ({ rfqNo: r.rfqNo, replyBy: r.replyBy, joinBy: new Date(r.joinBy).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }), offers: r.offers.map((o) => o.croName) }));
+  } catch (e) {
+    captureError(e, "admin:opt-in-transition");
+    return [];
+  }
 }

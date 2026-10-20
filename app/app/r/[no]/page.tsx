@@ -1,6 +1,6 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
-import { needsCda, confidentialAccess } from "@/lib/request-policy";
+import { needsCda, occupiesSeat, seatState } from "@/lib/request-policy";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
@@ -21,6 +21,12 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const d = await getRfqDetail(rfq);
   const idx = stageIndex(rfq.status);
   const submitted = d.invites.filter((i) => i.status === "submitted").length;
+  // 의뢰자에게는 참여한 기관과 지명 기관 결과만 보인다 (0023). 일반 기관의 참여 결정 전·불참·철회는 이름도 상태도 보이지 않는다
+  const shown = sponsorVisibleInvites(d.invites);
+  const seats = seatState(rfq.cro_count, rfq.join_by, d.invites);
+  const joinedCount = seats.used;
+  const seatLine = seats.cap == null ? `참여 ${joinedCount}곳` : `참여 ${joinedCount}/${seats.cap}곳`;
+  const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
   // 비교표는 첫 견적부터 열린다. 공개 단계가 없다 (lib/reply-window.ts)
   const canCompare = submitted > 0;
   const pending = pendingInvites(d.invites);
@@ -30,7 +36,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const labels = labelMap();
   const chips = [
     ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
-    rfq.cro_count ? `CRO ${rfq.cro_count}` : "",
+    rfq.cro_count ? (rfq.cro_count === "전체" ? "참여 자리 제한 없음" : `참여 자리 ${rfq.cro_count}`) : "",
+    rfq.nominees_only ? "지명 기관에만 안내" : "",
     needsCda(rfq.confidentiality) ? "CDA 필요" : "",
   ].filter(Boolean);
 
@@ -83,7 +90,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                     <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
                       <span className={`tl__t${state ? "" : " tl__t--off"}`}>{st.label}</span>
                       {state === 1 && <span className="tl__d">{st.desc}</span>}
-                      {st.key === "quoted" && state >= 1 && d.invites.length > 0 && <span className="tl__d">{submitted}/{d.invites.length}곳 회신</span>}
+                      {st.key === "quoted" && state >= 1 && joinedCount > 0 && <span className="tl__d tnum">참여 {joinedCount}곳 중 {submitted}곳 제출</span>}
                     </div>
                     <span className="tl__when tnum">{when ? mdhm(when) : state === 1 && st.key === "quoted" && rfq.reply_by ? `기한 ${md(rfq.reply_by)}` : ""}</span>
                   </div>
@@ -96,30 +103,38 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         <div className="stack">
           <div className="card" style={{ padding: 18 }}>
             <div className="sec-title" style={{ margin: "0 0 10px" }}>
-              <h2>회신 현황</h2>
-              <span>{rfq.reply_by ? `회신 기한 ${md(rfq.reply_by)}` : ""}</span>
+              <h2>회신 현황 <span className="tnum" style={{ fontSize: 14, fontWeight: 600, color: "var(--muted)" }}>{seatLine}</span></h2>
+              <span className="tnum">{rfq.reply_by ? `회신 기한 ${md(rfq.reply_by)}` : ""}</span>
             </div>
-            {d.invites.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 전달된 기관이 없습니다. 시험 분야가 맞는 기관을 확인하고 있습니다.</p>
+            {shown.length === 0 ? (
+              <p style={{ fontSize: 14, color: "var(--muted)" }}>
+                {d.invites.length === 0
+                  ? "아직 참여 안내를 보내지 않았습니다. 시험 분야가 맞는 기관을 확인하고 있습니다."
+                  : `분야가 맞는 기관에 참여 안내를 보냈습니다. 기관이 참여하면 여기에 이름이 나타납니다.${joinBy && open ? ` 참여 결정 기한은 ${md(joinBy)}입니다.` : ""}`}
+              </p>
             ) : (
               <div className="stack" style={{ gap: 8 }}>
-                {d.invites.map((i) => (
+                {shown.map((i) => (
                   <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: i.status === "submitted" ? "var(--brand)" : "var(--dash)" }} />
                       <span style={{ fontSize: 14, fontWeight: 600 }}>{i.cro_name}</span>
+                      {i.source === "nominated" && <span className="pill pill--tint">지명</span>}
                     </div>
                     <span style={{ fontSize: 13, color: i.status === "submitted" ? "var(--ink)" : "var(--muted)" }}>{inviteStageLabel(i)}</span>
                   </div>
                 ))}
               </div>
             )}
-            {d.invites.length > 0 && !d.award && (
+            {seats.reserved > 0 && open && joinBy && (
+              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>지명 기관 몫 {seats.reserved}곳은 참여 결정 기한({md(joinBy)})까지 비워 둡니다. 그때까지 결정하지 않으면 먼저 참여한 다른 기관에 돌아갑니다.</p>
+            )}
+            {shown.length > 0 && !d.award && (
               <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
                 {!open
                   ? `회신이 마감되었습니다. 도착한 견적은 더 바뀌지 않습니다.${submitted > 0 ? " 비교표에서 기관을 선정해 주세요." : ""}`
                   : submitted > 0
-                    ? `도착한 견적은 비교표에서 바로 볼 수 있습니다. ${revisable ? `회신 기한(${md(rfq.reply_by)})까지는 기관이 견적을 수정할 수 있습니다. ` : ""}${pending ? `아직 회신하지 않은 기관이 ${pending}곳 있습니다.` : "전달한 기관이 모두 회신했습니다."}`
+                    ? `도착한 견적은 비교표에서 바로 볼 수 있습니다. ${revisable ? `회신 기한(${md(rfq.reply_by)})까지는 기관이 견적을 수정할 수 있습니다. ` : ""}${pending ? `참여한 기관 중 아직 제출하지 않은 곳이 ${pending}곳 있습니다.` : "참여한 기관이 모두 제출했습니다."}`
                     : "기관이 견적을 제출하면 바로 비교표에 나타나고 알림으로 알려 드립니다."}
               </p>
             )}
@@ -152,6 +167,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               ["희망 착수", p.start],
               ["예산", rfq.budget],
               ["지명 기관", Array.isArray(p.nominees) && p.nominees.length ? (p.nominees as string[]).join(", ") : ""],
+              ["안내 범위", rfq.nominees_only ? "지명 기관에만 안내" : ""],
               ["기밀 등급", rfq.confidentiality],
               ["접수일", ymd(rfq.created_at)],
               ["상세 입력", rfq.submitted_step === 2 ? "완료" : "기본 정보만"],
@@ -203,4 +219,12 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
       )}
     </>
   );
+}
+
+/**
+ * 의뢰자 화면에 보일 초대 (0023): 참여한 기관(참여·작성 중·제출, 철회·취소 제외)과 지명 기관(결과와 함께).
+ * 일반 기관의 참여 결정 전·불참·철회는 보이지 않는다 (설계 규칙표 "불참", "지명 기관")
+ */
+function sponsorVisibleInvites<T extends { source?: string | null; status: string; joined_at?: string | null; withdrawn_at?: string | null; revoked_at?: string | null }>(invites: T[]): T[] {
+  return invites.filter((i) => i.source === "nominated" || occupiesSeat(i) || (i.status === "submitted" && !i.revoked_at) || (!!i.joined_at && !i.withdrawn_at && !i.revoked_at));
 }

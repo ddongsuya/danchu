@@ -1,4 +1,5 @@
 import { quoteSelectable } from "@/lib/quote-policy";
+import { occupiesSeat } from "@/lib/request-policy";
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -80,11 +81,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
 
   // 나머지 기관: 결과 안내 (금액·타사명은 알리지 않는다). 기관마다 따로, 계정 없는 기관은 /q 링크로
   // 제출한 기관에는 미선정, 회신이 열려 있던 중에 아직 내지 않은 기관에는 회신 마감 (마감 뒤 선정이면 이미 닫혀 있어 보내지 않는다)
-  const { data: rest } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]).neq("id", quote.invite_id);
+  const { data: rest } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]).neq("id", quote.invite_id);
   const losers = (rest ?? []).filter((i) => i.status === "submitted");
   const unreplied = rfq.compared_at ? [] : (rest ?? []).filter((i) => i.status === "sent" || i.status === "draft");
   await notifyInvitedOrgs(losers, { kind: "선정", title: `미선정 · ${rfq.rfq_no} ${rfq.substance}`, body: "의뢰자가 다른 기관을 선택했습니다. 참여해 주셔서 감사합니다.", portalHref: "/cro/quotes" });
-  await notifyInvitedOrgs(unreplied, { kind: "선정", title: `${rfq.rfq_no} 회신이 마감되었습니다`, body: `${rfq.substance} · 의뢰자가 기관을 선정해 이 요청의 회신이 마감되었습니다. 참여해 주셔서 감사합니다.`, portalHref: "/cro" });
+  await notifyInvitedOrgs(unreplied.filter((i) => occupiesSeat(i)), { kind: "선정", title: `${rfq.rfq_no} 회신이 마감되었습니다`, body: `${rfq.substance} · 의뢰자가 기관을 선정해 이 요청의 회신이 마감되었습니다. 참여해 주셔서 감사합니다.`, portalHref: "/cro" });
+  // 참여 결정 전 기관에는 시험물질명 없이 안내가 닫혔다는 것만 알린다 (0023)
+  await notifyInvitedOrgs(unreplied.filter((i) => !occupiesSeat(i)), { kind: "선정", title: `${rfq.rfq_no} 참여 안내가 마감되었습니다`, body: "의뢰자가 기관을 선정해 이 요청은 더 참여를 받지 않습니다. 안내를 확인해 주셔서 감사합니다.", portalHref: "/cro" });
 
   // 거래 귀속은 선정 시점의 기록(rfq_awards)으로 본다. 기존 거래 여부로 따로 판정하지 않는다
   await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });

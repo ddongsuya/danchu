@@ -282,7 +282,8 @@ describe("참여 기록과 청구 (0023)", () => {
     expect(joinStatusNote(undefined)).toBe("");
     expect(joinStatusNote("legacy")).toMatch(/청구하지 않음/);
     expect(joinStatusNote("not_joined")).toMatch(/참여 기록 없음/);
-    for (const s of [joinStatusNote("legacy"), joinStatusNote("not_joined")]) expect(s).not.toMatch(/[\u2013\u2014]/);
+    expect(joinStatusNote("pilot")).toMatch(/시범 운영 중 참여한 요청, 청구하지 않음/);
+    for (const s of [joinStatusNote("legacy"), joinStatusNote("not_joined"), joinStatusNote("pilot")]) expect(s).not.toMatch(/[\u2013\u2014]/);
   });
   it("SQL: 청구는 portal·token 참여 기록이 있을 때만, legacy 는 제외. 0020 의 '면제 없음' 원칙을 머리말에서 대신한다", () => {
     expect(OPT).toMatch(/i\.joined_at is not null and i\.join_channel in \('portal', 'token'\)/);

@@ -23,7 +23,7 @@ const COPY = {
   },
 } as const;
 
-export function DeclineForm({ token, mode, backHref, onCancel, afterHref, operator = false }: { token: string; mode: "decline" | "withdraw"; backHref?: string; onCancel?: () => void; afterHref: string; operator?: boolean }) {
+export function DeclineForm({ token, mode, backHref, onCancel, afterHref, operator = false, endpoint }: { token: string; mode: "decline" | "withdraw"; backHref?: string; onCancel?: () => void; afterHref: string; operator?: boolean; endpoint?: string }) {
   const router = useRouter();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export function DeclineForm({ token, mode, backHref, onCancel, afterHref, operat
             setBusy(true);
             setError("");
             try {
-              const res = await fetch(`/api/quote/${token}/decline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason, mode }) });
+              const res = await fetch(endpoint ?? `/api/quote/${token}/decline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason, mode }) });
               const d = (await res.json().catch(() => ({}))) as { error?: string };
               if (!res.ok) throw new Error(d.error || "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
               router.push(afterHref);

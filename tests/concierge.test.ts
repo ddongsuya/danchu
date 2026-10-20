@@ -82,7 +82,7 @@ describe("메일 링크: 계정 없는 기관은 /q 토큰", () => {
   it("담당자가 있는 기관은 지금처럼 포털 링크", () => {
     expect(replyPath(inv, { managed: false, members: 1 })).toBe("/cro/r/inv-1");
   });
-  const rfq = { rfq_no: "DC-2026-0001", substance: "ABC-1", categories: ["일반독성"], purpose: null, intent: "비교 견적", confidentiality: "일반", org_type: "바이오벤처" };
+  const rfq = { rfq_no: "DC-2026-0001", substance: "ABC-1", categories: ["일반독성"], purpose: null, intent: "비교 견적", confidentiality: "일반", org_type: "바이오벤처", cro_count: "3곳" };
   it("운영자 관리 기관 배포 메일: /q 링크만, 포털·카탈로그 안내 없음, PDF 회신 안내", () => {
     const html = inviteMailHtml(rfq, "2026-10-30", "tok_abcdefgh", "inv-1", { managed: true, members: 0 });
     expect(html).toContain("/q/tok_abcdefgh");
@@ -90,6 +90,8 @@ describe("메일 링크: 계정 없는 기관은 /q 토큰", () => {
     expect(html).not.toContain("카탈로그");
     expect(html).toContain("PDF를 이 메일에 회신");
     expect(html).toContain("수신 거부");
+    // 참여 안내 메일에는 시험물질명을 넣지 않는다 (0023)
+    expect(html).not.toContain("ABC-1");
   });
   it("담당자가 있는 기관 배포 메일은 포털 링크를 유지, 계정이 없으면 뺀다", () => {
     expect(inviteMailHtml(rfq, "2026-10-30", "tok_abcdefgh", "inv-1", { members: 2 })).toContain("/cro/r/inv-1");

@@ -3,7 +3,7 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
 import { logEvent, notifyUsers } from "@/lib/notify";
-import { inviteExpiresAt } from "@/lib/request-policy";
+import { inviteExpiresAt, occupiesSeat, undecidedOffer } from "@/lib/request-policy";
 import { todaySeoul } from "@/lib/format";
 import { audit } from "@/lib/audit";
 import { notifyInvitedOrgs } from "@/lib/distribute";
@@ -12,8 +12,10 @@ import type { TablesUpdate } from "@/lib/db-types";
 export const runtime = "nodejs";
 
 /**
+ * POST { joinBy: 'YYYY-MM-DD' } — 참여 결정 기한 연장 (0023, 요청마다 한 번). 아래 extendJoinBy 참고.
+ *
  * POST { replyBy: 'YYYY-MM-DD' } — 회신 기한 변경.
- * 요청의 reply_by 와 초대(sent·draft·submitted)의 reply_by·expires_at 을 함께 바꾸고 기관에 알린다.
+ * 요청의 reply_by 와 초대(sent·draft·submitted, 취소한 초대 제외)의 reply_by·expires_at 을 함께 바꾸고 기관에 알린다.
  * 제출한 기관도 새 기한까지 견적을 고칠 수 있다 (같은 기한, lib/reply-window.ts).
  * 회신이 마감된 요청(compared_at)도 선정 전이면 여기서 다시 연다: compared_at 을 비우고 상태를 견적 도착·배포로 되돌린다.
  * 마감 뒤에 온 회신을 받는 유일한 경로이고, 회신 0건으로 기한이 지난 요청을 다시 살리는 경로다.
@@ -26,7 +28,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
   if (!["received", "distributed", "quoted", "compared"].includes(rfq.status) || rfq.selected_quote_id) return NextResponse.json({ error: "기관을 선정했거나 종료된 요청은 기한을 바꿀 수 없습니다." }, { status: 400 });
 
-  const b = (await req.json().catch(() => ({}))) as { replyBy?: unknown };
+  const b = (await req.json().catch(() => ({}))) as { replyBy?: unknown; joinBy?: unknown };
+  if (b.joinBy !== undefined && b.replyBy === undefined) return extendJoinBy(rfq, b.joinBy, s);
   const replyBy = typeof b.replyBy === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.replyBy) ? b.replyBy : "";
   if (!replyBy || replyBy < todaySeoul()) return NextResponse.json({ error: "회신 기한은 오늘 이후의 날짜여야 합니다." }, { status: 400 });
   const reopen = !!rfq.compared_at;
@@ -45,7 +48,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   // 그 사이 의뢰자가 선정했으면 아무것도 바꾸지 않았다. 초대 기한을 늘리거나 "새 기한까지 고칠 수 있다"고 알리지 않는다
   if (!updated?.length) return NextResponse.json({ error: "그 사이 의뢰자가 기관을 선정해 기한을 바꾸지 않았습니다. 화면을 새로 고쳐 주세요." }, { status: 409 });
 
-  const { data: open } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]);
+  const { data: open } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]).is("revoked_at", null);
   const ids = (open ?? []).map((i) => i.id);
   if (ids.length) await sb.from("rfq_invites").update({ reply_by: replyBy, expires_at: inviteExpiresAt(replyBy).toISOString() }).in("id", ids);
   // 지난 기한의 리마인더 기록은 지워 새 기한에 D-2·당일 알림이 다시 간다
@@ -55,7 +58,61 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   await logEvent(rfq.id, "deadline", `${replyBy === rfq.reply_by ? `회신 기한 유지 · ${replyBy}` : `회신 기한 변경 · ${rfq.reply_by ?? "-"} → ${replyBy}`}${reopen ? " · 회신 다시 열림" : ""}`, ids.length ? `초대 ${ids.length}건에 적용` : undefined, s.userId, { from: rfq.reply_by, to: replyBy, reopen });
 
   // 기관마다 따로 보낸다 (다른 기관 주소가 받는 사람 칸에 보이지 않게). 계정이 있는 기관은 포털, 없거나 운영자 관리 기관은 초대별 /q 링크
-  await notifyInvitedOrgs(open ?? [], { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${rfq.substance} · 새 기한까지 회신하거나 제출한 견적을 고칠 수 있습니다. 회신 링크는 새 기한 +7일까지 열립니다.`, portalHref: "/cro" });
+  // 참여한 기관에는 시험물질명과 함께, 참여 결정 전 기관에는 시험물질명 없이 (참여 전 요약에 없는 정보, 0023)
+  const joined = (open ?? []).filter((i) => occupiesSeat(i));
+  // 취소(revoked)·철회 초대는 위 조회와 undecidedOffer 에서 빠진다 (닫힌 링크로 "참여를 결정해 주세요"를 보내지 않는다)
+  const undecided = (open ?? []).filter((i) => !occupiesSeat(i) && undecidedOffer(i));
+  await notifyInvitedOrgs(joined, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${rfq.substance} · 새 기한까지 회신하거나 제출한 견적을 고칠 수 있습니다. 회신 링크는 새 기한 +7일까지 열립니다.`, portalHref: "/cro" });
+  await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 안내 링크는 새 기한 +7일까지 열립니다.` });
   if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: reopen ? "회신을 다시 받습니다. 새 기한까지 견적이 더 도착하거나 바뀔 수 있습니다." : "새 기한까지 견적이 더 도착하거나 바뀔 수 있습니다.", href: `/app/r/${rfq.rfq_no}` });
   return NextResponse.json({ ok: true, invites: ids.length, message: `기한을 ${replyBy}로 바꿨습니다.${reopen ? " 회신을 다시 열었습니다." : ""}${ids.length ? ` 초대 ${ids.length}건에 안내했습니다.` : ""}` });
+}
+
+/**
+ * 참여 결정 기한 연장 (설계 규칙표 "운영자 권한": 참여 결정 기한 1회 연장).
+ * - 회신을 받는 중인 요청(배포·견적 도착, 회신 마감·선정 전)에서, 요청마다 한 번만 (rfq_requests.join_by_extended_at, 조건부 갱신)
+ * - 새 기한은 지금 기한보다 늦고, 오늘 이후, 회신 기한 이하. 그날 서울 자정 직전까지
+ * - 기한을 늘리면 아직 결정하지 않은 지명 기관 몫 자리를 새 기한까지 다시 비워 둔다 (offer_seat_state, join_offer)
+ * - 아직 참여를 결정하지 않은 기관에 시험물질명 없이 알리고, 의뢰자에게도 알린다. 회신 기한은 그대로다
+ */
+async function extendJoinBy(rfq: NonNullable<Awaited<ReturnType<typeof getRfqByNo>>>, raw: unknown, s: { userId: string; email: string }) {
+  const joinBy = typeof raw === "string" && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+  const today = todaySeoul();
+  if (!joinBy || joinBy < today) return NextResponse.json({ error: "참여 결정 기한은 오늘 이후의 날짜여야 합니다." }, { status: 400 });
+  if (!["distributed", "quoted"].includes(rfq.status) || rfq.compared_at) return NextResponse.json({ error: "회신을 받는 중인 요청만 참여 결정 기한을 늘릴 수 있습니다." }, { status: 400 });
+  if (!rfq.join_by) return NextResponse.json({ error: "참여 결정 기한이 없는 요청입니다 (참여 선택형 도입 전 요청)." }, { status: 400 });
+  if (rfq.join_by_extended_at) return NextResponse.json({ error: "참여 결정 기한은 요청마다 한 번만 늘릴 수 있습니다. 이미 늘렸습니다." }, { status: 409 });
+  const current = new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  if (joinBy <= current) return NextResponse.json({ error: `지금 참여 결정 기한(${current})보다 늦은 날짜를 골라 주세요.` }, { status: 400 });
+  if (rfq.reply_by && joinBy > rfq.reply_by) return NextResponse.json({ error: `참여 결정 기한은 회신 기한(${rfq.reply_by})을 넘을 수 없습니다. 회신 기한을 먼저 늘려 주세요.` }, { status: 400 });
+
+  const sb = getSupabaseAdmin()!;
+  const iso = new Date(`${joinBy}T23:59:59+09:00`).toISOString();
+  const patch: TablesUpdate<"rfq_requests"> = { join_by: iso, join_by_extended_at: new Date().toISOString() };
+  const { data: updated, error } = await sb
+    .from("rfq_requests")
+    .update(patch)
+    .eq("id", rfq.id)
+    .is("join_by_extended_at", null)
+    .is("selected_quote_id", null)
+    .is("compared_at", null)
+    .select("id");
+  if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  // 그 사이 다른 운영자가 먼저 늘렸거나 선정·마감되었다
+  if (!updated?.length) return NextResponse.json({ error: "그 사이 참여 결정 기한이 바뀌었거나 회신이 닫혔습니다. 화면을 새로 고쳐 주세요." }, { status: 409 });
+
+  await audit({ userId: s.userId, email: s.email }, "rfq.join_by", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { before: { join_by: rfq.join_by }, after: { join_by: iso } });
+  await logEvent(rfq.id, "join_by_extended", `참여 결정 기한 연장 · ${current} → ${joinBy}`, "요청마다 한 번", s.userId, { from: rfq.join_by, to: iso });
+
+  const { data: offers } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status, joined_at, withdrawn_at, revoked_at, expires_at").eq("rfq_id", rfq.id).eq("status", "sent");
+  const undecided = (offers ?? []).filter((i) => undecidedOffer(i));
+  await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 참여 결정 기한이 ${joinBy}로 늘었습니다`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 회신 기한${rfq.reply_by ? ` ${rfq.reply_by}` : ""}은 그대로입니다.` });
+  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 기관의 참여 결정 기한을 ${joinBy}로 늘렸습니다`, body: "더 많은 기관이 참여를 결정할 수 있도록 참여 결정 기한을 늘렸습니다. 지명한 기관 몫의 자리는 새 기한까지 비워 둡니다. 회신 기한은 그대로입니다.", href: `/app/r/${rfq.rfq_no}` });
+  return NextResponse.json({ ok: true, joinBy: iso, invites: undecided.length, message: `참여 결정 기한을 ${joinBy}로 늘렸습니다.${undecided.length ? ` 참여 결정 전 기관 ${undecided.length}곳에 안내했습니다.` : ""}` });
+}
+
+/** 참여 전 기관에게 쓰는 요청 이름: "{분야} 견적 요청" (시험물질명 없음, 0023) */
+function offerLabel(categories: string[] | null | undefined): string {
+  const c = (categories ?? []).join(" · ");
+  return c ? `${c} 견적 요청` : "견적 요청";
 }

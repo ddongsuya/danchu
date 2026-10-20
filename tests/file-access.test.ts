@@ -40,6 +40,8 @@ vi.mock("@/lib/supabase", () => ({
                     id: "invite",
                     cda_signed_at: fixture.signed,
                     status: fixture.status,
+                    joined_at: "2026-01-01T00:00:00Z",
+                    withdrawn_at: null,
                     expires_at: fixture.expired ? "2000-01-01" : "2099-01-01",
                   },
         }),

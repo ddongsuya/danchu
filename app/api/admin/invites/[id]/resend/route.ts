@@ -19,6 +19,15 @@ function relinkMail(rfqNo: string, replyBy: string, token: string) {
   };
 }
 
+/** 참여했지만 아직 제출하지 않은 초대의 회신 링크 안내 (0023). 이미 참여했으므로 "참여하기를 눌러 주세요" 안내를 다시 보내지 않는다 */
+function joinedLinkMail(rfqNo: string, replyBy: string, token: string) {
+  const link = `${siteUrl()}/q/${token}`;
+  return {
+    subject: `[단추] ${rfqNo} 참여하신 요청의 회신 링크를 다시 보내 드립니다`,
+    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크를 다시 보내 드립니다 · ${esc(rfqNo)}</h2><p>이 요청에는 이미 참여하셨습니다. 아래 링크에서 요청서 전체를 보고 견적을 작성하거나 이어서 작성할 수 있습니다.<br>회신 기한은 ${esc(replyBy)}입니다. 제출 전에는 언제든 참여를 철회할 수 있고, 철회하면 청구하지 않습니다.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
+  };
+}
+
 /**
  * POST — 배포 메일을 다시 보낸다 (메일 유실·담당자 변경 때). 열린 초대(sent·draft)와 제출한 초대(submitted).
  * 담당자 제외·이동·삭제나 기관 중지로 토큰이 재발급되면(0021) 제출한 기관도 새 링크가 필요하다. 토큰은 여기서 바꾸지 않는다.
@@ -36,7 +45,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   const { data: inv } = await sb.from("rfq_invites").select("*").eq("id", id).maybeSingle();
   if (!inv) return NextResponse.json({ error: "전달 기록을 찾을 수 없습니다." }, { status: 404 });
   if (inv.revoked_at) return NextResponse.json({ error: "운영자가 거둔 초대입니다. 다시 보낼 수 없습니다." }, { status: 409 });
-  if (!["sent", "draft", "submitted"].includes(inv.status)) return NextResponse.json({ error: "회신하지 않음 처리됐거나 닫힌 초대에는 다시 보낼 수 없습니다." }, { status: 409 });
+  if (!["sent", "draft", "submitted"].includes(inv.status)) return NextResponse.json({ error: "불참·철회했거나 닫힌 초대에는 다시 보낼 수 없습니다." }, { status: 409 });
   if (new Date(inv.expires_at).getTime() < Date.now()) return NextResponse.json({ error: "회신 링크가 만료되었습니다. 회신 기한을 늘린 뒤 다시 보내 주세요." }, { status: 409 });
   const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
@@ -48,7 +57,12 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   if (!to) return NextResponse.json({ error: "기관 대표 메일이 없습니다. 기관 정보에서 대표 메일을 먼저 확인해 주세요." }, { status: 409 });
   const { count: members } = inv.cro_org_id ? await sb.from("profiles").select("id", { count: "exact", head: true }).eq("cro_org_id", inv.cro_org_id) : { count: 0 };
   const mailOpts: InviteMailOpts = { managed: !!org?.managed, members: members ?? 0 };
-  const mail = inv.status === "submitted" ? relinkMail(inv.rfq_no, inv.reply_by, inv.token) : { subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id, mailOpts) };
+  // 제출함 → 새 링크 안내, 참여함(작성 전·작성 중) → 회신 링크 안내, 참여 결정 전 → 참여 안내 (0023)
+  const mail = inv.status === "submitted"
+    ? relinkMail(inv.rfq_no, inv.reply_by, inv.token)
+    : inv.joined_at
+      ? joinedLinkMail(inv.rfq_no, inv.reply_by, inv.token)
+      : { subject: inviteMailSubject(rfq, inv.reply_by), html: inviteMailHtml(rfq, inv.reply_by, inv.token, inv.id, mailOpts) };
   const ok = await sendMail({ to: [to], subject: mail.subject, html: mail.html, replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
   if (!ok) return NextResponse.json({ error: "메일을 보내지 못했습니다. 메일 설정(RESEND_API_KEY)을 확인해 주세요." }, { status: 502 });
   // 메일은 이미 갔으므로 실패로 돌리지 않는다. 기록 갱신 오류는 따로 남긴다 (mailed_at 이 비면 cron 이 한 번 더 보낼 수 있다)

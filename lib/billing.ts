@@ -18,13 +18,14 @@ export const SUCCESS_FEE_MIN = 50_000_000;
  * 참여 기록에 따른 청구 여부 (0023). 기관 본인이 참여한(joined) 초대의 견적만 청구한다. 운영자 대리 입력도 기관이 참여했으면 같다.
  * legacy: 참여 기능 전에 작성 중·제출이던 견적. not_joined: 참여 기록 없음. 둘 다 청구하지 않는다
  */
-export const JOIN_STATUS_NOTE: Record<"legacy" | "not_joined", string> = {
+export const JOIN_STATUS_NOTE: Record<"legacy" | "not_joined" | "pilot", string> = {
   legacy: "참여 기능 도입 전 견적, 청구하지 않음",
   not_joined: "참여 기록 없음, 청구하지 않음",
+  pilot: "시범 운영 중 참여한 요청, 청구하지 않음",
 };
 /** 청구에 넣지 않는 참여 상태면 그 안내, 아니면 빈 문자열. 0023 전 저장본(값 없음)은 안내 없음 */
 export function joinStatusNote(status: string | null | undefined): string {
-  return status === "legacy" || status === "not_joined" ? JOIN_STATUS_NOTE[status] : "";
+  return status === "legacy" || status === "not_joined" || status === "pilot" ? JOIN_STATUS_NOTE[status] : "";
 }
 
 /** 견적 총액의 청구 구간. no_amount: 금액 미입력(아직 청구하지 않음) */

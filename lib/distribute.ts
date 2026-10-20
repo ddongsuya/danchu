@@ -1,5 +1,5 @@
 import { notificationRecipients } from "./mail-preferences";
-import { inviteExpiresAt, maskedClientLabel, needsCda, type InviteSource } from "@/lib/request-policy";
+import { inviteExpiresAt, joinDeadline, maskedClientLabel, needsCda, type InviteSource } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
 import type { TablesUpdate } from "./db-types";
@@ -22,6 +22,8 @@ export type DistributeResult = {
    * 자리 수로는 막지 않는다. 안내는 분야가 맞는 기관 모두에게 가고, 자리는 기관이 참여할 때 join_offer 가 센다
    */
   blocked?: "request_not_open" | "nominees_only";
+  /** 이번 호출로 요청이 바뀐 값 (처음 안내한 시각, 다시 잡은 참여 결정 기한). 같은 요청으로 이어 부를 때 넘긴다 */
+  after?: { distributed_at: string | null; join_by: string | null; status: string; reply_by: string | null };
 };
 
 type Org = { id: string; name: string; contact_email: string | null; categories: string[]; glp_certs: string[]; managed?: boolean };
@@ -116,12 +118,23 @@ export function defaultReplyBy(rfq: RfqRow): string {
  * 참여 선택형(0023): 자리 수(3곳·5곳·전체)로 자르지 않는다. 받은 기관이 요약을 보고 참여하기를 눌러야 자리를 얻고,
  * 자리는 join_offer 가 요청 행을 잠그고 센다. 그래서 안내 순서(기관 id 순)는 누가 견적을 쓰는지에 영향이 없다.
  */
-export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual"): Promise<DistributeResult> {
+export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual"): Promise<DistributeResult> {
   const sb = getSupabaseAdmin();
   const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   if (!sb || !orgs.length) return res;
   // 마이그레이션이 덜 된 DB 에 새 코드가 배포됐으면 초대를 만들기 전에 멈춘다 (README "배포 순서")
   await assertSchemaReady(sb);
+  let rfq = rfqIn;
+  // 참여 결정 기한은 처음 안내한 날부터 센다 (0023). 접수 때 안내할 기관이 없어 운영자나 보충 안내가 나중에 처음 보내면
+  // 접수 때 잡은 기한이 이미 지났을 수 있으므로, 처음 안내할 때(distributed_at 이 비어 있을 때) 다시 잡고 메일에도 그 날짜를 쓴다
+  if (!rfq.distributed_at) {
+    const jb = joinDeadline(nowSeoul().toLocaleDateString("sv-SE"), replyBy);
+    if (jb !== rfq.join_by) {
+      const { error } = await sb.from("rfq_requests").update({ join_by: jb }).eq("id", rfq.id).is("distributed_at", null);
+      if (error) captureError(new Error(`참여 결정 기한 저장 실패: ${error.message}`), "distribute:join-by");
+      else rfq = { ...rfq, join_by: jb };
+    }
+  }
   // 기관별 월 전달 한도는 없다 (0020). 청구는 기관이 제출한 견적 기준이라 전달 자체에는 요금이 붙지 않는다
 
   const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id, status").eq("rfq_id", rfq.id);
@@ -199,6 +212,7 @@ export async function distributeTo(rfq: RfqRow, orgs: Org[], replyBy: string, ac
       const { error } = await st.run();
       if (error) captureError(new Error(`배포 뒤 요청 갱신 실패 (${st.what}): ${error.message}`), "distribute:request-update");
     }
+    res.after = { distributed_at: rfq.distributed_at ?? now, join_by: rfq.join_by ?? null, status: rfq.status === "received" ? "distributed" : rfq.status, reply_by: rfq.reply_by ?? replyBy };
     await logEvent(rfq.id, "distributed", `참여 안내 ${res.sent}곳${auto ? " (자동)" : ""}`, `${res.names.join(", ")} · 회신 기한 ${replyBy}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source });
     // 의뢰자에게는 처음 안내할 때 한 번만 알린다. 안내받은 기관 수와 이름은 알리지 않는다 (의뢰자는 참여한 기관만 본다, 0023)
     if (!rfq.distributed_at) {
@@ -224,7 +238,12 @@ export function inviteMailSubject(rfq: Pick<RfqRow, "rfq_no">, replyBy: string):
   return `[단추] 참여 안내 ${rfq.rfq_no} · ${INVITE_MAIL_ACTION} · 회신 기한 ${replyBy}`;
 }
 /** 받는 기관의 종류. 운영자 관리 기관이나 담당자 계정이 없는 기관에는 로그인이 필요한 포털 링크를 넣지 않는다 */
-export type InviteMailOpts = { managed?: boolean; members?: number };
+export type InviteMailOpts = {
+  managed?: boolean;
+  members?: number;
+  /** 참여 선택형 전환(lib/opt-in-transition.ts)으로 다시 보내는 안내. 예전에 견적 요청으로 받은 요청이라는 한 줄을 앞에 붙인다 */
+  transition?: boolean;
+};
 
 /** 운영자 관리 기관은 견적서 PDF 를 메일 회신으로 보낼 수 있게 회신 주소를 운영 역할 주소(OPERATOR_REPLY_TO)로 둔다 */
 export function inviteReplyTo(opts: InviteMailOpts = {}): string | undefined {
@@ -243,8 +262,11 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
   const guide = opts.managed
     ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 안내를 받았습니다.<br>참여는 귀 기관이 위 링크에서 직접 눌러 주셔야 합니다. 단추가 대신 참여할 수 없습니다. 참여하신 뒤에는 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시합니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선합니다. 의뢰자는 기한 전에도 선정할 수 있으니 견적서는 되도록 일찍 보내 주십시오.<br>다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 안내를 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
     : `${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."}<br>제출한 견적은 즉시 의뢰자 비교표에 보이고, 회신이 마감되기 전까지 회신 기한 안에서 수정할 수 있습니다. 의뢰자가 기한 전에 기관을 선정하거나 운영자가 회신을 마감하면 회신이 닫힙니다. 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
+  const transition = opts.transition
+    ? `<p style="font-size:14px;padding:12px 14px;background:#F5F5F4;border-radius:6px">앞서 견적 요청으로 안내드린 요청입니다. 단추는 이제 기관이 요약을 보고 직접 참여한 요청에서만 견적을 받습니다. 견적을 보내시려면 아래 링크에서 참여하기를 먼저 눌러 주세요. 링크는 이전과 같습니다.</p>`
+    : "";
   return mailWrap(`
-      <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청 참여 안내 · ${esc(rfq.rfq_no)}</h2>
+      <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청 참여 안내 · ${esc(rfq.rfq_no)}</h2>${transition}
       <p><b>${esc(maskedClientLabel(rfq.org_type))}</b><br>
       시험 분야: ${esc(rfq.categories.join(", "))}${items ? ` · 시험 항목 ${items}건` : ""}<br>
       요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${cda ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
@@ -305,7 +327,9 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
   const nominatedIds = new Set(nominated.map((o) => o.id));
   // "지명 기관에만 안내"면 분야가 맞는 다른 기관에는 안내하지 않는다 (0023)
   const rest = rfq.nominees_only ? [] : orgs.filter((o) => !nominatedIds.has(o.id));
-  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [] } : await distributeTo(rfq, rest, replyBy, null, true);
+  // 지명 기관 안내로 요청이 이미 "안내함"이 되었으면 그 값을 넘긴다. 의뢰자 알림("참여 안내를 보냈습니다")이 두 번 가지 않고, 참여 결정 기한도 다시 잡지 않는다
+  const rfqNext: RfqRow = first.after ? { ...rfq, ...first.after } : rfq;
+  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [] } : await distributeTo(rfqNext, rest, replyBy, null, true);
   return {
     sent: first.sent + r.sent,
     mailed: first.mailed + r.mailed,

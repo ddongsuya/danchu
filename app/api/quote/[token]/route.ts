@@ -213,6 +213,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
     const first = r.first ?? true;
     const done = r.submitted_invites ?? 0;
     const count = r.total_invites ?? 0;
+    // 의뢰자에게는 참여한 기관 수만 분모로 보인다 (안내 수·불참 수를 알리지 않는다, 0023)
+    const joinedCount = Math.max(r.joined_invites ?? count, done);
     await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}${source === "operator" ? " (운영자 대리 입력)" : ""}`, `총 ${won(total)} · ${weeks}주${source === "operator" ? " · 기관 PDF 기준" : ""}`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null, entrySource: source });
     if (source === "operator" && actor) {
       await audit({ userId: actor.userId, email: actor.email }, "quote.proxy", { type: "cro_quote", id: r.quote_id, label: `${got.rfq.no} · ${got.croName}` }, { after: { entry_source: source, total_amount: total, total_weeks: weeks, pdf_name: pdf?.name ?? got.draft?.pdfName ?? null }, note: first ? "대리 입력" : "대리 입력 수정" });
@@ -228,7 +230,7 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
       const lead = source === "operator" ? `단추 정리 · 기관 PDF 기준 견적이 ${first ? "도착했습니다" : "수정되었습니다"}. ` : "";
       await notifyUsers(
         [rq.user_id],
-        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no} ${got.croName}` : `견적이 수정되었습니다 · ${got.rfq.no} ${got.croName}`, body: `${lead}${done}/${count}곳 회신 · 비교표에서 바로 확인할 수 있습니다.${until ? ` ${until}` : ""}`, href: `/app/r/${got.rfq.no}/compare` },
+        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no} ${got.croName}` : `견적이 수정되었습니다 · ${got.rfq.no} ${got.croName}`, body: `${lead}참여 ${joinedCount}곳 중 ${done}곳 회신 · 비교표에서 바로 확인할 수 있습니다.${until ? ` ${until}` : ""}`, href: `/app/r/${got.rfq.no}/compare` },
         mailWorthy && rq.email ? { to: [rq.email], subject: `[단추] ${got.rfq.no} 첫 견적이 도착했습니다` } : undefined,
       );
     }

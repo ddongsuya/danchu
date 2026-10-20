@@ -17,8 +17,8 @@ describe("요청 상태", () => {
     expect(stageIndex(undefined)).toBe(0);
     expect(statusLabel("contracting")).toBe("계약 진행");
   });
-  it("회신하지 않음 라벨은 화면 전체에서 같다", () => {
-    expect(INVITE_LABEL.declined).toBe("회신하지 않음");
+  it("불참 라벨은 화면 전체에서 같다 (0023: 회신하지 않음 → 불참·철회)", () => {
+    expect(INVITE_LABEL.declined).toBe("불참");
   });
 });
 

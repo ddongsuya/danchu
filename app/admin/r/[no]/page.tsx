@@ -1,14 +1,16 @@
-import { needsCda } from "@/lib/request-policy";
+import { needsCda, seatState, seatsDetailLabel } from "@/lib/request-policy";
 import { CdaPanel } from "@/components/admin/CdaPanel";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, listCroOrgs } from "@/lib/data";
 import { inviteStageLabel, statusLabel, statusTone } from "@/lib/status";
+import { proxyEntryAllowed } from "@/lib/concierge";
 import { Crumb, StatusPill } from "@/components/app/ui";
 import { DistributePanel } from "@/components/admin/DistributePanel";
 import { AdminActions } from "@/components/admin/AdminActions";
 import { DeadlineForm } from "@/components/admin/DeadlineForm";
+import { JoinByForm } from "@/components/admin/JoinByForm";
 import { InviteActions } from "@/components/admin/InviteActions";
 import { RequestTerms } from "@/components/admin/RequestTerms";
 import { ContractRecord } from "@/components/admin/ContractRecord";
@@ -38,6 +40,10 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   // 회신 마감(compared, compared_at) 뒤에도 선정 전이면 기한을 늘려 다시 열 수 있다 (deadline 라우트가 compared_at 을 비운다)
   const canChangeDeadline = ["received", "distributed", "quoted", "compared"].includes(rfq.status) && !rfq.selected_quote_id;
   const done = rfq.status === "closed" || rfq.status === "cancelled";
+  // 참여 자리 (0023): 참여·작성 중·제출을 세고, 참여 결정 기한 전에는 아직 결정하지 않은 지명 기관 몫을 비워 둔다
+  const seats = seatState(rfq.cro_count, rfq.join_by, d.invites);
+  const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
+  const canExtendJoin = !!joinBy && ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !rfq.selected_quote_id;
 
   return (
     <>
@@ -61,7 +67,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack" style={{ gap: 16 }}>
           <div className="card card--pad">
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>배포</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>참여 안내 추가{rfq.nominees_only && <span className="pill pill--warn" style={{ marginLeft: 8 }}>지명 기관에만 안내</span>}</h2>
             {rfq.status === "cancelled" || rfq.status === "closed" ? (
               <p style={{ fontSize: 14, color: "var(--muted)" }}>종료된 요청입니다.</p>
             ) : (
@@ -69,6 +75,8 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                 no={rfq.rfq_no}
                 categories={rfq.categories}
                 defaultReplyBy={defaultReplyBy}
+                replyByLocked={!!rfq.reply_by}
+                nomineesOnly={!!rfq.nominees_only}
                 orgs={orgs.map((o) => ({ id: o.id, name: o.name, categories: o.categories, glp: o.glp_certs, email: o.contact_email, members: o.members, invited: invitedOrgIds.has(o.id), managed: !!o.managed }))}
                 today={today}
                 autoDistribute={rfq.auto_distribute !== false}
@@ -78,19 +86,25 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
 
           <div className="card card--pad">
             <div className="sec-title" style={{ margin: "0 0 10px" }}>
-              <h2>회신 현황 {submitted.length}/{d.invites.length}</h2>
+              <h2>회신 현황 <span className="tnum">참여 {seats.used}{seats.cap != null ? `/${seats.cap}` : ""} · 제출 {submitted.length} · 안내 {d.invites.length}</span></h2>
               <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 {rfq.reply_by ? <span>{`기한 ${md(rfq.reply_by)}`}{rfq.compared_at ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>회신 마감 {mdhm(rfq.compared_at)}</span> : rfq.reply_by < today ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>지남</span> : null}</span> : null}
                 {canChangeDeadline && <DeadlineForm no={rfq.rfq_no} current={rfq.reply_by} min={today} />}
               </span>
             </div>
+            {joinBy && (
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13, color: "var(--muted)", marginBottom: 10 }}>
+                <span className="tnum">참여 결정 기한 {md(joinBy)}{rfq.join_by && new Date(rfq.join_by).getTime() < Date.now() ? " · 지남" : ""} · {seatsDetailLabel(seats)}</span>
+                {canExtendJoin && <JoinByForm no={rfq.rfq_no} current={joinBy} min={today} max={rfq.reply_by} extended={!!rfq.join_by_extended_at} />}
+              </div>
+            )}
             {d.invites.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 배포하지 않았습니다.</p>
+              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 참여 안내를 보내지 않았습니다.</p>
             ) : (
               <div className="tbl-wrap">
-                <table className="tbl" style={{ minWidth: 520 }}>
+                <table className="tbl" style={{ minWidth: 620 }}>
                   <thead>
-                    <tr><th>CRO</th><th>상태</th><th>열람</th><th>총액 · 기간</th><th>링크</th></tr>
+                    <tr><th>CRO</th><th>상태</th><th>참여</th><th>열람</th><th>총액 · 기간</th><th>링크</th></tr>
                   </thead>
                   <tbody>
                     {d.invites.map((i) => {
@@ -105,10 +119,18 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                             <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{inviteStageLabel(i)}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}{q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf" style={{ marginLeft: 6 }}>대리 입력</span>}
                             {i.decline_reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{i.decline_reason}</div>}
                           </td>
+                          <td className="tnum" style={{ fontSize: 12 }} title={i.join_terms_version ? `조건 판 ${i.join_terms_version}` : undefined}>{joinCell(i)}</td>
                           <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
                           <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
                           <td>
-                            <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }} title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
+                            {proxyEntryAllowed(i) ? (
+                              <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }} title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
+                            ) : i.revoked_at ? (
+                              <span style={{ fontSize: 12, color: "var(--muted)" }}>취소됨</span>
+                            ) : (
+                              // 참여 전에는 회신 링크(토큰)를 내보내지 않는다. 운영자 전용 요약 화면으로 연다 (운영자는 대신 참여할 수 없다)
+                              <Link href={`/admin/r/${rfq.rfq_no}/offer/${i.id}`} style={{ fontSize: 12 }} title="기관이 참여하기 전이라 요약만 보입니다. 운영자는 대신 참여하거나 견적을 입력할 수 없습니다. 기관에 링크를 다시 보내려면 메일 재발송을 쓰세요.">요약 보기</Link>
+                            )}
                             {["sent", "draft", "submitted"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} canCancel={i.status !== "submitted"} /></div>}
                           </td>
                         </tr>
@@ -122,7 +144,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
 
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>진행 관리</h2>
-            {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites} />}
+            {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites.map((i) => ({ id: i.id, cro_name: i.cro_name, cda_signed_at: i.cda_signed_at }))} />}
             {!done && <div style={{ marginBottom: 12 }}><RequestTerms no={rfq.rfq_no} croCount={rfq.cro_count} confidentiality={rfq.confidentiality} /></div>}
             <AdminActions
               no={rfq.rfq_no}
@@ -201,4 +223,11 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
       </div>
     </>
   );
+}
+
+/** 운영자 화면 "참여" 칸 (0023): 참여 시각과 경로(포털·링크·도입 전), 철회 시각. 참여 기록은 기관이 직접 누른 것만 있다 */
+function joinCell(i: { joined_at: string | null; join_channel: string | null; withdrawn_at: string | null }): string {
+  if (!i.joined_at) return "-";
+  const via = i.join_channel === "portal" ? "포털" : i.join_channel === "token" ? "링크" : i.join_channel === "legacy" ? "도입 전" : "";
+  return `${mdhm(i.joined_at)}${via ? ` · ${via}` : ""}${i.withdrawn_at ? ` · 철회 ${mdhm(i.withdrawn_at)}` : ""}`;
 }

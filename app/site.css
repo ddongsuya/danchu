@@ -119,6 +119,11 @@
 .doc__body { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
 .doc__body p { max-width: 68ch; text-wrap: pretty; }
 .doc__body > p { color: var(--body); }
+/* 조항 목록 (기관 이용 조건): 카드 없이 구분선만 */
+.doc__list { display: flex; flex-direction: column; max-width: 68ch; }
+.doc__list li { padding: 12px 0; border-bottom: 1px solid var(--card-line); font-size: 15px; line-height: 1.7; color: var(--body); text-wrap: pretty; }
+.doc__list li:first-child { padding-top: 0; }
+.doc__list li:last-child { border-bottom: 0; }
 .doc__lead { font-size: 21px; line-height: 1.5; letter-spacing: -0.01em; color: var(--ink); max-width: 30ch; text-wrap: balance; }
 @media (max-width: 959px) {
   .doc { padding: 52px 0; }

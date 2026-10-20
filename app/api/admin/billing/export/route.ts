@@ -73,9 +73,9 @@ export async function GET(req: Request) {
   for (const a of view.awards) {
     const rate = a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : "미정";
     if (a.kind === "settlement") {
-      // 0023: 참여 기록이 없는 초대의 수주는 명세 합계에 넣지 않는다 (billing_summary). 행은 남기고 N 으로 표시
+      // 0023: 참여 기록이 없거나 시범 판으로 참여한 초대의 수주는 명세 합계에 넣지 않는다 (billing_summary). 행은 남기고 N 으로 표시
       const joined = a.invite_joined !== false;
-      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", joined ? "Y" : "N", "", "", rate, joined ? amountOrPending(a.fee) : 0, [`체결일 ${a.contract_date ?? "-"} · 체결 확인한 달에 정산`, a.invite_billable === false ? "견적 청구 제외한 초대" : "", joined ? "" : "참여 기록 없음, 청구하지 않음"].filter(Boolean).join(" · ")]);
+      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", joined ? "Y" : "N", "", "", rate, joined ? amountOrPending(a.fee) : 0, [`체결일 ${a.contract_date ?? "-"} · 체결 확인한 달에 정산`, a.invite_billable === false ? "견적 청구 제외한 초대" : "", joined ? "" : "청구 조건 참여 기록 없음(참여 기록 없음 또는 시범 운영 중 참여), 청구하지 않음"].filter(Boolean).join(" · ")]);
     } else {
       push(["성사수수료 예상", a.org_name, seoulDay(a.awarded_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "견적 기준", "N", "", "", rate, "", `안내용, 합계에 넣지 않음 · 예상 ${a.fee == null ? "미정" : a.fee}원`]);
     }

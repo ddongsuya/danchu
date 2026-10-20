@@ -17,7 +17,7 @@ function daysAgo(n: number): string {
 
 /**
  * 보존기간이 지난 개인정보를 지운다. 매일 cron 에서 한 번. 멱등.
- * 1) 90일 지난 접속 기록 비우기
+ * 1) 90일 지난 접속 기록 비우기 (요청 접수 IP·브라우저, 기관 참여 기록의 IP·브라우저)
  * 2) 3년 지난 요청서 익명화 + 미선정 첨부 삭제 (한 번에 최대 200건)
  * 3) 180일 지난 읽은 알림 삭제
  */
@@ -33,6 +33,20 @@ export async function runRetention(sb: Admin): Promise<{ accessLogs: number; req
   if (logs?.length) {
     const { error } = await sb.from("rfq_requests").update({ ip: null, user_agent: null }).in("id", logs.map((r) => r.id));
     if (!error) out.accessLogs = logs.length;
+  }
+
+  // 참여 기록의 IP·브라우저 (0023). 시각·경로·누른 사람·조건 판은 남기고 이 둘만 비운다.
+  // DB 트리거(rfq_invites_guard_join)는 참여한 지 90일이 지난 기록에서만 비우기를 허용한다
+  const { data: joins } = await sb
+    .from("rfq_invites")
+    .select("id")
+    .lt("joined_at", daysAgo(RETENTION.accessLogDays))
+    .or("join_ip.not.is.null,join_ua.not.is.null")
+    .limit(500);
+  if (joins?.length) {
+    const { error } = await sb.from("rfq_invites").update({ join_ip: null, join_ua: null }).in("id", joins.map((r) => r.id));
+    if (!error) out.accessLogs += joins.length;
+    else console.error("retention join_ip", error.message);
   }
 
   const { data: old } = await sb

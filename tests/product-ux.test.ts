@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { FAQ } from "@/lib/faq";
+import { CRO_TERMS_VERSION, JOIN_CONSENT } from "@/lib/request-policy";
+import { CONSENT_VERSION } from "@/lib/rfq-schema";
 import {
   confidentialAccess,
   needsCda,
@@ -95,5 +100,58 @@ describe("계정별 초안과 복구", () => {
         confid: "일반",
       }),
     ).not.toBe("");
+  });
+});
+
+/* 참여 선택형 공개 문구 (0023, 설계 5절 4단계): 약관 제4조·제5조, 기관 안내, FAQ, 조건 판 */
+
+const src = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+/** JSX·문자열 리터럴 안의 한글 문장만 대충 뽑는다 (주석 제외) */
+const visible = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+describe("참여 선택형 공개 문구", () => {
+  it("기관 조건 판은 한 곳에서 정하고 기관 안내 문서가 같은 값을 보여 준다", () => {
+    expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-20b");
+    // 시범 판은 pilot- 으로 시작해야 청구 함수가 무료로 본다 (0023 billing_lines)
+    expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
+    const forCro = src("app/for-cro/page.tsx");
+    expect(forCro).toContain('id="cro-terms"');
+    expect(forCro).toContain("{CRO_TERMS_VERSION}");
+    expect(forCro).not.toMatch(/pilot-20\d\d-/);
+    expect(src("components/cro/JoinPanel.tsx")).toContain("/for-cro#cro-terms");
+  });
+  it("약관을 바꿨으므로 의뢰자 동의 판도 올렸다", () => expect(CONSENT_VERSION).toBe("2026-10-20"));
+  it("약관 제4조는 참여 안내와 참여한 요청에 제출한 견적으로 설명한다", () => {
+    const terms = visible(src("app/terms/page.tsx"));
+    for (const s of ["참여 안내", "참여한 요청에 제출한 견적", "지명 기관에만 안내", "참여 결정 기한", "참여를 철회", "대신하여 참여를"]) expect(terms).toContain(s);
+    expect(terms).not.toContain("견적 요청을 배포합니다");
+    expect(terms).not.toContain("전달받은 참여 CRO가 모두 회신");
+    expect(terms).not.toContain("그 합의 이후에 전달된");
+  });
+  it("기관 안내에는 참여 결정 단계가 있고 없어진 자동 제출 설명이 없다", () => {
+    const forCro = visible(src("app/for-cro/page.tsx"));
+    expect(forCro).toContain("참여 결정");
+    expect(forCro).toContain("이번 요청 불참");
+    expect(forCro).not.toContain("예비 견적 자동 제출");
+    expect(forCro).not.toContain("회신하지 않음 포함");
+    expect(forCro).not.toContain("합의 이후에 전달된 요청");
+  });
+  it("FAQ 는 참여 안내와 참여 자리로 설명한다", () => {
+    const all = FAQ.flatMap((f) => [f.q, ...f.a]).join("\n");
+    expect(all).toContain("참여 안내");
+    expect(all).toContain("참여 자리");
+    expect(all).not.toContain("선택한 기관 수 범위");
+    expect(all).not.toContain("요청서가 배포");
+    expect(all).not.toContain("전달받은 기관이 모두 회신");
+  });
+  it("바뀐 화면 문구에 긴 대시가 없다", () => {
+    const texts = [
+      FAQ.flatMap((f) => [f.q, ...f.a]).join("\n"),
+      JOIN_CONSENT,
+      visible(src("app/terms/page.tsx")),
+      visible(src("app/for-cro/page.tsx")),
+      visible(src("components/admin/OptInTransition.tsx")),
+    ];
+    for (const t of texts) expect(t).not.toMatch(/[–—]/);
   });
 });

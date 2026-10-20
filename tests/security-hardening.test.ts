@@ -150,7 +150,7 @@ const asA = () => ({ userId: A, email: "new@example.test", profile: { id: A, rol
 const admin = () => ({ userId: "00000000-0000-4000-8000-0000000000ad", email: "ops@danchu.kr", profile: { role: "admin" } });
 
 function invite(over: Row = {}): Row {
-  return { id: INV, rfq_id: RFQ_A, rfq_no: "DC-2026-0001", cro_name: "기관가", cro_email: "leaver@example.test", cro_org_id: ORG, token: TOKEN, reply_by: "2099-01-01", expires_at: "2099-01-08T00:00:00Z", status: "sent", opened_at: "2026-01-01", cda_signed_at: null, revoked_at: null, declined_at: null, ...over };
+  return { id: INV, rfq_id: RFQ_A, rfq_no: "DC-2026-0001", cro_name: "기관가", cro_email: "leaver@example.test", cro_org_id: ORG, token: TOKEN, reply_by: "2099-01-01", expires_at: "2099-01-08T00:00:00Z", status: "sent", opened_at: "2026-01-01", cda_signed_at: null, revoked_at: null, declined_at: null, joined_at: "2026-01-01T00:00:00Z", withdrawn_at: null, ...over };
 }
 
 beforeEach(() => {
@@ -317,6 +317,21 @@ describe("재발송: 제출 초대 지원, 지금의 기관 대표 메일로만,
     expect((await resendInvite(json(), ctx({ id: INV }))).status).toBe(502);
     expect(fx.calls.some((c) => c.table === "rfq_invites" && c.op === "update")).toBe(false);
     expect(fx.tables.rfq_invites[0]).toMatchObject({ token: "tok_rotated_000000000000000000000", status: "submitted", cro_email: "leaver@example.test" });
+  });
+  it("참여했지만 아직 제출하지 않은 초대에는 '참여하기를 눌러 주세요'가 아니라 회신 링크 안내를 보낸다 (0023)", async () => {
+    fx.tables.rfq_invites = [invite({ status: "draft", joined_at: "2026-10-01T00:00:00Z" })];
+    expect((await resendInvite(json(), ctx({ id: INV }))).status).toBe(200);
+    const mail = fx.sendMail.mock.calls[0][0] as { html: string; subject: string };
+    expect(mail.subject).toContain("참여하신 요청의 회신 링크");
+    expect(mail.html).toContain(`/q/${TOKEN}`);
+    expect(mail.html).not.toContain("참여하기");
+  });
+  it("참여 결정 전 초대에는 참여 안내 메일을 다시 보낸다", async () => {
+    fx.tables.rfq_invites = [invite({ status: "sent", joined_at: null })];
+    Object.assign(fx.tables.rfq_requests[0], { categories: ["일반독성"], cro_count: "3곳", join_by: null });
+    expect((await resendInvite(json(), ctx({ id: INV }))).status).toBe(200);
+    const mail = fx.sendMail.mock.calls[0][0] as { subject: string };
+    expect(mail.subject).toContain("참여 안내");
   });
   it("철회된 초대와 중지된 기관에는 보내지 않는다", async () => {
     fx.tables.rfq_invites = [invite({ status: "expired", revoked_at: "2026-10-18T00:00:00Z" })];

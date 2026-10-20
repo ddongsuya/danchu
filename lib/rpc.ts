@@ -75,7 +75,7 @@ export type QuoteItemInput = {
   unit_price: number | null;
   sample_count: number | null;
 };
-export type SaveQuoteResult = { ok: true; quote_id: string; skipped?: boolean; first?: boolean; total_invites?: number; submitted_invites?: number };
+export type SaveQuoteResult = { ok: true; quote_id: string; skipped?: boolean; first?: boolean; total_invites?: number; submitted_invites?: number; joined_invites?: number };
 /**
  * token: 화면을 연 링크의 토큰. save_quote 가 잠금을 얻은 뒤 지금 토큰과 같은지, 철회·만료·기관 중지·소속 변경이 없는지 다시 본다 (0021).
  * 실패 code: closed 선정·마감 · revoked 철회·토큰 재발급 · expired 기한 만료 · declined 회신하지 않음 · org_inactive 기관 중지 · not_member 소속 아님 ·
@@ -112,6 +112,21 @@ export type WithdrawOfferResult = { ok: true; already?: boolean; seats?: SeatSta
 /** 참여 철회 (제출 전만). 실패 code: closed · revoked · not_member · not_joined 참여 전(불참으로) · submitted · declined · expired */
 export function withdrawOffer(inviteId: string, token: string, actorId: string | null, reason: string | null) {
   return call<WithdrawOfferResult, "withdraw_offer">("withdraw_offer", { p_invite_id: inviteId, p_token: token, p_actor: actorId, p_reason: reason });
+}
+
+/** 자리 수 바꾸기 (운영자). 요청 행을 잠그고 참여 수를 세므로 동시 참여와 겹쳐도 참여 수가 자리 수를 넘지 않는다. 실패 code: bad_value · not_found · closed · too_few */
+export type SetSeatCountResult = { ok: true; used: number; before: string | null };
+export async function setSeatCount(rfqId: string, croCount: string): Promise<SetSeatCountResult | (Fail & { used?: number })> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, code: "no_db" };
+  const { data, error } = await sb.rpc("set_seat_count", { p_rfq_id: rfqId, p_cro_count: croCount });
+  if (error) {
+    console.error("rpc set_seat_count", error.message);
+    return { ok: false, code: "db_error" };
+  }
+  const d = (data ?? {}) as { ok?: boolean; code?: string; used?: number; before?: string | null };
+  if (d.ok !== true) return { ok: false, code: d.code ?? "unknown", used: typeof d.used === "number" ? d.used : undefined };
+  return { ok: true, used: d.used ?? 0, before: d.before ?? null };
 }
 
 /* ── CRO 계약 체결 보고 ── */

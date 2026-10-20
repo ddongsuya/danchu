@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { loadQuote } from "@/lib/quote-load";
 import { viewerLoadOpts } from "@/lib/auth";
 import { ReplyForm } from "@/components/cro/ReplyForm";
@@ -11,6 +11,8 @@ export default async function TokenReply({ params }: { params: Promise<{ token: 
   const operator = opts.operator;
   const got = await loadQuote(token, opts);
   if (!got) notFound();
+  // 참여 전에는 회신 화면을 열지 않는다. 기관은 요약에서 참여를 결정하고, 운영자는 기관이 참여한 뒤에만 대리 입력한다 (0023)
+  if (!got.joined) redirect(`/q/${token}`);
   return (
     <>
       {operator && (

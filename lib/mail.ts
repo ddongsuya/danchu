@@ -120,7 +120,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames }: MailArgs): Prom
     </div>
     <h3 style="font-size:16px;margin:0 0 8px">다음 단계</h3>
     <ol style="padding-left:20px;margin:0 0 20px">
-      <li>시험 분야가 맞는 기관에 요청 전달. 실제 전달 수는 앱에서 확인할 수 있습니다.</li>
+      <li>시험 분야가 맞는 기관에 참여 안내. 참여한 기관은 앱에서 확인할 수 있습니다.</li>
       <li>견적 회신 기한: ${esc(String(values.replyBy || "앱에서 확인"))}</li>
       <li>견적은 기관이 제출하는 대로 앱의 비교표에서 바로 볼 수 있습니다. 회신 기한까지는 기관이 수정할 수 있습니다. 첫 견적이 도착할 때와 회신 기한이 지나 마감될 때 메일로 알려 드립니다.</li>
     </ol>

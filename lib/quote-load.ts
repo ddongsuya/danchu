@@ -71,8 +71,9 @@ export function rfqSummaryOf(r: RfqRow, inv: InviteRow, fileCount: number, seats
   const dd = ddayOf(inv.reply_by);
   const cda = needsCda(r.confidentiality);
   const joinBy = r.join_by ?? seats?.join_by ?? null;
+  const categories = r.categories ?? [];
   const overview: [string, string][] = [
-    ["분야", r.categories.join(" · ") || "-"],
+    ["분야", categories.join(" · ") || "-"],
     ["제출처", a("authority").join(" · ") || "-"],
     ["요청 성격", r.intent || s("intent") || "-"],
     ["의뢰자 기관 유형", r.org_type || "-"],
@@ -89,7 +90,7 @@ export function rfqSummaryOf(r: RfqRow, inv: InviteRow, fileCount: number, seats
     full: false,
     no: r.rfq_no,
     substance: "",
-    categories: r.categories,
+    categories,
     client: maskedClientLabel(r.org_type),
     masked: cda,
     identityMasked: true,
@@ -232,7 +233,9 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
   // 이 기관의 견적이 선정됐을 때만 회사명·연락처가 열린다
   const awarded = !!q && !!r.selected_quote_id && r.selected_quote_id === q.id;
   const seats = joined ? null : await offerSeatState(inv.rfq_id);
-  const rfq = joined ? rfqViewOf(r, inv, files ?? [], awarded) : rfqSummaryOf(r, inv, (files ?? []).length, seats);
+  // 철회·불참한 초대는 첨부를 내려받지 못한다 (/api/files 와 같은 규칙). 목록도 비운다
+  const gone = inv.status === "declined" || !!inv.withdrawn_at;
+  const rfq = joined ? rfqViewOf(r, inv, gone ? [] : files ?? [], awarded) : rfqSummaryOf(r, inv, (files ?? []).length, seats);
   let draft: ReplyDraft | null = null;
   if (q) {
     type ItemRow = { seq: number; avail: string | null; amount: number | null; weeks: number | null; reason: string | null; design?: Record<string, unknown> | null; source?: string | null; unit?: string | null; unit_price?: number | null; sample_count?: number | null };
@@ -261,7 +264,7 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
       includes: Array.isArray(q.includes) ? q.includes : [],
     };
     draft = { items, note: q.note ?? "", pdfName: q.pdf_name ?? "", status: q.status === "submitted" ? "submitted" : "draft", common };
-  } else if (inv.cro_org_id && joined) {
+  } else if (inv.cro_org_id && joined && !gone) {
     // 저장된 회신이 없으면 기관 카탈로그로 초안을 만든다 (저장은 CRO가 손댈 때). 참여 전에는 만들지 않는다 (요청서 전체가 열리는 때와 같다)
     draft = await prefillDraft(inv.cro_org_id, r, rfq);
   }

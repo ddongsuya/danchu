@@ -19,6 +19,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   const d = await getRfqDetail(rfq);
   // 실시간 비교: 기관이 제출한 견적은 바로 이 표에 기관명과 함께 나타난다. 공개 단계가 없다 (lib/reply-window.ts)
   const open = !repliesClosed(rfq);
+  // 참여한 기관 중 아직 제출하지 않은 곳만 센다 (0023). 참여 결정 전 안내는 의뢰자에게 보이지 않는다
   const pending = pendingInvites(d.invites);
   const early = open && beforeDeadline(rfq.reply_by);
   const replyByOf = new Map(d.invites.map((i) => [i.id, i.reply_by]));
@@ -76,12 +77,12 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       </div>
       <dl className="compare-status" aria-label="회신 현황">
         <div><dt>도착한 견적</dt><dd className="tnum">{quotes.length}건</dd></div>
-        <div><dt>아직 회신하지 않은 기관</dt><dd className="tnum">{open ? `${pending}곳` : "마감"}</dd></div>
+        <div><dt>참여했지만 아직 제출하지 않은 기관</dt><dd className="tnum">{open ? `${pending}곳` : "마감"}</dd></div>
         <div><dt>회신 기한</dt><dd className="tnum">{rfq.reply_by ? md(rfq.reply_by) : "미정"}{!open ? " · 마감" : ""}</dd></div>
       </dl>
       {rfq.selected_quote_id ? null : open ? (
         <p className="note note--tint" style={{ marginBottom: 16 }}>
-          견적은 기관이 제출하는 대로 이 표에 나타납니다. {early ? `회신 기한(${md(rfq.reply_by)})까지는 기관이 견적을 수정할 수 있어, 금액과 조건이 바뀔 수 있습니다. 기한 전에도 선정할 수 있지만, 선정하면 아직 회신하지 않은 기관의 회신 링크가 닫힙니다.` : "회신 기한이 지났습니다. 선정하면 남은 회신 링크가 닫힙니다."}
+          견적은 기관이 제출하는 대로 이 표에 나타납니다. {early ? `회신 기한(${md(rfq.reply_by)})까지는 기관이 견적을 수정할 수 있어, 금액과 조건이 바뀔 수 있습니다. 기한 전에도 선정할 수 있지만, 선정하면 아직 제출하지 않은 기관의 회신 링크가 닫힙니다.` : "회신 기한이 지났습니다. 선정하면 남은 회신 링크가 닫힙니다."}
         </p>
       ) : (
         <p className="note" style={{ marginBottom: 16 }}>회신이 마감되어 견적은 더 바뀌지 않습니다.</p>
@@ -89,7 +90,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       {cols.length === 0 ? (
         <div className="empty">
           <b>아직 도착한 견적이 없습니다</b>
-          {open ? "기관이 견적을 제출하면 바로 여기에 나타나고 알림으로 알려 드립니다." : "회신한 기관이 없어 비교할 견적이 없습니다. 단추가 재배포 여부를 안내합니다."}
+          {open ? "기관이 견적을 제출하면 바로 여기에 나타나고 알림으로 알려 드립니다." : "제출한 기관이 없어 비교할 견적이 없습니다. 운영자가 기한 연장이나 참여 안내 추가를 안내합니다."}
         </div>
       ) : (
         <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={!rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status)} />

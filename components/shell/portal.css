@@ -416,3 +416,31 @@
 .pt .grid2 > *, .pt .numin, .pt .stack { min-width: 0; }
 .pt .numin input { min-width: 0; }
 @media (min-width: 640px) { .pt .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── 참여 결정 (0023, components/cro/JoinPanel.tsx) ── */
+.pt .join, .join { padding: 24px; margin-bottom: 24px; border-color: var(--bline); display: grid; gap: 14px; }
+.join__head { display: grid; gap: 6px; }
+.join__head h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.join__lead { color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 70ch; }
+.join__consent { margin: 0; padding: 14px 16px; background: var(--sf); border-radius: var(--r-md); font-size: 14px; line-height: 1.7; color: var(--body); max-width: 75ch; }
+.join__meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.join__meta a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.join__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.join__err { margin: 0; }
+/* 참여 선택형 전환 카드 (운영자 홈, 0023 적용 뒤 한 번) */
+.optin-tr { display: grid; gap: 10px; margin-bottom: 16px; padding: 16px 18px; }
+.optin-tr__title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.optin-tr__body { margin: 0; max-width: 75ch; line-height: 1.7; }
+.optin-tr__list summary { font-size: 13px; color: var(--muted); width: fit-content; }
+.optin-tr__list ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; }
+.optin-tr__list a { text-underline-offset: 3px; }
+.optin-tr__actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.optin-tr__ok { font-size: 13px; color: var(--ok); }
+.optin-tr__err { font-size: 13px; color: var(--err); }
+.pt .optin-tr .b1 { transition: transform 160ms var(--ease-out); }
+.pt .join .b1, .pt .join .b2 { transition: transform 160ms var(--ease-out); }
+.pt .join .b1[aria-busy="true"] { cursor: progress; }
+@media (max-width: 639px) {
+  .pt .join, .join { padding: 18px; }
+  .join__actions > * { flex: 1 1 100%; }
+}

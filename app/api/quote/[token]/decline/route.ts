@@ -6,6 +6,9 @@ import { loadOptsFor } from "@/lib/concierge";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import { withdrawOffer } from "@/lib/rpc";
+import { reofferNow } from "@/lib/opt-in-cron";
+import { captureError } from "@/lib/observe";
+import { todaySeoul } from "@/lib/format";
 
 export const runtime = "nodejs";
 
@@ -73,6 +76,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
     if (rq?.user_id && !["closed", "cancelled"].includes(rq.status)) {
       await notifyUsers([rq.user_id], { kind: "견적", title: `${got.rfq.no} 참여한 기관 1곳이 참여를 철회했습니다`, body: "빈 자리에는 참여 안내를 받은 다른 기관이 참여할 수 있습니다. 다른 기관의 견적은 그대로 받습니다.", href: `/app/r/${got.rfq.no}` });
     }
+  }
+  // 철회나 지명 기관 불참으로 자리가 비었으면 바로 재안내한다 (cron 과 같은 판정, 한 번만. 자리를 비우지 않는 불참이면 아무것도 하지 않는다)
+  try {
+    await reofferNow(sb, got.rfqId, todaySeoul());
+  } catch (e) {
+    captureError(e, "decline:reoffer", { rfq: got.rfq.no });
   }
   return NextResponse.json({ ok: true, mode });
 }

@@ -11,6 +11,8 @@
  *   기한 전이거나 아직 회신하지 않은 기관이 있으면 선정 화면에서 한 번 더 확인한다 (selectionCaution).
  */
 
+import { occupiesSeat, type JoinFields } from "./request-policy";
+
 /** 'YYYY-MM-DD'의 서울 기준 그날 23:59:59 (ms) */
 export function endOfDaySeoul(ymd: string): number {
   return new Date(`${ymd.slice(0, 10)}T23:59:59+09:00`).getTime();
@@ -35,9 +37,12 @@ export function closeRepliesDue(rfq: { compared_at: string | null; reply_by: str
   return !!rfq.reply_by && rfq.reply_by < today;
 }
 
-/** 아직 회신하지 않은 초대 수 (회신하지 않음·만료는 뺀다) */
-export function pendingInvites(invites: { status: string }[]): number {
-  return invites.filter((i) => i.status === "sent" || i.status === "draft").length;
+/**
+ * 참여한 기관 중 아직 제출하지 않은 수 (0023). 참여 결정 전 안내, 불참·철회·취소·만료는 세지 않는다.
+ * 의뢰자는 참여한 기관만 보므로 "아직 회신하지 않은 기관"도 참여한 기관 안에서 센다
+ */
+export function pendingInvites(invites: JoinFields[]): number {
+  return invites.filter((i) => occupiesSeat(i) && i.status !== "submitted").length;
 }
 
 /** 비교표 열이 아직 바뀔 수 있는지: 회신이 열려 있고 그 기관의 기한 전 */
@@ -51,7 +56,7 @@ export const REVISABLE_LABEL = "기한 전 (수정될 수 있음)";
  * 선정 전에 한 번 더 확인할 내용. 기한 전이거나 아직 회신하지 않은 기관이 있으면 needed.
  * 확인 문구에는 기한, 미회신 기관 수, 선정하면 남은 회신 링크가 닫힌다는 사실을 적는다.
  */
-export function selectionCaution(rfq: { status: string; compared_at: string | null; reply_by: string | null }, invites: { status: string }[], now = Date.now()): { needed: boolean; early: boolean; pending: number; replyBy: string | null } {
+export function selectionCaution(rfq: { status: string; compared_at: string | null; reply_by: string | null }, invites: JoinFields[], now = Date.now()): { needed: boolean; early: boolean; pending: number; replyBy: string | null } {
   const open = !repliesClosed(rfq);
   const early = open && beforeDeadline(rfq.reply_by, now);
   const pending = open ? pendingInvites(invites) : 0;

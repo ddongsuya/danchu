@@ -9,6 +9,7 @@ import { Crumb } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
 
+/** 포털 요청 화면. 참여 전 요약·참여 결정과 참여 뒤 요청서 전체는 /q 와 같다 (RequestView). ?decline=1 은 참여 철회 확인 */
 export default async function CroRequest({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ decline?: string }> }) {
   const s = await requireSession("cro");
   const { id } = await params;
@@ -17,24 +18,26 @@ export default async function CroRequest({ params, searchParams }: { params: Pro
   if (!inv || (s.profile.role !== "admin" && inv.cro_org_id !== s.profile.cro_org_id)) notFound();
   const got = await loadByInvite(inv, loadOptsFor(s.profile.role));
   if (!got) notFound();
-  if (decline === "1") {
+  const open = !got.closed && !got.declined && !got.expired && got.draft?.status !== "submitted";
+  if (decline === "1" && open) {
+    const withdraw = got.joined;
     return (
       <>
         <Crumb href={`/cro/r/${id}`} label={got.rfq.no} />
         <div className="ph">
           <div>
-            <h1>이번 요청은 회신하지 않습니다</h1>
-            <p>처리하면 이 요청은 종료 목록으로 이동합니다.</p>
+            <h1>{withdraw ? "이 요청의 참여를 철회합니다" : "이번 요청에 불참합니다"}</h1>
+            <p>{withdraw ? "철회하면 자리가 비고 청구하지 않습니다. 이 요청은 종료 목록으로 이동하고 다시 참여할 수 없습니다." : "불참해도 다음 참여 안내에 영향이 없습니다. 이 요청은 종료 목록으로 이동합니다."}</p>
           </div>
         </div>
-        <DeclineForm token={inv.token} backHref={`/cro/r/${id}`} afterHref="/cro" />
+        <DeclineForm token={inv.token} mode={withdraw ? "withdraw" : "decline"} backHref={`/cro/r/${id}`} afterHref="/cro" operator={got.operator} />
       </>
     );
   }
   return (
     <>
       <Crumb href="/cro" label="받은 요청" />
-      <RequestView got={got} replyHref={`/cro/r/${id}/reply`} declineHref={`/cro/r/${id}?decline=1`} />
+      <RequestView got={got} replyHref={`/cro/r/${id}/reply`} withdrawHref={`/cro/r/${id}?decline=1`} afterDeclineHref="/cro" />
     </>
   );
 }

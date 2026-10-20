@@ -20,7 +20,7 @@ export type JoinChannel = "portal" | "token" | "legacy";
 /** 참여 기록 열 (0023). join_offer()·withdraw_offer() 만 쓴다 */
 type InviteJoinColumn = "joined_at" | "join_actor" | "join_channel" | "join_user_id" | "join_terms_version" | "join_ip" | "join_ua" | "withdrawn_at";
 /** billing_lines().join_status (0023). joined 만 청구한다 */
-export type JoinStatus = "joined" | "legacy" | "not_joined";
+export type JoinStatus = "joined" | "legacy" | "not_joined" | "pilot";
 
 /** Row 에서 Insert 를 만든다: 기본값이 있는 컬럼은 선택 */
 type Ins<Row, Optional extends keyof Row> = Omit<Row, Optional> & Partial<Pick<Row, Optional>>;
@@ -69,10 +69,12 @@ export type Database = {
           join_by: string | null;
           /** 지명 기관에만 안내 (0023). 켜져 있으면 자동 매칭 안내(source = matched)를 DB 가 거절한다 */
           nominees_only: boolean;
+          /** 운영자가 참여 결정 기한을 늘린 시각 (0023). 연장은 한 번만 */
+          join_by_extended_at: string | null;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "orphaned_at" | "join_by" | "nominees_only"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "orphaned_at" | "join_by" | "nominees_only" | "join_by_extended_at"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
@@ -140,7 +142,8 @@ export type Database = {
         };
         /** 참여 기록(join_*·joined_at·withdrawn_at)은 DB 함수만 쓴다 (0023 트리거). 직접 넣거나 바꾸면 거절된다 */
         Insert: Ins<Omit<Database["public"]["Tables"]["rfq_invites"]["Row"], InviteJoinColumn>, "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference" | "source" | "billable" | "bill_excluded_reason" | "mailed_at" | "revoked_at">;
-        Update: Partial<Omit<Database["public"]["Tables"]["rfq_invites"]["Row"], InviteJoinColumn>>;
+        // 참여 기록은 앱이 바꾸지 못한다. 접속 기록(join_ip·join_ua)만 보존 기간 뒤 비울 수 있다 (lib/retention.ts, DB 트리거가 90일 경과를 확인)
+        Update: Partial<Omit<Database["public"]["Tables"]["rfq_invites"]["Row"], InviteJoinColumn>> & { join_ip?: null; join_ua?: null };
         Relationships: [
           { foreignKeyName: "rfq_invites_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
           { foreignKeyName: "rfq_invites_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
@@ -457,6 +460,7 @@ export type Database = {
       withdraw_offer: { Args: { p_invite_id: string; p_token: string; p_actor: string | null; p_reason: string | null }; Returns: Json };
       /** 0023: 요청의 자리 현황 */
       offer_seat_state: { Args: { p_rfq_id: string }; Returns: Json };
+      set_seat_count: { Args: { p_rfq_id: string; p_cro_count: string }; Returns: Json };
       /** 0021: p_token 은 화면을 연 링크의 토큰. 잠금 뒤 지금 토큰·철회·만료·기관 상태·소속을 다시 본다. 0023: 참여 전이면 not_joined */
       save_quote: { Args: { p_invite_id: string; p_header: Json; p_items: Json; p_submit: boolean; p_actor: string | null; p_token: string }; Returns: Json };
       /** 0021: 운영자 초대 취소 (철회 표식 + 토큰 재발급). { ok, already?, status } 또는 { ok: false, code } */

@@ -113,7 +113,8 @@ declare
     'public.danchu_schema_version()',
     'public.join_offer(uuid, text, uuid, text, text, text, text)',
     'public.withdraw_offer(uuid, text, uuid, text)',
-    'public.offer_seat_state(uuid)'
+    'public.offer_seat_state(uuid)',
+    'public.set_seat_count(uuid, text)'
   ];
   f text;
   p regprocedure;

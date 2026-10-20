@@ -95,7 +95,7 @@ describe("견적 제출 알림: 앱 알림은 견적마다, 메일은 요청의 
       rfq: { no: "DC-2026-0001", rows: [{ seq: 1, category: "일반독성", name: "4주 반복투여", cond: "" }] },
       draft: { items: [], note: "", pdfName: "기관견적.pdf", status: "draft", common: {} },
       inviteId: "inv-1", rfqId: "rfq-1", croName: "바이오랩", croOrgId: null, token: "tok_abcdefgh",
-      expired: false, locked: false, declined: false, closed: false,
+      expired: false, locked: false, declined: false, closed: false, joined: true, withdrawn: false,
     };
     fx.respond = (q) => (q.table === "rfq_requests" ? { data: { user_id: "sponsor-1", email: "sponsor@example.com", reply_by: "2099-01-10" }, error: null } : { data: null, error: null });
   });
@@ -116,6 +116,14 @@ describe("견적 제출 알림: 앱 알림은 견적마다, 메일은 요청의 
     const c = sponsorCall();
     expect(c).toBeDefined();
     expect(c?.[2]).toBeUndefined();
+  });
+  it("의뢰자 알림의 분모는 안내한 기관 수가 아니라 참여한 기관 수다 (안내 수·불참 수를 알리지 않는다, 0023)", async () => {
+    fx.saveQuote.mockResolvedValueOnce({ ok: true, quote_id: "quote-1", first: true, total_invites: 9, submitted_invites: 1, joined_invites: 3 });
+    await submitQuote(json(body), ctx);
+    expect(sponsorCall()?.[1].body).toContain("참여 3곳 중 1곳 회신");
+    expect(sponsorCall()?.[1].body).not.toContain("9");
+    // 운영자 알림은 안내 전체 기준 그대로
+    expect(calls().find((c) => c[0][0] === "admin-1")?.[1].title).toContain("회신 1/9");
   });
   it("수정 제출도 앱 알림만", async () => {
     fx.saveQuote.mockResolvedValueOnce({ ok: true, quote_id: "quote-1", first: false, total_invites: 3, submitted_invites: 1 });
@@ -140,7 +148,9 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
       return { data: [
         { id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "a@example.com", status: "submitted" },
         { id: "i2", token: "tok_aaaaaaa2", cro_org_id: null, cro_email: "b@example.com", status: "submitted" },
-        { id: "i3", token: "tok_aaaaaaa3", cro_org_id: null, cro_email: "c@example.com", status: "sent" },
+        { id: "i3", token: "tok_aaaaaaa3", cro_org_id: null, cro_email: "c@example.com", status: "sent", joined_at: "2026-10-02T00:00:00Z" },
+        // 참여 결정 전 안내는 미회신으로 세지 않는다 (0023)
+        { id: "i4", token: "tok_aaaaaaa4", cro_org_id: null, cro_email: "d@example.com", status: "sent", joined_at: null },
       ], error: null };
     if (q.table === "rfq_requests" && q.op === "update") return { data: closedNow ? [{ id: "rfq-1" }] : [], error: null };
     return { data: [], error: null };
@@ -165,7 +175,7 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     expect(r.ok).toBe(false);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
   });
-  it("기한 전 마감은 미회신 기관이 있으면 의뢰자 요청 없이는 거절한다 (약관 제4조5항)", async () => {
+  it("기한 전 마감은 미회신 기관이 있으면 의뢰자 요청 없이는 거절한다 (약관 제4조7항)", async () => {
     fx.session = admin;
     fx.rfq = rfq;
     fx.respond = db(true);
@@ -189,8 +199,27 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     expect(toA[0][1].body).toContain("더 수정할 수 없습니다");
     // 기관마다 따로: 한 통에 다른 기관 주소가 섞이지 않는다
     expect(calls().some((c) => c[2]?.to.includes("a@example.com") && c[2]?.to.includes("b@example.com"))).toBe(false);
+    // 참여 결정 전 기관에는 시험물질명 없이 참여 안내가 마감되었다고만 알린다
+    const toD = calls().filter((c) => c[2]?.to.includes("d@example.com"));
+    expect(toD).toHaveLength(1);
+    expect(toD[0][1].title).toContain("참여 안내가 마감되었습니다");
+    expect(`${toD[0][1].title} ${toD[0][1].body}`).not.toContain("ABC-1");
     expect(fx.logEvent.mock.calls[0][3]).toContain("의뢰자 요청");
     expect(fx.audit).toHaveBeenCalledWith(expect.anything(), "rfq.close_replies", expect.anything(), expect.objectContaining({ after: expect.objectContaining({ sponsor_requested: true }) }));
+  });
+  it("참여한 기관이 모두 제출했으면 참여 결정 전 안내가 남아 있어도 기한 전에 마감할 수 있다", async () => {
+    fx.session = admin;
+    fx.rfq = rfq;
+    fx.respond = (q) => {
+      if (q.table === "rfq_invites") return { data: [
+        { id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "a@example.com", status: "submitted", joined_at: "2026-10-02T00:00:00Z" },
+        { id: "i4", token: "tok_aaaaaaa4", cro_org_id: null, cro_email: "d@example.com", status: "sent", joined_at: null },
+      ], error: null };
+      return db(true)(q);
+    };
+    const r = await closeRoute(json({}), { params: Promise.resolve({ no: "DC-2026-0001" }) });
+    expect(r.status).toBe(200);
+    expect(fx.logEvent.mock.calls[0][3]).toContain("전원 회신");
   });
   it("전원 회신했으면 기한 전이라도 의뢰자 요청 없이 마감하고 제출 기관에 알린다", async () => {
     fx.session = admin;
@@ -266,5 +295,104 @@ describe("기한 연장으로 마감된 회신을 다시 연다", () => {
     fx.session = admin;
     fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "selected", compared_at: null, selected_quote_id: "q1", reply_by: "2026-10-10" };
     expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(400);
+  });
+});
+
+describe("참여 결정 기한 연장 (운영자, 요청마다 한 번, 0023)", () => {
+  const ctx = { params: Promise.resolve({ no: "DC-2026-0001" }) };
+  const base = {
+    id: "rfq-1", rfq_no: "DC-2026-0001", status: "distributed", compared_at: null, selected_quote_id: null, reply_by: "2099-01-20",
+    join_by: "2099-01-05T14:59:59.000Z", join_by_extended_at: null, categories: ["일반독성"], substance: "ABC-1", user_id: "sponsor-1", distributed_at: "2099-01-01T00:00:00Z",
+  };
+  const offers = [
+    { id: "i-u", token: "tok_undecided", cro_org_id: null, cro_email: "undecided@example.com", status: "sent", joined_at: null, expires_at: "2099-01-27T14:59:59Z" },
+    { id: "i-j", token: "tok_joined001", cro_org_id: null, cro_email: "joined@example.com", status: "sent", joined_at: "2099-01-02T00:00:00Z", expires_at: "2099-01-27T14:59:59Z" },
+  ];
+  const db = (updated = true) => (q: Q) => {
+    if (q.table === "rfq_requests" && q.op === "update") return { data: updated ? [{ id: "rfq-1" }] : [], error: null };
+    if (q.table === "rfq_invites" && q.op === "select") return { data: offers, error: null };
+    return { data: [], error: null };
+  };
+
+  it("한 번 늘리고, 참여 결정 전 기관에만 시험물질명 없이 알린다. 의뢰자에게도 알린다", async () => {
+    fx.session = admin;
+    fx.rfq = base;
+    fx.respond = db();
+    const r = await changeDeadline(json({ joinBy: "2099-01-08" }), ctx);
+    expect(r.status).toBe(200);
+    const up = fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update");
+    expect(up?.payload).toMatchObject({ join_by: new Date("2099-01-08T23:59:59+09:00").toISOString() });
+    expect((up?.payload as Record<string, unknown>).join_by_extended_at).toEqual(expect.any(String));
+    // 한 번만: 연장 기록이 비어 있을 때만 바꾼다 (조건부 갱신)
+    expect(up?.filters).toContainEqual(["is:join_by_extended_at", null]);
+    expect(up?.filters).toContainEqual(["is:selected_quote_id", null]);
+    // 회신 기한·초대 기한은 그대로
+    expect(fx.calls.some((c) => c.table === "rfq_invites" && c.op === "update")).toBe(false);
+    const toU = calls().filter((c) => c[2]?.to.includes("undecided@example.com"));
+    expect(toU).toHaveLength(1);
+    expect(toU[0][1].title).toContain("참여 결정 기한이 2099-01-08로 늘었습니다");
+    expect(`${toU[0][1].title} ${toU[0][1].body}`).not.toContain("ABC-1");
+    expect(calls().some((c) => c[2]?.to.includes("joined@example.com"))).toBe(false);
+    expect(calls().find((c) => c[0][0] === "sponsor-1")?.[1].title).toContain("참여 결정 기한");
+    expect(fx.audit).toHaveBeenCalledWith(expect.anything(), "rfq.join_by", expect.anything(), expect.anything());
+    expect(fx.logEvent.mock.calls[0][1]).toBe("join_by_extended");
+  });
+  it("이미 한 번 늘렸으면 409", async () => {
+    fx.session = admin;
+    fx.rfq = { ...base, join_by_extended_at: "2099-01-03T00:00:00Z" };
+    fx.respond = db();
+    const r = await changeDeadline(json({ joinBy: "2099-01-08" }), ctx);
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("한 번만");
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+  });
+  it("회신 기한을 넘기거나 지금 기한보다 이르면 400", async () => {
+    fx.session = admin;
+    fx.rfq = base;
+    fx.respond = db();
+    expect((await changeDeadline(json({ joinBy: "2099-01-21" }), ctx)).status).toBe(400);
+    expect((await changeDeadline(json({ joinBy: "2099-01-05" }), ctx)).status).toBe(400);
+    expect((await changeDeadline(json({ joinBy: "2099-1-8" }), ctx)).status).toBe(400);
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+  });
+  it("참여 결정 기한이 없는 예전 요청, 회신 마감된 요청은 늘리지 않는다", async () => {
+    fx.session = admin;
+    fx.respond = db();
+    fx.rfq = { ...base, join_by: null };
+    expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(400);
+    fx.rfq = { ...base, status: "compared", compared_at: "2099-01-21T00:00:00Z" };
+    expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(400);
+  });
+  it("그 사이 다른 운영자가 먼저 늘렸으면 409 이고 아무에게도 알리지 않는다", async () => {
+    fx.session = admin;
+    fx.rfq = base;
+    fx.respond = db(false);
+    expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(409);
+    expect(fx.notifyUsers).not.toHaveBeenCalled();
+  });
+  it("운영자만 할 수 있다", async () => {
+    fx.session = { userId: "sponsor-1", email: "s@example.com", profile: { role: "requester" } };
+    fx.rfq = base;
+    expect((await changeDeadline(json({ joinBy: "2099-01-08" }), ctx)).status).toBe(403);
+  });
+});
+
+describe("회신 기한 변경 알림: 참여 결정 전 기관에는 시험물질명을 쓰지 않는다", () => {
+  it("참여한 기관은 물질명과 함께, 참여 결정 전 기관은 분야만", async () => {
+    fx.session = admin;
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "distributed", compared_at: null, selected_quote_id: null, reply_by: "2099-01-01", substance: "ABC-1", categories: ["일반독성"], user_id: null };
+    fx.respond = (q) => {
+      if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
+      if (q.table === "rfq_invites" && q.op === "select") return { data: [
+        { id: "i1", token: "tok_aaaaaaa1", cro_org_id: null, cro_email: "joined@example.com", status: "sent", joined_at: "2026-10-02T00:00:00Z" },
+        { id: "i2", token: "tok_aaaaaaa2", cro_org_id: null, cro_email: "undecided@example.com", status: "sent", joined_at: null },
+      ], error: null };
+      return { data: [], error: null };
+    };
+    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), { params: Promise.resolve({ no: "DC-2026-0001" }) })).status).toBe(200);
+    expect(calls().find((c) => c[2]?.to.includes("joined@example.com"))?.[1].body).toContain("ABC-1");
+    const u = calls().find((c) => c[2]?.to.includes("undecided@example.com"));
+    expect(`${u?.[1].title} ${u?.[1].body}`).not.toContain("ABC-1");
+    expect(u?.[1].body).toContain("일반독성 견적 요청");
   });
 });

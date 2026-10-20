@@ -54,8 +54,9 @@ const FIELD_LABELS: Record<string, string> = {
   start: "희망 착수 시기",
   replyBy: "견적 회신 희망일",
   budget: "예산 범위",
-  croCount: "요청할 기관 수",
+  croCount: "받을 견적 수",
   nominees: "지명 기관",
+  nomineesOnly: "지명 기관에만 안내",
   confid: "정보 공개 방식",
   categories: "시험 항목",
   notes: "추가 설명",
@@ -228,6 +229,8 @@ export function NewRequest({
       return field({ ...f, help: f.help || wiz.sub });
     });
   const contactOk = !!(contact.company && contact.name && contact.email);
+  // "지명 기관에만 안내"는 지명 기관을 고른 경우에만 보인다 (서버도 지명 기관이 없으면 무시한다)
+  const hasNominees = Array.isArray(values.nominees) && values.nominees.length > 0;
   const checks = requestChecks(values);
   const submit = async () => {
     if (busy || preview) return;
@@ -553,10 +556,10 @@ export function NewRequest({
         )}
         {step === 1 && (
           <section className="request__section request__fields">
-            {baseFields(["start", "replyBy", "budget", "croCount", "nominees"])}
+            {baseFields(["start", "replyBy", "budget", "croCount", "nominees", ...(hasNominees ? ["nomineesOnly"] : [])])}
             <p className="fld__help">
-              승인된 기관 중 시험 분야가 맞는 곳에 순차적으로 전달합니다. 기관이
-              부족하면 선택한 수보다 적게 전달될 수 있습니다.
+              시험 분야가 맞는 승인 기관에 참여 안내가 갑니다. 참여한 기관이
+              고른 수보다 적으면 받는 견적도 그만큼 줄어들 수 있습니다.
             </p>
           </section>
         )}
@@ -597,7 +600,7 @@ export function NewRequest({
                       "authority",
                     ]
                   : section === 1
-                    ? ["start", "replyBy", "budget", "croCount", "nominees"]
+                    ? ["start", "replyBy", "budget", "croCount", "nominees", ...(hasNominees ? ["nomineesOnly"] : [])]
                     : ["confid", "notes"];
               return (
                 <section className="request__section" key={section}>
@@ -618,7 +621,9 @@ export function NewRequest({
                         <dd>
                           {Array.isArray(values[id])
                             ? (values[id] as string[]).join(", ") || "미선택"
-                            : String(values[id] || "입력하지 않음")}
+                            : typeof values[id] === "boolean" || id === "nomineesOnly"
+                              ? values[id] === true ? "예" : "아니요"
+                              : String(values[id] || "입력하지 않음")}
                         </dd>
                       </div>
                     ))}

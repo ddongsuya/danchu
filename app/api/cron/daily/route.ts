@@ -3,12 +3,9 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo } from "@/lib/notify";
 import { closeReplies } from "@/lib/compare";
 import { distributeOpenRfqs, inviteMailTo, orgMailTargets, resendUnmailedInvites } from "@/lib/distribute";
-import { loadByInvite } from "@/lib/quote-load";
 import { todaySeoul } from "@/lib/format";
-import { won } from "@/lib/format";
-import { saveQuote, type QuoteItemInput } from "@/lib/rpc";
 import { captureError } from "@/lib/observe";
-import { autoReplyEnabled, isProduction } from "@/lib/env";
+import { isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
 import { daysSince, reminderStage } from "@/lib/contract-reminder";
@@ -17,6 +14,8 @@ import { contractFollowupMail, sendMail } from "@/lib/mail";
 import { notificationRecipients } from "@/lib/mail-preferences";
 import { needsContractReminder, replyPath } from "@/lib/concierge";
 import { closeRepliesDue, repliesClosed } from "@/lib/reply-window";
+import { occupiesSeat } from "@/lib/request-policy";
+import { runOptInSteps } from "@/lib/opt-in-cron";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,10 +45,14 @@ function addDays(ymd: string, n: number): string {
 
 /**
  * 매일 09:00 KST 실행 (vercel.json crons).
- * 1) 미회신 기관에 D-2·당일 리마인더
- * 2) 자동 회신을 켠 기관의 완성된 초안을 기한 당일 예비 견적으로 제출
- * 3) 회신 기한이 지난 요청의 회신 마감 (제출 1건 이상): compared_at 을 채워 남은 회신을 닫고 의뢰자에게 요약을 한 번 보낸다.
- *    비교표 공개 단계는 없다. 의뢰자는 첫 견적부터 비교표를 본다 (lib/reply-window.ts)
+ * 0) 빠진 참여 안내 보충, 안 간 안내 메일 재발송
+ * 0-2) 참여 단계 (0023, lib/opt-in-cron.ts): 참여 결정 기한 경과 처리(지명 기관 몫 자리 풀기), 참여 부족 알림(운영자 + 의뢰자 1회),
+ *      회신 기한 3영업일 전 참여 1곳 이하 알림(운영자), 빈 자리 재안내("자리가 생겼습니다")
+ * 1) 참여한 기관 중 아직 제출하지 않은 곳에 D-2·당일 리마인더 (참여 결정 전 안내에는 보내지 않는다)
+ * 2) 회신 기한이 지난 요청의 회신 마감 (제출 1건 이상): compared_at 을 채워 남은 회신을 닫고 의뢰자에게 요약을 한 번 보낸다.
+ *    제출 0건이면 마감하지 않는다. 비교표 공개 단계는 없다. 의뢰자는 첫 견적부터 비교표를 본다 (lib/reply-window.ts)
+ * 자동 회신(기관 카탈로그 초안을 기한 당일 예비 견적으로 제출)은 0023 에서 없앴다. 견적은 참여한 기관만 낼 수 있고,
+ * 참여는 기관 본인이 눌러야 한다 (save_quote 가 참여 기록 없는 초대를 not_joined 로 거절한다)
  */
 export async function GET(req: Request) {
   if (!authorized(req)) {
@@ -66,7 +69,7 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
-  const out = { reminded: 0, autoSubmitted: 0, compared: 0, distributed: 0, outcomeAsked: 0, resent: 0, contractReminded: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
+  const out = { reminded: 0, compared: 0, distributed: 0, outcomeAsked: 0, resent: 0, contractReminded: 0, joinDeadlines: 0, lowParticipation: 0, extendAsked: 0, reoffered: 0, retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 }, errors: [] as string[] };
 
   // 속도 제한 카운터 정리 (함수가 아직 없으면 무시)
   await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
@@ -81,11 +84,21 @@ export async function GET(req: Request) {
     out.resent = (await resendUnmailedInvites()).sent;
   });
 
-  // 1) 리마인더
+  // 0-2) 참여 단계: 참여 결정 기한, 참여 부족, 빈 자리 재안내 (lib/opt-in-cron.ts)
+  await step("opt-in", out.errors, async () => {
+    const r = await runOptInSteps(sb, today);
+    out.joinDeadlines = r.joinDeadlines;
+    out.lowParticipation = r.lowParticipation;
+    out.extendAsked = r.extendAsked;
+    out.reoffered = r.reoffered;
+    out.errors.push(...r.errors);
+  });
+
+  // 1) 리마인더: 참여한 기관 중 아직 제출하지 않은 곳만 (참여 결정 전 안내·철회·취소에는 보내지 않는다, 0023)
   await step("remind", out.errors, async () => {
   for (const [kind, day] of [["d2", addDays(today, 2)], ["d0", today]] as const) {
     const { data: invites } = await sb.from("rfq_invites").select("*").eq("reply_by", day).in("status", ["sent", "draft"]);
-    for (const inv of invites ?? []) {
+    for (const inv of (invites ?? []).filter((i) => occupiesSeat(i))) {
       const { data: done } = await sb.from("invite_reminders").select("invite_id").eq("invite_id", inv.id).eq("kind", kind).maybeSingle();
       if (done) continue;
       const { data: rfq } = await sb.from("rfq_requests").select("substance, status, compared_at").eq("id", inv.rfq_id).maybeSingle();
@@ -99,9 +112,11 @@ export async function GET(req: Request) {
       // 담당자 계정이 없는 기관(운영자 관리 포함)은 로그인 없는 회신 링크로. 계정이 있으면 포털 링크 그대로
       const href = replyPath(inv, { managed, members: ids.length });
       // 운영자 관리 기관의 초안은 운영자가 PDF 를 옮겨 적다 저장한 것일 수 있고, 기관은 PDF 를 이미 메일로 보냈을 수 있다. 초안 여부로 문구를 나누지 않는다
+      // 받는 기관은 모두 참여한 기관이므로 시험물질명을 적어도 된다. 제출이 어려우면 철회를 안내한다 (철회하면 청구 없음, 자리는 다른 기관에)
+      const withdrawHint = "제출이 어려우면 요청 화면에서 참여를 철회해 주세요. 철회하면 청구하지 않고 자리는 다른 기관에 돌아갑니다.";
       const body = managed
-        ? "아직 제출된 견적이 없습니다. 아래 버튼의 회신 링크에서 직접 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 비교표에 옮겨 적습니다. 이미 PDF를 보내셨다면 이 안내는 넘기셔도 됩니다."
-        : inv.status === "draft" ? "작성 중인 초안이 있습니다. 확인하고 제출해 주세요." : "아직 회신하지 않았습니다. 회신하지 않을 경우 '회신하지 않음'으로 처리해 주시면 의뢰자에게 안내됩니다.";
+        ? `참여하신 요청에 아직 제출된 견적이 없습니다. 아래 버튼의 회신 링크에서 직접 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 비교표에 옮겨 적습니다. 이미 PDF를 보내셨다면 이 안내는 넘기셔도 됩니다. ${withdrawHint}`
+        : inv.status === "draft" ? `작성 중인 초안이 있습니다. 확인하고 제출해 주세요. ${withdrawHint}` : `참여하신 요청의 견적을 아직 작성하지 않았습니다. ${withdrawHint}`;
       await notifyUsers(
         ids,
         { kind: "견적", title: kind === "d2" ? `회신 기한 이틀 전 · ${inv.rfq_no} ${rfq.substance}` : `오늘이 회신 기한입니다 · ${inv.rfq_no} ${rfq.substance}`, body, href },
@@ -113,47 +128,7 @@ export async function GET(req: Request) {
   }
   });
 
-  // 2) 자동 회신 (기한 당일, auto_reply 기관, 초안이 확인 필요 없이 완성된 경우)
-  await step("auto-reply", out.errors, async () => {
-  if (!autoReplyEnabled()) return; // 출시 범위 밖 (lib/env.ts 참고)
-  const { data: autoOrgs } = await sb.from("cro_orgs").select("id").eq("auto_reply", true);
-  const autoIds = (autoOrgs ?? []).map((o) => o.id as string);
-  if (autoIds.length) {
-    const { data: invites } = await sb.from("rfq_invites").select("*").eq("reply_by", today).in("status", ["sent", "draft"]).in("cro_org_id", autoIds);
-    for (const inv of invites ?? []) {
-      try {
-        const got = await loadByInvite(inv);
-        if (!got || got.closed || got.expired) continue;
-        const d = got.draft;
-        if (!d || d.status === "submitted") continue;
-        const complete = d.items.length > 0 && d.items.every((it) => it.avail === "불가" ? !!it.reason : it.avail === "가능" && it.amount && it.weeks && !(it.checks && it.checks.length));
-        if (!complete || d.items.every((it) => it.avail === "불가")) continue;
-        const total = d.items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
-        const weeks = Math.max(0, ...d.items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
-        const valid = d.common.validUntil || addDays(today, 30);
-        const rows = got.rfq.rows;
-        const items: QuoteItemInput[] = d.items.map((it) => {
-          const r = rows.find((x) => x.seq === it.seq)!;
-          return { seq: it.seq, category: r.category, name: r.name, cond: r.cond, avail: it.avail || null, amount: it.avail !== "불가" && it.amount ? Number(it.amount) : null, weeks: it.avail !== "불가" && it.weeks ? Number(it.weeks) : null, reason: it.reason || null, design: it.design ?? {}, source: it.source ?? "catalog", unit: it.unit ?? "total", unit_price: it.unitPrice ? Number(it.unitPrice) : null, sample_count: it.sampleCount ? Number(it.sampleCount) : null };
-        });
-        const saved = await saveQuote(inv.id, { total_amount: total || null, total_weeks: weeks || null, vat: "별도", valid_until: valid, auto: true, start_date: d.common.startDate || null, pay_terms: null, substance_qty: null, report_lang: null, includes: d.common.includes, note: d.note }, items, true, null, got.token);
-        if (!saved.ok) throw new Error(`save_quote ${saved.code}`);
-        const q = { id: saved.quote_id };
-        const { data: r } = await sb.from("rfq_requests").select("user_id, email").eq("id", inv.rfq_id).maybeSingle();
-        await logEvent(inv.rfq_id, "quote_submitted", `${inv.cro_name} 예비 견적 자동 제출`, `총 ${won(total)} · ${weeks}주`, null, { quoteId: q.id, auto: true });
-        // 견적 라우트와 같은 규칙: 앱 알림은 견적마다, 메일은 이 요청의 첫 견적일 때만 (app/api/quote/[token]/route.ts)
-        const mailWorthy = (saved.first ?? true) && saved.submitted_invites === 1;
-        if (r?.user_id) await notifyUsers([r.user_id], { kind: "견적", title: `예비 견적이 도착했습니다 · ${inv.rfq_no}`, body: `${inv.cro_name} · 카탈로그 기준 자동 회신 · 비교표에서 바로 확인할 수 있습니다.`, href: `/app/r/${inv.rfq_no}/compare` }, mailWorthy && r.email ? { to: [r.email], subject: `[단추] ${inv.rfq_no} 첫 견적이 도착했습니다` } : undefined);
-        out.autoSubmitted++;
-      } catch (e) {
-        captureError(e, "cron:auto-reply", { invite: inv.id, rfq: inv.rfq_no });
-        out.errors.push(`auto:${inv.rfq_no}`);
-      }
-    }
-  }
-  });
-
-  // 3) 기한 후 회신 마감 + 의뢰자 요약 (한 번만, lib/compare.ts closeReplies)
+  // 2) 기한 후 회신 마감 + 의뢰자 요약 (한 번만, lib/compare.ts closeReplies). 제출 0건이면 마감하지 않는다
   await step("close-replies", out.errors, async () => {
   const { data: rfqs } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).is("compared_at", null).lt("reply_by", today);
   for (const rfq of rfqs ?? []) {
@@ -161,17 +136,17 @@ export async function GET(req: Request) {
     const r = await closeReplies(rfq, null, true);
     if (r.ok) {
       out.compared++;
-      // 미회신 기관 이름을 적는다. 운영자 관리 기관이 기한 당일 늦게 PDF 를 보냈다면 기한을 늘려 다시 연 뒤 옮겨 적어야 한다
+      // 참여했지만 내지 않은 기관 이름을 적는다 (운영자 알림만). 운영자 관리 기관이 기한 당일 늦게 PDF 를 보냈다면 기한을 늘려 다시 연 뒤 옮겨 적어야 한다
       const names = r.pendingNames?.length ? `미회신: ${r.pendingNames.join(", ")}. 견적서 PDF가 메일로 와 있다면 기한을 늘려 다시 연 뒤 옮겨 적어 주세요.` : undefined;
       await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 회신 마감 · 견적 ${r.count}건${r.pending ? ` · 미회신 ${r.pending}곳` : ""}`, body: names, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
     } else if (!r.count) {
       // 회신이 하나도 없으면 마감하지 않고(늦은 회신을 받을 수 있게) 운영자에게 재배포 판단을 넘긴다 (한 번만)
       const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "no_reply").maybeSingle();
       if (!ev) {
-        await logEvent(rfq.id, "no_reply", "기한 경과 · 회신 없음", "재배포 또는 기한 연장 판단 필요", null);
-        await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "재배포하거나 기한을 연장해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+        await logEvent(rfq.id, "no_reply", "기한 경과 · 회신 없음", "참여 안내 추가 또는 기한 연장 판단 필요", null);
+        await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "제출된 견적이 없어 회신을 마감하지 않았습니다. 의뢰자와 상의해 회신 기한을 늘리고, 필요하면 참여 안내를 추가해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
         // 의뢰자에게도 한 번: 기다리는 이유와 선택지
-        await notifyUsers(rfq.user_id ? [rfq.user_id] : [], { kind: "비교", title: `${rfq.rfq_no} 회신 기한이 지났지만 아직 견적이 없습니다`, body: `${rfq.substance} · 운영자가 기한을 늘려 다시 전달하거나 기관을 추가합니다. 진행을 원하지 않으시면 요청 화면에서 마무리할 수 있습니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+        await notifyUsers(rfq.user_id ? [rfq.user_id] : [], { kind: "비교", title: `${rfq.rfq_no} 회신 기한이 지났지만 아직 견적이 없습니다`, body: `${rfq.substance} · 운영자가 회신 기한 연장과 참여 안내 추가를 안내해 드립니다. 진행을 원하지 않으시면 요청 화면에서 마무리할 수 있습니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
       }
     }
   }

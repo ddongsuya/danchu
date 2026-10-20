@@ -419,6 +419,17 @@ begin
     select i.id, i.joined_at, i.join_channel, i.join_actor, i.join_terms_version from public.rfq_invites i where i.joined_at is not null;
 end $$;
 
+-- 8-1) 참여 결정 기한 연장 기록 열 (운영자 연장은 요청마다 한 번, 앱이 이 열이 빌 때만 조건부로 바꾼다)
+do $$
+declare rq uuid := pg_temp.t_offer('T-JOIN-EXT', '3곳', now() + interval '1 day');
+begin
+  perform pg_temp.t_assert((select join_by_extended_at is null from public.rfq_requests where id = rq), '새 요청은 연장 기록 없음');
+  update public.rfq_requests set join_by = join_by + interval '2 days', join_by_extended_at = now() where id = rq and join_by_extended_at is null;
+  perform pg_temp.t_assert((select join_by_extended_at is not null from public.rfq_requests where id = rq), '첫 연장 기록');
+  update public.rfq_requests set join_by = join_by + interval '2 days' where id = rq and join_by_extended_at is null;
+  perform pg_temp.t_assert((select join_by < now() + interval '4 days' from public.rfq_requests where id = rq), '두 번째 조건부 연장은 바뀌지 않음');
+end $$;
+
 -- 9) 데이터가 있는 상태에서 0023 을 다시 적용해도 참여 기록·청구가 그대로다
 \i :f
 
@@ -430,4 +441,110 @@ begin
   perform pg_temp.t_eq((select count(*)::int from public.rfq_invites where joined_at is not null), (select count(*)::int from t_ids), '재적용해도 새로 참여 처리되는 초대 없음');
   perform pg_temp.t_eq(public.danchu_schema_version(), 23, '스키마 판 23');
   perform pg_temp.t_assert(to_regprocedure('public.join_offer(uuid, text, uuid, text, text, text, text)') is not null, 'join_offer 있음');
+end $$;
+
+-- 10) 검토 반영 (2026-10-20)
+--  a) 참여한 담당자 계정은 계정이 실제로 지워졌을 때만 비울 수 있다 (앱 코드가 "누른 사람"을 지우지 못한다)
+--  b) 참여 기록의 IP·브라우저는 보존 기간(90일)이 지난 뒤에만 비울 수 있고, 다른 값으로는 바꿀 수 없다
+--  c) 시범 판(pilot-…)으로 참여한 요청은 청구하지 않는다 (건당 이용료·성사수수료 모두)
+--  d) 자리 수 바꾸기는 요청 행을 잠그고 참여 수를 센다 (set_seat_count)
+--  e) save_quote 는 의뢰자 알림용 참여 기관 수(joined_invites)를 따로 돌려준다
+do $$
+declare
+  o uuid := pg_temp.t_org('검토기관');
+  rq uuid := pg_temp.t_offer('T-JOIN-REVIEW', '전체');
+  i uuid := pg_temp.t_invite(rq, o, now(), false);
+  k uuid := pg_temp.t_invite(rq, pg_temp.t_org('검토기관2'), now(), false);
+  member uuid := pg_temp.t_user('review-member@example.test', 'cro', o);
+  n int := 0;
+begin
+  perform pg_temp.t_eq(pg_temp.j(i, 'portal', member), 'ok', '포털 참여');
+  begin update public.rfq_invites set join_user_id = null where id = i;
+  exception when others then if sqlerrm like 'join_record_protected%' then n := n + 1; end if; end;
+  perform pg_temp.t_eq(n, 1, 'a) 계정이 남아 있으면 누른 담당자를 비울 수 없다');
+  perform pg_temp.t_eq((select join_user_id from public.rfq_invites where id = i), member, 'a) 누른 담당자 그대로');
+
+  n := 0;
+  begin update public.rfq_invites set join_ip = null, join_ua = null where id = i;
+  exception when others then if sqlerrm like 'join_record_protected%' then n := n + 1; end if; end;
+  perform pg_temp.t_eq(n, 1, 'b) 보존 기간 안에는 IP·브라우저를 지울 수 없다');
+  -- 90일 지난 참여로 만든다 (참여 시각은 트리거가 막으므로 잠시 끈다)
+  alter table public.rfq_invites disable trigger rfq_invites_guard_join;
+  update public.rfq_invites set joined_at = now() - interval '91 days' where id = i;
+  alter table public.rfq_invites enable trigger rfq_invites_guard_join;
+  n := 0;
+  begin update public.rfq_invites set join_ip = '198.51.100.1' where id = i;
+  exception when others then if sqlerrm like 'join_record_protected%' then n := n + 1; end if; end;
+  perform pg_temp.t_eq(n, 1, 'b) 보존 기간이 지나도 다른 값으로는 못 바꾼다');
+  update public.rfq_invites set join_ip = null, join_ua = null where id = i;
+  perform pg_temp.t_assert((select join_ip is null and join_ua is null and join_channel = 'portal' and join_terms_version = 'v1' and join_user_id = member from public.rfq_invites where id = i),
+    'b) 보존 기간이 지나면 IP·브라우저만 비우고 나머지 참여 기록은 남는다');
+
+  -- e) 참여 2곳 중 1곳 제출: 참여 기관 수와 안내 수를 따로 돌려준다
+  perform pg_temp.t_eq(pg_temp.j(k), 'ok', 'K 참여');
+  perform pg_temp.t_invite(rq, pg_temp.t_org('검토미결정'), now(), false);
+  declare r jsonb := public.save_quote(k, jsonb_build_object('total_amount', 20000000), '[]'::jsonb, true, null, pg_temp.tok(k));
+  begin
+    perform pg_temp.t_eq((r->>'total_invites')::int, 3, 'e) 안내 전체 3');
+    perform pg_temp.t_eq((r->>'joined_invites')::int, 2, 'e) 참여 기관 2');
+    perform pg_temp.t_eq((r->>'submitted_invites')::int, 1, 'e) 제출 1');
+  end;
+end $$;
+
+do $$
+declare
+  o uuid := pg_temp.t_org('시범참여기관', 300000, 0.03);
+  rq uuid := pg_temp.t_offer('T-JOIN-PILOT', '전체');
+  p uuid := pg_temp.t_invite(rq, o, now(), false);
+  paid uuid := pg_temp.t_invite(rq, pg_temp.t_org('유료판기관', 300000, 0.03), now(), false);
+  l record;
+  s record;
+begin
+  perform pg_temp.t_eq(pg_temp.j(p, 'token', null, 'pilot-2026-10-20b'), 'ok', '시범 판으로 참여');
+  perform pg_temp.t_eq(pg_temp.j(paid, 'token', null, 'paid-2027-01'), 'ok', '유료 판으로 참여');
+  perform pg_temp.t_eq(pg_temp.t_save(p, pg_temp.tok(p), true), 'ok', '시범 참여 제출');
+  perform pg_temp.t_eq(pg_temp.t_save(paid, pg_temp.tok(paid), true), 'ok', '유료 참여 제출');
+  update public.cro_quotes set total_amount = 60000000, pdf_path = 'x/q.pdf', start_date = current_date, valid_until = current_date + 30 where invite_id in (p, paid);
+  perform public.report_contract(pg_temp.t_award((select id from public.cro_quotes where invite_id = p)), (now() at time zone 'Asia/Seoul')::date, 70000000, '');
+
+  select * into l from public.billing_lines(pg_temp.t_month(0), pg_temp.t_month(1)) where invite_id = p;
+  perform pg_temp.t_eq(l.join_status, 'pilot', 'c) 시범 참여 표시');
+  perform pg_temp.t_eq(l.chargeable, false, 'c) 시범 참여 견적은 청구하지 않음');
+  perform pg_temp.t_eq(l.fee_due, 0::bigint, 'c) 시범 참여 0원');
+  select * into l from public.billing_lines(pg_temp.t_month(0), pg_temp.t_month(1)) where invite_id = paid;
+  perform pg_temp.t_eq(l.join_status, 'joined', 'c) 유료 판 참여');
+  perform pg_temp.t_eq(l.chargeable, true, 'c) 유료 판 참여 견적은 청구');
+  perform pg_temp.t_eq((select invite_joined from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o and kind = 'settlement'), false, 'c) 시범 참여 수주는 합계에 넣지 않음');
+  select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
+  perform pg_temp.t_eq(s.per_quote, 0, 'c) 시범 참여 건당 0');
+  perform pg_temp.t_eq(s.settled_count, 0, 'c) 시범 참여 정산 0');
+  perform pg_temp.t_eq(s.total_due, 0::bigint, 'c) 시범 참여 합계 0');
+end $$;
+
+do $$
+declare
+  rq uuid := pg_temp.t_offer('T-JOIN-SEATCNT', '5곳');
+  a uuid := pg_temp.t_invite(rq, pg_temp.t_org('자리A'), now(), false);
+  b uuid := pg_temp.t_invite(rq, pg_temp.t_org('자리B'), now(), false);
+  c uuid := pg_temp.t_invite(rq, pg_temp.t_org('자리C'), now(), false);
+  d uuid := pg_temp.t_invite(rq, pg_temp.t_org('자리D'), now(), false);
+  r jsonb;
+begin
+  perform pg_temp.t_eq(pg_temp.j(a), 'ok', 'A 참여');
+  perform pg_temp.t_eq(pg_temp.j(b), 'ok', 'B 참여');
+  perform pg_temp.t_eq(pg_temp.j(c), 'ok', 'C 참여');
+  perform pg_temp.t_eq(pg_temp.j(d), 'ok', 'D 참여');
+  r := public.set_seat_count(rq, '3곳');
+  perform pg_temp.t_eq(r->>'code', 'too_few', 'd) 참여 4곳인데 3곳으로 줄이기 거절');
+  perform pg_temp.t_eq((r->>'used')::int, 4, 'd) 잠금 안에서 센 참여 수');
+  perform pg_temp.t_eq((select cro_count from public.rfq_requests where id = rq), '5곳', 'd) 자리 수 그대로');
+  perform pg_temp.t_eq(public.set_seat_count(rq, '10곳')->>'code', 'bad_value', 'd) 잘못된 값');
+  perform pg_temp.t_eq(pg_temp.w(d), 'ok', 'D 철회');
+  perform pg_temp.t_eq(pg_temp.w(c), 'ok', 'C 철회');
+  r := public.set_seat_count(rq, '3곳');
+  perform pg_temp.t_eq((r->>'ok')::boolean, true, 'd) 참여 2곳이면 3곳으로 줄일 수 있다');
+  perform pg_temp.t_eq(r->>'before', '5곳', 'd) 전 값');
+  perform pg_temp.t_eq((select cro_count from public.rfq_requests where id = rq), '3곳', 'd) 자리 수 바뀜');
+  update public.rfq_requests set status = 'cancelled' where id = rq;
+  perform pg_temp.t_eq(public.set_seat_count(rq, '전체')->>'code', 'closed', 'd) 취소된 요청은 바꾸지 않음');
 end $$;

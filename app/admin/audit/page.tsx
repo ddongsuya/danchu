@@ -10,7 +10,7 @@ const ACTION_KO: Record<string, string> = {
   "org.create": "기관 추가(운영자 관리)", "org.optout": "수신 거부 처리",
   "user.role": "역할·기관 연결 변경", "user.delete": "계정 삭제",
   "invite.billing": "청구 제외·복원", "invite.decline_proxy": "불참 대리 기록", "invite.withdraw_proxy": "참여 철회 대리 기록",
-  "rfq.deadline": "회신 기한 변경",
+  "rfq.deadline": "회신 기한 변경", "rfq.join_by": "참여 결정 기한 연장", "rfq.distribute_override": "지명 기관 밖 참여 안내(의뢰자 요청)", "rfq.opt_in_transition": "참여 선택형 전환",
   "rfq.close_replies": "회신 마감",
   "quote.proxy": "견적 대리 입력",
   "award.contract": "계약 체결 기록·정정", "award.contract_status": "계약 상태 기록",
@@ -20,7 +20,7 @@ const rfqOf = (label: string | null) => (label ? label.split(" · ")[0] || null 
 const TARGET_HREF: Record<string, (id: string, label: string | null) => string | null> = {
   cro_org: (id) => `/admin/cros/${id}`,
   profile: () => "/admin/users",
-  rfq_request: (_id, label) => (label ? `/admin/r/${label}` : null),
+  rfq_request: (id, label) => (id && label ? `/admin/r/${label}` : null),
   rfq_invite: () => "/admin/billing",
   cro_quote: (_id, label) => (rfqOf(label) ? `/admin/r/${rfqOf(label)}` : null),
   rfq_award: () => "/admin/awards",

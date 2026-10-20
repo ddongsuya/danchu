@@ -143,7 +143,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
               </span>
             </summary>
             <div style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 요청서가 배포되지 않습니다. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
+              {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 참여 안내가 오지 않습니다. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
               {list.map((it) => (
                 <ItemBlock key={it.key} item={it} rows={rowsOf(it.key)} cat={cat as Cat} onAdd={() => addVariant(it)} onPatch={patch} onDuplicate={duplicate} onRemove={remove} />
               ))}

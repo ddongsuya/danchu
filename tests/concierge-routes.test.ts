@@ -14,6 +14,7 @@ const fx = vi.hoisted(() => ({
   notifyUsers: vi.fn(),
   learn: vi.fn(async () => {}),
   saveQuote: vi.fn(async () => ({ ok: true, quote_id: "quote-1", first: true, total_invites: 3, submitted_invites: 1 })),
+  setSeatCount: vi.fn(async (..._a: unknown[]): Promise<Record<string, unknown>> => ({ ok: true, used: 0, before: "3곳" })),
   reportContract: vi.fn(async () => ({ ok: true, rfq_id: "rfq-1", rfq_no: "DC-2026-0001", user_id: "sponsor-1", substance: "ABC-1", corrected: false })),
   org: null as unknown,
   selectQuote: vi.fn(async () => ({ ok: true, award_id: "award-1", invite_id: "inv-w", cro_org_id: "org-managed", cro_name: "바이오랩" })),
@@ -68,7 +69,7 @@ vi.mock("@/lib/quote-load", () => ({
     return fx.loaded;
   },
 }));
-vi.mock("@/lib/rpc", async (orig) => ({ ...(await orig<typeof import("@/lib/rpc")>()), saveQuote: fx.saveQuote, reportContract: fx.reportContract, selectQuote: fx.selectQuote }));
+vi.mock("@/lib/rpc", async (orig) => ({ ...(await orig<typeof import("@/lib/rpc")>()), saveQuote: fx.saveQuote, reportContract: fx.reportContract, selectQuote: fx.selectQuote, setSeatCount: fx.setSeatCount }));
 vi.mock("@/lib/catalog-db", () => ({ learnFromSubmission: fx.learn }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: (fn: () => unknown) => void fn() }));
 
@@ -179,12 +180,20 @@ describe("PATCH /api/admin/rfqs/[no] 자동 공개 스위치 제거", () => {
     expect(r.status).toBe(400);
     expect(fx.calls.some((c) => c.op === "update")).toBe(false);
   });
-  it("기관 수 변경은 그대로", async () => {
+  it("기관 수 변경은 요청 행을 잠그는 DB 함수(set_seat_count)로", async () => {
     fx.session = admin;
-    fx.respond = (q) => (q.table === "rfq_invites" ? { data: [], error: null } : { data: null, error: null });
+    fx.setSeatCount.mockResolvedValueOnce({ ok: true, used: 1, before: "3곳" });
     const r = await patchRfq(json({ croCount: "5곳" }, "PATCH"), ctx);
     expect(r.status).toBe(200);
-    expect(fx.calls.find((c) => c.op === "update")?.payload).toEqual({ cro_count: "5곳" });
+    expect(fx.setSeatCount).toHaveBeenCalledWith("rfq-1", "5곳");
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+  });
+  it("이미 참여한 기관 수보다 적게 줄이면 409 (DB 가 잠금 안에서 센 수)", async () => {
+    fx.session = admin;
+    fx.setSeatCount.mockResolvedValueOnce({ ok: false, code: "too_few", used: 4 });
+    const r = await patchRfq(json({ croCount: "3곳" }, "PATCH"), ctx);
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("이미 4곳이 참여해");
   });
 });
 
@@ -200,7 +209,7 @@ describe("POST /api/quote/[token] 운영자 대리 입력", () => {
       rfq: { no: "DC-2026-0001", rows: [{ seq: 1, category: "일반독성", name: "4주 반복투여", cond: "" }] },
       draft: { items: [], note: "", pdfName: "기관견적.pdf", status: "draft", common: {} },
       inviteId: "inv-1", rfqId: "rfq-1", croName: "바이오랩", croOrgId: "org-1", token: "tok_abcdefgh",
-      expired: false, locked: false, declined: false, closed: false,
+      expired: false, locked: false, declined: false, closed: false, joined: true, withdrawn: false,
     };
     fx.respond = (q) => (q.table === "rfq_requests" ? { data: { user_id: null, email: "sponsor@example.com" }, error: null } : { data: null, error: null });
   });
@@ -225,6 +234,21 @@ describe("POST /api/quote/[token] 운영자 대리 입력", () => {
     expect((fx.saveQuote.mock.calls[0] as unknown[])[1]).toMatchObject({ entry_source: "cro" });
     expect(fx.learn).toHaveBeenCalledTimes(1);
     expect(fx.audit).not.toHaveBeenCalled();
+  });  it("기관이 참여하기 전이면 운영자 대리 입력을 409 로 막고 save_quote 를 부르지 않는다 (0023)", async () => {
+    fx.session = admin;
+    fx.loaded = { ...(fx.loaded as object), joined: false, draft: null, operator: true };
+    const r = await submitQuote(json(body), ctx);
+    expect(r.status).toBe(409);
+    expect((await r.json()).error).toContain("참여하기 전");
+    expect(fx.saveQuote).not.toHaveBeenCalled();
+    expect(fx.audit).not.toHaveBeenCalled();
+  });
+  it("기관도 참여 전에는 제출할 수 없다", async () => {
+    fx.session = null;
+    fx.loaded = { ...(fx.loaded as object), joined: false, draft: null };
+    const r = await submitQuote(json(body), ctx);
+    expect(r.status).toBe(409);
+    expect(fx.saveQuote).not.toHaveBeenCalled();
   });
 });
 
@@ -236,12 +260,13 @@ describe("POST /api/admin/rfqs/[no]/deadline 기한 변경 메일", () => {
     fx.respond = (q) => {
       if (q.table === "rfq_invites" && q.op === "select")
         return { data: [
-          { id: "inv-m", token: "tok_member1", cro_org_id: "org-member", cro_email: "member-org@example.com", status: "sent" },
-          { id: "inv-g", token: "tok_managed", cro_org_id: "org-managed", cro_email: "managed@example.com", status: "sent" },
+          { id: "inv-m", token: "tok_member1", cro_org_id: "org-member", cro_email: "member-org@example.com", status: "sent", joined_at: "2026-10-02T00:00:00Z" },
+          { id: "inv-g", token: "tok_managed", cro_org_id: "org-managed", cro_email: "managed@example.com", status: "sent", joined_at: "2026-10-02T00:00:00Z" },
+          { id: "inv-u", token: "tok_undec01", cro_org_id: "org-undecided", cro_email: "undecided@example.com", status: "sent", joined_at: null },
         ], error: null };
-      if (q.table === "profiles") return { data: [{ id: "m1", cro_org_id: "org-member" }], error: null };
+      if (q.table === "profiles") return { data: [{ id: "m1", cro_org_id: "org-member" }, { id: "u1", cro_org_id: "org-undecided" }], error: null };
       // 받는 사람은 지금의 기관 대표 메일 + 소속 담당자 (초대의 cro_email 이 아님, lib/distribute.ts orgMailTargets)
-      if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false, contact_email: "member-org@example.com" }, { id: "org-managed", managed: true, contact_email: "managed@example.com" }], error: null };
+      if (q.table === "cro_orgs") return { data: [{ id: "org-member", managed: false, contact_email: "member-org@example.com" }, { id: "org-managed", managed: true, contact_email: "managed@example.com" }, { id: "org-undecided", managed: false, contact_email: "undecided@example.com" }], error: null };
       if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
       return { data: null, error: null };
     };
@@ -255,6 +280,11 @@ describe("POST /api/admin/rfqs/[no]/deadline 기한 변경 메일", () => {
     expect(token?.[0]).toEqual([]);
     expect(token?.[2]?.to).toEqual(["managed@example.com"]);
     expect(calls.some((c) => c[1].href === "/cro" && c[2]?.to.includes("managed@example.com"))).toBe(false);
+    // 참여 결정 전 기관: 시험물질명 없이, 요약 화면 링크로 (0023)
+    const undecided = calls.find((c) => c[2]?.to.includes("undecided@example.com")) as unknown as [string[], { title: string; body?: string; href?: string }] | undefined;
+    expect(undecided?.[1].href).toBe("/cro/r/inv-u");
+    expect(`${undecided?.[1].title} ${undecided?.[1].body}`).not.toContain("ABC-1");
+    expect(calls.find((c) => c[2]?.to.includes("member-org@example.com"))?.[1]).toMatchObject({ href: "/cro" });
   });
 });
 
@@ -326,17 +356,19 @@ describe("POST /api/awards/[id]/contract 운영자 기록", () => {
   });
 });
 
-describe("POST /api/quote/[token]/decline 운영자 처리", () => {
+describe("POST /api/quote/[token]/decline 운영자 처리 (불참·철회, 0023)", () => {
   const ctx = { params: Promise.resolve({ token: "tok_abcdefgh" }) };
   beforeEach(() => {
-    fx.loaded = { rfq: { no: "DC-2026-0001" }, draft: null, inviteId: "inv-1", rfqId: "rfq-1", croName: "바이오랩", croOrgId: "org-1", token: "tok_abcdefgh", expired: false, locked: false, declined: false, closed: false };
+    fx.loaded = { rfq: { no: "DC-2026-0001" }, draft: null, inviteId: "inv-1", rfqId: "rfq-1", croName: "바이오랩", croOrgId: "org-1", token: "tok_abcdefgh", expired: false, locked: false, declined: false, closed: false, joined: false, withdrawn: false };
+    // 참여 전 불참은 sent·참여 기록 없음 조건부 갱신이 한 행을 바꿔야 성공한다
+    fx.respond = (q) => (q.table === "rfq_invites" && q.op === "update" ? { data: [{ id: "inv-1" }], error: null } : { data: null, error: null });
   });
-  it("운영자가 기관 대신 처리하면 운영 기록을 남긴다", async () => {
+  it("운영자가 기관이 메일로 알린 불참을 기록하면 운영 기록을 남긴다", async () => {
     fx.session = admin;
     expect((await declineQuote(json({ reason: "기관이 메일로 불가 회신" }), ctx)).status).toBe(200);
     expect(fx.audit).toHaveBeenCalledWith(expect.objectContaining({ userId: "admin-1" }), "invite.decline_proxy", expect.objectContaining({ type: "rfq_invite", id: "inv-1" }), expect.objectContaining({ note: "기관이 메일로 불가 회신" }));
   });
-  it("기관이 토큰으로 처리하면 운영 기록은 없다", async () => {
+  it("기관이 토큰으로 불참하면 운영 기록은 없다", async () => {
     fx.session = null;
     expect((await declineQuote(json({}), ctx)).status).toBe(200);
     expect(fx.audit).not.toHaveBeenCalled();
@@ -381,7 +413,7 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
           : { data: [{ invite_id: "inv-l" }], error: null };
       if (q.table === "cro_quotes") return { data: { id: QID, invite_id: "inv-w", cro_org_id: "org-managed", cro_name: "바이오랩", total_amount: 1000 }, error: null };
       if (q.table === "rfq_invites" && q.filters.some(([k, v]) => k === "id" && v === "inv-w")) return { data: { id: "inv-w", token: "tok_winner1", cro_org_id: "org-managed", cro_email: "lab@example.com" }, error: null };
-      if (q.table === "rfq_invites") return { data: [{ id: "inv-l", token: "tok_loser01", cro_org_id: "org-solo", cro_email: "solo@example.com", status: "submitted" }, { id: "inv-o", token: "tok_open001", cro_org_id: null, cro_email: "open@example.com", status: "sent" }], error: null };
+      if (q.table === "rfq_invites") return { data: [{ id: "inv-l", token: "tok_loser01", cro_org_id: "org-solo", cro_email: "solo@example.com", status: "submitted" }, { id: "inv-o", token: "tok_open001", cro_org_id: null, cro_email: "open@example.com", status: "sent", joined_at: "2026-10-02T00:00:00Z" }, { id: "inv-u", token: "tok_undec01", cro_org_id: null, cro_email: "undecided@example.com", status: "sent", joined_at: null }], error: null };
       if (q.table === "profiles") return { data: [], error: null };
       if (q.table === "cro_orgs") return { data: [{ id: "org-managed", managed: true, contact_email: "lab@example.com" }, { id: "org-solo", managed: false, contact_email: "solo@example.com" }], error: null };
       return { data: null, error: null };
@@ -403,6 +435,11 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
     const open = calls.filter((c) => c[2]?.to.includes("open@example.com"));
     expect(open).toHaveLength(1);
     expect(open[0][1].title).toContain("회신이 마감되었습니다");
+    // 참여 결정 전 기관에는 시험물질명 없이 참여 안내가 닫혔다는 것만 (0023)
+    const undecided = calls.filter((c) => c[2]?.to.includes("undecided@example.com"));
+    expect(undecided).toHaveLength(1);
+    expect(undecided[0][1].title).toContain("참여 안내가 마감되었습니다");
+    expect(`${undecided[0][1].title} ${undecided[0][1].body}`).not.toContain("ABC-1");
     expect(calls.filter((c) => c[1].title.startsWith("미선정"))).toHaveLength(1);
     const sponsor = calls.find((c) => c[0][0] === "admin-1" && c[1].title.includes("선정 완료"));
     expect(sponsor?.[1].body).not.toContain("기관이 단추에 보고");

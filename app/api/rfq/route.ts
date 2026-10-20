@@ -1,4 +1,4 @@
-import { cleanNominees } from "@/lib/request-policy";
+import { cleanNominees, joinDeadline } from "@/lib/request-policy";
 import { NextResponse, after } from "next/server";
 import { isProduction } from "@/lib/env";
 import { captureError } from "@/lib/observe";
@@ -97,6 +97,10 @@ export async function POST(req: Request) {
         if (cleaned.length) values.nominees = cleaned;
         else delete values.nominees;
       }
+      // "지명 기관에만 안내"(기본 꺼짐)는 지명 기관이 남아 있을 때만 켠다. 지명 기관 없이 켜면 아무에게도 안내가 가지 않는다
+      const nomineesOnly = values.nomineesOnly === true && Array.isArray(values.nominees) && values.nominees.length > 0;
+      if (nomineesOnly) values.nomineesOnly = true;
+      else delete values.nomineesOnly;
       const { data: no, error: e1 } = await supabase.rpc("next_rfq_no", { p_year: year });
       if (e1 || !no) throw e1 || new Error("채번 실패");
       rfqNo = String(no);
@@ -119,6 +123,10 @@ export async function POST(req: Request) {
           confidentiality: nul("confid"),
           intent: nul("intent"),
           reply_by: /^\d{4}-\d{2}-\d{2}$/.test(str("replyBy")) ? str("replyBy") : null,
+          // 참여 결정 기한: 안내(접수 직후 자동 안내) 뒤 2영업일, 회신 기한이 5영업일 안이면 1영업일 (0023, lib/request-policy.ts joinDeadline).
+          // 접수 때 안내할 기관이 없어 나중에 처음 안내하면 그때 다시 잡는다 (lib/distribute.ts distributeTo)
+          join_by: joinDeadline(today, /^\d{4}-\d{2}-\d{2}$/.test(str("replyBy")) ? str("replyBy") : null),
+          nominees_only: nomineesOnly,
           payload: values,
           user_id: userId,
           user_agent: req.headers.get("user-agent"),
