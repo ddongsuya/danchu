@@ -65,7 +65,7 @@ vi.mock("@/lib/supabase", () => {
     from: builder,
     rpc: async (fn: string, args: Record<string, unknown>) => {
       fx.rpcCalls.push({ fn, args });
-      if (fn === "danchu_schema_version") return { data: 23, error: null };
+      if (fn === "danchu_schema_version") return { data: 24, error: null };
       return { data: fx.rpcResult[fn] ?? null, error: null };
     },
     storage: { from: () => ({ createSignedUrl: fx.signedUrl, list: async () => ({ data: [{ name: "x" }], error: null }), createSignedUploadUrl: async () => ({ data: { signedUrl: "u", token: "t" }, error: null }) }) },

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { joinStatusNote, monthRangeOf, TIER_LABEL } from "@/lib/billing";
-import type { BillingAwardRow, BillingLineRow, BillingSnapshot, BillingSummaryRow } from "@/lib/db-types";
+import { joinStatusNote, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_UNIT_LABEL, TIER_LABEL } from "@/lib/billing";
+import type { BillingAdjustmentRow, BillingAwardRow, BillingLineRow, BillingReferenceRow, BillingSnapshot, BillingSummaryRow } from "@/lib/db-types";
 
 export const runtime = "nodejs";
 
@@ -17,8 +17,10 @@ const amountOrPending = (v: number | null | undefined) => (v == null ? "미정" 
 
 /**
  * GET ?month=YYYY-MM: 그 달 청구 명세 CSV (0020 기준). 엑셀에서 바로 열리게 BOM 을 붙인다.
- * 한 행이 청구 항목 하나다. 구분: 견적 회신(처음 제출한 달, 금액 없이 제출했으면 금액이 들어온 달) · 월 구독료 · 성사수수료 정산(체결 확인한 달) · 성사수수료 예상(선정한 달, 합계 미포함)
- * 마감한 달은 마감 때 저장한 명세를 쓴다.
+ * 한 행이 청구 항목 하나다. 구분: 견적 회신(처음 제출한 달, 금액 없이 제출했으면 금액이 들어온 달) · 월 구독료 · 성사수수료 정산(체결 확인한 달) ·
+ * 성사수수료 예상(선정한 달, 합계 미포함) · 조정(0024, 마감한 달을 바로잡는 금액, 합계에 들어감) ·
+ * 참고 (시범 기간, 청구 안 함)(0024, 기관별 "유료였다면" 수치. 청구액은 0 이고 숫자는 "참고:" 열에만 적는다)
+ * 마감한 달은 마감 때 저장한 명세를 쓴다. 0024 전 저장본에는 조정이 없고, 참고 수치는 지금 집계로 채운다.
  */
 export async function GET(req: Request) {
   const s = await sessionOrNull("admin");
@@ -31,18 +33,37 @@ export async function GET(req: Request) {
   const { data: period } = await sb.from("billing_periods").select("snapshot").eq("month", r.from).maybeSingle();
   let view = (period?.snapshot ?? null) as BillingSnapshot | null;
   if (!view) {
-    const [{ data: summary, error }, { data: lines }, { data: awards }] = await Promise.all([
+    const [{ data: summary, error }, { data: lines }, { data: awards }, { data: adjustments, error: adjError }, { data: reference, error: refError }] = await Promise.all([
       sb.rpc("billing_summary", { p_from: r.from, p_to: r.to }),
       sb.rpc("billing_lines", { p_from: r.from, p_to: r.to }),
       sb.rpc("billing_awards", { p_from: r.from, p_to: r.to }),
+      sb.rpc("billing_adjustment_lines", { p_from: r.from, p_to: r.to }),
+      sb.rpc("billing_reference", { p_from: r.from, p_to: r.to }),
     ]);
-    if (error) return NextResponse.json({ error: "집계 함수를 불러오지 못했습니다. 0020 마이그레이션이 적용됐는지 확인해 주세요." }, { status: 500 });
-    view = { taken_at: new Date().toISOString(), summary: (summary ?? []) as BillingSummaryRow[], lines: (lines ?? []) as BillingLineRow[], awards: (awards ?? []) as BillingAwardRow[] };
+    // 조정·참고가 빠지면 Y 행 합이 명세 합계와 어긋나므로 하나라도 실패하면 내려보내지 않는다
+    if (error || adjError || refError) return NextResponse.json({ error: "집계 함수를 불러오지 못했습니다. 0024 마이그레이션이 적용됐는지 확인해 주세요." }, { status: 500 });
+    view = {
+      taken_at: new Date().toISOString(),
+      summary: (summary ?? []) as BillingSummaryRow[],
+      lines: (lines ?? []) as BillingLineRow[],
+      awards: (awards ?? []) as BillingAwardRow[],
+      adjustments: (adjustments ?? []) as BillingAdjustmentRow[],
+      reference: (reference ?? []) as BillingReferenceRow[],
+    };
+  } else if (!view.reference) {
+    // 0024 전 저장본: 조정은 없었고, 참고 수치(청구 아님)는 지금 집계로 채운다
+    const { data: reference, error: refError } = await sb.rpc("billing_reference", { p_from: r.from, p_to: r.to });
+    if (refError) return NextResponse.json({ error: "참고 수치를 불러오지 못했습니다. 0024 마이그레이션이 적용됐는지 확인해 주세요." }, { status: 500 });
+    view = { ...view, reference: (reference ?? []) as BillingReferenceRow[] };
   }
 
   const SOURCE: Record<string, string> = { matched: "매칭", nominated: "지명", manual: "수동" };
-  const head = ["구분", "기관", "일자", "요청 번호", "견적 금액(원)", "계약 금액(원)", "구간", "청구 대상", "제외 사유", "입력 주체", "단가(원) 또는 요율", "청구액(원)", "비고"];
-  const lines = [head.join(",")];
+  const head = [
+    "구분", "기관", "일자", "요청 번호", "견적 금액(원)", "계약 금액(원)", "구간", "청구 대상", "제외 사유", "입력 주체", "단가(원) 또는 요율", "청구액(원)", "비고",
+    // 0024 참고 수치 (시범 기간, 청구 안 함). 청구액·합계에 넣지 않는다
+    "참고: 1,000만 원 미만 견적 수", "참고: 건당 이용료 대상 견적 수", "참고: 건당 단가(원)", "참고: 건당 이용료(원)", "참고: 체결 수", "참고: 계약 금액(원)", "참고: 성사수수료율", "참고: 성사수수료(원)",
+  ];
+  const lines = [head.map(csvCell).join(",")];
   const push = (cells: unknown[]) => lines.push(cells.map(csvCell).join(","));
 
   for (const l of view.lines) {
@@ -79,6 +100,17 @@ export async function GET(req: Request) {
     } else {
       push(["성사수수료 예상", a.org_name, seoulDay(a.awarded_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "견적 기준", "N", "", "", rate, "", `안내용, 합계에 넣지 않음 · 예상 ${a.fee == null ? "미정" : a.fee}원`]);
     }
+  }
+  for (const a of view.adjustments ?? []) {
+    push(["조정", a.org_name, a.month, "", "", "", "", "Y", "", "운영자", "", a.amount, [`사유: ${a.reason}`, a.corrects_month ? `바로잡는 달 ${a.corrects_month.slice(0, 7)}` : "", `넣은 날 ${seoulDay(a.created_at)}`].filter(Boolean).join(" · ")]);
+  }
+  for (const x of view.reference ?? []) {
+    const src = [x.per_quote_unit_source === "reference" ? `건당 ${REFERENCE_UNIT_LABEL}` : "", x.success_rate_source === "reference" ? `요율 ${REFERENCE_UNIT_LABEL}` : ""].filter(Boolean).join(" · ");
+    push([
+      REFERENCE_LABEL, x.org_name, r.from, "", "", "", "", "N", "", "", "", 0,
+      ["유료였다면, 합계에 넣지 않음", src].filter(Boolean).join(" · "),
+      x.subscription_count, x.per_quote_count, x.per_quote_unit, x.per_quote_fee, x.success_count, x.success_contract_amount, rateLabel(x.success_rate), x.success_fee,
+    ]);
   }
   const body = "﻿" + lines.join("\r\n");
   return new NextResponse(body, {

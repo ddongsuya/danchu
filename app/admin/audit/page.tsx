@@ -9,7 +9,7 @@ const ACTION_KO: Record<string, string> = {
   "org.approve": "기관 승인", "org.reject": "기관 반려", "org.suspend": "기관 중지", "org.terms": "기관 약정·설정 변경",
   "org.create": "기관 추가(운영자 관리)", "org.optout": "수신 거부 처리",
   "user.role": "역할·기관 연결 변경", "user.delete": "계정 삭제",
-  "invite.billing": "청구 제외·복원", "invite.decline_proxy": "불참 대리 기록", "invite.withdraw_proxy": "참여 철회 대리 기록",
+  "invite.billing": "청구 제외·복원", "billing.close": "청구 월 마감", "billing.adjust": "청구 조정 항목 추가", "invite.decline_proxy": "불참 대리 기록", "invite.withdraw_proxy": "참여 철회 대리 기록",
   "rfq.deadline": "회신 기한 변경", "rfq.join_by": "참여 결정 기한 연장", "rfq.distribute_override": "지명 기관 밖 참여 안내(의뢰자 요청)", "rfq.opt_in_transition": "참여 선택형 전환",
   "rfq.close_replies": "회신 마감",
   "quote.proxy": "견적 대리 입력",
@@ -24,6 +24,7 @@ const TARGET_HREF: Record<string, (id: string, label: string | null) => string |
   rfq_invite: () => "/admin/billing",
   cro_quote: (_id, label) => (rfqOf(label) ? `/admin/r/${rfqOf(label)}` : null),
   rfq_award: () => "/admin/awards",
+  billing_period: (_id, label) => (label && /^\d{4}-\d{2}$/.test(label) ? `/admin/billing?month=${label}` : "/admin/billing"),
 };
 
 /** 운영자 행위 기록. 요청 단위 이력(각 요청의 "이력")에 없는 기관·사용자·청구 변경을 본다 */

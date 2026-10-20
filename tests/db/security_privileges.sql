@@ -114,7 +114,13 @@ declare
     'public.join_offer(uuid, text, uuid, text, text, text, text)',
     'public.withdraw_offer(uuid, text, uuid, text)',
     'public.offer_seat_state(uuid)',
-    'public.set_seat_count(uuid, text)'
+    'public.set_seat_count(uuid, text)',
+    'public.add_billing_adjustment(uuid, date, bigint, text, date, uuid)',
+    'public.billing_adjustment_lines(date, date)',
+    'public.billing_reference(date, date)',
+    'public.billing_month_lock(date)',
+    'public.billing_reference_per_quote_fee()',
+    'public.billing_reference_success_rate()'
   ];
   f text;
   p regprocedure;
@@ -173,5 +179,5 @@ begin
   v := public.danchu_schema_version();
   reset role;
   perform pg_temp.t_eq(res->>'code', 'not_found', 'service_role 은 select_quote 를 실행한다');
-  perform pg_temp.t_eq(v, 23, 'service_role 은 스키마 판을 읽는다');
+  perform pg_temp.t_eq(v, 24, 'service_role 은 스키마 판을 읽는다');
 end $$;

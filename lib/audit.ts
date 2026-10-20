@@ -4,7 +4,7 @@ import { captureError } from "./observe";
 export type AuditAction =
   | "org.approve" | "org.reject" | "org.suspend" | "org.terms"
   | "user.role" | "user.delete"
-  | "invite.billing" | "invite.resend" | "invite.cancel" | "billing.close"
+  | "invite.billing" | "invite.resend" | "invite.cancel" | "billing.close" | "billing.adjust"
   | "rfq.deadline" | "rfq.join_by" | "rfq.distribute_override" | "rfq.opt_in_transition" | "rfq.close_replies" | "rfq.terms" | "award.contract" | "award.contract_status"
   | "org.create" | "org.optout" | "quote.proxy" | "invite.decline_proxy" | "invite.withdraw_proxy";
 

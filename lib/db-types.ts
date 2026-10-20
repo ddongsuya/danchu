@@ -424,6 +424,13 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["billing_periods"]["Row"]>;
         Relationships: [];
       };
+      billing_adjustments: {
+        /** 청구 조정 항목 (0024). 마감한 달에는 넣을 수 없고, 그 달을 마감하면 바꾸거나 지울 수 없다 (트리거) */
+        Row: { id: string; org_id: string; month: string; amount: number; reason: string; corrects_month: string | null; created_by: string | null; created_at: string };
+        Insert: Ins<Database["public"]["Tables"]["billing_adjustments"]["Row"], "id" | "corrects_month" | "created_by" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["billing_adjustments"]["Row"]>;
+        Relationships: [];
+      };
       admin_audit: {
         Row: {
           id: string;
@@ -470,7 +477,14 @@ export type Database = {
       billing_lines: { Args: { p_from: string; p_to: string }; Returns: BillingLineRow[] };
       billing_awards: { Args: { p_from: string; p_to: string }; Returns: BillingAwardRow[] };
       billing_snapshot: { Args: { p_from: string; p_to: string }; Returns: BillingSnapshot };
+      /** 0024: 한 번만 마감한다. { ok, month, orgs } · 이미 마감했으면 { ok, already } · 끝나지 않은 달이면 { ok: false, code: 'not_ended' } */
       close_billing_month: { Args: { p_month: string; p_actor: string | null; p_note: string }; Returns: Json };
+      /** 0024: 조정 항목 넣기. { ok, id, month, org_name } 또는 { ok: false, code: bad_month·amount·reason·not_found·closed·corrects } */
+      add_billing_adjustment: { Args: { p_org: string; p_month: string; p_amount: number; p_reason: string; p_corrects: string | null; p_actor: string | null }; Returns: Json };
+      /** 0024: 그 기간의 조정 항목 (적용 월 기준) */
+      billing_adjustment_lines: { Args: { p_from: string; p_to: string }; Returns: BillingAdjustmentRow[] };
+      /** 0024: 시범 기간 참고 수치. 합계에 넣지 않는다 */
+      billing_reference: { Args: { p_from: string; p_to: string }; Returns: BillingReferenceRow[] };
       billing_tier: { Args: { p_amount: number | null }; Returns: string };
     };
     Enums: Record<string, never>;
@@ -524,7 +538,7 @@ export type BillingSummaryRow = {
   settled_count: number;
   settled_contract_amount: number;
   settled_fee: number | null;
-  /** 월 구독료 + 건당 이용료 + 성사수수료 정산 (미정은 0 으로 더함) */
+  /** 월 구독료 + 건당 이용료 + 성사수수료 정산 + 조정 항목(0024) (미정은 0 으로 더함) */
   total_due: number;
   /** 미정 금액이 있음 */
   terms_pending: boolean;
@@ -583,10 +597,51 @@ export type BillingAwardRow = {
   invite_joined?: boolean;
 };
 
-/** billing_periods.snapshot: 마감 때 저장한 그 달 명세 */
+/** billing_adjustment_lines() 한 행: 조정 항목 1건 (0024). amount 는 원, 돌려주면 음수 */
+export type BillingAdjustmentRow = {
+  adjustment_id: string;
+  org_id: string;
+  org_name: string;
+  /** 적용 월 (그 달 1일) */
+  month: string;
+  amount: number;
+  reason: string;
+  /** 바로잡는 마감 월 (그 달 1일). 없으면 null */
+  corrects_month: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+/** 참고 단가 출처: org 기관 약정 값 · reference 참고 단가(예시, 시장 검증 전) */
+export type ReferenceSource = "org" | "reference";
+
+/** billing_reference() 한 행: 시범 기간이라 청구하지 않은 견적·체결의 "유료였다면" 수치 (0024). 합계·청구에 넣지 않는다 */
+export type BillingReferenceRow = {
+  org_id: string;
+  org_name: string;
+  /** 1,000만 원 미만 견적 수 (구독 구간, 구독료 미정이라 금액 없음) */
+  subscription_count: number;
+  /** 1,000만 원 이상 견적 수 */
+  per_quote_count: number;
+  per_quote_unit: number;
+  per_quote_unit_source: ReferenceSource;
+  /** 참고 건당 이용료 = 건수 × 단가 */
+  per_quote_fee: number;
+  /** 체결 확인된 수주 (선정 견적 5,000만 원 이상, signed) */
+  success_count: number;
+  success_contract_amount: number;
+  success_rate: number;
+  success_rate_source: ReferenceSource;
+  /** 참고 성사수수료 = 계약 금액 × 요율 */
+  success_fee: number;
+};
+
+/** billing_periods.snapshot: 마감 때 저장한 그 달 명세. adjustments·reference 는 0024 부터 (그 전 저장본에는 없다) */
 export type BillingSnapshot = {
   taken_at: string;
   summary: BillingSummaryRow[];
   lines: BillingLineRow[];
   awards: BillingAwardRow[];
+  adjustments?: BillingAdjustmentRow[];
+  reference?: BillingReferenceRow[];
 };

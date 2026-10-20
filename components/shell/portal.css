@@ -444,3 +444,22 @@
   .pt .join, .join { padding: 18px; }
   .join__actions > * { flex: 1 1 100%; }
 }
+/* 청구 명세 (0024): 마감 버튼 · 조정 항목 · 참고 수치 */
+.billclose { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.billclose--arm { font-size: 13px; gap: 6px; }
+.billclose__hint { font-size: 13px; color: var(--muted); align-self: center; }
+.billclose__err { font-size: 12px; color: var(--err); }
+.fld__err { font-size: 13px; color: var(--err); line-height: 1.5; }
+.billadj-card__foot { padding: 16px; border-top: 1px solid var(--cline); }
+.billadj { display: grid; gap: 12px; }
+.billadj__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.billadj__actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.billadj__ok { font-size: 13px; color: var(--ok); }
+.billadj__err { font-size: 13px; color: var(--err); }
+.billref__lead { margin: 0; padding: 0 16px 12px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 75ch; }
+.pt .billadj .b1, .pt .billclose .b1, .pt .billclose .b2 { transition: transform 160ms var(--ease-out); }
+.pt .billadj .b1[aria-busy="true"], .pt .billclose .b1[aria-busy="true"] { cursor: progress; }
+@media (min-width: 768px) {
+  .billadj__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .billadj__reason { grid-column: 1 / -1; }
+}

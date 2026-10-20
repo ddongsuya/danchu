@@ -26,26 +26,28 @@ begin
     where n.nspname = 'public' and p.prokind = 'f' and pg_get_functiondef(p.oid) ilike '%monthly_cap%'), 'monthly_cap 을 읽는 함수가 없다');
 end $$;
 
--- 월 마감: 저장본으로 고정. 마감 뒤 단가가 바뀌어도 저장본은 그대로, 다시 마감하면 새로 찍힌다
+-- 월 마감: 저장본으로 고정. 마감 뒤 단가가 바뀌어도 저장본은 그대로. 다시 마감해도 새로 찍지 않는다 (0024)
 do $$
 declare
   o uuid := pg_temp.t_org('마감기관', 300000);
   res jsonb;
   snap jsonb;
+  snap0 jsonb;
 begin
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-CL'), o), 20000000);
-  res := public.close_billing_month(pg_temp.t_month(0), null, '시험 마감');
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-CL'), o, pg_temp.t_mid(-1)), 20000000, pg_temp.t_mid(-1));
+  res := public.close_billing_month(pg_temp.t_month(-1), null, '시험 마감');
   perform pg_temp.t_eq(res->>'ok', 'true', '마감');
-  select snapshot into snap from public.billing_periods where month = pg_temp.t_month(0);
-  perform pg_temp.t_eq((select (x->>'per_quote_fee')::bigint from jsonb_array_elements(snap->'summary') x where x->>'org_id' = o::text), 300000::bigint, '저장본 건당 합계');
-  perform pg_temp.t_eq((select count(*) from jsonb_array_elements(snap->'lines') x where x->>'org_id' = o::text)::int, 1, '저장본 견적 행');
+  select snapshot into snap0 from public.billing_periods where month = pg_temp.t_month(-1);
+  perform pg_temp.t_eq((select (x->>'per_quote_fee')::bigint from jsonb_array_elements(snap0->'summary') x where x->>'org_id' = o::text), 300000::bigint, '저장본 건당 합계');
+  perform pg_temp.t_eq((select count(*) from jsonb_array_elements(snap0->'lines') x where x->>'org_id' = o::text)::int, 1, '저장본 견적 행');
 
   update public.cro_orgs set per_request_fee = 400000 where id = o;
-  select snapshot into snap from public.billing_periods where month = pg_temp.t_month(0);
+  select snapshot into snap from public.billing_periods where month = pg_temp.t_month(-1);
   perform pg_temp.t_eq((select (x->>'per_quote_fee')::bigint from jsonb_array_elements(snap->'summary') x where x->>'org_id' = o::text), 300000::bigint, '마감 뒤 단가 변경은 저장본에 반영되지 않는다');
 
-  res := public.close_billing_month(pg_temp.t_month(0) + 10, null, '');
-  select snapshot into snap from public.billing_periods where month = pg_temp.t_month(0);
-  perform pg_temp.t_eq((select (x->>'per_quote_fee')::bigint from jsonb_array_elements(snap->'summary') x where x->>'org_id' = o::text), 400000::bigint, '다시 마감하면 새로 찍힌다 (달 중간 날짜도 그 달 1일로)');
-  perform pg_temp.t_eq((select count(*) from public.billing_periods where month = pg_temp.t_month(0))::int, 1, '같은 달은 1행');
+  res := public.close_billing_month(pg_temp.t_month(-1) + 10, null, '');
+  perform pg_temp.t_eq(res->>'already', 'true', '이미 마감한 달은 already (달 중간 날짜도 그 달 1일로)');
+  select snapshot into snap from public.billing_periods where month = pg_temp.t_month(-1);
+  perform pg_temp.t_eq(snap, snap0, '다시 마감해도 저장본은 그대로 (0024)');
+  perform pg_temp.t_eq((select count(*) from public.billing_periods where month = pg_temp.t_month(-1))::int, 1, '같은 달은 1행');
 end $$;

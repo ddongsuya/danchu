@@ -4,6 +4,8 @@
 #  2) 0022 를 먼저 붙여 넣으면 아무것도 바꾸지 않고 멈춘다 (0019·0020·0021 이 빠졌다는 메시지).
 #  3) 0019 → 0020 → 0021 → 0022 를 순서대로 적용하면 판이 22 가 된다.
 #  4) 0023 은 0022 없이 적용하면 멈추고, 0022 다음에 적용하면 판이 23 이 된다.
+#  5) 0024 는 0023 없이 적용하면 멈추고 아무것도 바꾸지 않으며, 끝나지 않은 달이 마감돼 있어도 멈추고,
+#     0023 다음에 적용하면 판이 24 가 된다.
 # 별도 데이터베이스(danchu_order)를 만들어 쓰고 지운다. scripts/db-test.sh 가 PSQL·ROOT·PG* 환경을 넘겨 부른다.
 set -uo pipefail
 DB=danchu_order
@@ -41,7 +43,25 @@ V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "22" ]] || fail "판은 22 여야 합니다 (실제 $V)"
 echo "  0019 → 0020 → 0021 → 0022: 판 22"
 
+if q -d "$DB" -f "$ROOT/supabase/migrations/0024_billing_close_lock.sql" >"$TMPD/out" 2>&1; then fail "0023 없이 0024 가 적용되면 안 됩니다"; fi
+grep -q "0019, 0020, 0021, 0022, 0023 을 순서대로" "$TMPD/out" || fail "0024 의 멈춤 메시지가 다릅니다: $(cat "$TMPD/out")"
+[[ "$(q -d "$DB" -c "select count(*) from information_schema.tables where table_name = 'billing_adjustments'")" == "0" ]] || fail "멈춘 0024 가 일부를 바꿨습니다"
+echo "  0024 를 0023 없이 적용: 멈춤 (0019~0023 필요), 바뀐 것 없음"
+
 q -d "$DB" -f "$ROOT/supabase/migrations/0023_opt_in.sql" >"$TMPD/out" 2>&1 || { cat "$TMPD/out" >&2; fail "0023 적용 실패"; }
 V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "23" ]] || fail "판은 23 이어야 합니다 (실제 $V)"
 echo "  0022 → 0023: 판 23"
+
+# 0020 까지는 이번 달도 마감할 수 있었다. 끝나지 않은 달이 마감돼 있으면 0024 는 멈추고 아무것도 바꾸지 않는다
+q -d "$DB" -c "insert into public.billing_periods (month, note) values (date_trunc('month', now() at time zone 'Asia/Seoul')::date, '달 중간 마감')" >/dev/null || fail "이번 달 마감 행을 넣지 못했습니다"
+if q -d "$DB" -f "$ROOT/supabase/migrations/0024_billing_close_lock.sql" >"$TMPD/out" 2>&1; then fail "끝나지 않은 달이 마감돼 있는데 0024 가 적용되면 안 됩니다"; fi
+grep -q "끝나지 않은 달" "$TMPD/out" || fail "0024 의 끝나지 않은 달 멈춤 메시지가 다릅니다: $(cat "$TMPD/out")"
+[[ "$(q -d "$DB" -c "select count(*) from information_schema.tables where table_name = 'billing_adjustments'")" == "0" ]] || fail "멈춘 0024 가 일부를 바꿨습니다"
+echo "  끝나지 않은 달이 마감된 DB 에 0024: 멈춤 (먼저 마감 해제), 바뀐 것 없음"
+q -d "$DB" -c "delete from public.billing_periods where month >= date_trunc('month', now() at time zone 'Asia/Seoul')::date" >/dev/null || fail "마감 해제 실패"
+
+q -d "$DB" -f "$ROOT/supabase/migrations/0024_billing_close_lock.sql" >"$TMPD/out" 2>&1 || { cat "$TMPD/out" >&2; fail "0024 적용 실패"; }
+V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
+[[ "$V" == "24" ]] || fail "판은 24 여야 합니다 (실제 $V)"
+echo "  0023 → 0024: 판 24"
