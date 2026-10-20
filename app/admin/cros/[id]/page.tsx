@@ -7,7 +7,7 @@ import { JoinRequests } from "@/components/admin/JoinRequests";
 import { OrgTerms } from "@/components/admin/OrgTerms";
 import { autoReplyEnabled } from "@/lib/env";
 import { ymd, won } from "@/lib/format";
-import { INVITE_LABEL } from "@/lib/status";
+import { inviteStageLabel } from "@/lib/status";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +74,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
             {invites.slice(0, 20).map((i) => (
               <div key={i.id} className="kv" style={{ fontSize: 13 }}>
                 <span><b className="tnum" style={{ fontWeight: 600 }}>{i.rfq_no}</b> · {i.rfq?.substance}</span>
-                <span style={{ color: "var(--muted)" }}>{INVITE_LABEL[i.status] ?? i.status}{i.quote?.status === "submitted" ? ` · ${won(i.quote.total_amount ?? 0)}` : ""}</span>
+                <span style={{ color: "var(--muted)" }}>{inviteStageLabel(i)}{i.quote?.status === "submitted" ? ` · ${won(i.quote.total_amount ?? 0)}` : ""}</span>
               </div>
             ))}
           </div>

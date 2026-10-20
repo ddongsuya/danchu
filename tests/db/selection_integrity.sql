@@ -144,5 +144,5 @@ end $$;
 -- 4) 스키마 판
 do $$
 begin
-  perform pg_temp.t_eq(public.danchu_schema_version(), 22, '스키마 판 22');
+  perform pg_temp.t_assert(public.danchu_schema_version() >= 22, '스키마 판 22 이상 (0023 부터 23)');
 end $$;

@@ -15,6 +15,13 @@ export type QuoteEntrySource = "cro" | "operator";
 /** rfq_awards.contract_status */
 export type ContractStatus = "pending" | "negotiating" | "signed" | "not_signed";
 
+/** rfq_invites.join_channel (0023) */
+export type JoinChannel = "portal" | "token" | "legacy";
+/** 참여 기록 열 (0023). join_offer()·withdraw_offer() 만 쓴다 */
+type InviteJoinColumn = "joined_at" | "join_actor" | "join_channel" | "join_user_id" | "join_terms_version" | "join_ip" | "join_ua" | "withdrawn_at";
+/** billing_lines().join_status (0023). joined 만 청구한다 */
+export type JoinStatus = "joined" | "legacy" | "not_joined";
+
 /** Row 에서 Insert 를 만든다: 기본값이 있는 컬럼은 선택 */
 type Ins<Row, Optional extends keyof Row> = Omit<Row, Optional> & Partial<Pick<Row, Optional>>;
 
@@ -58,10 +65,14 @@ export type Database = {
           auto_distribute: boolean;
           /** 계정이 지워져 user_id 가 비워진 시각 (0021). 채워진 요청은 같은 이메일 계정에 다시 연결하지 않는다 */
           orphaned_at: string | null;
+          /** 참여 결정 기한 (0023). 이때까지 결정하지 않은 지명 기관 수만큼 자리를 비워 둔다 */
+          join_by: string | null;
+          /** 지명 기관에만 안내 (0023). 켜져 있으면 자동 매칭 안내(source = matched)를 DB 가 거절한다 */
+          nominees_only: boolean;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "orphaned_at"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "orphaned_at" | "join_by" | "nominees_only"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
@@ -112,9 +123,24 @@ export type Database = {
           mailed_at: string | null;
           /** 운영자가 초대를 거둔 시각 (0021). 채워지면 지울 수 없고 회신 화면·저장·첨부·PDF 모두 거절 */
           revoked_at: string | null;
+          /** 기관이 참여하기를 누른 시각 (0023). 비어 있으면 참여 결정 전. join_offer() 로만 채우고 바꿀 수 없다. 견적 저장·청구의 조건 */
+          joined_at: string | null;
+          /** 참여를 누른 주체 (0023). member 로그인한 담당자 · token:<링크 지문> · legacy */
+          join_actor: string | null;
+          /** 참여 경로 (0023). legacy 는 0023 전 작성 중·제출 초대이며 청구하지 않는다 */
+          join_channel: JoinChannel | null;
+          /** 참여를 누른 담당자 계정 (0023). 링크만으로 누르면 null */
+          join_user_id: string | null;
+          /** 참여할 때 보여 준 이용 조건 판 (0023) */
+          join_terms_version: string | null;
+          join_ip: string | null;
+          join_ua: string | null;
+          /** 참여 뒤 제출 전 철회한 시각 (0023). 상태는 declined */
+          withdrawn_at: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_invites"]["Row"], "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference" | "source" | "billable" | "bill_excluded_reason" | "mailed_at" | "revoked_at">;
-        Update: Partial<Database["public"]["Tables"]["rfq_invites"]["Row"]>;
+        /** 참여 기록(join_*·joined_at·withdrawn_at)은 DB 함수만 쓴다 (0023 트리거). 직접 넣거나 바꾸면 거절된다 */
+        Insert: Ins<Omit<Database["public"]["Tables"]["rfq_invites"]["Row"], InviteJoinColumn>, "id" | "token" | "status" | "sent_at" | "opened_at" | "created_at" | "cro_org_id" | "declined_at" | "decline_reason" | "cda_signed_at" | "cda_reference" | "source" | "billable" | "bill_excluded_reason" | "mailed_at" | "revoked_at">;
+        Update: Partial<Omit<Database["public"]["Tables"]["rfq_invites"]["Row"], InviteJoinColumn>>;
         Relationships: [
           { foreignKeyName: "rfq_invites_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },
           { foreignKeyName: "rfq_invites_cro_org_id_fkey"; columns: ["cro_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
@@ -425,7 +451,13 @@ export type Database = {
       select_quote: { Args: { p_rfq_id: string; p_quote_id: string; p_user: string; p_revision: number }; Returns: Json };
       /** 0022: 마지막으로 적용한 마이그레이션 번호 (lib/schema-version.ts) */
       danchu_schema_version: { Args: Record<string, never>; Returns: number };
-      /** 0021: p_token 은 화면을 연 링크의 토큰. 잠금 뒤 지금 토큰·철회·만료·기관 상태·소속을 다시 본다 */
+      /** 0023: 기관 참여. { ok, already?, joined_at, channel, seats } 또는 { ok: false, code } */
+      join_offer: { Args: { p_invite_id: string; p_token: string; p_actor: string | null; p_channel: "portal" | "token"; p_terms_version: string; p_ip: string | null; p_ua: string | null }; Returns: Json };
+      /** 0023: 참여 철회 (제출 전만). { ok, already?, seats } 또는 { ok: false, code } */
+      withdraw_offer: { Args: { p_invite_id: string; p_token: string; p_actor: string | null; p_reason: string | null }; Returns: Json };
+      /** 0023: 요청의 자리 현황 */
+      offer_seat_state: { Args: { p_rfq_id: string }; Returns: Json };
+      /** 0021: p_token 은 화면을 연 링크의 토큰. 잠금 뒤 지금 토큰·철회·만료·기관 상태·소속을 다시 본다. 0023: 참여 전이면 not_joined */
       save_quote: { Args: { p_invite_id: string; p_header: Json; p_items: Json; p_submit: boolean; p_actor: string | null; p_token: string }; Returns: Json };
       /** 0021: 운영자 초대 취소 (철회 표식 + 토큰 재발급). { ok, already?, status } 또는 { ok: false, code } */
       revoke_invite: { Args: { p_invite_id: string; p_reason: string | null }; Returns: Json };
@@ -465,9 +497,9 @@ export type BillingSummaryRow = {
   unanswered: number;
   /** 그 달에 처음 제출된 견적 */
   quoted: number;
-  /** 청구 대상 견적 (제외되지 않았고 금액이 있는 것) */
+  /** 청구 대상 견적 (참여 기록이 있고, 제외되지 않았고, 금액이 있는 것. 0023) */
   billable: number;
-  /** 운영자가 청구에서 뺀 견적 */
+  /** 청구하지 않는 견적: 운영자 제외 + 참여 기록 없음 + 참여 기능 전(legacy) 견적 (0023) */
   excluded: number;
   /** 금액 미입력 견적 (아직 청구하지 않음) */
   no_amount: number;
@@ -518,6 +550,9 @@ export type BillingLineRow = {
   per_request_fee: number | null;
   /** 청구할 건당 이용료. 대상 아니면 0, 단가 미정이면 null */
   fee_due: number | null;
+  /** 참여 기록 (0023). joined 만 청구한다. 0023 전 저장본에는 없다 */
+  join_status?: JoinStatus;
+  joined_at?: string | null;
 };
 
 /** billing_awards() 한 행: 성사수수료 대상 (선정 견적 5,000만 원 이상) */
@@ -540,6 +575,8 @@ export type BillingAwardRow = {
   fee: number | null;
   /** 그 초대가 청구 대상인지 (false 면 운영자가 견적 청구를 제외한 초대). 0020 수정 전 저장본에는 없다 */
   invite_billable?: boolean;
+  /** 그 초대에 기관 본인의 참여 기록(portal·token)이 있는지. false 면 명세 합계에 넣지 않는다 (0023). 0023 전 저장본에는 없다 */
+  invite_joined?: boolean;
 };
 
 /** billing_periods.snapshot: 마감 때 저장한 그 달 명세 */

@@ -5,36 +5,74 @@ import { sessionOrNull } from "@/lib/auth";
 import { loadOptsFor } from "@/lib/concierge";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
+import { withdrawOffer } from "@/lib/rpc";
 
 export const runtime = "nodejs";
 
-/** POST { reason? } — 이번 요청은 회신하지 않음 */
+/** 화면이 본 상태. 다르면(그 사이 같은 기관 다른 담당자가 참여한 경우 등) 처리하지 않고 다시 보게 한다 */
+type DeclineMode = "decline" | "withdraw";
+
+const STALE = "요청 상태가 바뀌었습니다. 화면을 새로 고친 뒤 다시 확인해 주세요.";
+
+const WITHDRAW_DENIED: Record<string, { error: string; status: number }> = {
+  closed: { error: "이 요청의 회신은 이미 닫혔습니다.", status: 403 },
+  revoked: { error: "유효하지 않거나 만료된 링크입니다.", status: 404 },
+  not_found: { error: "유효하지 않거나 만료된 링크입니다.", status: 404 },
+  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 처리할 수 없습니다.", status: 403 },
+  not_joined: { error: STALE, status: 409 },
+  submitted: { error: "이미 제출한 견적은 철회할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 400 },
+  declined: { error: "이미 불참으로 처리한 요청입니다.", status: 409 },
+  expired: { error: "링크가 만료되었습니다.", status: 403 },
+};
+
+/**
+ * POST { mode, reason? } — 참여 전 "이번 요청 불참"(decline) 또는 참여 뒤 제출 전 "참여 철회"(withdraw). 0023.
+ * - 불참: 사유는 선택이고 운영자에게만 전달한다. 다음 안내에 영향이 없다. 의뢰자에게는 알리지 않는다 (일반 기관의 불참은 이름도 알림도 보이지 않는다).
+ * - 철회: withdraw_offer 가 요청 행을 잠그고 처리한다. 자리가 비고, 청구하지 않는다. 의뢰자에게는 기관명 없이 알린다 (참여 기관 수가 바뀌므로).
+ * 운영자는 기관이 메일로 알린 불참·철회를 기록할 수 있고, 그때는 감사 기록을 남긴다. 제출한 견적은 어느 쪽도 할 수 없다.
+ */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const s = await sessionOrNull();
   const got = await loadQuote(token, loadOptsFor(s?.profile.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 회신은 취소할 수 없습니다. 단추에 문의해 주세요." }, { status: 400 });
+  if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 견적은 철회할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요." }, { status: 400 });
   if (got.declined) return NextResponse.json({ ok: true, already: true });
   if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
   if (got.closed) return NextResponse.json({ error: "이 요청의 회신은 이미 닫혔습니다." }, { status: 403 });
-  const b = (await req.json().catch(() => ({}))) as { reason?: unknown };
+  const b = (await req.json().catch(() => ({}))) as { reason?: unknown; mode?: unknown };
   const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 500) : "";
+  const mode: DeclineMode = got.joined ? "withdraw" : "decline";
+  // 화면이 본 상태와 다르면 멈춘다. 불참을 누른 사이 다른 담당자가 참여했다면 철회는 따로 확인받아야 한다
+  if (b.mode !== undefined && b.mode !== mode) return NextResponse.json({ error: STALE }, { status: 409 });
   const sb = getSupabaseAdmin()!;
-  const { error } = await sb.from("rfq_invites").update({ status: "declined", declined_at: new Date().toISOString(), decline_reason: reason || null }).eq("id", got.inviteId);
-  if (error) return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 500 });
   const byOperator = s?.profile.role === "admin";
-  await logEvent(got.rfqId, "declined", `${got.croName} 회신하지 않음${byOperator ? " (운영자 처리)" : ""}`, reason || undefined, s?.userId ?? null);
-  // 운영자가 기관 대신 처리한 것은 운영 기록에도 남긴다 (기관의 의사를 운영자가 옮긴 것)
-  if (s && byOperator) await audit({ userId: s.userId, email: s.email }, "invite.decline_proxy", { type: "rfq_invite", id: got.inviteId, label: `${got.rfq.no} · ${got.croName}` }, { after: { status: "declined" }, note: reason || undefined });
-  await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신하지 않음 · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
-  // 알림에는 기관명 없이 숫자만. 어느 기관이 회신하지 않는지는 요청 화면의 회신 현황에서 본다
-  const { data: rq } = await sb.from("rfq_requests").select("user_id, status").eq("id", got.rfqId).maybeSingle();
-  if (rq?.user_id && !["closed", "cancelled"].includes(rq.status)) {
-    const { data: all } = await sb.from("rfq_invites").select("status").eq("rfq_id", got.rfqId).neq("status", "expired");
-    const total = (all ?? []).length;
-    const declined = (all ?? []).filter((i) => i.status === "declined").length;
-    await notifyUsers([rq.user_id], { kind: "견적", title: `${got.rfq.no} 전달한 ${total}곳 중 ${declined}곳이 회신하지 않습니다`, body: declined >= total ? "회신할 기관이 남지 않았습니다. 운영자가 다른 기관을 찾아 다시 전달합니다." : "나머지 기관의 회신을 기다리는 중입니다. 빈 자리는 운영자가 다른 기관으로 채웁니다.", href: `/app/r/${got.rfq.no}` });
+  const what = mode === "withdraw" ? "참여 철회" : "불참";
+
+  if (mode === "withdraw") {
+    const r = await withdrawOffer(got.inviteId, got.token, s?.userId ?? null, reason || null);
+    if (!r.ok) {
+      const d = WITHDRAW_DENIED[r.code] ?? { error: "처리하지 못했습니다.", status: 500 };
+      return NextResponse.json({ error: d.error }, { status: d.status });
+    }
+    if (r.already) return NextResponse.json({ ok: true, already: true });
+  } else {
+    // 참여 전 초대만: 상태가 sent 이고 참여 기록이 없을 때만 바꾼다. 그 사이 참여했으면 바뀌는 행이 없다
+    const { data, error } = await sb.from("rfq_invites").update({ status: "declined", declined_at: new Date().toISOString(), decline_reason: reason || null }).eq("id", got.inviteId).eq("status", "sent").is("joined_at", null).select("id");
+    if (error) return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 500 });
+    if (!data?.length) return NextResponse.json({ error: STALE }, { status: 409 });
   }
-  return NextResponse.json({ ok: true });
+
+  await logEvent(got.rfqId, mode === "withdraw" ? "withdrawn" : "declined", `${got.croName} ${what}${byOperator ? " (운영자 기록)" : ""}`, reason || undefined, s?.userId ?? null);
+  // 운영자가 기관 대신 처리한 것은 운영 기록에도 남긴다 (기관이 메일로 알린 의사를 운영자가 옮긴 것)
+  if (s && byOperator) await audit({ userId: s.userId, email: s.email }, mode === "withdraw" ? "invite.withdraw_proxy" : "invite.decline_proxy", { type: "rfq_invite", id: got.inviteId, label: `${got.rfq.no} · ${got.croName}` }, { after: { status: "declined", mode }, note: reason || undefined });
+  await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} ${what} · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
+  if (mode === "withdraw") {
+    // 의뢰자는 참여한 기관을 보므로 철회는 알린다. 기관명과 사유는 넣지 않는다
+    const { data: rq } = await sb.from("rfq_requests").select("user_id, status").eq("id", got.rfqId).maybeSingle();
+    if (rq?.user_id && !["closed", "cancelled"].includes(rq.status)) {
+      await notifyUsers([rq.user_id], { kind: "견적", title: `${got.rfq.no} 참여한 기관 1곳이 참여를 철회했습니다`, body: "빈 자리에는 참여 안내를 받은 다른 기관이 참여할 수 있습니다. 다른 기관의 견적은 그대로 받습니다.", href: `/app/r/${got.rfq.no}` });
+    }
+  }
+  return NextResponse.json({ ok: true, mode });
 }

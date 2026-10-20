@@ -78,10 +78,40 @@ export type QuoteItemInput = {
 export type SaveQuoteResult = { ok: true; quote_id: string; skipped?: boolean; first?: boolean; total_invites?: number; submitted_invites?: number };
 /**
  * token: 화면을 연 링크의 토큰. save_quote 가 잠금을 얻은 뒤 지금 토큰과 같은지, 철회·만료·기관 중지·소속 변경이 없는지 다시 본다 (0021).
- * 실패 code: closed 선정·마감 · revoked 철회·토큰 재발급 · expired 기한 만료 · declined 회신하지 않음 · org_inactive 기관 중지 · not_member 소속 아님
+ * 실패 code: closed 선정·마감 · revoked 철회·토큰 재발급 · expired 기한 만료 · declined 회신하지 않음 · org_inactive 기관 중지 · not_member 소속 아님 ·
+ *   not_joined 기관이 참여하기 전(운영자 대리 입력 포함, 0023) · withdrawn 참여 철회
  */
 export function saveQuote(inviteId: string, header: QuoteHeader, items: QuoteItemInput[], submit: boolean, actorId: string | null, token: string) {
   return call<SaveQuoteResult, "save_quote">("save_quote", { p_invite_id: inviteId, p_header: header as unknown as Json, p_items: items as unknown as Json, p_submit: submit, p_actor: actorId, p_token: token });
+}
+
+/* ── 기관 참여·철회 (0023) ── */
+export type SeatState = { cap: number | null; used: number; reserved: number; open: number | null; join_by: string | null };
+export type JoinOfferResult = { ok: true; already?: boolean; joined_at: string; channel: "portal" | "token" | "legacy"; seats: SeatState };
+/**
+ * 기관이 참여하기를 누른다. 요청 행을 잠그고 자리를 세므로 동시에 눌러도 자리를 넘지 않는다.
+ * channel: portal(로그인한 그 기관 담당자) · token(회신 링크). 운영자 계정이면 operator_not_allowed (대신 참여 불가).
+ * termsVersion: 참여 화면에 보여 준 이용 조건 판. ip·ua 와 함께 참여 기록으로 남는다.
+ * 실패 code: closed · revoked · withdrawn · declined · expired · operator_not_allowed · not_member · org_inactive ·
+ *   cutoff 참여 마감 · reserved 남은 자리가 지명 기관 몫 · full 자리 없음 · bad_channel · terms_required
+ */
+export function joinOffer(inviteId: string, token: string, opts: { actorId: string | null; channel: "portal" | "token"; termsVersion: string; ip: string | null; ua: string | null }) {
+  return call<JoinOfferResult, "join_offer">("join_offer", { p_invite_id: inviteId, p_token: token, p_actor: opts.actorId, p_channel: opts.channel, p_terms_version: opts.termsVersion, p_ip: opts.ip, p_ua: opts.ua });
+}
+/** 요청의 자리 현황 (offer_seat_state). 읽지 못하면 null (화면은 "-" 로 보인다) */
+export async function offerSeatState(rfqId: string): Promise<SeatState | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("offer_seat_state", { p_rfq_id: rfqId });
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) return null;
+  const d = data as Record<string, unknown>;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  return { cap: num(d.cap), used: num(d.used) ?? 0, reserved: num(d.reserved) ?? 0, open: num(d.open), join_by: typeof d.join_by === "string" ? d.join_by : null };
+}
+export type WithdrawOfferResult = { ok: true; already?: boolean; seats?: SeatState };
+/** 참여 철회 (제출 전만). 실패 code: closed · revoked · not_member · not_joined 참여 전(불참으로) · submitted · declined · expired */
+export function withdrawOffer(inviteId: string, token: string, actorId: string | null, reason: string | null) {
+  return call<WithdrawOfferResult, "withdraw_offer">("withdraw_offer", { p_invite_id: inviteId, p_token: token, p_actor: actorId, p_reason: reason });
 }
 
 /* ── CRO 계약 체결 보고 ── */

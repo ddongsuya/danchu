@@ -1,4 +1,4 @@
--- 직접 접근 차단 (0022 기준 전체 스키마). 대역(supabase-stubs.sql)이 Supabase 처럼 public 의 새 표·함수를 anon·authenticated·service_role 에
+-- 직접 접근 차단 (0023 기준 전체 스키마). 대역(supabase-stubs.sql)이 Supabase 처럼 public 의 새 표·함수를 anon·authenticated·service_role 에
 -- 모두 열어 두므로, 여기서 막히는 것은 마이그레이션의 RLS·revoke 덕분이다.
 -- 업무 표: RLS 켜짐, 정책 없음 → anon·authenticated 는 읽기 0행, 쓰기 거절. service_role 은 RLS 를 우회해 읽는다
 -- 핵심 RPC·security definer 함수: anon·authenticated 실행 불가, service_role 실행 가능
@@ -110,7 +110,10 @@ declare
     'public.rate_limit_hit(text, integer, integer)',
     'public.rate_limit_cleanup()',
     'public.next_rfq_no(integer)',
-    'public.danchu_schema_version()'
+    'public.danchu_schema_version()',
+    'public.join_offer(uuid, text, uuid, text, text, text, text)',
+    'public.withdraw_offer(uuid, text, uuid, text)',
+    'public.offer_seat_state(uuid)'
   ];
   f text;
   p regprocedure;
@@ -169,5 +172,5 @@ begin
   v := public.danchu_schema_version();
   reset role;
   perform pg_temp.t_eq(res->>'code', 'not_found', 'service_role 은 select_quote 를 실행한다');
-  perform pg_temp.t_eq(v, 22, 'service_role 은 스키마 판을 읽는다');
+  perform pg_temp.t_eq(v, 23, 'service_role 은 스키마 판을 읽는다');
 end $$;

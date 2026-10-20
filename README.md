@@ -43,22 +43,22 @@ npm run test:db              # 실제 PostgreSQL 16 으로 마이그레이션·D
 CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 
 ## Supabase 설정 (1회)
-1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0022_selection_integrity.sql`). 이미 운영 중인 DB 에 0019 이후를 올릴 때는 아래 "배포 순서"를 따른다. 새 마이그레이션은 다음 번호로 추가하고, 그 파일에서 `danchu_schema_version()` 을 새 번호로 바꾸고 `lib/schema-version.ts` 의 `REQUIRED_SCHEMA_VERSION` 과 `scripts/check-schema.mjs` 의 `REQUIRED` 도 올린다. 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
+1. SQL Editor에서 `supabase/migrations/` 의 파일을 번호 순서대로 실행 (`0001_rfq.sql` → … → `0023_opt_in.sql`). 이미 운영 중인 DB 에 0019 이후를 올릴 때는 아래 "배포 순서"를 따른다. 새 마이그레이션은 다음 번호로 추가하고, 그 파일에서 `danchu_schema_version()` 을 새 번호로 바꾸고 `lib/schema-version.ts` 의 `REQUIRED_SCHEMA_VERSION` 과 `scripts/check-schema.mjs` 의 `REQUIRED` 도 올린다. 표를 바꾸면 `lib/db-types.ts` 도 함께 고친다
 2. Storage에 비공개 버킷 `rfq-files`, `cro-files`가 있는지 확인 (스키마가 만들지만 없으면 직접 생성)
 3. Authentication → Providers → Email: 켜 둔다. **Confirm email 켜짐** 유지 (가입 확인은 우리가 보내는 메일 링크로 처리)
    - Authentication → Sign In / Providers → **"Allow new users to sign up" 끄기**. 가입은 서버가 `auth.admin.createUser`로만 만든다. 켜 두면 anon 키로 직접 가입해 프로필을 만들 수 있다 (역할·기관은 어차피 서버만 적지만, 불필요한 계정이 생긴다)
 4. Project Settings → API에서 `URL`, `anon`, `service_role` 키 → 환경변수
 
-### 배포 순서 (0019 → 0022, 운영 DB 에 처음 올릴 때)
-0019·0020·0021·0022 는 서로 이어져 있고, 새 코드는 0022 까지 적용된 DB 를 전제로 한다. 코드와 DB 가 어긋난 채 돌면 회신 저장·선정·청구가 실패하고, 예전에는 배포 대상 조회 오류가 "맞는 기관 없음"으로 보였다. 지금은 DB 판이 모자라면 배포(`lib/distribute.ts`)가 멈추고 오류를 내며, 운영자 홈에 "운영 설정 확인" 경고가 뜬다. 순서는 다음과 같다.
+### 배포 순서 (0019 → 0023, 운영 DB 에 처음 올릴 때)
+0019·0020·0021·0022·0023 은 서로 이어져 있고, 새 코드는 0023 까지 적용된 DB 를 전제로 한다. 코드와 DB 가 어긋난 채 돌면 회신 저장·선정·청구가 실패하고, 예전에는 배포 대상 조회 오류가 "맞는 기관 없음"으로 보였다. 지금은 DB 판이 모자라면 배포(`lib/distribute.ts`)가 멈추고 오류를 내며, 운영자 홈에 "운영 설정 확인" 경고가 뜬다. 순서는 다음과 같다.
 
 1. **쓰기 중지.** 앱에는 점검 모드가 없으므로, 접수·회신·선정이 없는 시간을 고르고 매일 크론(09:00 KST, `vercel.json`) 시각을 피한다. 필요하면 Vercel 에서 프로젝트를 잠시 멈추거나(Pause) 배포 보호를 켜 외부 요청을 막는다. 시작 전에 DB 백업을 받아 둔다 (Supabase → Database → Backups).
-2. **마이그레이션 적용.** SQL Editor 에서 `0019_concierge_mode.sql` → `0020_billing_rules.sql` → `0021_security_hardening.sql` → `0022_selection_integrity.sql` 을 순서대로 하나씩 실행한다. 파일 하나는 한 트랜잭션으로 적용한다 (SQL Editor 실행 또는 `psql -1 -f 파일`). 문장마다 커밋되는 방식으로 돌리다 중간에 실패하면 판 번호는 올라갔는데 권한 정리 같은 뒷부분이 빠질 수 있다. 0022 는 0019~0021 이 빠졌으면 아무것도 바꾸지 않고 멈춘다.
-3. **검증 (코드 배포 전).** 로컬에서 `npm run test:db` 가 모두 통과하는지 본다 (같은 SQL 을 빈 PostgreSQL 에 두 번씩 적용하고, 선정 경합·배포 순서·직접 접근 차단을 검사한다). 운영 DB 에는 `node --env-file=.env.local scripts/check-schema.mjs` (또는 환경변수를 넣고 `npm run check:schema`) 로 `DB 판 22` 가 나오는지 확인한다. 실패하면 코드를 배포하지 않는다.
+2. **마이그레이션 적용.** SQL Editor 에서 `0019_concierge_mode.sql` → `0020_billing_rules.sql` → `0021_security_hardening.sql` → `0022_selection_integrity.sql` → `0023_opt_in.sql` 을 순서대로 하나씩 실행한다. 파일 하나는 한 트랜잭션으로 적용한다 (SQL Editor 실행 또는 `psql -1 -f 파일`). 문장마다 커밋되는 방식으로 돌리다 중간에 실패하면 판 번호는 올라갔는데 권한 정리 같은 뒷부분이 빠질 수 있다. 0022 는 0019~0021 이, 0023 은 0019~0022 가 빠졌으면 아무것도 바꾸지 않고 멈춘다.
+3. **검증 (코드 배포 전).** 로컬에서 `npm run test:db` 가 모두 통과하는지 본다 (같은 SQL 을 빈 PostgreSQL 에 두 번씩 적용하고, 선정 경합·배포 순서·직접 접근 차단을 검사한다). 운영 DB 에는 `node --env-file=.env.local scripts/check-schema.mjs` (또는 환경변수를 넣고 `npm run check:schema`) 로 `DB 판 23` 이 나오는지 확인한다. 실패하면 코드를 배포하지 않는다.
 4. **코드 배포.** `main` 에 올려 Vercel 이 배포하게 한다. 멈춘 프로젝트·배포 보호를 되돌린다.
 5. **검증 (배포 뒤).** `npm run check:schema` 를 한 번 더 돌리고, `/admin` 에 "운영 설정 확인" 경고가 없는지, 시험 요청 1건이 기관에 배포되는지(배포 0곳이면 오류 기록부터 확인) 본다.
 
-사이에 남는 틈: 0021 적용부터 코드 배포까지 옛 코드는 회신 저장(5개 인자 `save_quote`)과 선정(3개 인자 `select_quote`)이 실패하고, 0020 은 `cro_orgs.monthly_cap` 을 지워 옛 코드의 배포 대상 조회가 실패한다. 그래서 1번에서 쓰기를 멈춘다.
+사이에 남는 틈: 0021 적용부터 코드 배포까지 옛 코드는 회신 저장(5개 인자 `save_quote`)과 선정(3개 인자 `select_quote`)이 실패하고, 0020 은 `cro_orgs.monthly_cap` 을 지워 옛 코드의 배포 대상 조회가 실패한다. 0023(참여 선택형)은 참여 기록이 없는 초대의 견적 저장을 막으므로, 참여 화면이 없는 옛 코드에서는 열린 초대(아직 작성 전)의 회신 저장이 실패한다 (작성 중·제출 초대는 전환되어 그대로 저장된다). 그래서 1번에서 쓰기를 멈추고 0023 과 참여 화면 코드를 함께 배포한다.
 
 인증 메일(가입 확인·로그인 링크·비밀번호 재설정)은 Supabase SMTP가 아니라 **Resend로 보낸다**
 (`auth.admin.generateLink` → `/auth/confirm`). Supabase 무료 SMTP의 시간당 발송 한도를 타지 않는다.

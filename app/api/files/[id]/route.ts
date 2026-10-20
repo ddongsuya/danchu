@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/files/[id]?token=… RFQ 첨부 파일 다운로드. 의뢰자·운영자·선정된 기관은 서명 URL로 리다이렉트하고, 선정 전 기관에는 서버가 받아 익명 이름으로 흘려 준다.
- * 허용: 요청 소유 의뢰자 · 운영자 · 이 요청의 초대를 받은 CRO(계정 또는 토큰). CDA 마스킹 요청은 CRO에게 열지 않는다.
+ * 허용: 요청 소유 의뢰자 · 운영자 · 이 요청에 참여한 CRO(계정 또는 토큰). CDA 마스킹 요청은 CRO에게 열지 않는다.
+ * 참여 전(joined_at 없음)이나 철회한 초대에는 첨부를 주지 않는다 (0023: 첨부는 참여 뒤에 열린다).
  */
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -29,19 +30,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   let allowed = false;
   // 기관 열람이면 선정 전까지 파일명을 가린다 (화면 라벨과 같은 규칙, CDA 체결과 무관). 의뢰자·운영자는 원본 이름
   let viaInvite: { id: string; cda_signed_at: string | null; cro_org_id: string | null } | null = null;
+  type Inv = { id: string; cda_signed_at: string | null; expires_at: string; status: string; revoked_at: string | null; cro_org_id: string | null; joined_at: string | null; withdrawn_at: string | null };
+  const inviteOpen = (inv: Inv | null): inv is Inv =>
+    !!inv && !inv.revoked_at && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && !!inv.joined_at && !inv.withdrawn_at && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
+  const INV_COLS = "id, cda_signed_at, expires_at, status, revoked_at, cro_org_id, joined_at, withdrawn_at";
   if (s) {
     if (s.profile.role === "admin") allowed = true;
     // 소유는 user_id 로만 (이메일이 같다고 소유자가 아니다)
     else if (!!rfq.user_id && rfq.user_id === s.userId) allowed = true;
     else if (s.profile.role === "cro" && s.profile.cro_org_id) {
-      const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status, revoked_at, cro_org_id").eq("rfq_id", rfq.id).eq("cro_org_id", s.profile.cro_org_id).maybeSingle();
-      allowed = !!inv && !inv.revoked_at && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
+      const { data: inv } = await sb.from("rfq_invites").select(INV_COLS).eq("rfq_id", rfq.id).eq("cro_org_id", s.profile.cro_org_id).maybeSingle();
+      allowed = inviteOpen(inv);
       if (allowed && inv) viaInvite = inv;
     }
   }
   if (!allowed && token) {
-    const { data: inv } = await sb.from("rfq_invites").select("id, cda_signed_at, expires_at, status, revoked_at, cro_org_id").eq("rfq_id", rfq.id).eq("token", token).maybeSingle();
-    allowed = !!inv && !inv.revoked_at && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
+    const { data: inv } = await sb.from("rfq_invites").select(INV_COLS).eq("rfq_id", rfq.id).eq("token", token).maybeSingle();
+    allowed = inviteOpen(inv);
     if (allowed && inv) viaInvite = inv;
   }
   // 참여가 중지·반려된 기관은 초대를 받았어도 첨부를 내려받지 않는다 (제출한 초대는 중지 때 만료되지 않으므로 여기서 막는다)

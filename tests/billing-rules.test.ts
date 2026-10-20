@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase", () => {
     return b;
   };
   // 배포 전 스키마 판 확인(lib/schema-version.ts)은 이 코드가 기대하는 판을 돌려준다
-  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 22, error: null } : { data: null, error: null }) }) };
+  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 23, error: null } : { data: null, error: null }) }) };
 });
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/mail", () => ({ mailWrap: (s: string) => s, esc: (s: string) => s, sendMail: fx.sendMail }));
@@ -53,7 +53,7 @@ vi.mock("@/lib/data", () => ({ getCroOrg: async () => fx.org }));
 vi.mock("@/lib/audit", async (orig) => ({ ...(await orig<typeof import("@/lib/audit")>()), audit: fx.audit }));
 
 import {
-  SUBSCRIPTION_MAX_EXCL, SUCCESS_FEE_MIN, billingTier, chargesPerQuote, statementDigest, statementTotals, successFeeEligible, successFeeView, wonOrPending,
+  SUBSCRIPTION_MAX_EXCL, SUCCESS_FEE_MIN, billingTier, chargesPerQuote, joinStatusNote, statementDigest, statementTotals, successFeeEligible, successFeeView, wonOrPending,
 } from "@/lib/billing";
 import { comma } from "@/lib/format";
 import { ORG_COLUMNS, distributeTo } from "@/lib/distribute";
@@ -270,3 +270,57 @@ describe("리뷰 수정 (2026-10-18)", () => {
     expect(SQL).toMatch(/p_from <= \(now\(\) at time zone 'Asia\/Seoul'\)::date/);
   });
 });
+
+describe("참여 기록과 청구 (0023)", () => {
+  const OPT = readFileSync("supabase/migrations/0023_opt_in.sql", "utf8");
+  beforeEach(() => {
+    fx.calls = [];
+    fx.session = { userId: "admin-1", email: "admin@example.test", profile: { role: "admin" } };
+  });
+  it("청구하지 않는 참여 상태만 안내가 붙는다", () => {
+    expect(joinStatusNote("joined")).toBe("");
+    expect(joinStatusNote(undefined)).toBe("");
+    expect(joinStatusNote("legacy")).toMatch(/청구하지 않음/);
+    expect(joinStatusNote("not_joined")).toMatch(/참여 기록 없음/);
+    for (const s of [joinStatusNote("legacy"), joinStatusNote("not_joined")]) expect(s).not.toMatch(/[\u2013\u2014]/);
+  });
+  it("SQL: 청구는 portal·token 참여 기록이 있을 때만, legacy 는 제외. 0020 의 '면제 없음' 원칙을 머리말에서 대신한다", () => {
+    expect(OPT).toMatch(/i\.joined_at is not null and i\.join_channel in \('portal', 'token'\)/);
+    expect(OPT).toMatch(/\(i\.billable and j\.ok and public\.billing_tier/);
+    expect(OPT).toMatch(/0020 배경 3[^\n]*를 대신한다/);
+    expect(OPT).toMatch(/if inv\.joined_at is null then return jsonb_build_object\('ok', false, 'code', 'not_joined'\)/);
+  });
+  it("CSV: 참여 기록 없는 견적·legacy 는 청구 대상 N 과 비고, 참여 기록 없는 수주의 정산은 N·0원", async () => {
+    const line = (over: Record<string, unknown>) => ({
+      quote_id: "q", invite_id: "i", rfq_id: "r", rfq_no: "DC-1", org_id: "o", org_name: "기관", managed: false,
+      first_submitted_at: "2026-10-15T03:00:00Z", billing_at: "2026-10-15T03:00:00Z", total_amount: 30000000, entry_source: "cro", auto: false, invite_source: "matched",
+      billable: true, bill_excluded_reason: null, tier: "per_quote", chargeable: true, per_request_fee: 300000, fee_due: 300000, join_status: "joined", ...over,
+    });
+    const snapshot = {
+      taken_at: "2026-11-01T00:00:00Z",
+      summary: [],
+      lines: [
+        line({ quote_id: "q1" }),
+        line({ quote_id: "q2", entry_source: "operator" }),
+        line({ quote_id: "q3", join_status: "legacy", chargeable: false, fee_due: 0 }),
+        line({ quote_id: "q4", join_status: "not_joined", chargeable: false, fee_due: 0 }),
+      ],
+      awards: [{ kind: "settlement", award_id: "a", rfq_id: "r", rfq_no: "DC-2", org_id: "o", org_name: "기관", quote_amount: 60000000, contract_amount: 55000000, contract_status: "signed", awarded_at: "2026-10-01T00:00:00Z", contract_date: "2026-10-05", contract_reported_at: "2026-10-06T00:00:00Z", fee_rate: 0.03, fee: 1650000, invite_billable: true, invite_joined: false }],
+    };
+    fx.respond = (q) => (q.table === "billing_periods" ? { data: { snapshot }, error: null } : { data: null, error: null });
+    const r = await exportCsv(new Request("http://x/api/admin/billing/export?month=2026-10"));
+    const rows = (await r.text()).replace(/^\uFEFF/, "").split("\r\n").map((l) => l.split(","));
+    const head = rows[0];
+    const yn = head.indexOf("청구 대상");
+    const fee = head.indexOf("청구액(원)");
+    const quoteRows = rows.filter((c) => c[0] === "견적 회신");
+    expect(quoteRows.map((c) => c[yn])).toEqual(["Y", "Y", "N", "N"]);
+    expect(quoteRows[2].join(",")).toContain("참여 기능 도입 전 견적");
+    expect(quoteRows[3].join(",")).toContain("참여 기록 없음");
+    const settle = rows.find((c) => c[0] === "성사수수료 정산")!;
+    expect(settle[yn]).toBe("N");
+    expect(settle[fee]).toBe("0");
+    expect(settle.join(",")).toContain("참여 기록 없음");
+  });
+});
+

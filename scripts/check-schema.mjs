@@ -11,7 +11,7 @@
 import { pathToFileURL } from "node:url";
 
 /** lib/schema-version.ts REQUIRED_SCHEMA_VERSION 과 같아야 한다 (tests/selection-integrity.test.ts 가 확인) */
-export const REQUIRED = 22;
+export const REQUIRED = 23;
 
 /** @param {{ url: string; key: string; required?: number; fetchImpl?: typeof fetch }} o */
 export async function checkSchema({ url, key, required = REQUIRED, fetchImpl = fetch }) {
@@ -41,7 +41,7 @@ export async function checkSchema({ url, key, required = REQUIRED, fetchImpl = f
       /* 본문이 JSON 이 아님 */
     }
     if (res.status === 404 || code === "PGRST202" || code === "42883") {
-      return { ok: false, version: null, message: `danchu_schema_version() 이 없습니다. 0019 → 0020 → 0021 → 00${required} 을 순서대로 적용해 주세요.` };
+      return { ok: false, version: null, message: `danchu_schema_version() 이 없습니다. ${Array.from({ length: Math.max(required - 18, 1) }, (_, k) => String(19 + k).padStart(4, "0")).join(" → ")} 을 순서대로 적용해 주세요.` };
     }
     return { ok: false, version: null, message: `DB 판을 읽지 못했습니다 (HTTP ${res.status}${code ? `, ${code}` : ""}).` };
   }

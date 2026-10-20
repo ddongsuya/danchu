@@ -4,13 +4,13 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
 import { logEvent } from "@/lib/notify";
 import { audit, diffFields } from "@/lib/audit";
-import { CONFIDENTIALITY_OPTIONS, countsTowardLimit, CRO_COUNT_OPTIONS, invitationLimit } from "@/lib/request-policy";
+import { CONFIDENTIALITY_OPTIONS, CRO_COUNT_OPTIONS, invitationLimit, occupiesSeat } from "@/lib/request-policy";
 
 export const runtime = "nodejs";
 
 /**
  * PATCH { croCount?, confidentiality? } — 의뢰자가 잘못 고른 전달 기관 수·기밀 등급을 운영자가 바로잡는다.
- * 종료·취소된 요청은 바꾸지 않는다. 기관 수를 이미 전달한 수보다 줄일 수는 없다 (이미 보낸 초대는 되돌리지 않는다).
+ * 종료·취소된 요청은 바꾸지 않는다. 자리 수를 이미 참여한 기관 수(참여·작성 중·제출)보다 줄일 수는 없다 (0023: 안내는 자리 수와 무관).
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");
@@ -34,9 +34,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
 
   const sb = getSupabaseAdmin()!;
   if (patch.cro_count) {
-    const { data: inv } = await sb.from("rfq_invites").select("status").eq("rfq_id", rfq.id);
-    const used = (inv ?? []).filter((i) => countsTowardLimit(i.status)).length;
-    if (used > invitationLimit(patch.cro_count)) return NextResponse.json({ error: `이미 ${used}곳에 전달되어 그보다 적게 줄일 수 없습니다. 필요하면 초대를 개별로 취소하세요.` }, { status: 409 });
+    const { data: inv } = await sb.from("rfq_invites").select("status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id);
+    const used = (inv ?? []).filter(occupiesSeat).length;
+    if (used > invitationLimit(patch.cro_count)) return NextResponse.json({ error: `이미 ${used}곳이 참여해 그보다 적게 줄일 수 없습니다. 필요하면 초대를 개별로 취소하세요.` }, { status: 409 });
   }
   const before = { cro_count: rfq.cro_count, confidentiality: rfq.confidentiality };
   const { error } = await sb.from("rfq_requests").update(patch).eq("id", rfq.id);
@@ -46,5 +46,5 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ no: string }>
   await logEvent(rfq.id, "terms", "요청 조건 변경", label, s.userId, patch);
   await audit({ userId: s.userId, email: s.email }, "rfq.terms", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, changed);
   const wider = patch.cro_count && invitationLimit(patch.cro_count) > invitationLimit(rfq.cro_count);
-  return NextResponse.json({ ok: true, message: wider ? "저장했습니다. 늘어난 자리는 배포 패널에서 채우거나 다음 자동 보충 때 채워집니다." : "저장했습니다." });
+  return NextResponse.json({ ok: true, message: wider ? "저장했습니다. 늘어난 자리에는 참여 안내를 받은 기관이 참여할 수 있습니다." : "저장했습니다." });
 }

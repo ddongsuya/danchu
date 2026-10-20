@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { monthRangeOf, TIER_LABEL } from "@/lib/billing";
+import { joinStatusNote, monthRangeOf, TIER_LABEL } from "@/lib/billing";
 import type { BillingAwardRow, BillingLineRow, BillingSnapshot, BillingSummaryRow } from "@/lib/db-types";
 
 export const runtime = "nodejs";
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   for (const l of view.lines) {
     const billedAt = l.billing_at ?? l.first_submitted_at;
     const lateAmount = !!l.billing_at && seoulDay(l.billing_at).slice(0, 7) !== seoulDay(l.first_submitted_at).slice(0, 7);
-    const note = [SOURCE[l.invite_source] ? `전달 ${SOURCE[l.invite_source]}` : "", l.auto ? "예비 견적(자동 회신)" : "", l.tier === "no_amount" ? "금액 미입력, 청구하지 않음" : "", lateAmount ? `처음 제출 ${seoulDay(l.first_submitted_at)}, 금액 입력한 달에 청구` : ""].filter(Boolean).join(" · ");
+    const note = [SOURCE[l.invite_source] ? `전달 ${SOURCE[l.invite_source]}` : "", l.auto ? "예비 견적(자동 회신)" : "", l.tier === "no_amount" ? "금액 미입력, 청구하지 않음" : "", lateAmount ? `처음 제출 ${seoulDay(l.first_submitted_at)}, 금액 입력한 달에 청구` : "", joinStatusNote(l.join_status)].filter(Boolean).join(" · ");
     push([
       "견적 회신",
       l.org_name,
@@ -57,7 +57,8 @@ export async function GET(req: Request) {
       l.total_amount ?? "",
       "",
       TIER_LABEL[l.tier] ?? l.tier,
-      l.billable && l.tier !== "no_amount" ? "Y" : "N",
+      // 0023: 참여 기록이 없거나 참여 기능 전(legacy) 견적은 청구 대상이 아니다. 0023 전 저장본(join_status 없음)은 예전 기준
+      l.billable && l.tier !== "no_amount" && (l.join_status ?? "joined") === "joined" ? "Y" : "N",
       l.bill_excluded_reason ?? "",
       l.entry_source === "operator" ? "운영자 대리 입력" : "기관",
       l.chargeable ? amountOrPending(l.per_request_fee) : "",
@@ -72,7 +73,9 @@ export async function GET(req: Request) {
   for (const a of view.awards) {
     const rate = a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : "미정";
     if (a.kind === "settlement") {
-      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", "Y", "", "", rate, amountOrPending(a.fee), [`체결일 ${a.contract_date ?? "-"} · 체결 확인한 달에 정산`, a.invite_billable === false ? "견적 청구 제외한 초대" : ""].filter(Boolean).join(" · ")]);
+      // 0023: 참여 기록이 없는 초대의 수주는 명세 합계에 넣지 않는다 (billing_summary). 행은 남기고 N 으로 표시
+      const joined = a.invite_joined !== false;
+      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", joined ? "Y" : "N", "", "", rate, joined ? amountOrPending(a.fee) : 0, [`체결일 ${a.contract_date ?? "-"} · 체결 확인한 달에 정산`, a.invite_billable === false ? "견적 청구 제외한 초대" : "", joined ? "" : "참여 기록 없음, 청구하지 않음"].filter(Boolean).join(" · ")]);
     } else {
       push(["성사수수료 예상", a.org_name, seoulDay(a.awarded_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "견적 기준", "N", "", "", rate, "", `안내용, 합계에 넣지 않음 · 예상 ${a.fee == null ? "미정" : a.fee}원`]);
     }

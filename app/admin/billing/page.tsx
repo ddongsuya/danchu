@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
-import { monthRangeOf, statementDigest, statementTotals, TIER_LABEL, wonOrPending } from "@/lib/billing";
+import { monthRangeOf, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
 import { BillingClose } from "@/components/admin/BillingClose";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { BillingAwardRow, BillingLineRow, BillingSnapshot, BillingSummaryRow } from "@/lib/db-types";
@@ -66,7 +66,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
       <div className="note note--tint" style={{ marginBottom: 12 }}>시범운영 기간에는 기관에 청구하지 않습니다(이용약관 제5조3항). 이 화면의 금액은 참고 집계이며, 금액은 기관과 서면으로 합의한 뒤에 적용합니다.</div>
       <p style={{ ...muted, fontSize: 13, lineHeight: 1.6, marginBottom: 16, maxWidth: "75ch" }}>
-        견적을 제출한 기관만 청구합니다. 요청을 받고 견적을 내지 않은 기관, 금액이 입력되지 않은 견적은 청구하지 않습니다. 금액 없이 제출된 견적은 나중에 금액이 들어온 달에 청구합니다. 견적 총액(부가세 별도) 1,000만 원 미만은 월 구독료에 포함되고, 1,000만 원 이상은 건당 이용료, 선정 견적이 5,000만 원 이상이고 단추를 통해 계약이 체결되면 계약 금액 기준 성사수수료를 더합니다. 같은 초대의 재제출·수정은 처음 제출한 달에 한 번만 셉니다. 월 구독료는 구독 시작 월부터 이번 달까지만 나옵니다.
+        기관이 직접 참여한 요청에 제출한 견적만 청구합니다. 참여 기록이 없는 견적, 요청을 받고 견적을 내지 않은 기관, 금액이 입력되지 않은 견적은 청구하지 않습니다. 기관이 참여한 뒤 운영자가 옮겨 적은 견적은 기관이 직접 낸 견적과 같게 셉니다. 금액 없이 제출된 견적은 나중에 금액이 들어온 달에 청구합니다. 견적 총액(부가세 별도) 1,000만 원 미만은 월 구독료에 포함되고, 1,000만 원 이상은 건당 이용료, 선정 견적이 5,000만 원 이상이고 단추를 통해 계약이 체결되면 계약 금액 기준 성사수수료를 더합니다. 같은 초대의 재제출·수정은 처음 제출한 달에 한 번만 셉니다. 월 구독료는 구독 시작 월부터 이번 달까지만 나옵니다.
       </p>
       {closed && (
         <div className="note note--ok" style={{ marginBottom: 12 }}>
@@ -101,7 +101,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td>
                     <Link href={`/admin/cros/${x.org_id}`}>{x.org_name}</Link>{x.managed && <ManagedBadge />}
                     <span style={{ ...muted, display: "block" }}>
-                      전달 {x.delivered} · 제출 {x.quoted}{x.excluded ? ` · 제외 ${x.excluded}` : ""}{x.no_amount ? ` · 금액 미입력 ${x.no_amount}` : ""} · 선정 {x.selected}{x.quoted ? ` (${Math.round((x.selected / x.quoted) * 100)}%)` : ""}
+                      전달 {x.delivered} · 제출 {x.quoted}{x.excluded ? ` · 청구 안 함 ${x.excluded}` : ""}{x.no_amount ? ` · 금액 미입력 ${x.no_amount}` : ""} · 선정 {x.selected}{x.quoted ? ` (${Math.round((x.selected / x.quoted) * 100)}%)` : ""}
                     </span>
                   </td>
                   <td className="tnum">{x.billable}</td>
@@ -144,7 +144,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 <tr key={l.quote_id}>
                   <td><Link href={`/admin/r/${l.rfq_no}`} className="tnum">{l.rfq_no}</Link></td>
                   <td className="tnum" data-label="처음 제출">{ymd(l.first_submitted_at)}{l.billing_at && ymd(l.billing_at).slice(0, 7) !== ymd(l.first_submitted_at).slice(0, 7) ? <span style={{ ...muted, display: "block" }}>금액 입력 {ymd(l.billing_at)}</span> : null}</td>
-                  <td data-label="기관">{l.org_name}{l.entry_source === "operator" && <span style={{ ...muted, display: "block" }}>운영자 대리 입력</span>}{l.auto && <span style={{ ...muted, display: "block" }}>예비 견적 (자동 회신)</span>}</td>
+                  <td data-label="기관">{l.org_name}{l.entry_source === "operator" && <span style={{ ...muted, display: "block" }}>운영자 대리 입력</span>}{l.auto && <span style={{ ...muted, display: "block" }}>예비 견적 (자동 회신)</span>}{joinStatusNote(l.join_status) && <span style={{ ...muted, display: "block" }}>{joinStatusNote(l.join_status)}</span>}</td>
                   <td className="tnum" data-label="견적 금액">{l.total_amount ? won(l.total_amount) : <span style={muted}>금액 미입력</span>}</td>
                   <td data-label="구간" style={{ fontSize: 12 }}>{TIER_LABEL[l.tier] ?? l.tier}</td>
                   <td className="tnum" data-label="건당 이용료">{l.chargeable ? wonOrPending(l.fee_due, comma, "단가 미정") : "-"}</td>
@@ -168,7 +168,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 <tr key={`${a.kind}-${a.award_id}`}>
                   <td><Link href={`/admin/r/${a.rfq_no}`} className="tnum">{a.rfq_no}</Link></td>
                   <td data-label="구분">{a.kind === "settlement" ? <b>정산 (계약 기준)</b> : "예상 (견적 기준)"}<span style={{ ...muted, display: "block" }}>{a.kind === "settlement" ? `체결 확인 ${ymd(a.contract_reported_at)}` : `선정 ${ymd(a.awarded_at)}`}</span></td>
-                  <td data-label="기관">{a.org_name}{a.invite_billable === false && <span style={{ ...muted, display: "block" }}>견적 청구 제외한 초대</span>}</td>
+                  <td data-label="기관">{a.org_name}{a.invite_billable === false && <span style={{ ...muted, display: "block" }}>견적 청구 제외한 초대</span>}{a.invite_joined === false && <span style={{ ...muted, display: "block" }}>참여 기록 없음, 합계 미포함</span>}</td>
                   <td className="tnum" data-label="선정 견적">{won(a.quote_amount)}</td>
                   <td className="tnum" data-label="계약 금액">{a.contract_amount != null ? won(a.contract_amount) : "-"}</td>
                   <td data-label="계약 상태" style={{ fontSize: 12 }}>{CONTRACT_STATUS_LABEL[a.contract_status] ?? a.contract_status}</td>

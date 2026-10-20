@@ -263,11 +263,20 @@ describe("검사 직후 철회·재발급 경합: save_quote 가 잠금 뒤 거�
     expect(fx.saveQuote.mock.calls[0][5]).toBe(TOKEN);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
   });
-  it.each([["org_inactive"], ["not_member"], ["expired"], ["declined"]])("save_quote %s 도 403", async (code) => {
+  it.each([["org_inactive"], ["not_member"], ["expired"], ["declined"], ["withdrawn"]])("save_quote %s 도 403", async (code) => {
     fx.tables.rfq_requests[0].status = "distributed";
     fx.tables.cro_quotes = [{ id: QUOTE_A, invite_id: INV, rfq_id: RFQ_A, cro_org_id: ORG, status: "draft", cro_quote_items: [] }];
     fx.saveQuote.mockResolvedValueOnce({ ok: false, code });
     expect((await quotePut(json({ items: [] }, "PUT"), ctx({ token: TOKEN }))).status).toBe(403);
+  });
+  it("save_quote not_joined(기관이 참여하기 전, 0023) 는 409 와 참여 안내", async () => {
+    fx.tables.rfq_requests[0].status = "distributed";
+    fx.tables.cro_quotes = [{ id: QUOTE_A, invite_id: INV, rfq_id: RFQ_A, cro_org_id: ORG, status: "draft", cro_quote_items: [] }];
+    fx.saveQuote.mockResolvedValueOnce({ ok: false, code: "not_joined" });
+    const r = await quotePut(json({ items: [] }, "PUT"), ctx({ token: TOKEN }));
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as { error: string }).error).toMatch(/참여하기/);
+    expect(fx.notifyUsers).not.toHaveBeenCalled();
   });
 });
 

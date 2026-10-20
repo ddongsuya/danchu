@@ -9,7 +9,7 @@ import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { md, todaySeoul, won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
-import { entrySourceFor, loadOptsFor } from "@/lib/concierge";
+import { entrySourceFor, loadOptsFor, PROXY_BEFORE_JOIN, proxyEntryAllowed } from "@/lib/concierge";
 import { audit } from "@/lib/audit";
 import { beforeDeadline } from "@/lib/reply-window";
 
@@ -34,28 +34,37 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
   const a = await actorOf();
   const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed });
+  // 참여 전(joined false)에는 rfq 가 요약이고 draft 는 null 이다 (lib/quote-load.ts rfqSummaryOf)
+  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed, joined: got.joined, withdrawn: got.withdrawn });
 }
 
 const CLOSED_MSG = "의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다.";
 const LINK_GONE = "유효하지 않거나 만료된 링크입니다.";
 
-/** save_quote 가 잠금 뒤 재검사에서 거절한 이유 (0021) */
+/** save_quote 가 잠금 뒤 재검사에서 거절한 이유 (0021, 0023) */
 const SAVE_DENIED: Record<string, { error: string; status: number }> = {
   revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(hello@danchu.kr)에서 새 링크를 받아 주세요.`, status: 403 },
   expired: { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 },
-  declined: { error: "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
+  declined: { error: "불참으로 처리한 요청입니다. 다시 참여하려면 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
   org_inactive: { error: "기관 참여가 중지되어 저장할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
   not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관 견적을 저장할 수 없습니다. 이 기관의 견적이라면 로그아웃한 뒤 메일의 링크로 다시 열어 회신해 주세요.", status: 403 },
+  // 0023: 기관 본인이 참여하기를 누르기 전에는 기관도 운영자(대리 입력)도 저장할 수 없다
+  not_joined: { error: "기관이 이 요청에 참여한 뒤에 견적을 저장할 수 있습니다. 요청 화면에서 참여하기를 먼저 눌러 주세요.", status: 409 },
+  withdrawn: { error: "참여를 철회한 요청입니다. 다시 참여하려면 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
 };
 
-/** 저장·제출이 막힌 상태면 그 이유 */
-function blocked(got: Loaded): string {
-  if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
-  if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
-  if (got.closed) return CLOSED_MSG;
-  if (got.declined) return "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.";
-  return "";
+/**
+ * 저장·제출이 막힌 상태면 그 이유와 상태 코드. 참여 전에는 기관도 운영자(대리 입력)도 저장할 수 없다 (0023).
+ * DB(save_quote)도 같은 규칙으로 다시 거절한다. 여기서는 화면 검사와 문구를 맡는다
+ */
+function blocked(got: Loaded): { error: string; status: number } | null {
+  if (got.expired) return { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 };
+  if (got.locked) return { error: "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.", status: 403 };
+  if (got.closed) return { error: CLOSED_MSG, status: 403 };
+  if (got.withdrawn) return SAVE_DENIED.withdrawn;
+  if (got.declined) return SAVE_DENIED.declined;
+  if (!proxyEntryAllowed(got)) return got.operator ? { error: PROXY_BEFORE_JOIN, status: 409 } : SAVE_DENIED.not_joined;
+  return null;
 }
 
 type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef };
@@ -235,7 +244,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
   const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   const why = blocked(got);
-  if (why) return NextResponse.json({ error: why }, { status: 403 });
+  if (why) return NextResponse.json({ error: why.error }, { status: why.status });
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
   if (got.draft?.status === "submitted") return NextResponse.json({ ok: true, skipped: true }); // 제출본은 자동 저장으로 덮지 않는다
@@ -251,7 +260,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   const why = blocked(got);
-  if (why) return NextResponse.json({ error: why }, { status: 403 });
+  if (why) return NextResponse.json({ error: why.error }, { status: why.status });
 
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
@@ -260,7 +269,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const incomplete = parsed.items.some((it) => !(it.avail === "불가" || (it.avail && it.amount && it.weeks)));
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });
-  if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 '회신하지 않음'으로 처리해 주세요." }, { status: 400 });
+  if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 견적 대신 요청 화면에서 '참여 철회'로 처리해 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "불가" && Number(it.amount) < 1)) return NextResponse.json({ error: "가능·조건부 가능 항목의 금액은 1원 이상이어야 합니다." }, { status: 400 });
   if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
   const today = todaySeoul();

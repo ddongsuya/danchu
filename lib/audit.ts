@@ -6,7 +6,7 @@ export type AuditAction =
   | "user.role" | "user.delete"
   | "invite.billing" | "invite.resend" | "invite.cancel" | "billing.close"
   | "rfq.deadline" | "rfq.close_replies" | "rfq.terms" | "award.contract" | "award.contract_status"
-  | "org.create" | "org.optout" | "quote.proxy" | "invite.decline_proxy";
+  | "org.create" | "org.optout" | "quote.proxy" | "invite.decline_proxy" | "invite.withdraw_proxy";
 
 /**
  * 운영자 행위를 남긴다. 요청 단위 이력(rfq_events)과 달리 기관·사용자·청구처럼 요청 밖의 변경을 모은다.

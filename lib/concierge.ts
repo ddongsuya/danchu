@@ -99,6 +99,21 @@ export function replyPath(inv: { id: string; token: string }, org: { managed?: b
 
 /* ── 3) 대리 입력 ── */
 
+/**
+ * 참여 선택 (0023): 참여는 기관 본인만 누른다. 운영자는 기관 대신 참여할 수 없고(join_offer 가 operator_not_allowed 로 거절),
+ * 기관이 참여하기 전에는 견적을 대신 입력할 수 없다(save_quote 가 not_joined 로 거절). 화면과 라우트는 DB 보다 먼저 같은 규칙으로 막는다.
+ * 기관이 메일로 알린 불참·철회 기록은 운영자가 할 수 있다 (감사 기록을 남긴다).
+ */
+export function canJoinAs(role: string | null | undefined): boolean {
+  return role !== "admin";
+}
+/** 운영자 대리 입력이 열리는지: 그 초대에 기관 본인의 참여 기록이 있을 때만 */
+export function proxyEntryAllowed(inv: { joined_at?: string | null } | { joined: boolean }): boolean {
+  return "joined" in inv ? inv.joined : !!inv.joined_at;
+}
+export const OPERATOR_JOIN_DENIED = "운영자는 기관 대신 참여할 수 없습니다. 기관이 회신 링크나 포털에서 직접 참여하기를 눌러야 합니다. 참여를 권하려면 기관에 전화나 메일로 안내해 주세요.";
+export const PROXY_BEFORE_JOIN = "기관이 이 요청에 참여하기 전이라 견적을 대신 입력할 수 없습니다. 기관이 회신 링크에서 참여하기를 누른 뒤 PDF 견적을 옮겨 적어 주세요.";
+
 /** 제출한 세션의 역할로 입력 주체를 정한다. 운영자가 회신 링크로 제출하면 대리 입력이다 */
 export function entrySourceFor(role: string | null | undefined): QuoteEntrySource {
   return role === "admin" ? "operator" : "cro";

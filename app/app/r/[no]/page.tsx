@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
-import { STAGES, stageIndex, statusLabel, statusTone, INVITE_LABEL } from "@/lib/status";
+import { STAGES, stageIndex, statusLabel, statusTone, inviteStageLabel } from "@/lib/status";
 import { CheckMark, Crumb, StatusPill } from "@/components/app/ui";
 import { md, mdhm, ymd } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
@@ -109,7 +109,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: i.status === "submitted" ? "var(--brand)" : "var(--dash)" }} />
                       <span style={{ fontSize: 14, fontWeight: 600 }}>{i.cro_name}</span>
                     </div>
-                    <span style={{ fontSize: 13, color: i.status === "submitted" ? "var(--ink)" : "var(--muted)" }}>{INVITE_LABEL[i.status] ?? i.status}</span>
+                    <span style={{ fontSize: 13, color: i.status === "submitted" ? "var(--ink)" : "var(--muted)" }}>{inviteStageLabel(i)}</span>
                   </div>
                 ))}
               </div>

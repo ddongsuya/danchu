@@ -4,6 +4,7 @@ import { seoulMonthRange } from "./request-policy";
  * 청구 기준 (2026-10-18 결정). DB 함수(supabase/migrations/0020_billing_rules.sql)와 같은 값이다.
  * - 의뢰자는 비용을 내지 않는다.
  * - 청구 단위는 기관이 실제로 제출한 견적 1건. 견적을 내지 않은 기관에는 청구하지 않는다. 재제출·수정은 다시 청구하지 않는다.
+ * - 그 초대에 기관 본인의 참여 기록이 있어야 청구한다 (0023_opt_in.sql). 참여 기록이 있으면 운영자 대리 입력도 같다.
  * - 견적 총액(부가세 별도) 1,000만 원 미만: 월 구독료에 포함 / 1,000만 원 이상: 건당 이용료 /
  *   5,000만 원 이상: 건당 이용료 + 단추를 통해 계약이 체결되면 성사수수료(계약 금액 × 요율)
  * 두 기준 금액은 tests/billing-rules.test.ts 가 SQL 과 같은지 확인한다.
@@ -12,6 +13,19 @@ import { seoulMonthRange } from "./request-policy";
 export const SUBSCRIPTION_MAX_EXCL = 10_000_000;
 /** 이 금액 이상 견적은 성사수수료 대상 */
 export const SUCCESS_FEE_MIN = 50_000_000;
+
+/**
+ * 참여 기록에 따른 청구 여부 (0023). 기관 본인이 참여한(joined) 초대의 견적만 청구한다. 운영자 대리 입력도 기관이 참여했으면 같다.
+ * legacy: 참여 기능 전에 작성 중·제출이던 견적. not_joined: 참여 기록 없음. 둘 다 청구하지 않는다
+ */
+export const JOIN_STATUS_NOTE: Record<"legacy" | "not_joined", string> = {
+  legacy: "참여 기능 도입 전 견적, 청구하지 않음",
+  not_joined: "참여 기록 없음, 청구하지 않음",
+};
+/** 청구에 넣지 않는 참여 상태면 그 안내, 아니면 빈 문자열. 0023 전 저장본(값 없음)은 안내 없음 */
+export function joinStatusNote(status: string | null | undefined): string {
+  return status === "legacy" || status === "not_joined" ? JOIN_STATUS_NOTE[status] : "";
+}
 
 /** 견적 총액의 청구 구간. no_amount: 금액 미입력(아직 청구하지 않음) */
 export type BillingTier = "no_amount" | "subscription" | "per_quote" | "per_quote_success";

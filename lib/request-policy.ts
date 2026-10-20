@@ -45,21 +45,89 @@ export function maskedClientLabel(orgType: string | null | undefined): string {
   return `${orgType || "의뢰기관"} (선정 시 공개)`;
 }
 
-/** 의뢰자가 고르는 전달 기관 수·기밀 등급 (rfq-schema 의 선택지와 같아야 한다) */
+/** 의뢰자가 고르는 참여 자리 수·기밀 등급 (rfq-schema 의 선택지와 같아야 한다) */
 export const CRO_COUNT_OPTIONS = ["3곳", "5곳", "전체"] as const;
 export const CONFIDENTIALITY_OPTIONS = ["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"] as const;
 
+/**
+ * 참여 자리 수 (0023). 3곳·5곳·전체는 "보낼 곳"이 아니라 "참여 자리"다. 안내는 분야가 맞는 기관 모두에게 간다.
+ * 전체면 무한대. DB 함수 join_offer·offer_seat_state 와 같은 규칙
+ */
 export function invitationLimit(value: string | null | undefined): number {
   return value === "전체" ? Number.POSITIVE_INFINITY : value === "5곳" ? 5 : 3;
 }
 
+/** 남은 참여 자리 (자리 수 - 이미 쓴 자리) */
 export function remainingInvites(value: string | null | undefined, existing: number): number {
   return Math.max(0, invitationLimit(value) - existing);
 }
 
-/** 초대 한도에 세는 초대인지. 회신하지 않음·만료는 자리를 비운 것이다 (DB 트리거와 같은 규칙, 0012) */
+/** 자리를 차지할 수 있는 초대 상태인지. 불참·철회(declined)·만료는 자리를 비운 것이다 */
 export function countsTowardLimit(status: string): boolean {
   return status !== "declined" && status !== "expired";
+}
+
+/* ── 참여 (0023) ── */
+
+/**
+ * 기관이 참여할 때 보여 주고 참여 기록(rfq_invites.join_terms_version)에 남기는 이용 조건 판.
+ * 시범운영 중 이 판으로 참여한 요청은 끝까지 무료다. 조건이 바뀌면 판 이름을 바꾸고 약관 문서에도 같은 이름을 적는다
+ */
+export const CRO_TERMS_VERSION = "pilot-2026-10";
+
+/** 참여 버튼 옆에 그대로 보여 주는 동의 문장 (설계 규칙표 "참여 버튼 문구"). 이 문장을 보고 누른 것이 참여 기록이다 */
+export const JOIN_CONSENT = "이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 그 1건이 이용 조건에 따른 청구 단위가 됩니다(시범 운영 중 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.";
+
+/** 참여 단계 판정에 쓰는 초대 열 */
+export type JoinFields = { status: string; joined_at?: string | null; withdrawn_at?: string | null; revoked_at?: string | null };
+
+/** 기관 본인(또는 0023 전 작성 중·제출, legacy)이 참여한 초대인지 */
+export function isJoined(inv: Pick<JoinFields, "joined_at">): boolean {
+  return !!inv.joined_at;
+}
+
+/**
+ * 자리에 세는 초대인지: 참여·작성 중·제출 (철회·불참·취소·만료는 세지 않는다).
+ * offer_seat_state 의 used 와 같은 규칙. 0023 전환으로 draft·submitted 는 모두 joined_at 이 있지만, 빠진 행도 같게 센다
+ */
+export function occupiesSeat(inv: JoinFields): boolean {
+  if (inv.revoked_at || inv.withdrawn_at) return false;
+  if (!["sent", "draft", "submitted"].includes(inv.status)) return false;
+  return !!inv.joined_at || inv.status === "draft" || inv.status === "submitted";
+}
+
+/** 자리 현황 (offer_seat_state 결과, lib/rpc.ts SeatState 와 같은 모양). cap·open 이 null 이면 자리 제한 없음(전체) */
+export type SeatInfo = { cap: number | null; used: number; reserved: number; open: number | null; join_by: string | null };
+
+/** "자리 3곳 중 2곳 남음" · "자리 제한 없음, 지금 2곳 참여". 지명 기관 몫이 있으면 함께 적는다 */
+export function seatsLabel(s: SeatInfo | null | undefined): string {
+  if (!s) return "-";
+  if (s.cap == null) return `자리 제한 없음 · 지금 ${s.used}곳 참여`;
+  const open = s.open ?? Math.max(0, s.cap - s.used - s.reserved);
+  const reserved = s.reserved > 0 ? ` (지명 기관 몫 ${s.reserved}곳 별도)` : "";
+  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼습니다${reserved}`;
+}
+
+/**
+ * 참여 결정 기한: 안내한 날부터 2영업일, 회신 기한이 5영업일 안이면 1영업일 (설계 규칙표 "기한"). 평일 기준, 공휴일 미반영.
+ * from·replyBy 는 서울 날짜(YYYY-MM-DD). 그날 서울 자정 직전 시각(ISO)을 돌려준다. 접수 라우트가 rfq_requests.join_by 에 쓴다
+ */
+export function joinDeadline(from: string, replyBy: string | null | undefined): string {
+  const addBiz = (ymd: string, n: number) => {
+    const d = new Date(`${ymd}T12:00:00Z`);
+    let k = 0;
+    while (k < n) {
+      d.setUTCDate(d.getUTCDate() + 1);
+      const w = d.getUTCDay();
+      if (w !== 0 && w !== 6) k++;
+    }
+    return d.toISOString().slice(0, 10);
+  };
+  const short = !!replyBy && replyBy <= addBiz(from, 5);
+  let day = addBiz(from, short ? 1 : 2);
+  // 회신 기한을 넘기지 않는다
+  if (replyBy && day > replyBy) day = replyBy;
+  return new Date(`${day}T23:59:59+09:00`).toISOString();
 }
 
 /** 회신 링크 만료 시각: 기한 날 자정(서울) + 7일 */

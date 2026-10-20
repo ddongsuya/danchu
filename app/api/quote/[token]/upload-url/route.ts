@@ -15,7 +15,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const got = await loadQuote(token, await viewerLoadOpts());
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
-  if (got.locked || got.closed) return NextResponse.json({ error: "지금은 수정할 수 없습니다." }, { status: 403 });
+  if (got.locked || got.closed || got.declined) return NextResponse.json({ error: "지금은 수정할 수 없습니다." }, { status: 403 });
+  // 견적서 PDF 는 참여한 초대에만 올린다 (견적 저장과 같은 조건, 0023)
+  if (!got.joined) return NextResponse.json({ error: got.operator ? "기관이 이 요청에 참여하기 전이라 견적서를 대신 올릴 수 없습니다." : "이 요청에 참여한 뒤에 견적서를 올릴 수 있습니다." }, { status: 409 });
 
   const b = (await req.json().catch(() => ({}))) as { name?: unknown; size?: unknown; type?: unknown };
   const name = typeof b.name === "string" ? b.name : "";

@@ -36,13 +36,22 @@ language sql as $$
   returning id
 $$;
 
-create or replace function pg_temp.t_invite(p_rfq uuid, p_org uuid, p_sent timestamptz default now()) returns uuid
-language sql as $$
-  insert into public.rfq_invites (rfq_id, rfq_no, cro_name, cro_email, cro_org_id, reply_by, expires_at, sent_at, source)
-  select r.id, r.rfq_no, o.name, 'cro-' || o.id || '@example.test', o.id, (now() + interval '7 days')::date, now() + interval '14 days', p_sent, 'matched'
+-- 초대 1건. 기본은 기관이 참여한 초대다 (0023: 참여 기록이 있어야 견적을 저장하고 청구한다). p_joined = false 면 참여 결정 전.
+-- 참여 기록은 join_offer() 로만 쓰게 막혀 있어(0023 트리거), 도우미는 같은 쓰기 표식을 잠시 켜고 넣는다
+create or replace function pg_temp.t_invite(p_rfq uuid, p_org uuid, p_sent timestamptz default now(), p_joined boolean default true, p_source text default 'matched') returns uuid
+language plpgsql as $$
+declare v uuid;
+begin
+  perform set_config('danchu.opt_in_write', 'on', true);
+  insert into public.rfq_invites (rfq_id, rfq_no, cro_name, cro_email, cro_org_id, reply_by, expires_at, sent_at, source,
+                                  joined_at, join_channel, join_actor, join_terms_version)
+  select r.id, r.rfq_no, o.name, 'cro-' || o.id || '@example.test', o.id, (now() + interval '7 days')::date, now() + interval '14 days', p_sent, p_source,
+         case when p_joined then p_sent end, case when p_joined then 'portal' end, case when p_joined then 'member' end, case when p_joined then 'test-terms' end
   from public.rfq_requests r, public.cro_orgs o where r.id = p_rfq and o.id = p_org
-  returning id
-$$;
+  returning id into v;
+  perform set_config('danchu.opt_in_write', '', true);
+  return v;
+end $$;
 
 -- 제출된 견적 1건 (정식 견적서 조건을 갖춘다). p_at 이 처음 제출 시각이 된다
 create or replace function pg_temp.t_quote(p_invite uuid, p_amount bigint, p_at timestamptz default now(), p_source text default 'cro') returns uuid
