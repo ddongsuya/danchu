@@ -180,3 +180,36 @@
 .request h1 {
   scroll-margin-top: 90px;
 }
+
+/* ── 로그인 전 "보내기": 이메일 확인 창 (GuestVerify) ──
+   좁은 화면은 아래에서 올라오는 시트, 넓은 화면은 가운데 창. 요청서는 뒤에 그대로 보인다. */
+.gv {
+  margin: auto auto 0; width: 100%; max-width: 100%; max-height: calc(100dvh - 48px);
+  padding: 0 0 calc(24px + env(safe-area-inset-bottom, 0px)); border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--white); color: var(--ink);
+  box-shadow: 0 -12px 40px -16px rgba(20, 20, 24, 0.28);
+  overflow-y: auto;
+}
+.gv[open] { animation: gvIn 280ms var(--ease-drawer); }
+.gv::backdrop { background: rgba(14, 14, 16, 0.36); }
+@keyframes gvIn { from { opacity: 0.6; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+.gv__bar { position: sticky; top: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 52px; padding: 0 8px; background: var(--white); border-bottom: 1px solid var(--card-line); }
+.gv__bar b { font-size: 16px; font-weight: 600; }
+.gv__bar .btxt { justify-self: start; color: var(--brand); font-size: 16px; }
+.gv__body { display: flex; flex-direction: column; gap: 16px; padding: 20px 20px 0; }
+.gv__body h2 { font-size: 22px; line-height: 1.35; font-weight: 700; letter-spacing: -0.03em; text-wrap: balance; }
+.gv__lead { margin-top: -8px; color: var(--body); font-size: 15px; line-height: 1.55; }
+.gv__center { text-align: center; }
+.gv__code { letter-spacing: 0.32em; text-align: center; font-weight: 600; caret-color: var(--brand); }
+.gv__row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.gv__row .btxt { color: var(--brand); }
+@media (min-width: 640px) {
+  .gv { margin: auto; max-width: 480px; padding-bottom: 24px; border-radius: var(--r-lg); box-shadow: 0 24px 60px -24px rgba(20, 20, 24, 0.35); }
+  .gv[open] { animation-name: gvPop; }
+  @keyframes gvPop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gv[open] { animation: gvFade 200ms ease; }
+  @keyframes gvFade { from { opacity: 0; } to { opacity: 1; } }
+}

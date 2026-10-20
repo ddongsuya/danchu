@@ -24,19 +24,46 @@ export type Loaded = {
   locked: boolean;
   /** 불참(참여 전) 또는 철회(참여 뒤) 처리. status = declined */
   declined: boolean;
-  /** 의뢰자가 CRO를 선택했거나 회신이 마감되어(compared_at) 회신이 닫힘 */
+  /** 회신이 닫힘: 비교표 공개(compared_at), 선정, 마무리·취소, 운영자가 이 초대를 취소, 기관 참여 중지 */
   closed: boolean;
+  /** 닫힌 이유. 기관에게 보여 줄 문구는 closedMessage() */
+  closedReason: ClosedReason | null;
   /** 기관이 참여했는지 (joined_at, 0023). false 면 rfq 는 참여 전 요약이고 draft 는 null 이다 */
   joined: boolean;
-  /** 참여 뒤 철회했는지 (withdrawn_at). declined 와 함께 참이다 */
+  /** 참여 뒤 철회했는지 (withdrawn_at). declined 와 함께 참이다. 철회는 되돌릴 수 없다 */
   withdrawn: boolean;
+  /**
+   * 참여 전 불참을 되돌려 다시 참여할 수 있는지 (2026-10-20 결정, 0025 join_offer).
+   * 불참(참여 전)이고, 참여 결정 기한(join_by) 전이고, 회신이 열려 있을 때. 자리가 남았는지는 join_offer 가 잠금 안에서 다시 본다
+   */
+  canRejoin: boolean;
   /** 운영자 세션으로 연 화면 (대리 입력). 참여를 대신 누를 수 없다 */
   operator: boolean;
-  /** 참여 전에만 채운다: 자리 현황 (offer_seat_state) */
+  /** 참여 전(불참 포함)에만 채운다: 자리 현황 (offer_seat_state) */
   seats: SeatInfo | null;
   /** 참여 결정 기한 (rfq_requests.join_by). 없으면 null */
   joinBy: string | null;
 };
+
+export type ClosedReason = "selected" | "ended" | "compared" | "invite_cancelled" | "org_suspended";
+
+/** 닫힌 회신 화면과 저장 거부 응답에 쓰는 문구 */
+export function closedMessage(reason: ClosedReason | null): string {
+  switch (reason) {
+    case "selected":
+      return "의뢰자가 기관을 선정해 이 요청의 회신이 닫혔습니다.";
+    case "ended":
+      return "의뢰자가 요청을 마무리해 회신이 닫혔습니다.";
+    case "compared":
+      return "비교표가 열려 이 요청의 회신이 닫혔습니다. 제출한 견적은 의뢰자가 보고 있습니다.";
+    case "invite_cancelled":
+      return "운영자가 이 기관에 보낸 요청을 취소했습니다. 저장하거나 제출할 수 없습니다.";
+    case "org_suspended":
+      return "기관의 참여가 중지되어 회신할 수 없습니다. hello@danchu.kr로 문의해 주세요.";
+    default:
+      return "이 요청의 회신이 닫혔습니다.";
+  }
+}
 
 /**
  * 의뢰자 표시명과 공개 상태.
@@ -269,18 +296,32 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
     draft = await prefillDraft(inv.cro_org_id, r, rfq);
   }
   const now = Date.now();
-  // 운영자는 기한 뒤에도 대리 입력한 견적을 고칠 수 있다. 회신 마감·선정 뒤에는 아래 closed 가 막는다
+  // 운영자는 기한 뒤에도 대리 입력한 견적을 고칠 수 있다. 비교표 공개·선정 뒤에는 아래 closed 가 막는다
   const expired = !opts.operator && !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
   const locked = !opts.operator && draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
-  // 회신이 마감되면(compared_at, 기한 다음 날 cron 또는 운영자 회신 마감) 아직 제출하지 않은 기관도 닫힌다. 제때 낸 기관만 잠기고
-  // 안 낸 기관은 링크 만료까지 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 을 비우므로 다시 열린다 (lib/reply-window.ts)
-  // 참여가 중지된 기관의 초대는 위에서 막았다. 운영자가 열면 닫힌 화면으로 보인다
-  const closed = repliesClosed(r) || orgSuspended;
+  // 비교표가 열리면(compared_at: 참여한 기관이 모두 제출, 회신 기한 경과, 운영자 회신 마감) 아직 제출하지 않은 기관도 닫힌다.
+  // 제때 낸 기관만 잠기고 안 낸 기관은 링크 만료까지 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 을 비우므로 다시 열린다
+  // 참여가 중지된 기관의 초대는 위에서 막았다. 운영자가 열면 닫힌 화면으로 보인다. 운영자가 이 초대만 취소한(expired) 초대도 닫는다 (DB save_quote·join_offer 도 거절)
+  const closedReason: ClosedReason | null = r.selected_quote_id || ["selected", "contracting"].includes(r.status)
+    ? "selected"
+    : ["closed", "cancelled"].includes(r.status)
+      ? "ended"
+      : repliesClosed(r)
+        ? "compared"
+        : orgSuspended
+          ? "org_suspended"
+          : inv.status === "expired"
+            ? "invite_cancelled"
+            : null;
+  const closed = !!closedReason;
+  const withdrawn = !!inv.withdrawn_at;
+  // 불참 되돌리기: 참여 전 불참만, 참여 결정 기한 전, 회신이 열려 있을 때 (철회는 되돌릴 수 없다)
+  const canRejoin = !closed && !expired && inv.status === "declined" && !withdrawn && !inv.joined_at && !!r.join_by && now <= new Date(r.join_by).getTime();
 
   return {
     rfq, draft, inviteId: inv.id, rfqId: inv.rfq_id, croName: inv.cro_name, croOrgId: inv.cro_org_id, token: inv.token,
-    expired, locked, declined: inv.status === "declined", closed,
-    joined, withdrawn: !!inv.withdrawn_at, operator: !!opts.operator, seats, joinBy: r.join_by ?? null,
+    expired, locked, declined: inv.status === "declined", closed, closedReason,
+    joined, withdrawn, canRejoin, operator: !!opts.operator, seats, joinBy: r.join_by ?? null,
   };
 }
 

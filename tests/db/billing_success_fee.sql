@@ -1,4 +1,4 @@
--- 성사수수료: 대상은 선정 견적 5,000만 원 이상. 예상 = 견적 × 요율(선정 달), 정산 = 계약 금액 × 요율(체결 확인 달, signed 만)
+-- 성사수수료: 대상은 선정 견적 5,000만 원 이상. 예상 = 견적 × 요율(선정 달), 정산 = 계약 금액 × 요율(계약이 확인된 달, signed 만. 0025)
 do $$
 declare
   o uuid := pg_temp.t_org('성사기관', 300000, 0.03);
@@ -7,6 +7,7 @@ declare
   res jsonb;
   s record;
   b record;
+  v_conf timestamptz;
 begin
   q_big := pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-SF-1'), o, pg_temp.t_mid(-2)), 60000000, pg_temp.t_mid(-2));
   q_small := pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-SF-2'), o, pg_temp.t_mid(-2)), 49999999, pg_temp.t_mid(-2));
@@ -29,6 +30,10 @@ begin
   res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false);
   perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고');
   res := public.report_contract(a_small, (now() at time zone 'Asia/Seoul')::date, 49999999, '', false);
+  -- 확인 전에는 정산하지 않는다 (0025)
+  perform pg_temp.t_eq(coalesce((select settled_count from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 0), 0, '확인 전 정산 없음');
+  perform pg_temp.t_confirm(a_big);
+  perform pg_temp.t_confirm(a_small);
 
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.settled_count, 1, '정산 1건 (5,000만 미만 견적은 대상 아님)');
@@ -42,15 +47,18 @@ begin
   perform pg_temp.t_eq(b.quote_amount, 60000000::bigint, '대상 판정은 견적 금액');
   perform pg_temp.t_eq(b.fee, 1650000::bigint, '정산 행 금액');
 
-  -- 정정(운영자)은 확인 시각을 바꾸지 않는다: 정산 월이 옮겨 가지 않는다
+  -- 정정(운영자)은 보고·확인 시각을 바꾸지 않는다: 정산 월이 옮겨 가지 않는다
   update public.rfq_awards set contract_reported_at = pg_temp.t_mid(0) where id = a_big;
+  select contract_confirmed_at into v_conf from public.rfq_awards where id = a_big;
   res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 70000000, '정정', true);
   perform pg_temp.t_eq(res->>'corrected', 'true', '정정');
-  perform pg_temp.t_eq((select contract_reported_at from public.rfq_awards where id = a_big), pg_temp.t_mid(0), '처음 확인 시각 유지');
+  perform pg_temp.t_eq(res->>'confirmed', 'true', '확인된 계약의 정정');
+  perform pg_temp.t_eq((select contract_reported_at from public.rfq_awards where id = a_big), pg_temp.t_mid(0), '처음 보고 시각 유지');
+  perform pg_temp.t_eq((select contract_confirmed_at from public.rfq_awards where id = a_big), v_conf, '확인 시각 유지');
   perform pg_temp.t_eq((select settled_fee from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 2100000::bigint, '정정 금액 7,000만 × 3%');
 end $$;
 
--- 정산 월 = 체결 확인 달. 계약 체결일(contract_date)이 지난달이어도 이번 달에 확인되면 이번 달
+-- 정산 월 = 계약 확인 달. 계약 체결일(contract_date)이 지난달이어도 이번 달에 확인되면 이번 달
 do $$
 declare
   o uuid := pg_temp.t_org('정산월기관', 300000, 0.03);
@@ -60,6 +68,7 @@ declare
 begin
   res := public.report_contract(a, pg_temp.t_month(-1) + 3, 50000000, '', false);
   perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고');
+  perform pg_temp.t_confirm(a);
   perform pg_temp.t_eq((select settled_fee from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 1500000::bigint, '확인한 이번 달에 정산');
   perform pg_temp.t_eq(coalesce((select settled_count from public.billing_summary(pg_temp.t_month(-1), pg_temp.t_month(0)) where org_id = o), 0), 0, '체결일 달에는 없음');
 end $$;
@@ -74,6 +83,7 @@ declare
   s record;
 begin
   res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false);
+  perform pg_temp.t_confirm(a);
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.settled_count, 1, '정산 대상 1건');
   perform pg_temp.t_assert(s.settled_fee is null, '요율 미정이면 null');

@@ -120,7 +120,15 @@ declare
     'public.billing_reference(date, date)',
     'public.billing_month_lock(date)',
     'public.billing_reference_per_quote_fee()',
-    'public.billing_reference_success_rate()'
+    'public.billing_reference_success_rate()',
+    'public.compare_readiness(uuid)',
+    'public.open_comparison_if_ready(uuid)',
+    'public.open_ready_comparisons()',
+    'public.confirm_contract(uuid, uuid)',
+    'public.dispute_contract(uuid, uuid, text)',
+    'public.resolve_contract_dispute(uuid, uuid, text, text)',
+    'public.auto_confirm_contracts()',
+    'public.auth_user_confirmed(uuid)'
   ];
   f text;
   p regprocedure;
@@ -179,5 +187,5 @@ begin
   v := public.danchu_schema_version();
   reset role;
   perform pg_temp.t_eq(res->>'code', 'not_found', 'service_role 은 select_quote 를 실행한다');
-  perform pg_temp.t_eq(v, 24, 'service_role 은 스키마 판을 읽는다');
+  perform pg_temp.t_eq(v, 25, 'service_role 은 스키마 판을 읽는다');
 end $$;

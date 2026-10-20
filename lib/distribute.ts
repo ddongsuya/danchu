@@ -95,6 +95,8 @@ export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: st
     if (r.available !== false) on.set(r.org_id, (on.get(r.org_id) ?? new Set()).add(r.item_key));
   }
   const skipped: string[] = [];
+  // 안내 순서는 기관 id 순 그대로 둔다. 참여 선택형(0023)이라 안내는 맞는 기관 모두에게 가고, 자리는 먼저 참여한 기관이 얻는다.
+  // 그래서 "최근에 덜 받은 기관부터" 같은 순번을 두지 않는다 (2026-10-20 결정)
   const orgs = candidates.filter((o) => {
     const h = has.get(o.id);
     const allOff = !!h && keys.length > 0 && keys.every((k) => h.has(k) && !on.get(o.id)?.has(k));
@@ -118,7 +120,13 @@ export function defaultReplyBy(rfq: RfqRow): string {
  * 참여 선택형(0023): 자리 수(3곳·5곳·전체)로 자르지 않는다. 받은 기관이 요약을 보고 참여하기를 눌러야 자리를 얻고,
  * 자리는 join_offer 가 요청 행을 잠그고 센다. 그래서 안내 순서(기관 id 순)는 누가 견적을 쓰는지에 영향이 없다.
  */
-export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual"): Promise<DistributeResult> {
+/**
+ * 의뢰자에게 처음 안내 결과를 알리는 방법. none: 호출부가 따로 알린다(접수 메일에 합침, lib/rfq-create.ts) · app: 앱 알림만 · mail: 앱 알림과 메일.
+ * 처음 안내할 때(distributed_at 이 비어 있을 때)만 알린다. 보충 안내는 알리지 않는다 (의뢰자는 참여한 기관만 본다, 0023)
+ */
+export type RequesterNotice = "none" | "app" | "mail";
+
+export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, actorId: string | null, auto = false, source: InviteSource = auto ? "matched" : "manual", notice: RequesterNotice = "mail"): Promise<DistributeResult> {
   const sb = getSupabaseAdmin();
   const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   if (!sb || !orgs.length) return res;
@@ -215,11 +223,13 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
     res.after = { distributed_at: rfq.distributed_at ?? now, join_by: rfq.join_by ?? null, status: rfq.status === "received" ? "distributed" : rfq.status, reply_by: rfq.reply_by ?? replyBy };
     await logEvent(rfq.id, "distributed", `참여 안내 ${res.sent}곳${auto ? " (자동)" : ""}`, `${res.names.join(", ")} · 회신 기한 ${replyBy}`, actorId, { orgIds: orgs.map((o) => o.id), auto, source });
     // 의뢰자에게는 처음 안내할 때 한 번만 알린다. 안내받은 기관 수와 이름은 알리지 않는다 (의뢰자는 참여한 기관만 본다, 0023)
-    if (!rfq.distributed_at) {
+    // 접수 메일에 합칠 때(notice = none)는 호출부가 한 통으로 알린다 (lib/mail.ts sendRfqMails)
+    if (!rfq.distributed_at && notice !== "none") {
+      const mail = notice === "mail" ? { to: [rfq.email] } : undefined;
       const capNote = rfq.cro_count === "전체" ? "참여한 기관" : `먼저 참여한 기관 ${rfq.cro_count}`;
       if (rfq.user_id) {
-        await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈습니다`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보냅니다. 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
-      } else {
+        await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈습니다`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보냅니다. 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, mail);
+      } else if (mail) {
         await notifyUsers([], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈습니다`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보냅니다. 견적이 도착하면 이메일로 알려 드립니다. 진행 상황은 ${siteUrl()}/signup 에서 같은 이메일로 가입하면 볼 수 있습니다.` }, { to: [rfq.email] });
       }
     }
@@ -260,8 +270,8 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
   const seats = rfq.cro_count === "전체" ? "참여한 기관은 모두 견적을 쓸 수 있습니다." : `견적 자리는 ${rfq.cro_count || "3곳"}이며 먼저 참여한 순서로 찹니다.`;
   const how = `링크에서 요약을 보고 <b>참여하기</b> 또는 <b>이번 요청 불참</b>을 눌러 주세요. 참여하시면 시험물질명, 의뢰자 설명, 첨부${opts.managed ? "" : ", 카탈로그로 채운 회신 초안"}이 열립니다. ${esc(seats)} 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다(시범 운영 중 무료). 불참해도 다음 안내에 영향이 없습니다.`;
   const guide = opts.managed
-    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 안내를 받았습니다.<br>참여는 귀 기관이 위 링크에서 직접 눌러 주셔야 합니다. 단추가 대신 참여할 수 없습니다. 참여하신 뒤에는 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시합니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선합니다. 의뢰자는 기한 전에도 선정할 수 있으니 견적서는 되도록 일찍 보내 주십시오.<br>다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 안내를 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
-    : `${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."}<br>제출한 견적은 즉시 의뢰자 비교표에 보이고, 회신이 마감되기 전까지 회신 기한 안에서 수정할 수 있습니다. 의뢰자가 기한 전에 기관을 선정하거나 운영자가 회신을 마감하면 회신이 닫힙니다. 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
+    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 안내를 받았습니다.<br>참여는 귀 기관이 위 링크에서 직접 눌러 주셔야 합니다. 단추가 대신 참여할 수 없습니다. 참여하신 뒤에는 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시합니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선합니다. 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 회신 기한 전에도 비교표가 열려 회신이 닫히니 견적서는 되도록 일찍 보내 주십시오.<br>다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 안내를 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
+    : `${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."}<br>제출한 견적은 비교표가 열리기 전까지 회신 기한 안에서 수정할 수 있습니다. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열리고, 그때 회신이 닫힙니다. 의뢰자는 비교표가 열린 뒤에 기관을 선택합니다. 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
   const transition = opts.transition
     ? `<p style="font-size:14px;padding:12px 14px;background:#F5F5F4;border-radius:6px">앞서 견적 요청으로 안내드린 요청입니다. 단추는 이제 기관이 요약을 보고 직접 참여한 요청에서만 견적을 받습니다. 견적을 보내시려면 아래 링크에서 참여하기를 먼저 눌러 주세요. 링크는 이전과 같습니다.</p>`
     : "";
@@ -307,8 +317,12 @@ export async function resendUnmailedInvites(): Promise<{ tried: number; sent: nu
   return out;
 }
 
-/** 접수 직후 자동 안내: 지명 기관 + 분야가 맞는 승인 기관 전부 (자리 수로 자르지 않는다, 0023). 맞는 기관이 없으면 운영자에게만 알린다. */
-export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { matched: number }> {
+/**
+ * 접수 직후 자동 안내: 지명 기관 + 분야가 맞는 승인 기관 전부 (자리 수로 자르지 않는다, 0023). 맞는 기관이 없으면 운영자에게만 알린다.
+ * notifyRequester: false 면 의뢰자 알림을 보내지 않는다. 첨부가 다 올라간 뒤 시작하는 경로(startRfq)는 접수 메일 한 통에 안내 결과를 합친다
+ */
+export async function autoDistribute(rfq: RfqRow, opts: { notifyRequester?: boolean } = {}): Promise<DistributeResult & { matched: number }> {
+  const notice: RequesterNotice = opts.notifyRequester === false ? "none" : "mail";
   const replyBy = defaultReplyBy(rfq);
   const { orgs, skipped } = await matchOrgs(rfq);
   // 의뢰자가 지명한 기관이 있으면 먼저 보낸다. 분야가 안 맞아도 의뢰자의 선택을 존중한다. 지명 기관 몫 자리는 join_offer 가 참여 결정 기한까지 비워 둔다
@@ -322,14 +336,14 @@ export async function autoDistribute(rfq: RfqRow): Promise<DistributeResult & { 
     const { data, error } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).in("name", nominees);
     if (error) throw new Error(`지명 기관을 조회하지 못했습니다: ${error.message}`);
     nominated = (data ?? []) as Org[];
-    if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated");
+    if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated", notice);
   }
   const nominatedIds = new Set(nominated.map((o) => o.id));
   // "지명 기관에만 안내"면 분야가 맞는 다른 기관에는 안내하지 않는다 (0023)
   const rest = rfq.nominees_only ? [] : orgs.filter((o) => !nominatedIds.has(o.id));
   // 지명 기관 안내로 요청이 이미 "안내함"이 되었으면 그 값을 넘긴다. 의뢰자 알림("참여 안내를 보냈습니다")이 두 번 가지 않고, 참여 결정 기한도 다시 잡지 않는다
   const rfqNext: RfqRow = first.after ? { ...rfq, ...first.after } : rfq;
-  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [] } : await distributeTo(rfqNext, rest, replyBy, null, true);
+  const r = first.blocked ? { ...first, sent: 0, mailed: 0, names: [], skipped: [] } : await distributeTo(rfqNext, rest, replyBy, null, true, "matched", notice);
   return {
     sent: first.sent + r.sent,
     mailed: first.mailed + r.mailed,
@@ -373,6 +387,8 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   }
   for (const rfq of list) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
+    // 아직 시작하지 않은 요청(첨부 업로드 중, started_at 없음)은 startRfq 가 처음 안내를 맡는다
+    if (!rfq.started_at) continue;
     // 운영자가 수동 배포하면서 자동 보충을 끈 요청, "지명 기관에만 안내" 요청은 건드리지 않는다
     if (rfq.auto_distribute === false || rfq.nominees_only) continue;
     // 회신 기한: 정해져 있으면 그대로(먼저 받은 기관과 같게), 없으면 지금 기준으로 새로 잡는다
@@ -381,7 +397,8 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
     const { orgs } = await matchOrgs(rfq);
     const targets = orgId ? orgs.filter((o) => o.id === orgId) : orgs;
     if (!targets.length) continue;
-    const r = await distributeTo(rfq, targets, replyBy, actorId, true);
+    // 처음 안내가 이 보충으로 나가면(접수 때 맞는 기관이 없던 요청) 접수 메일에서 약속한 대로 메일로 알린다. 보충 안내는 알리지 않는다
+    const r = await distributeTo(rfq, targets, replyBy, actorId, true, "matched", rfq.distributed_at ? "app" : "mail");
     if (r.sent) { out.rfqs++; out.invites += r.sent; }
   }
   return out;

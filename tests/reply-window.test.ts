@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { beforeDeadline, closeRepliesDue, pendingInvites, quoteRevisable, repliesClosed, REVISABLE_LABEL, selectionCaution } from "@/lib/reply-window";
+import * as replyWindow from "@/lib/reply-window";
+import { beforeDeadline, closeRepliesDue, comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-window";
 
 // 2026-10-10 서울 정오
 const NOON = new Date("2026-10-10T12:00:00+09:00").getTime();
@@ -27,14 +28,21 @@ describe("회신 기한과 마감", () => {
   });
 });
 
-describe("실시간 비교표", () => {
-  const open = { status: "quoted", compared_at: null };
-  it("기한 전 열린 요청의 견적은 수정될 수 있다고 표시한다", () => {
-    expect(quoteRevisable(open, "2026-10-10", NOON)).toBe(true);
-    expect(quoteRevisable(open, "2026-10-10", AFTER)).toBe(false);
-    expect(quoteRevisable({ status: "compared", compared_at: "2026-10-09T00:00:00Z" }, "2026-10-10", NOON)).toBe(false);
-    expect(quoteRevisable({ status: "selected", compared_at: null }, "2026-10-10", NOON)).toBe(false);
-    expect(REVISABLE_LABEL).toBe("기한 전 (수정될 수 있음)");
+describe("비교표 공개 (2026-10-20 결정 1)", () => {
+  it("비교표가 열리기 전에는 의뢰자에게 견적을 보여 주지 않는다", () => {
+    expect(comparisonOpened({ compared_at: null, selected_quote_id: null })).toBe(false);
+    expect(comparisonOpened({ compared_at: null })).toBe(false);
+  });
+  it("열렸거나 이미 선정한 요청만 견적을 보여 준다", () => {
+    expect(comparisonOpened({ compared_at: "2026-10-11T00:00:00Z", selected_quote_id: null })).toBe(true);
+    // 0025 전 기한 전 선정으로 이미 선정한 요청
+    expect(comparisonOpened({ compared_at: null, selected_quote_id: "q-1" })).toBe(true);
+  });
+  it("기한 전 선정 확인 단계와 '수정될 수 있음' 표시는 없다", () => {
+    const mod = replyWindow as Record<string, unknown>;
+    expect(mod.selectionCaution).toBeUndefined();
+    expect(mod.quoteRevisable).toBeUndefined();
+    expect(mod.REVISABLE_LABEL).toBeUndefined();
   });
   it("미회신은 참여한 기관 중 아직 제출하지 않은 곳만 센다 (0023)", () => {
     const J = "2026-10-02T00:00:00Z";
@@ -49,21 +57,5 @@ describe("실시간 비교표", () => {
       { status: "sent", joined_at: J, revoked_at: J }, // 취소
     ])).toBe(2);
     expect(pendingInvites([{ status: "sent" }, { status: "sent" }])).toBe(0);
-  });
-});
-
-describe("선정 전 확인 단계", () => {
-  const rfq = { status: "quoted", compared_at: null, reply_by: "2026-10-10" };
-  const invites = [{ status: "submitted", joined_at: "2026-10-02T00:00:00Z" }, { status: "sent", joined_at: "2026-10-02T00:00:00Z" }];
-  it("기한 전이거나 미회신 기관이 있으면 확인한다", () => {
-    expect(selectionCaution(rfq, invites, NOON)).toEqual({ needed: true, early: true, pending: 1, replyBy: "2026-10-10" });
-    expect(selectionCaution(rfq, [{ status: "submitted" }], AFTER)).toEqual({ needed: false, early: false, pending: 0, replyBy: "2026-10-10" });
-    expect(selectionCaution(rfq, invites, AFTER).needed).toBe(true);
-  });
-  it("참여 결정 전 안내만 남았으면 미회신이 아니다", () => {
-    expect(selectionCaution(rfq, [{ status: "submitted", joined_at: "2026-10-02T00:00:00Z" }, { status: "sent" }], AFTER)).toEqual({ needed: false, early: false, pending: 0, replyBy: "2026-10-10" });
-  });
-  it("회신이 마감된 뒤에는 확인하지 않는다", () => {
-    expect(selectionCaution({ ...rfq, status: "compared", compared_at: "2026-10-11T00:00:00Z" }, invites, NOON).needed).toBe(false);
   });
 });

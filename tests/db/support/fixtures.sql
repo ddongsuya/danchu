@@ -76,6 +76,21 @@ language sql as $$
   returning id
 $$;
 
+-- 계약 확인 (0025): 체결 보고 뒤 확인해야 성사수수료 정산에 들어간다. 요청 주인(의뢰자) 계정으로 confirm_contract 를 부른다 (via sponsor).
+-- 운영자는 대신 확인할 수 없다 (이의 정리만). 주인이 없는 요청이면 의뢰자 계정을 만들어 주인으로 붙인다.
+-- 의뢰자 확인 경로·이의·자동 확정은 flow_redesign.sql 이 따로 본다
+create or replace function pg_temp.t_confirm(p_award uuid) returns jsonb
+language plpgsql as $$
+declare v uuid; v_rfq uuid;
+begin
+  select a.rfq_id, r.user_id into v_rfq, v from public.rfq_awards a join public.rfq_requests r on r.id = a.rfq_id where a.id = p_award;
+  if v is null then
+    v := pg_temp.t_user('t-confirm-owner-' || replace(v_rfq::text, '-', '') || '@example.test', 'requester');
+    update public.rfq_requests set user_id = v where id = v_rfq;
+  end if;
+  return public.confirm_contract(p_award, v);
+end $$;
+
 -- 계정 1개 (auth.users → 가입 트리거가 profiles 를 만든다). 기관 담당자면 소속·역할을 함께 채운다
 create or replace function pg_temp.t_user(p_email text, p_role text default 'requester', p_org uuid default null, p_org_role text default 'member') returns uuid
 language plpgsql as $$

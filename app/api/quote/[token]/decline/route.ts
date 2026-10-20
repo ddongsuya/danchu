@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { loadQuote } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
+import { closedMessage, loadQuote } from "@/lib/quote-load";
 import { loadOptsFor } from "@/lib/concierge";
-import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import { withdrawOffer } from "@/lib/rpc";
 import { reofferNow } from "@/lib/opt-in-cron";
 import { captureError } from "@/lib/observe";
+import { announceCompareOpened, publishIfAllReplied } from "@/lib/compare";
 import { todaySeoul } from "@/lib/format";
+import { POST as joinPost } from "../join/route";
 
 export const runtime = "nodejs";
 
@@ -18,13 +20,14 @@ type DeclineMode = "decline" | "withdraw";
 const STALE = "요청 상태가 바뀌었습니다. 화면을 새로 고친 뒤 다시 확인해 주세요.";
 
 const WITHDRAW_DENIED: Record<string, { error: string; status: number }> = {
-  closed: { error: "이 요청의 회신은 이미 닫혔습니다.", status: 403 },
+  closed: { error: closedMessage(null), status: 403 },
   revoked: { error: "유효하지 않거나 만료된 링크입니다.", status: 404 },
   not_found: { error: "유효하지 않거나 만료된 링크입니다.", status: 404 },
   not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 처리할 수 없습니다.", status: 403 },
   not_joined: { error: STALE, status: 409 },
   submitted: { error: "이미 제출한 견적은 철회할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 400 },
   declined: { error: "이미 불참으로 처리한 요청입니다.", status: 409 },
+  withdrawn: { error: "이미 참여를 철회한 요청입니다.", status: 409 },
   expired: { error: "링크가 만료되었습니다.", status: 403 },
 };
 
@@ -42,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 견적은 철회할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요." }, { status: 400 });
   if (got.declined) return NextResponse.json({ ok: true, already: true });
   if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
-  if (got.closed) return NextResponse.json({ error: "이 요청의 회신은 이미 닫혔습니다." }, { status: 403 });
+  if (got.closed) return NextResponse.json({ error: closedMessage(got.closedReason) }, { status: 403 });
   const b = (await req.json().catch(() => ({}))) as { reason?: unknown; mode?: unknown };
   const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 500) : "";
   const mode: DeclineMode = got.joined ? "withdraw" : "decline";
@@ -50,6 +53,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (b.mode !== undefined && b.mode !== mode) return NextResponse.json({ error: STALE }, { status: 409 });
   const sb = getSupabaseAdmin()!;
   const byOperator = s?.profile.role === "admin";
+  // 철회로 남은 참여 기관이 모두 제출한 상태가 되면 withdraw_offer 가 같은 트랜잭션에서 비교표를 연다 (0025)
+  let compareOpened = false;
   const what = mode === "withdraw" ? "참여 철회" : "불참";
 
   if (mode === "withdraw") {
@@ -59,6 +64,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
       return NextResponse.json({ error: d.error }, { status: d.status });
     }
     if (r.already) return NextResponse.json({ ok: true, already: true });
+    compareOpened = !!r.compare_opened;
   } else {
     // 참여 전 초대만: 상태가 sent 이고 참여 기록이 없을 때만 바꾼다. 그 사이 참여했으면 바뀌는 행이 없다
     const { data, error } = await sb.from("rfq_invites").update({ status: "declined", declined_at: new Date().toISOString(), decline_reason: reason || null }).eq("id", got.inviteId).eq("status", "sent").is("joined_at", null).select("id");
@@ -69,7 +75,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   await logEvent(got.rfqId, mode === "withdraw" ? "withdrawn" : "declined", `${got.croName} ${what}${byOperator ? " (운영자 기록)" : ""}`, reason || undefined, s?.userId ?? null);
   // 운영자가 기관 대신 처리한 것은 운영 기록에도 남긴다 (기관이 메일로 알린 의사를 운영자가 옮긴 것)
   if (s && byOperator) await audit({ userId: s.userId, email: s.email }, mode === "withdraw" ? "invite.withdraw_proxy" : "invite.decline_proxy", { type: "rfq_invite", id: got.inviteId, label: `${got.rfq.no} · ${got.croName}` }, { after: { status: "declined", mode }, note: reason || undefined });
-  await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} ${what} · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
+  // 운영자는 앱 알림만. 메일은 예약 작업이 하루 한 번 모아서 보낸다 (운영자 하루 요약)
+  await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} ${what} · ${got.croName}`, body: reason || undefined, href: `/admin/r/${got.rfq.no}` });
+  if (compareOpened) {
+    // 비교표가 열렸으면 철회 알림 대신 "비교표가 열렸습니다"를 한 번 보낸다
+    await logEvent(got.rfqId, "compared", "비교표 공개 (참여 기관 모두 제출)", undefined, null, { auto: "all" });
+    await announceCompareOpened(got.rfqId, "all").catch((e) => captureError(e, "decline:compare-opened", { rfq: got.rfq.no }));
+    return NextResponse.json({ ok: true, mode });
+  }
   if (mode === "withdraw") {
     // 의뢰자는 참여한 기관을 보므로 철회는 알린다. 기관명과 사유는 넣지 않는다
     const { data: rq } = await sb.from("rfq_requests").select("user_id, status").eq("id", got.rfqId).maybeSingle();
@@ -83,5 +96,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   } catch (e) {
     captureError(e, "decline:reoffer", { rfq: got.rfq.no });
   }
+  // 안전망: 불참으로 판정이 바뀌는 경로(예: 참여 결정 기한 직후)도 비교표를 열 수 있으면 연다. DB 가 요청 행을 잠그고 한 번만 연다
+  await publishIfAllReplied(got.rfqId).catch(() => false);
   return NextResponse.json({ ok: true, mode });
+}
+
+/**
+ * DELETE { agree: true, terms } — 참여 전 불참을 되돌린다 = 다시 참여한다 (2026-10-20 결정 3).
+ * 참여하기와 같은 길(join_offer)로 처리한다: 참여 결정 기한 전, 남은 자리와 지명 기관 몫을 잠금 안에서 다시 보고,
+ * 참여 기록(조건 판·IP·브라우저)과 decline_undone_at 을 남긴다. 참여 조건 확인(agree, terms)이 없으면 400.
+ * 참여 뒤 철회는 되돌릴 수 없다 (join_offer withdrawn).
+ */
+export async function DELETE(req: Request, ctx: { params: Promise<{ token: string }> }) {
+  return joinPost(req, ctx);
 }

@@ -5,6 +5,8 @@ import { getRfqByNo } from "@/lib/data";
 import { distributeTo, ORG_COLUMNS } from "@/lib/distribute";
 import { todaySeoul } from "@/lib/format";
 import { audit } from "@/lib/audit";
+import { startRfq } from "@/lib/rfq-create";
+import { captureError } from "@/lib/observe";
 
 export const runtime = "nodejs";
 
@@ -47,8 +49,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (b.autoDistribute === false && rfq.auto_distribute !== false) {
     await sb.from("rfq_requests").update({ auto_distribute: false }).eq("id", rfq.id);
   }
+  // 아직 시작하지 않은 요청(첨부 업로드 중, started_at 없음)은 먼저 시작한다: 분야 매칭 안내 + 의뢰자 접수 메일 한 통.
+  // 시작하지 않고 수동 안내만 하면 상태가 배포로 바뀌어 예약 작업의 시작 단계(received 만)도 건너뛰고, 의뢰자 접수 메일과 보충 안내가 영영 빠진다
+  let target = rfq;
+  if (!rfq.started_at) {
+    try {
+      if ((await startRfq(rfq.id)).started) target = (await getRfqByNo(no)) ?? rfq;
+    } catch (e) {
+      captureError(e, "admin:distribute-start", { rfqNo: rfq.rfq_no });
+    }
+  }
   const { data: orgs } = await sb.from("cro_orgs").select(ORG_COLUMNS).in("id", orgIds).eq("status", "approved");
-  const r = await distributeTo(rfq, orgs ?? [], replyBy, s.userId, false, "manual");
+  const r = await distributeTo(target, orgs ?? [], replyBy, s.userId, false, "manual");
   if (r.blocked && !r.sent) return NextResponse.json({ error: BLOCKED_MSG[r.blocked] }, { status: 409 });
   if (rfq.nominees_only && r.sent) {
     await audit({ userId: s.userId, email: s.email }, "rfq.distribute_override", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { after: { orgs: (orgs ?? []).map((o) => o.name), sent: r.sent }, note: overrideReason });

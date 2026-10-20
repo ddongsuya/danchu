@@ -7,7 +7,8 @@ import type { BillingAdjustmentRow, BillingReferenceRow, ReferenceSource } from 
  * - 청구 단위는 기관이 실제로 제출한 견적 1건. 견적을 내지 않은 기관에는 청구하지 않는다. 재제출·수정은 다시 청구하지 않는다.
  * - 그 초대에 기관 본인의 참여 기록이 있어야 청구한다 (0023_opt_in.sql). 참여 기록이 있으면 운영자 대리 입력도 같다.
  * - 견적 총액(부가세 별도) 1,000만 원 미만: 월 구독료에 포함 / 1,000만 원 이상: 건당 이용료 /
- *   5,000만 원 이상: 건당 이용료 + 단추를 통해 계약이 체결되면 성사수수료(계약 금액 × 요율)
+ *   5,000만 원 이상: 건당 이용료 + 단추를 통해 계약이 체결되면 성사수수료(계약 금액 × 요율).
+ *   성사수수료는 의뢰자가 확인했거나 7일 뒤 자동 확정된 계약만, 확인된 달에 정산한다 (0025_flow_redesign.sql)
  * 두 기준 금액은 tests/billing-rules.test.ts 가 SQL 과 같은지 확인한다.
  */
 /** 이 금액 미만 견적은 월 구독료 구간 (건당 이용료 없음) */
@@ -70,6 +71,17 @@ export function monthRangeOf(month: string | undefined): { label: string; from: 
   return { label: `${y}년 ${mm}월`, from, to, prev, next };
 }
 
+/**
+ * 계약 확인 (2026-10-20 결정, 0025). 기관이 체결(체결일·금액)을 보고하면 의뢰자가 확인하거나 이의를 낸다.
+ * 이 기간 안에 이의가 없으면 예약 작업(auto_confirm_contracts)이 보고 내용대로 확정한다. 이의가 있으면 운영자가 정리할 때까지 정산하지 않는다.
+ * 성사수수료 정산은 확인된 계약만, 확인된 달(서울)에, 확인된 계약 금액으로 한다 (대상 판정은 여전히 선정 견적 5,000만 원 이상).
+ * DB 의 contract_confirm_due_at = 보고(또는 확인 전 정정) 시각 + 이 일수
+ */
+export const CONTRACT_CONFIRM_DAYS = 7;
+
+/** 계약 확정 경로 (0025 rfq_awards.contract_confirmed_via). legacy 는 0025 전에 보고되어 보고 시각으로 확정한 계약 */
+export const CONFIRM_VIA_LABEL: Record<string, string> = { sponsor: "의뢰자 확인", auto: "7일 뒤 자동 확정", operator: "운영자 확정", legacy: "확인 절차 전 보고" };
+
 /** 금액 × 요율 (원 단위 반올림). 요율이 없으면 null (미정) */
 export function successFee(amount: number, feeRate: number | null | undefined): number | null {
   if (feeRate == null || feeRate < 0) return null;
@@ -79,14 +91,15 @@ export function successFee(amount: number, feeRate: number | null | undefined): 
 /**
  * 성사수수료 두 숫자.
  * - 예상(견적 기준): 선정 견적 금액 × 요율. 안내용이며 청구 합계에 넣지 않는다
- * - 정산(계약 기준): 체결 계약 금액 × 요율. 계약 상태가 signed 일 때만
+ * - 정산(계약 기준): 체결 계약 금액 × 요율. 계약 상태가 signed 이고 계약이 확인됐을 때만 (0025).
+ *   confirmed 를 넘기지 않으면(0025 전 화면) signed 만 본다
  * 선정 견적이 5,000만 원 미만이면 둘 다 대상 아님(eligible false, 금액 0).
  */
-export function successFeeView(a: { quoteAmount: number | null | undefined; contractAmount: number | null | undefined; contractStatus: string | null | undefined; feeRate: number | null | undefined }): {
+export function successFeeView(a: { quoteAmount: number | null | undefined; contractAmount: number | null | undefined; contractStatus: string | null | undefined; feeRate: number | null | undefined; confirmed?: boolean }): {
   eligible: boolean;
   /** 예상. 요율 미정이면 null */
   expected: number | null;
-  /** 정산. 체결 전이면 0 (아직 없음), 요율 미정이면 null */
+  /** 정산. 체결·확인 전이면 0 (아직 없음), 요율 미정이면 null */
   settled: number | null;
   signed: boolean;
 } {
@@ -94,7 +107,7 @@ export function successFeeView(a: { quoteAmount: number | null | undefined; cont
   const signed = a.contractStatus === "signed" && a.contractAmount != null;
   if (!eligible) return { eligible, expected: 0, settled: 0, signed };
   const expected = a.contractStatus === "not_signed" ? 0 : successFee(a.quoteAmount ?? 0, a.feeRate);
-  const settled = signed ? successFee(a.contractAmount ?? 0, a.feeRate) : 0;
+  const settled = signed && a.confirmed !== false ? successFee(a.contractAmount ?? 0, a.feeRate) : 0;
   return { eligible, expected, settled, signed };
 }
 

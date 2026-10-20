@@ -65,7 +65,7 @@ vi.mock("@/lib/supabase", () => {
     from: builder,
     rpc: async (fn: string, args: Record<string, unknown>) => {
       fx.rpcCalls.push({ fn, args });
-      if (fn === "danchu_schema_version") return { data: 24, error: null };
+      if (fn === "danchu_schema_version") return { data: 25, error: null };
       return { data: fx.rpcResult[fn] ?? null, error: null };
     },
     storage: { from: () => ({ createSignedUrl: fx.signedUrl, list: async () => ({ data: [{ name: "x" }], error: null }), createSignedUploadUrl: async () => ({ data: { signedUrl: "u", token: "t" }, error: null }) }) },
@@ -290,7 +290,7 @@ describe("POST /api/quote/[token]/join", () => {
     expect(c?.args).toMatchObject({ p_invite_id: INV, p_token: TOKEN, p_actor: null, p_channel: "token", p_terms_version: CRO_TERMS_VERSION, p_ip: "203.0.113.7", p_ua: "TestUA/1.0" });
     expect(fx.logEvent).toHaveBeenCalledWith(RFQ, "joined", expect.stringContaining("바이오랩 참여"), expect.stringContaining(CRO_TERMS_VERSION), null, expect.anything());
     // 자리 현황 원본(참여 수·지명 수)은 돌려주지 않는다 (경쟁 기관 수 노출 방지)
-    expect(await r.json()).toEqual({ ok: true, already: false });
+    expect(await r.json()).toEqual({ ok: true, already: false, rejoined: false });
   });
   it("그 기관 담당자로 로그인했으면 portal 경로와 계정을 남긴다", async () => {
     fx.session = croMember;

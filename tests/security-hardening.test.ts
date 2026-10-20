@@ -195,9 +195,17 @@ describe("소유는 user_id 로만 (이메일 재사용)", () => {
     expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}`), ctx({ id: FILE_A }))).status).toBe(302);
   });
   it("견적 PDF: B 는 A 요청의 견적 PDF 를 받을 수 없다", async () => {
+    // 의뢰자는 비교표가 열린 뒤에만 견적을 본다 (2026-10-20 결정 1). 소유 검사만 보려고 비교표를 연 요청으로 둔다
+    fx.tables.rfq_requests[0].compared_at = "2026-01-02T00:00:00Z";
     fx.session = asB();
     expect((await pdfGet(new Request(`https://danchu.kr/api/quotes/${QUOTE_A}/pdf`), ctx({ id: QUOTE_A }))).status).toBe(403);
     fx.session = asA();
+    expect((await pdfGet(new Request(`https://danchu.kr/api/quotes/${QUOTE_A}/pdf`), ctx({ id: QUOTE_A }))).status).toBe(302);
+  });
+  it("견적 PDF: 비교표가 열리기 전에는 소유한 의뢰자도 받을 수 없다 (결정 1)", async () => {
+    fx.session = asA();
+    expect((await pdfGet(new Request(`https://danchu.kr/api/quotes/${QUOTE_A}/pdf`), ctx({ id: QUOTE_A }))).status).toBe(403);
+    fx.tables.rfq_requests[0].selected_quote_id = QUOTE_A;
     expect((await pdfGet(new Request(`https://danchu.kr/api/quotes/${QUOTE_A}/pdf`), ctx({ id: QUOTE_A }))).status).toBe(302);
   });
   it("탈퇴: B 의 탈퇴는 A 의 요청·첨부를 건드리지 않는다", async () => {

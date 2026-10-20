@@ -3,7 +3,7 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
 import { logEvent, notifyUsers } from "@/lib/notify";
-import { inviteExpiresAt, occupiesSeat, undecidedOffer } from "@/lib/request-policy";
+import { inviteExpiresAt, joinDeadline, occupiesSeat, undecidedOffer } from "@/lib/request-policy";
 import { todaySeoul } from "@/lib/format";
 import { audit } from "@/lib/audit";
 import { notifyInvitedOrgs } from "@/lib/distribute";
@@ -16,9 +16,11 @@ export const runtime = "nodejs";
  *
  * POST { replyBy: 'YYYY-MM-DD' } — 회신 기한 변경.
  * 요청의 reply_by 와 초대(sent·draft·submitted, 취소한 초대 제외)의 reply_by·expires_at 을 함께 바꾸고 기관에 알린다.
- * 제출한 기관도 새 기한까지 견적을 고칠 수 있다 (같은 기한, lib/reply-window.ts).
- * 회신이 마감된 요청(compared_at)도 선정 전이면 여기서 다시 연다: compared_at 을 비우고 상태를 견적 도착·배포로 되돌린다.
- * 마감 뒤에 온 회신을 받는 유일한 경로이고, 회신 0건으로 기한이 지난 요청을 다시 살리는 경로다.
+ * 이미 제출한 기관에도 같은 새 기한이 적용된다 (늦게 내는 기관만 시간을 더 받는 일을 막는다). 제출한 견적은 비교표가 열리기 전까지 고칠 수 있다.
+ * 비교표가 열린 요청(compared_at)도 선정 전이면 여기서 다시 연다: compared_at 을 비우고 상태를 견적 도착·배포로 되돌린다.
+ * 그러면 의뢰자 화면은 다시 진행 현황만 보이고, 새 기한이 지나거나 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 비교표가 다시 열린다 (2026-10-20 결정 1).
+ * 다시 열 때 참여 결정 기한(join_by)을 오늘부터 다시 잡는다 (joinDeadline, 늦추기만 한다). 새 기관이 참여하기 전에 비교표가 곧바로 다시 열리지 않게.
+ * 비교표가 열린 뒤에 온 회신을 받는 유일한 경로이고, 회신 0건으로 기한이 지난 요청을 다시 살리는 경로다.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");
@@ -42,6 +44,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     // 회신 마감을 풀어 다시 받는다. 제출된 견적이 있으면 견적 도착, 없으면 배포 단계로
     const { count } = await sb.from("cro_quotes").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id).eq("status", "submitted");
     Object.assign(patch, { compared_at: null, status: count ? "quoted" : rfq.distributed_at ? "distributed" : "received" });
+    // 참여 결정 기한도 오늘부터 다시 잡는다(앞당기지는 않는다). 그대로 두면 참여 기관이 모두 제출한 요청은
+    // 다음 제출이나 예약 작업(open-ready)에서 새 기관이 참여하기도 전에 비교표가 다시 열린다 (0025 compare_readiness)
+    if (rfq.join_by) {
+      const next = joinDeadline(todaySeoul(), replyBy);
+      if (new Date(next).getTime() > new Date(rfq.join_by).getTime()) patch.join_by = next;
+    }
   }
   const { data: updated, error } = await sb.from("rfq_requests").update(patch).eq("id", rfq.id).is("selected_quote_id", null).select("id");
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
@@ -52,9 +60,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const ids = (open ?? []).map((i) => i.id);
   if (ids.length) await sb.from("rfq_invites").update({ reply_by: replyBy, expires_at: inviteExpiresAt(replyBy).toISOString() }).in("id", ids);
   // 지난 기한의 리마인더 기록은 지워 새 기한에 D-2·당일 알림이 다시 간다
-  if (ids.length) await sb.from("invite_reminders").delete().in("invite_id", ids);
+  const unsent = (open ?? []).filter((i) => i.status !== "submitted").map((i) => i.id);
+  if (unsent.length) await sb.from("invite_reminders").delete().in("invite_id", unsent);
 
-  await audit({ userId: s.userId, email: s.email }, "rfq.deadline", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { before: { reply_by: rfq.reply_by }, after: { reply_by: replyBy } });
+  await audit({ userId: s.userId, email: s.email }, "rfq.deadline", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { before: { reply_by: rfq.reply_by, join_by: rfq.join_by }, after: { reply_by: replyBy, join_by: patch.join_by ?? rfq.join_by } });
   await logEvent(rfq.id, "deadline", `${replyBy === rfq.reply_by ? `회신 기한 유지 · ${replyBy}` : `회신 기한 변경 · ${rfq.reply_by ?? "-"} → ${replyBy}`}${reopen ? " · 회신 다시 열림" : ""}`, ids.length ? `초대 ${ids.length}건에 적용` : undefined, s.userId, { from: rfq.reply_by, to: replyBy, reopen });
 
   // 기관마다 따로 보낸다 (다른 기관 주소가 받는 사람 칸에 보이지 않게). 계정이 있는 기관은 포털, 없거나 운영자 관리 기관은 초대별 /q 링크
@@ -62,9 +71,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const joined = (open ?? []).filter((i) => occupiesSeat(i));
   // 취소(revoked)·철회 초대는 위 조회와 undecidedOffer 에서 빠진다 (닫힌 링크로 "참여를 결정해 주세요"를 보내지 않는다)
   const undecided = (open ?? []).filter((i) => !occupiesSeat(i) && undecidedOffer(i));
-  await notifyInvitedOrgs(joined, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${rfq.substance} · 새 기한까지 회신하거나 제출한 견적을 고칠 수 있습니다. 회신 링크는 새 기한 +7일까지 열립니다.`, portalHref: "/cro" });
+  await notifyInvitedOrgs(joined, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${rfq.substance} · 새 기한까지 회신할 수 있고, 제출한 견적도 비교표가 열리기 전까지 고칠 수 있습니다. 회신 링크는 새 기한 +7일까지 열립니다.`, portalHref: "/cro" });
   await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 안내 링크는 새 기한 +7일까지 열립니다.` });
-  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: reopen ? "회신을 다시 받습니다. 새 기한까지 견적이 더 도착하거나 바뀔 수 있습니다." : "새 기한까지 견적이 더 도착하거나 바뀔 수 있습니다.", href: `/app/r/${rfq.rfq_no}` });
+  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: reopen ? "비교표를 닫고 회신을 다시 받습니다. 새 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 비교표가 다시 열립니다." : "새 기한까지 견적이 더 도착할 수 있습니다. 비교표는 새 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열립니다.", href: `/app/r/${rfq.rfq_no}` });
   return NextResponse.json({ ok: true, invites: ids.length, message: `기한을 ${replyBy}로 바꿨습니다.${reopen ? " 회신을 다시 열었습니다." : ""}${ids.length ? ` 초대 ${ids.length}건에 안내했습니다.` : ""}` });
 }
 

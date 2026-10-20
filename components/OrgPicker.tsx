@@ -25,7 +25,7 @@ export function OrgPicker({ id, values, onChange }: { id: string; values: Values
     return () => { on = false; };
   }, []);
 
-  if (failed) return <p className="field__help">기관 목록을 불러오지 못했습니다. 지명 없이 진행해도 분야가 맞는 기관에 전달됩니다.</p>;
+  if (failed) return <p className="field__help">기관 목록을 불러오지 못했습니다. 지명 없이 진행해도 분야가 맞는 기관에 참여 안내가 갑니다.</p>;
   if (!orgs) return <div className="chipset" aria-busy="true"><span className="chip" style={{ opacity: 0.5 }}>기관 목록 불러오는 중</span></div>;
   if (!orgs.length) return <p className="field__help">아직 참여 기관이 없습니다. 지명 없이 진행하면 승인되는 기관에 순서대로 전달됩니다.</p>;
 

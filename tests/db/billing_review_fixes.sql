@@ -80,6 +80,7 @@ begin
   update public.rfq_invites set billable = false, bill_excluded_reason = '중복 요청' where id = i;
   a := pg_temp.t_award(q);
   perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 55000000, null);
+  perform pg_temp.t_confirm(a);
   perform pg_temp.t_eq((select invite_billable from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a and kind = 'settlement'), false, '정산 행에 청구 제외 초대 표시');
   perform pg_temp.t_eq((select fee from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a and kind = 'settlement'), 1650000::bigint, '정산 금액은 그대로');
   perform pg_temp.t_eq((select count(*) from public.billing_lines(pg_temp.t_month(0), pg_temp.t_month(1)) where quote_id = q and chargeable)::int, 0, '건당 이용료는 제외');

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, listCroOrgs } from "@/lib/data";
-import { inviteStageLabel, statusLabel, statusTone } from "@/lib/status";
+import { contractConfirmState, inviteStageLabel, statusLabel, statusTone } from "@/lib/status";
 import { proxyEntryAllowed } from "@/lib/concierge";
 import { Crumb, StatusPill } from "@/components/app/ui";
 import { DistributePanel } from "@/components/admin/DistributePanel";
@@ -14,6 +14,7 @@ import { JoinByForm } from "@/components/admin/JoinByForm";
 import { InviteActions } from "@/components/admin/InviteActions";
 import { RequestTerms } from "@/components/admin/RequestTerms";
 import { ContractRecord } from "@/components/admin/ContractRecord";
+import { DisputeResolve } from "@/components/admin/DisputeResolve";
 import { todaySeoul } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { quoteRowsFromPayload } from "@/lib/quote-items";
@@ -54,7 +55,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
           <h1>{rfq.substance} · {rfq.company}</h1>
           <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "-"}{Array.isArray(p.nominees) && p.nominees.length ? ` · 지명 ${(p.nominees as string[]).join(", ")}` : ""}</p>
           <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status)}</StatusPill>
+            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
             {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
             {d.files.length > 0 && <span className="tag">첨부 {d.files.length}</span>}
           </div>
@@ -159,6 +160,12 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
             {d.award && (
               <div style={{ marginTop: 12 }}>
                 <ContractRecord awardId={d.award.id} status={d.award.contract_status} reported={!!d.award.contract_reported_at} today={today} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} note={d.award.contract_note} />
+                {d.award.contract_reported_at && (() => {
+                  // 계약 확인 (2026-10-20 결정 2, 0025): 의뢰자 확인·이의·7일 뒤 자동 확정
+                  const cs = contractConfirmState(d.award);
+                  return cs ? <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", overflowWrap: "anywhere" }}>계약 확인 · <b style={{ fontWeight: 600, color: cs.tone === "warn" ? "var(--warn)" : cs.tone === "ok" ? "var(--ok)" : "var(--ink)" }}>{cs.label}</b></p> : null;
+                })()}
+                {d.award.requester_disputed_at && !d.award.dispute_resolved_at && !d.award.contract_confirmed_at ? <div style={{ marginTop: 10 }}><DisputeResolve awardId={d.award.id} /></div> : null}
               </div>
             )}
           </div>

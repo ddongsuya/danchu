@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # 동시 선정 (0022): 두 연결이 같은 요청에서 서로 다른 견적을 동시에 선정하면 한 건만 성공하고 수주 기록은 1건이다.
 # 이어서 선정과 견적 수정이 겹치면, 수정이 먼저 잠금을 잡은 경우 옛 판의 선정은 quote_changed 로 거절된다.
+# 0025: 선정은 비교표가 열린 뒤에만 된다. 첫 시나리오는 준비 때 비교표를 열고, 두 번째는 마지막 재제출이 비교표를 연다
+#       (참여 결정 기한이 지난 요청에서 참여 기관이 모두 제출 → save_quote 가 같은 트랜잭션에서 compared_at 을 채운다).
 # scripts/db-test.sh 가 PSQL·ROOT·PG* 환경을 넘겨 부른다. 데이터는 커밋되므로 요청 번호를 따로 쓴다.
 set -uo pipefail
 q() { "$PSQL" -X -q -At -v ON_ERROR_STOP=1 --no-psqlrc "$@"; }
@@ -13,6 +15,7 @@ create temp table ids as
   select rq, pg_temp.t_quote(pg_temp.t_invite(rq, pg_temp.t_org('경합A')), 20000000) qa,
              pg_temp.t_quote(pg_temp.t_invite(rq, pg_temp.t_org('경합B')), 21000000) qb
   from (select pg_temp.t_rfq('T-RACE-1') rq) s;
+update public.rfq_requests set compared_at = now(), status = 'compared' where id = (select rq from ids);
 -- 판은 다음 문장에서 읽는다 (같은 문장 안에서는 방금 넣은 견적이 보이지 않는다)
 select rq || ' ' || qa || ' ' || (select revision from public.cro_quotes where id = qa) || ' ' || qb || ' ' || (select revision from public.cro_quotes where id = qb) from ids;
 SQL
@@ -43,6 +46,7 @@ read -r RQ2 Q2 R2 INV2 TOK2 < <({ cat "$ROOT/tests/db/support/fixtures.sql"; cat
 create temp table ids2 as
   select rq, i, pg_temp.t_quote(i, 30000000) q from (
     select rq, pg_temp.t_invite(rq, pg_temp.t_org('경합C')) i from (select pg_temp.t_rfq('T-RACE-2') rq) s) s2;
+update public.rfq_requests set join_by = now() - interval '1 day' where id = (select rq from ids2);
 select rq || ' ' || q || ' ' || (select revision from public.cro_quotes where id = q) || ' ' || i || ' ' || (select token from public.rfq_invites where id = i) from ids2;
 SQL
 } | q | tail -n 1)
@@ -55,5 +59,7 @@ wait $PID_C || fail "수정 연결 실패: $(cat "$TMPD/c")"
 [[ "$(grep -v '^$' "$TMPD/c" | head -n 1)" == "true" ]] || fail "재제출이 성공해야 합니다: $(cat "$TMPD/c")"
 [[ "$D" == *'quote_changed'* ]] || fail "옛 판 선정은 quote_changed 여야 합니다: $D"
 N2="$(q -c "select count(*) from public.rfq_awards where rfq_id = '$RQ2'")"
+[[ "$(q -c "select compared_at is not null from public.rfq_requests where id = '$RQ2'")" == "t" ]] || fail "마지막 재제출이 비교표를 열어야 합니다"
+
 [[ "$N2" == "0" ]] || fail "옛 판 선정은 수주 기록을 남기지 않아야 합니다 (실제 $N2)"
-echo "  수정 중 선정: 옛 판 선정 거절(quote_changed), 수주 기록 0건"
+echo "  수정 중 선정: 재제출이 비교표를 연 뒤 옛 판 선정 거절(quote_changed), 수주 기록 0건"

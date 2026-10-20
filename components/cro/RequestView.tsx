@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { Loaded } from "@/lib/quote-load";
+import { closedMessage, type Loaded } from "@/lib/quote-load";
 import { Lock, StatusPill } from "@/components/app/ui";
-import { won } from "@/lib/format";
+import { md, won } from "@/lib/format";
 import { seatsLabel } from "@/lib/request-policy";
 import { JoinPanel } from "./JoinPanel";
 
@@ -30,6 +30,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
               : { tone: rfq.urgent ? ("err" as const) : ("sf" as const), label: rfq.ddayLabel };
   // 참여 결정을 받을 수 있는 상태: 참여 전이고 닫히지 않음
   const deciding = summary && !got.closed && !got.declined && !got.expired;
+  const joinByLabel = got.joinBy ? md(new Date(got.joinBy).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })) : "";
   const title = summary ? `${rfq.categories.join(" · ") || "비임상 시험"} 견적 요청` : rfq.substance;
 
   return (
@@ -54,8 +55,10 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
       </div>
 
       {deciding && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} declineEndpoint={declineEndpoint} />}
-      {summary && got.declined && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청에는 불참으로 처리했습니다. 다시 참여하려면 단추(hello@danchu.kr)에 문의해 주세요.</div>}
-      {got.withdrawn && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청의 참여를 철회했습니다. 청구하지 않으며, 작성 중이던 내용은 의뢰자에게 보이지 않습니다.</div>}
+      {/* 불참 되돌리기 (2026-10-20 결정 3): 참여 전 불참만, 참여 결정 기한 전, 자리가 남았을 때. 참여와 같은 동의·같은 길(join_offer) */}
+      {got.canRejoin && !got.withdrawn && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} rejoinBy={joinByLabel} />}
+      {summary && got.declined && !got.withdrawn && !got.canRejoin && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청에는 불참으로 처리했습니다.{joinByLabel ? ` 참여 결정 기한(${joinByLabel})이 지나 다시 참여할 수 없습니다.` : ""}</div>}
+      {got.withdrawn && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청의 참여를 철회했습니다. 청구하지 않으며, 작성 중이던 내용은 의뢰자에게 보이지 않습니다. 철회는 되돌릴 수 없습니다.</div>}
 
       {!summary && rfq.identityMasked && !rfq.masked && (
         <div className="note note--tint" style={{ marginBottom: 16 }}>
@@ -72,7 +75,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           </span>
         </div>
       )}
-      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다.</div>}
+      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>{closedMessage(got.closedReason)}</div>}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">
@@ -163,7 +166,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           {!summary && !submitted && !got.closed && !got.declined && !got.expired && withdrawHref && (
             <div style={{ textAlign: "center" }}>
               <Link href={withdrawHref} className="btxt">참여 철회</Link>
-              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.</p>
+              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다. 철회한 뒤에는 다시 참여할 수 없습니다.</p>
             </div>
           )}
         </div>

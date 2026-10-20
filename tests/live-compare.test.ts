@@ -57,7 +57,7 @@ vi.mock("@/lib/notify", () => ({
   siteUrl: () => "https://danchu.kr",
 }));
 vi.mock("@/lib/data", () => ({ getRfqByNo: async () => fx.rfq, ownsRfq: () => false }));
-vi.mock("@/lib/quote-load", () => ({ loadQuote: async () => fx.loaded }));
+vi.mock("@/lib/quote-load", async (orig) => ({ ...(await orig<typeof import("@/lib/quote-load")>()), loadQuote: async () => fx.loaded }));
 vi.mock("@/lib/rpc", async (orig) => ({ ...(await orig<typeof import("@/lib/rpc")>()), saveQuote: fx.saveQuote }));
 vi.mock("@/lib/catalog-db", () => ({ learnFromSubmission: vi.fn(async () => {}) }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: (fn: () => unknown) => void fn() }));
@@ -83,7 +83,7 @@ beforeEach(() => {
   fx.saveQuote.mockClear();
 });
 
-describe("견적 제출 알림: 앱 알림은 견적마다, 메일은 요청의 첫 견적만", () => {
+describe("견적 제출 알림: 비교표가 열리기 전에는 진행 현황만 (2026-10-20 결정 1)", () => {
   const ctx = { params: Promise.resolve({ token: "tok_abcdefgh" }) };
   const body = {
     items: [{ seq: 1, avail: "가능", amount: "12000000", weeks: "6", reason: "" }],
@@ -101,13 +101,13 @@ describe("견적 제출 알림: 앱 알림은 견적마다, 메일은 요청의 
   });
   const sponsorCall = () => calls().find((c) => c[0][0] === "sponsor-1");
 
-  it("첫 견적: 비교표 링크, 기관명, 수정 가능 안내, 메일 한 통", async () => {
+  it("첫 견적: 요청 화면 링크, 기관명·금액 없이 참여·제출 수만, 메일 한 통", async () => {
     expect((await submitQuote(json(body), ctx)).status).toBe(200);
     const c = sponsorCall();
-    expect(c?.[1].href).toBe("/app/r/DC-2026-0001/compare");
-    expect(c?.[1].title).toContain("바이오랩");
-    expect(c?.[1].body).toContain("수정할 수 있습니다");
-    expect(c?.[1].body).not.toContain("기한 후 공개");
+    expect(c?.[1].href).toBe("/app/r/DC-2026-0001");
+    expect(`${c?.[1].title} ${c?.[1].body}`).not.toContain("바이오랩");
+    expect(`${c?.[1].title} ${c?.[1].body}`).not.toMatch(/12,?000,?000|1,200만/);
+    expect(c?.[1].body).toContain("비교표가 열리면");
     expect(c?.[2]?.to).toEqual(["sponsor@example.com"]);
   });
   it("두 번째 견적과 전원 회신은 앱 알림만 (메일 없음)", async () => {
@@ -120,16 +120,32 @@ describe("견적 제출 알림: 앱 알림은 견적마다, 메일은 요청의 
   it("의뢰자 알림의 분모는 안내한 기관 수가 아니라 참여한 기관 수다 (안내 수·불참 수를 알리지 않는다, 0023)", async () => {
     fx.saveQuote.mockResolvedValueOnce({ ok: true, quote_id: "quote-1", first: true, total_invites: 9, submitted_invites: 1, joined_invites: 3 });
     await submitQuote(json(body), ctx);
-    expect(sponsorCall()?.[1].body).toContain("참여 3곳 중 1곳 회신");
+    expect(sponsorCall()?.[1].body).toContain("참여 3곳 중 1곳 제출");
     expect(sponsorCall()?.[1].body).not.toContain("9");
     // 운영자 알림은 안내 전체 기준 그대로
     expect(calls().find((c) => c[0][0] === "admin-1")?.[1].title).toContain("회신 1/9");
   });
-  it("수정 제출도 앱 알림만", async () => {
+  it("수정 제출은 진행 현황을 바꾸지 않으므로 의뢰자에게 알리지 않는다", async () => {
     fx.saveQuote.mockResolvedValueOnce({ ok: true, quote_id: "quote-1", first: false, total_invites: 3, submitted_invites: 1 });
     await submitQuote(json(body), ctx);
-    expect(sponsorCall()?.[1].title).toContain("수정");
-    expect(sponsorCall()?.[2]).toBeUndefined();
+    expect(sponsorCall()).toBeUndefined();
+    expect(calls().find((c) => c[0][0] === "admin-1")?.[1].body).toContain("수정");
+  });
+  it("마지막 참여 기관의 제출로 비교표가 열리면 견적 알림 대신 비교표 알림을 한 번 보낸다 (save_quote compare_opened)", async () => {
+    fx.saveQuote.mockResolvedValueOnce({ ok: true, quote_id: "quote-2", first: true, total_invites: 4, submitted_invites: 2, joined_invites: 2, compare_opened: true });
+    fx.respond = (q) => {
+      if (q.table === "rfq_requests") return { data: { id: "rfq-1", rfq_no: "DC-2026-0001", user_id: "sponsor-1", email: "sponsor@example.com", substance: "ABC-1" }, error: null };
+      if (q.table === "cro_quotes") return { data: null, error: null, count: 2 };
+      return { data: [], error: null };
+    };
+    expect((await submitQuote(json(body), ctx)).status).toBe(200);
+    // 비교표 알림은 응답 뒤(after)에 간다
+    await vi.waitFor(() => expect(calls().some((c) => c[0][0] === "sponsor-1")).toBe(true));
+    const sponsor = calls().filter((c) => c[0][0] === "sponsor-1");
+    expect(sponsor).toHaveLength(1);
+    expect(sponsor[0][1].title).toContain("비교표가 열렸습니다");
+    expect(sponsor[0][2]?.to).toEqual(["sponsor@example.com"]);
+    expect(fx.logEvent.mock.calls.some((c) => c[1] === "compared")).toBe(true);
   });
   it("화면을 연 뒤 선정·마감되면 save_quote 의 closed 를 409 로 돌려준다", async () => {
     fx.saveQuote.mockResolvedValueOnce({ ok: false, code: "closed" });
@@ -164,7 +180,7 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     expect(up?.payload).toMatchObject({ status: "compared" });
     expect(up?.filters).toContainEqual(["is:compared_at", null]);
     const sponsor = calls().find((c) => c[0][0] === "sponsor-1");
-    expect(sponsor?.[1].body).toContain("1곳 미회신");
+    expect(sponsor?.[1].body).toContain("1곳 미제출");
     expect(sponsor?.[2]?.to).toEqual(["sponsor@example.com"]);
     // 기한 후 자동 마감은 기관에 따로 알리지 않는다
     expect(calls().some((c) => c[2]?.to.includes("c@example.com"))).toBe(false);
@@ -196,7 +212,7 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     expect(toC[0][1].title).toContain("회신이 마감되었습니다");
     const toA = calls().filter((c) => c[2]?.to.includes("a@example.com"));
     expect(toA).toHaveLength(1);
-    expect(toA[0][1].body).toContain("더 수정할 수 없습니다");
+    expect(toA[0][1].title).toContain("견적 수정이 닫혔습니다");
     // 기관마다 따로: 한 통에 다른 기관 주소가 섞이지 않는다
     expect(calls().some((c) => c[2]?.to.includes("a@example.com") && c[2]?.to.includes("b@example.com"))).toBe(false);
     // 참여 결정 전 기관에는 시험물질명 없이 참여 안내가 마감되었다고만 알린다
@@ -262,6 +278,19 @@ describe("기한 연장으로 마감된 회신을 다시 연다", () => {
     const inv = fx.calls.find((c) => c.table === "rfq_invites" && c.op === "update");
     expect(inv?.payload).toMatchObject({ reply_by: "2099-01-05" });
     expect(calls().some((c) => c[2]?.to.includes("a@example.com"))).toBe(true);
+  });
+  it("다시 열면 지난 참여 결정 기한을 오늘부터 다시 잡는다 (곧바로 다시 열리지 않게)", async () => {
+    fx.session = admin;
+    fx.rfq = { id: "rfq-1", rfq_no: "DC-2026-0001", status: "compared", compared_at: "2026-10-11T00:00:00Z", selected_quote_id: null, reply_by: "2026-10-10", join_by: "2026-10-03T14:59:59.000Z", distributed_at: "2026-10-01T00:00:00Z", substance: "ABC-1", user_id: "sponsor-1" };
+    fx.respond = (q) => {
+      if (q.table === "cro_quotes") return { data: null, error: null, count: 2 };
+      if (q.table === "rfq_requests" && q.op === "update") return { data: [{ id: "rfq-1" }], error: null };
+      return { data: [], error: null };
+    };
+    expect((await changeDeadline(json({ replyBy: "2099-01-05" }), ctx)).status).toBe(200);
+    const payload = fx.calls.find((c) => c.table === "rfq_requests" && c.op === "update")?.payload as Record<string, unknown>;
+    expect(payload).toMatchObject({ compared_at: null, status: "quoted" });
+    expect(new Date(payload.join_by as string).getTime()).toBeGreaterThan(Date.now());
   });
   it("기한 전에 마감한 요청은 같은 기한으로 다시 열 수 있다", async () => {
     fx.session = admin;

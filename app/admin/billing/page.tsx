@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
-import { adjustmentsByOrg, CLOSED_MONTH_NOTE, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_PER_QUOTE_FEE, REFERENCE_SUCCESS_RATE, REFERENCE_UNIT_LABEL, referenceTotals, signedWon, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
+import { adjustmentsByOrg, CLOSED_MONTH_NOTE, CONFIRM_VIA_LABEL, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_PER_QUOTE_FEE, REFERENCE_SUCCESS_RATE, REFERENCE_UNIT_LABEL, referenceTotals, signedWon, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
 import { BillingClose } from "@/components/admin/BillingClose";
 import { BillingAdjustmentForm } from "@/components/admin/BillingAdjustmentForm";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -103,7 +103,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <div className="card tbl-wrap" style={{ marginBottom: 20 }}>
         <div style={cardHead}>기관별 명세 · 미정은 0원으로 보이지 않고 미정으로 표시합니다</div>
         {rows.length === 0 ? (
-          <p className="empty">이 달에 제출된 견적, 체결 확인, 구독 기관이 없습니다.</p>
+          <p className="empty">이 달에 제출된 견적, 확정된 계약, 구독 기관이 없습니다.</p>
         ) : (
           <table className="tbl tbl--sticky">
             <thead>
@@ -114,7 +114,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 <th className="tnum">건당 이용료 대상</th>
                 <th className="tnum">건당 이용료 합계</th>
                 <th className="tnum">성사수수료 예상 (견적 기준)</th>
-                <th className="tnum">성사수수료 정산 (계약 기준, 체결 확인분)</th>
+                <th className="tnum">성사수수료 정산 (계약 기준, 계약 확정분)</th>
                 <th className="tnum">월 구독료</th>
                 <th className="tnum">조정</th>
                 <th className="tnum">합계</th>
@@ -217,7 +217,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="card tbl-wrap" style={{ marginBottom: 20 }}>
-        <div style={cardHead}>성사수수료 · 선정 견적 5,000만 원 이상만. 예상은 이 달 선정분(선정 견적 × 요율, 안내용), 정산은 이 달 체결 확인분(계약 금액 × 요율)</div>
+        <div style={cardHead}>성사수수료 · 선정 견적 5,000만 원 이상만. 예상은 이 달 선정분(선정 견적 × 요율, 안내용), 정산은 이 달 계약 확정분(확정된 계약 금액 × 요율. 의뢰자 확인 또는 보고 7일 뒤 자동 확정)</div>
         {guidance.length + settled.length === 0 ? (
           <p className="empty">이 달에 해당하는 성사수수료가 없습니다.</p>
         ) : (
@@ -227,7 +227,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               {[...settled, ...guidance].map((a) => (
                 <tr key={`${a.kind}-${a.award_id}`}>
                   <td><Link href={`/admin/r/${a.rfq_no}`} className="tnum">{a.rfq_no}</Link></td>
-                  <td data-label="구분">{a.kind === "settlement" ? <b>정산 (계약 기준)</b> : "예상 (견적 기준)"}<span style={{ ...muted, display: "block" }}>{a.kind === "settlement" ? `체결 확인 ${ymd(a.contract_reported_at)}` : `선정 ${ymd(a.awarded_at)}`}</span></td>
+                  <td data-label="구분">{a.kind === "settlement" ? <b>정산 (계약 기준)</b> : "예상 (견적 기준)"}<span style={{ ...muted, display: "block" }}>{a.kind === "settlement" ? `계약 확정 ${ymd(a.contract_confirmed_at ?? a.contract_reported_at)}${a.contract_confirmed_via ? ` · ${CONFIRM_VIA_LABEL[a.contract_confirmed_via] ?? a.contract_confirmed_via}` : ""}` : `선정 ${ymd(a.awarded_at)}`}</span></td>
                   <td data-label="기관">{a.org_name}{a.invite_billable === false && <span style={{ ...muted, display: "block" }}>견적 청구 제외한 초대</span>}{a.invite_joined === false && <span style={{ ...muted, display: "block" }}>청구 조건 참여 기록 없음(참여 기록 없음 또는 시범 운영 중 참여), 합계 미포함</span>}</td>
                   <td className="tnum" data-label="선정 견적">{won(a.quote_amount)}</td>
                   <td className="tnum" data-label="계약 금액">{a.contract_amount != null ? won(a.contract_amount) : "-"}</td>

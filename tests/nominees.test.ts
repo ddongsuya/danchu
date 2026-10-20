@@ -34,7 +34,7 @@ vi.mock("@/lib/supabase", () => {
   return {
     getSupabaseAdmin: () => ({
       from: builder,
-      rpc: async (name: string) => (name === "next_rfq_no" ? { data: "DC-2026-0100", error: null } : name === "danchu_schema_version" ? { data: 24, error: null } : { data: null, error: null }),
+      rpc: async (name: string) => (name === "next_rfq_no" ? { data: "DC-2026-0100", error: null } : name === "danchu_schema_version" ? { data: 25, error: null } : { data: null, error: null }),
       storage: { from: () => ({ createSignedUploadUrl: async () => ({ data: { signedUrl: "https://x" }, error: null }) }) },
     }),
   };

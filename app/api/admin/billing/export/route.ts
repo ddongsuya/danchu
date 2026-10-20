@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { joinStatusNote, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_UNIT_LABEL, TIER_LABEL } from "@/lib/billing";
+import { CONFIRM_VIA_LABEL, joinStatusNote, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_UNIT_LABEL, TIER_LABEL } from "@/lib/billing";
 import type { BillingAdjustmentRow, BillingAwardRow, BillingLineRow, BillingReferenceRow, BillingSnapshot, BillingSummaryRow } from "@/lib/db-types";
 
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ const amountOrPending = (v: number | null | undefined) => (v == null ? "미정" 
 
 /**
  * GET ?month=YYYY-MM: 그 달 청구 명세 CSV (0020 기준). 엑셀에서 바로 열리게 BOM 을 붙인다.
- * 한 행이 청구 항목 하나다. 구분: 견적 회신(처음 제출한 달, 금액 없이 제출했으면 금액이 들어온 달) · 월 구독료 · 성사수수료 정산(체결 확인한 달) ·
+ * 한 행이 청구 항목 하나다. 구분: 견적 회신(처음 제출한 달, 금액 없이 제출했으면 금액이 들어온 달) · 월 구독료 · 성사수수료 정산(계약을 확정한 달. 0025: 의뢰자 확인, 7일 뒤 자동 확정 또는 운영자 확정) ·
  * 성사수수료 예상(선정한 달, 합계 미포함) · 조정(0024, 마감한 달을 바로잡는 금액, 합계에 들어감) ·
  * 참고 (시범 기간, 청구 안 함)(0024, 기관별 "유료였다면" 수치. 청구액은 0 이고 숫자는 "참고:" 열에만 적는다)
  * 마감한 달은 마감 때 저장한 명세를 쓴다. 0024 전 저장본에는 조정이 없고, 참고 수치는 지금 집계로 채운다.
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
     if (a.kind === "settlement") {
       // 0023: 참여 기록이 없거나 시범 판으로 참여한 초대의 수주는 명세 합계에 넣지 않는다 (billing_summary). 행은 남기고 N 으로 표시
       const joined = a.invite_joined !== false;
-      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", joined ? "Y" : "N", "", "", rate, joined ? amountOrPending(a.fee) : 0, [`체결일 ${a.contract_date ?? "-"} · 체결 확인한 달에 정산`, a.invite_billable === false ? "견적 청구 제외한 초대" : "", joined ? "" : "청구 조건 참여 기록 없음(참여 기록 없음 또는 시범 운영 중 참여), 청구하지 않음"].filter(Boolean).join(" · ")]);
+      push(["성사수수료 정산", a.org_name, seoulDay(a.contract_confirmed_at ?? a.contract_reported_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "계약 기준", joined ? "Y" : "N", "", "", rate, joined ? amountOrPending(a.fee) : 0, [`체결일 ${a.contract_date ?? "-"} · 계약 확정한 달에 정산${a.contract_confirmed_via ? ` (${CONFIRM_VIA_LABEL[a.contract_confirmed_via] ?? a.contract_confirmed_via})` : ""}`, a.invite_billable === false ? "견적 청구 제외한 초대" : "", joined ? "" : "청구 조건 참여 기록 없음(참여 기록 없음 또는 시범 운영 중 참여), 청구하지 않음"].filter(Boolean).join(" · ")]);
     } else {
       push(["성사수수료 예상", a.org_name, seoulDay(a.awarded_at), a.rfq_no, a.quote_amount, a.contract_amount ?? "", "견적 기준", "N", "", "", rate, "", `안내용, 합계에 넣지 않음 · 예상 ${a.fee == null ? "미정" : a.fee}원`]);
     }

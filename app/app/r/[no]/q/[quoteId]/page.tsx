@@ -1,6 +1,6 @@
 import { quoteSelectable } from "@/lib/quote-policy";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -8,7 +8,7 @@ import { glpCoverage } from "@/lib/quote-items";
 import { INCL_KEYS } from "@/lib/cro-data";
 import { Crumb } from "@/components/app/ui";
 import { comma, md, won, ymd } from "@/lib/format";
-import { quoteRevisable, REVISABLE_LABEL } from "@/lib/reply-window";
+import { comparisonOpened } from "@/lib/reply-window";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,9 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const { no, quoteId } = await params;
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
-  // 제출된 견적은 바로 볼 수 있다 (공개 단계 없음, lib/reply-window.ts). 초안은 아래에서 걸러진다
+  // 견적은 비교표가 열린 뒤에만 의뢰자에게 보인다 (2026-10-20 결정 1). 열리기 전에는 비교표 화면이 진행 숫자를 보여 준다
+  if (!comparisonOpened(rfq) && s.profile.role !== "admin") redirect(`/app/r/${rfq.rfq_no}/compare`);
+  // 제출된 견적만. 초안은 아래에서 걸러진다
   const d = await getRfqDetail(rfq);
   const q = d.quotes.find((x) => x.id === quoteId && x.status === "submitted");
   if (!q) notFound();
@@ -26,9 +28,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const { data: org } = q.cro_org_id ? await sb.from("cro_orgs").select("glp_certs, aaalac, website, intro").eq("id", q.cro_org_id).maybeSingle() : { data: null };
   const certs = (org?.glp_certs ?? []) as string[];
   const cov = glpCoverage(Array.isArray(rfq.payload.authority) ? (rfq.payload.authority as string[]) : [], certs);
-  const selectable = !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
-  const inv = d.invites.find((i) => i.id === q.invite_id);
-  const revisable = !rfq.selected_quote_id && quoteRevisable(rfq, inv?.reply_by ?? rfq.reply_by);
+  const selectable = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
 
   return (
     <>
@@ -39,7 +39,6 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <h1>{q.cro_name}</h1>
           {q.auto && <p className="note note--warn">기관 확인 전 예비 견적입니다. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
           {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용에 오류가 있으면 단추가 바로잡고 알려 드립니다.</p>}
-          {revisable && <p className="note note--warn">{REVISABLE_LABEL}. 회신 기한({md(inv?.reply_by ?? rfq.reply_by)})까지는 기관이 이 견적을 고칠 수 있습니다. 고치면 알림으로 알려 드립니다.</p>}
           {!quoteSelectable(q) && <Link href={`/app/support?rfq=${rfq.rfq_no}`}>정식 견적·유효기간 확인 요청</Link>}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
             <div>

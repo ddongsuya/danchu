@@ -330,7 +330,6 @@
 .compare-status > div:first-child { border-left: 0; }
 .compare-status dt { font-size: 12px; color: var(--muted); }
 .compare-status dd { margin: 4px 0 0; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.compare-col__live { display: inline-block; margin-top: 4px; }
 .request-attention { display: flex; align-items: center; gap: 14px; padding: 20px 22px; border-radius: var(--r-md); background: var(--tint); margin-bottom: 30px; border: 1px solid var(--bline); }
 .request-attention__icon { color: var(--brand); flex: none; }
 .request-attention b { font-size: 14px; font-weight: 650; }
@@ -463,3 +462,10 @@
   .billadj__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .billadj__reason { grid-column: 1 / -1; }
 }
+/* ── 로그인 전 요청서 (GuestShell) ── 메뉴 없이 상단 바만 */
+.pt--guest .pt__top { display: block; }
+.pt--guest .pt__topin { max-width: 1080px; margin: 0 auto; }
+.pt--guest .pt__topin > .pt__brand { display: flex; }
+.pt--guest .pt__main { padding-bottom: calc(48px + var(--bot)); }
+.pt .pt__guest-login { font-size: 14px; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .pt .pt__guest-login:hover { color: var(--ink); text-decoration: underline; } }

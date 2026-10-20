@@ -15,9 +15,8 @@ export const runtime = "nodejs";
 /**
  * POST { quoteId, revision } — 의뢰자가 CRO를 선택한다. revision 은 선정 확인 화면이 보여 준 견적 판이다.
  * 화면을 연 뒤 기관이 견적을 고쳤으면 선정하지 않고 409 quote_changed 로 다시 확인하게 한다 (0022).
- * rfq_awards 생성, 상태 selected, 선택된 CRO에 의뢰자 연락처 공개 알림, 나머지 CRO에 결과 안내.
- * 제출된 견적이 있으면 회신 기한 전에도 선택할 수 있다 (lib/reply-window.ts). 선택하면 남은 회신 링크가 닫히므로,
- * 회신이 아직 열려 있던 요청이면 회신하지 않은 기관에도 마감을 알린다. 확인 단계는 선정 화면(SelectCroForm)에 있다.
+ * rfq_awards 생성, 상태 selected, 선택된 CRO에 의뢰자 연락처 공개 알림, 의뢰자에게 기관 담당자 연락처, 나머지 CRO에 결과 안내.
+ * 선택은 비교표가 열린 뒤에만 된다 (2026-10-20 결정 1, 0025 select_quote not_compared). 기한 전 확인 단계 선택은 없다.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
@@ -91,8 +90,26 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
 
   // 거래 귀속은 선정 시점의 기록(rfq_awards)으로 본다. 기존 거래 여부로 따로 판정하지 않는다
   await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-  // 체결 기록은 기관 보고나 운영자 확인으로 남는다. 누가 남기는지는 의뢰자에게 약속하지 않는다
-  await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name} 선정 완료 · ${rfq.rfq_no}`, body: "선정한 기관에 연락처를 전달했습니다. 기관이 곧 연락드리며, 계약은 기관과 직접 진행합니다. 계약 체결이 단추에 기록되면 알림으로 알려 드립니다.", href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+  // 의뢰자에게도 기관 담당자 연락처를 준다 (연락처는 선정 때 서로 주고받는다. 의뢰자 정보는 위에서 선정 기관에만 갔다)
+  let contactLine = "";
+  let croReplyTo: string | undefined;
+  if (quote.cro_org_id) {
+    const { data: org } = await sb.from("cro_orgs").select("contact_name, contact_email, contact_phone").eq("id", quote.cro_org_id).maybeSingle();
+    const email = org?.contact_email || winnerMails[0] || "";
+    contactLine = [org?.contact_name, email, org?.contact_phone].filter(Boolean).join(" · ");
+    croReplyTo = email || undefined;
+  }
+  // 체결 기록은 기관 보고로 남고, 의뢰자가 확인한다 (7일 안에 이의가 없으면 보고대로 확정, 0025)
+  await notifyUsers(
+    [s.userId],
+    {
+      kind: "선정",
+      title: `${quote.cro_name} 선정 완료 · ${rfq.rfq_no}`,
+      body: `선정한 기관과 서로 연락처를 주고받았습니다.${contactLine ? ` 기관 담당: ${contactLine}.` : ""} 계약은 기관과 직접 진행합니다. 기관이 체결을 보고하면 내용을 확인해 주세요.`,
+      href: `/app/r/${rfq.rfq_no}`,
+    },
+    { to: [rfq.email], replyTo: croReplyTo },
+  );
 
   return NextResponse.json({ ok: true, awardId: award.id });
 }

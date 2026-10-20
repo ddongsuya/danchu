@@ -26,7 +26,7 @@ function fakeDb(respond: (q: Q) => { data: unknown; error: unknown }, calls: Q[]
       insert: (p: unknown) => ((q.op = "insert"), (q.payload = p), b),
       update: (p: unknown) => ((q.op = "update"), (q.payload = p), b),
       delete: () => ((q.op = "delete"), b),
-      eq: rec(""), is: rec("is:"), in: rec("in:"), lt: rec("lt:"), gte: rec("gte:"), neq: rec("neq:"),
+      eq: rec(""), is: rec("is:"), in: rec("in:"), lt: rec("lt:"), gte: rec("gte:"), neq: rec("neq:"), contains: rec("contains:"), not: rec("not:"),
       order: () => b, limit: () => b,
       maybeSingle: () => ((q.single = true), finish()),
       single: () => ((q.single = true), finish()),
@@ -53,11 +53,13 @@ vi.mock("@/lib/distribute", () => ({
   inviteMailTo: (inv: { cro_email: string }) => [inv.cro_email],
   inviteReplyTo: () => undefined,
 }));
-vi.mock("@/lib/compare", () => ({ closeReplies: fx.closeReplies }));
+vi.mock("@/lib/compare", () => ({ closeReplies: fx.closeReplies, announceCompareOpened: vi.fn(async () => {}) }));
+vi.mock("@/lib/rfq-create", () => ({ startRfq: vi.fn(async () => ({ started: false, sent: 0 })) }));
+vi.mock("@/lib/rfq-pending", () => ({ cleanupPending: vi.fn(async () => ({ pending: 0, files: 0, accounts: 0 })) }));
 vi.mock("@/lib/rpc", () => ({ saveQuote: fx.saveQuote }));
 vi.mock("@/lib/retention", () => ({ runRetention: async () => ({ accessLogs: 0, requests: 0, files: 0, notifications: 0 }) }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimited: async () => false }));
-vi.mock("@/lib/mail", () => ({ sendMail: async () => true, contractFollowupMail: () => ({ subject: "", html: "" }) }));
+vi.mock("@/lib/mail", () => ({ sendMail: async () => true, contractFollowupMail: () => ({ subject: "", html: "" }), esc: (x: string) => x, mailWrap: (x: string) => x }));
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/supabase", () => ({ getSupabaseAdmin: () => (fx.routeDb ? fakeDb(fx.routeDb) : null) }));
 
@@ -333,7 +335,7 @@ describe("GET /api/cron/daily", () => {
     expect(fx.closeReplies).toHaveBeenCalledTimes(1);
     expect(r.body.compared).toBe(0);
     expect(eventKinds()).toContain("no_reply");
-    expect(notified().find((c) => c[0][0] === "admin-1" && c[1].title.includes("회신 없음"))?.[1].body).toContain("마감하지 않았습니다");
+    expect(notified().find((c) => c[0][0] === "admin-1" && c[1].title.includes("회신 없음"))?.[1].body).toContain("열지 않았습니다");
     expect(notified().some((c) => c[0][0] === "sponsor-1" && c[1].title.includes("아직 견적이 없습니다"))).toBe(true);
   });
 });

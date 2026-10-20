@@ -88,8 +88,11 @@ async function runForRfq(sb: Admin, rfq: RfqRow, today: string, now: number, out
         body: `참여 결정 기한이 지났지만 참여한 기관이 적습니다 (안내 ${offered}곳). 분야가 맞는 기관에 참여를 권하거나 참여 안내를 추가해 주세요. 회신 기한 3영업일 전까지는 늦은 참여를 받을 수 있습니다.`,
         href: `/admin/r/${rfq.rfq_no}`,
       }, { to: adminEmails() });
-      // 의뢰자 안내는 요청마다 한 번 (참여 결정 기한을 늘려도 다시 보내지 않는다)
-      if (!events.some((e) => e.kind === "low_participation")) {
+      // 의뢰자 안내는 요청마다 한 번 (참여 결정 기한을 늘려도 다시 보내지 않는다).
+      // 참여한 기관이 모두 제출했으면 이번 예약 작업(open-ready)이 비교표를 열고 늦은 참여도 닫히므로 늦은 참여 안내를 보내지 않는다 (0025)
+      const seated = invites.filter((i) => !i.revoked_at && !i.withdrawn_at && (i.joined_at || i.status === "draft" || i.status === "submitted") && ["sent", "draft", "submitted"].includes(i.status));
+      const opensNow = seated.length > 0 && seated.every((i) => i.status === "submitted");
+      if (!opensNow && !events.some((e) => e.kind === "low_participation")) {
         await notifyUsers(rfq.user_id ? [rfq.user_id] : [], {
           kind: "배포",
           title: `${rfq.rfq_no} 참여한 기관이 아직 ${seats.used}곳입니다`,

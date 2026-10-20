@@ -6,6 +6,7 @@
 #  4) 0023 은 0022 없이 적용하면 멈추고, 0022 다음에 적용하면 판이 23 이 된다.
 #  5) 0024 는 0023 없이 적용하면 멈추고 아무것도 바꾸지 않으며, 끝나지 않은 달이 마감돼 있어도 멈추고,
 #     0023 다음에 적용하면 판이 24 가 된다.
+#  6) 0025 는 0024 없이 적용하면 멈추고 아무것도 바꾸지 않으며, 0024 다음에 적용하면 판이 25 가 된다.
 # 별도 데이터베이스(danchu_order)를 만들어 쓰고 지운다. scripts/db-test.sh 가 PSQL·ROOT·PG* 환경을 넘겨 부른다.
 set -uo pipefail
 DB=danchu_order
@@ -53,6 +54,12 @@ V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "23" ]] || fail "판은 23 이어야 합니다 (실제 $V)"
 echo "  0022 → 0023: 판 23"
 
+if q -d "$DB" -f "$ROOT/supabase/migrations/0025_flow_redesign.sql" >"$TMPD/out" 2>&1; then fail "0024 없이 0025 가 적용되면 안 됩니다"; fi
+grep -q "0019 부터 0024 까지 순서대로" "$TMPD/out" || fail "0025 의 멈춤 메시지가 다릅니다: $(cat "$TMPD/out")"
+[[ "$(q -d "$DB" -c "select count(*) from information_schema.columns where table_name = 'rfq_requests' and column_name = 'started_at'")" == "0" ]] || fail "멈춘 0025 가 일부를 바꿨습니다"
+[[ "$(q -d "$DB" -c "select count(*) from information_schema.tables where table_name = 'rfq_pending'")" == "0" ]] || fail "멈춘 0025 가 rfq_pending 을 만들었습니다"
+echo "  0025 를 0024 없이 적용: 멈춤 (0019~0024 필요), 바뀐 것 없음"
+
 # 0020 까지는 이번 달도 마감할 수 있었다. 끝나지 않은 달이 마감돼 있으면 0024 는 멈추고 아무것도 바꾸지 않는다
 q -d "$DB" -c "insert into public.billing_periods (month, note) values (date_trunc('month', now() at time zone 'Asia/Seoul')::date, '달 중간 마감')" >/dev/null || fail "이번 달 마감 행을 넣지 못했습니다"
 if q -d "$DB" -f "$ROOT/supabase/migrations/0024_billing_close_lock.sql" >"$TMPD/out" 2>&1; then fail "끝나지 않은 달이 마감돼 있는데 0024 가 적용되면 안 됩니다"; fi
@@ -65,3 +72,8 @@ q -d "$DB" -f "$ROOT/supabase/migrations/0024_billing_close_lock.sql" >"$TMPD/ou
 V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "24" ]] || fail "판은 24 여야 합니다 (실제 $V)"
 echo "  0023 → 0024: 판 24"
+
+q -d "$DB" -f "$ROOT/supabase/migrations/0025_flow_redesign.sql" >"$TMPD/out" 2>&1 || { cat "$TMPD/out" >&2; fail "0025 적용 실패"; }
+V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
+[[ "$V" == "25" ]] || fail "판은 25 여야 합니다 (실제 $V)"
+echo "  0024 → 0025: 판 25"

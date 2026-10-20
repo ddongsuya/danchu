@@ -1,4 +1,5 @@
 -- 선정 무결성 (0022): 늦게 끝난 배포가 선정을 덮어쓰지 못함, 선정 뒤 수정 거절, 확인한 견적 판만 선정, 수주 기록 1건
+-- 0025: 선정은 비교표가 열린 뒤에만 된다. 아래 시나리오는 비교표를 연(compared_at) 상태에서 선정한다 (비교표 공개 조건은 flow_redesign.sql)
 
 -- 정식 견적서 조건(PDF·착수일·유효기간)을 갖춘 제출. 결과 code ('ok' 또는 거절 사유)
 create or replace function pg_temp.t_submit(p_invite uuid, p_amount bigint, p_submit boolean default true) returns text
@@ -30,6 +31,8 @@ begin
   perform pg_temp.t_eq(pg_temp.t_submit(inv, 20000000), 'ok', '배포 중 제출');
   perform pg_temp.t_eq((select status from public.rfq_requests where id = rq), 'quoted', '제출하면 quoted');
   select id, revision into q, rev from public.cro_quotes where invite_id = inv;
+  perform pg_temp.t_eq(public.select_quote(rq, q, null, rev)->>'code', 'not_compared', '비교표가 열리기 전에는 선정 거절 (0025)');
+  update public.rfq_requests set compared_at = now() where id = rq;
   res := public.select_quote(rq, q, null, rev);
   perform pg_temp.t_eq((res->>'ok')::boolean, true, '배포 중 선정 성공');
 
@@ -97,6 +100,7 @@ begin
   select revision into now_rev from public.cro_quotes where id = q;
   perform pg_temp.t_assert(now_rev > seen, '재제출하면 판이 오른다');
 
+  update public.rfq_requests set compared_at = now() where id = rq;
   res := public.select_quote(rq, q, null, seen);
   perform pg_temp.t_eq(res->>'code', 'quote_changed', '옛 판으로 선정 거절');
   perform pg_temp.t_eq((res->>'revision')::int, now_rev, '지금 판을 알려 준다');
@@ -128,6 +132,7 @@ begin
   perform pg_temp.t_submit(ib, 21000000);
   select id into qa from public.cro_quotes where invite_id = ia;
   select id into qb from public.cro_quotes where invite_id = ib;
+  update public.rfq_requests set compared_at = now() where id = rq;
   perform pg_temp.t_eq((public.select_quote(rq, qa, null, (select revision from public.cro_quotes where id = qa))->>'ok')::boolean, true, '첫 선정');
   perform pg_temp.t_eq(public.select_quote(rq, qb, null, (select revision from public.cro_quotes where id = qb))->>'code', 'already_selected', '두 번째 선정 거절');
   perform pg_temp.t_eq((select count(*)::int from public.rfq_awards where rfq_id = rq), 1, '수주 기록 1건');

@@ -63,7 +63,8 @@ vi.mock("@/lib/notify", () => ({
   siteUrl: () => "https://danchu.kr",
 }));
 vi.mock("@/lib/data", () => ({ getRfqByNo: async () => fx.rfq, getCroOrg: async () => fx.org, ownsRfq: () => false }));
-vi.mock("@/lib/quote-load", () => ({
+vi.mock("@/lib/quote-load", async (orig) => ({
+  ...(await orig<typeof import("@/lib/quote-load")>()),
   loadQuote: async (_token: string, opts?: unknown) => {
     fx.loadOpts.push(opts);
     return fx.loaded;

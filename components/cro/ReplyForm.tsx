@@ -113,10 +113,13 @@ type Loaded = {
   expired?: boolean;
   locked?: boolean;
   declined?: boolean;
+  closedMessage?: string;
   closed?: boolean;
   /** 참여 전이면 false (0023). 회신 화면은 참여 뒤에만 열리지만, 그 사이 상태가 바뀐 경우를 막는다 */
   joined?: boolean;
   withdrawn?: boolean;
+  /** 참여 전 불참을 되돌릴 수 있는지 (참여 결정 기한 전, 2026-10-20 결정 3) */
+  canRejoin?: boolean;
 };
 
 /**
@@ -336,7 +339,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "의뢰자가 기관을 선정했거나 회신이 마감되어 이 요청의 회신이 닫혔습니다." : data.withdrawn ? "참여를 철회한 요청입니다." : data.declined ? "불참으로 처리한 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 
