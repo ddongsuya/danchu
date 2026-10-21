@@ -22,7 +22,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ no: string }>
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
   if (!rfq.compared_at && beforeDeadline(rfq.reply_by)) return NextResponse.json({ error: EARLY_CLOSE_REFUSED, code: "early_close_removed" }, { status: 409 });
   const r = await closeReplies(rfq, s.userId, false);
-  if (!r.ok) return NextResponse.json({ error: r.message }, { status: 400 });
+  if (!r.ok) return NextResponse.json({ error: r.message }, { status: r.failed ? 500 : 400 });
   await audit({ userId: s.userId, email: s.email }, "rfq.close_replies", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { after: { quotes: r.count, pending: r.pending, reply_by: rfq.reply_by } });
   return NextResponse.json({ ok: true, message: r.message });
 }

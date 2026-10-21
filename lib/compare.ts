@@ -8,7 +8,16 @@ import { occupiesSeat, undecidedOffer } from "./request-policy";
 /** 기한 전 마감을 거절할 때 쓰는 문구 (2026-10-21 결정 2). 운영자 화면과 라우트가 같이 쓴다 */
 export const EARLY_CLOSE_REFUSED = "회신 기한 전에는 회신을 마감할 수 없습니다. 비교표는 참여가 마감된 뒤 참여한 기관이 모두 제출하면 바로 열리고, 그렇지 않으면 회신 기한 다음 날 오전 9시에 열립니다.";
 
-export type CloseRepliesResult = { ok: boolean; count: number; pending: number; message: string; /** 아직 회신하지 않은 기관 이름 (운영자 알림용, 의뢰자·기관에는 보내지 않는다) */ pendingNames?: string[] };
+export type CloseRepliesResult = {
+  ok: boolean;
+  count: number;
+  pending: number;
+  message: string;
+  /** 아직 회신하지 않은 기관 이름 (운영자 알림용, 의뢰자·기관에는 보내지 않는다) */
+  pendingNames?: string[];
+  /** 견적 수·초대를 읽지 못했다. count 0 은 "견적 없음"이 아니므로 부른 쪽은 회신 없음 안내를 보내지 않는다 */
+  failed?: boolean;
+};
 
 /**
  * 비교표가 열린 이유 (2026-10-20 결정, 0025 · 2026-10-21 결정 2).
@@ -40,10 +49,15 @@ export async function closeReplies(rfq: RfqRow, actorId: string | null, auto = f
   if (!["distributed", "quoted"].includes(rfq.status)) return { ok: false, count: 0, pending: 0, message: "회신을 받는 중인 요청만 마감할 수 있습니다." };
   if (beforeDeadline(rfq.reply_by)) return { ok: false, count: 0, pending: 0, message: EARLY_CLOSE_REFUSED };
 
-  const [{ count }, { data: invites }] = await Promise.all([
+  const [{ count, error: countError }, { data: invites, error: invitesError }] = await Promise.all([
     sb.from("cro_quotes").select("id", { count: "exact", head: true }).eq("rfq_id", rfq.id).eq("status", "submitted"),
     sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, cro_name, status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id),
   ]);
+  // 읽기 오류를 "제출 0건"으로 보면 예약 작업이 의뢰자에게 잘못된 "견적 없음" 안내를 보낸다
+  if (countError || invitesError) {
+    captureError(countError ?? invitesError, "compare:count", { rfq: rfq.rfq_no });
+    return { ok: false, failed: true, count: 0, pending: 0, message: "견적 수를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  }
   if (!count) return { ok: false, count: 0, pending: 0, message: "제출된 견적이 없습니다. 기한을 늘리거나 기관을 추가해 주세요." };
   // 미회신은 참여한 기관 안에서 센다 (0023). 참여 결정 전 안내는 "미회신"이 아니다
   const pending = pendingInvites(invites ?? []);
