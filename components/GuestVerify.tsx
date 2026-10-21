@@ -289,7 +289,7 @@ export function GuestVerify({
             }}
           />
           <p id="gv-code-help" className="fld__help">
-            메일 속 버튼을 눌러도 이 화면이 그대로 이어집니다. 확인이 끝나면 쓰신 요청서가 바로 접수됩니다.
+            번호를 입력하면 쓰신 요청서가 바로 접수됩니다. 메일 속 버튼으로 열면 요청서를 확인하고 보낼 수 있고, 보내면 이 화면도 이어집니다.
           </p>
           {uploads.total > 0 && (
             <p className="fld__help" role="status">

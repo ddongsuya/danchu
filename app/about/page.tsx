@@ -120,7 +120,7 @@ export default function About() {
             <div className="doc__body">
               <p>제안 받기는 합성의약품, 바이오의약품, 세포·유전자치료제, 건강기능식품, 화장품, 의료기기, 화학물질·농약을 지원합니다. 제안 규칙은 초안이며 실무 검토 전입니다. 효력시험 구조, 질의응답과 재견적, 회사 단위 계정, 계약 이후의 시험 진행 관리는 아직 없습니다.</p>
               <div className="hero__cta">
-                <RfqLink className="b b--fill">요청서 작성</RfqLink>
+                <RfqLink className="b b--fill">견적 요청하기</RfqLink>
                 <Link href="/for-cro" className="b b--line">기관 참여 안내</Link>
               </div>
             </div>

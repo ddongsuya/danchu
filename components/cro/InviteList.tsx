@@ -17,6 +17,8 @@ export type InviteItem = {
   expiresAt: string;
   /** lib/status.ts inviteStage: undecided · joined · draft · submitted · declined · withdrawn · ended */
   stage: InviteStage;
+  /** 운영자가 취소한 안내 (rfq_invites.revoked_at) */
+  cancelled?: boolean;
   rfqStatus: string;
   total: number | null;
   quoteStatus: string | null;
@@ -38,6 +40,19 @@ export function bucket(i: Pick<InviteItem, "expiresAt" | "rfqStatus" | "stage">)
   if (i.stage === "draft") return "작성 중";
   if (i.stage === "joined") return "참여";
   return "참여 결정 전";
+}
+
+/**
+ * "종료"에 모인 줄의 표시 (흐름 재설계 디자인 2d783db). 다 같은 "종료"로 두면 기관이 이유를 알 수 없다.
+ * 제출한 뒤 비교표가 열리면 마감, 운영자가 취소한 안내는 취소됨, 내기 전에 요청이 마감되면 마감, 링크 기한이 지나면 만료
+ */
+export function endedLabel(i: Pick<InviteItem, "stage" | "cancelled" | "rfqStatus" | "expiresAt">, now = Date.now()): string {
+  if (i.stage === "submitted") return "마감";
+  if (i.stage === "declined" || i.stage === "withdrawn") return INVITE_STAGE_LABEL[i.stage];
+  if (i.cancelled) return "취소됨";
+  if (CLOSED_RFQ.includes(i.rfqStatus)) return "마감";
+  if (new Date(i.expiresAt).getTime() < now) return "만료";
+  return "종료";
 }
 
 export function InviteList({ items }: { items: InviteItem[] }) {
@@ -67,8 +82,7 @@ export function InviteList({ items }: { items: InviteItem[] }) {
           {shown.map((i) => {
             const b = bucket(i);
             const dd = dday(i.replyBy);
-            const ended = i.stage === "submitted" ? "마감" : i.stage === "declined" || i.stage === "withdrawn" ? INVITE_STAGE_LABEL[i.stage] : "종료";
-            const pill = b === "제출" ? { cls: "pill--ok", text: "제출 완료" } : b === "종료" ? { cls: "pill--sf", text: ended } : b === "참여 결정 전" ? { cls: "pill--tint", text: "참여 결정 전" } : { cls: dd.n <= 2 ? "pill--err" : "pill--sf", text: `회신 ${dd.label}` };
+            const pill = b === "제출" ? { cls: "pill--ok", text: "제출 완료" } : b === "종료" ? { cls: "pill--sf", text: endedLabel(i) } : b === "참여 결정 전" ? { cls: "pill--tint", text: "참여 결정 전" } : { cls: dd.n <= 2 ? "pill--err" : "pill--sf", text: `회신 ${dd.label}` };
             const state = b === "제출" ? `제출 · ${won(i.total ?? 0)}` : b === "작성 중" ? "작성 중" : b === "참여" ? "참여" : b === "참여 결정 전" ? "참여 결정 전" : "";
             const action = b === "제출" ? (["selected", "contracting", "closed"].includes(i.rfqStatus) ? "결과 확인" : "수정") : b === "작성 중" ? "이어서 작성" : b === "참여" ? "견적 작성" : b === "참여 결정 전" ? "요약 보고 참여 결정" : "보기";
             const title = i.substance || `${i.tags.join(" · ") || "비임상 시험"} 견적 요청`;

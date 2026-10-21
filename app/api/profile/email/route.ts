@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   const link = `${siteUrl()}/auth/email-change?token=${token}`;
   const html = taken
     ? mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">이미 가입된 주소입니다</h2><p>누군가 단추 계정의 로그인 이메일을 이 주소(${esc(email)})로 바꾸려 했지만, 이 주소는 이미 다른 계정에서 쓰고 있습니다. 본인이라면 그 계정으로 로그인하세요. 요청하지 않았다면 이 메일은 무시해도 됩니다.</p>`)
-    : mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">로그인 이메일을 바꿉니다</h2><p>아래 버튼을 누르면 단추 로그인 이메일이 <b>${esc(s.email)}</b> 에서 <b>${esc(email)}</b> 로 바뀝니다. 링크는 1시간 동안 유효합니다. 요청하지 않았다면 이 메일은 무시하세요.</p><p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">이메일 변경 확인</a></p><p style="font-size:13px;color:#6F6A63">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣으세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`);
+    : mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">로그인 이메일을 바꿉니다</h2><p>아래 버튼을 누르면 단추 로그인 이메일이 <b>${esc(s.email)}</b> 에서 <b>${esc(email)}</b> 로 바뀝니다. 링크는 1시간 동안 유효합니다. 요청하지 않았다면 이 메일은 무시하세요.</p><p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">이메일 변경 확인</a></p><p style="font-size:13px;color:#6F6A63">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣으세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`);
   const ok = await sendMail({ to: email, subject: "[단추] 로그인 이메일 변경 확인", html });
   if (!ok) {
     await sb.from("profiles").update({ pending_email: null, pending_email_hash: null, pending_email_expires_at: null }).eq("id", s.userId);

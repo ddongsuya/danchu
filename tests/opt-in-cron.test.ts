@@ -330,6 +330,22 @@ describe("GET /api/cron/daily", () => {
     expect(r.body).not.toHaveProperty("autoSubmitted");
     expect(r.body).toMatchObject({ joinDeadlines: 0, lowParticipation: 0, extendAsked: 0, reoffered: 0 });
   });
+  it("계약 보고 리마인더(14·30일)는 기관 담당자에게 앱 알림과 함께 대표·담당자 메일로도 간다 (흐름 재설계 디자인)", async () => {
+    const base = fx.routeDb!;
+    const awardedAt = new Date(Date.now() - 15 * 864e5).toISOString();
+    fx.routeDb = (q) => {
+      if (q.table === "rfq_awards") return { data: [{ id: "aw-1", rfq_id: "rfq-1", cro_org_id: "org-1", invite_id: "inv-1", cro_name: "바이오랩", awarded_at: awardedAt, contract_reported_at: null, contract_status: "pending" }], error: null };
+      if (q.table === "cro_orgs" && q.single) return { data: { managed: false, contact_email: "rep@cro.example" }, error: null };
+      if (q.table === "profiles") return { data: [{ id: "m-1", email: "m1@cro.example" }, { id: "m-2", email: null }], error: null };
+      if (q.table === "rfq_requests" && q.single && q.filters.some(([k, v]) => k === "id" && v === "rfq-1")) return { data: { rfq_no: "DC-2099-0001", substance: "ABC-1", user_id: "sponsor-1", email: "sponsor@example.com", status: "selected" }, error: null };
+      return base(q);
+    };
+    await run();
+    const c = notified().find((x) => x[1].title.includes("계약 체결을 보고해 주세요"));
+    expect(c?.[0]).toEqual(["m-1", "m-2"]);
+    expect(c?.[2]?.to.sort()).toEqual(["m1@cro.example", "rep@cro.example"]);
+    expect(eventKinds()).toContain("contract_remind_14");
+  });
   it("제출 0건이면 마감하지 않고 운영자·의뢰자에게 한 번 알린다", async () => {
     const r = await run();
     expect(fx.closeReplies).toHaveBeenCalledTimes(1);

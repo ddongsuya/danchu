@@ -46,7 +46,7 @@ export async function sendMail(m: { to: string | string[]; subject: string; html
 }
 
 const BTN = (href: string, label: string) =>
-  `<a href="${esc(href)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">${esc(label)}</a>`;
+  `<a href="${esc(href)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">${esc(label)}</a>`;
 
 /** 인증 메일 - 가입 확인·로그인 링크·비밀번호 재설정 */
 export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: string, link: string): Promise<boolean> {
@@ -67,7 +67,8 @@ export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: st
 }
 
 /**
- * 보내기 직전 가입의 인증 메일. 6자리 번호(화면에 입력)와 버튼(누르면 같은 요청서가 접수된다)을 함께 보낸다.
+ * 보내기 직전 가입의 인증 메일. 6자리 번호(화면에 입력하면 바로 접수)와 버튼(요청서 요약을 열고 "이 요청서 보내기"를 눌러야 접수,
+ * GET 만으로는 접수하지 않는다: app/app/claim/[token])을 함께 보낸다.
  * 번호와 버튼은 같은 일회용 토큰이라 어느 쪽을 쓰든 한 번만 통한다.
  */
 export async function sendCodeMail(to: string, code: string, link: string): Promise<boolean> {
@@ -77,9 +78,9 @@ export async function sendCodeMail(to: string, code: string, link: string): Prom
     html: mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">요청서를 보내기 전에 이메일을 확인합니다</h2>
       <p>요청서 화면에 아래 번호를 입력해 주세요. 확인이 끝나면 쓰신 요청서가 바로 접수됩니다.</p>
-      <div style="display:inline-block;background:#F5F5F7;border-radius:12px;padding:14px 26px;margin:8px 0 20px;font-size:30px;font-weight:700;letter-spacing:.18em">${esc(code)}</div>
-      <p>화면을 닫았다면 아래 버튼을 눌러도 같은 요청서가 접수됩니다.</p>
-      <p style="margin:24px 0">${BTN(link, "인증하고 요청서 보내기")}</p>
+      <div style="display:inline-block;background:#f3f5f2;border-radius:12px;padding:14px 26px;margin:8px 0 20px;font-size:30px;font-weight:700;letter-spacing:.18em">${esc(code)}</div>
+      <p>화면을 닫았다면 아래 버튼을 눌러 쓰신 요청서를 확인하고 보낼 수 있습니다.</p>
+      <p style="margin:24px 0">${BTN(link, "인증하고 요청서 확인하기")}</p>
       <p style="font-size:13px;color:#6F6A63">번호와 버튼은 1시간 동안 유효하고, 한 번만 쓸 수 있습니다. 요청하지 않았다면 이 메일은 무시하세요. 확인하지 않으면 요청서는 접수되지 않고, 입력한 내용은 7일 뒤 지워집니다.</p>`),
   });
 }
@@ -160,7 +161,7 @@ export async function sendRfqMails({ rfqNo, values, fileNames, fileCount, sent, 
   const requesterHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">${delivered ? "요청서를 접수했고, 기관에 참여 안내를 보냈습니다" : "요청서를 접수했습니다"}</h2>
     <p>${esc(company)} ${esc(name)} 님, 보내 주신 내용 그대로 접수했습니다.${files ? ` 첨부 ${files}개도 함께 올라갔습니다.` : ""}</p>
-    <div style="display:inline-block;background:#F5F5F7;border-radius:12px;padding:12px 24px;margin:8px 0 20px">
+    <div style="display:inline-block;background:#f3f5f2;border-radius:12px;padding:12px 24px;margin:8px 0 20px">
       <div style="font-size:12px;font-weight:600;color:#6E6E73">접수 번호</div>
       <div style="font-size:22px;font-weight:700">${esc(rfqNo)}</div>
     </div>

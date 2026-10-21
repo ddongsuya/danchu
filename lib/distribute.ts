@@ -281,7 +281,7 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
       시험 분야: ${esc(rfq.categories.join(", "))}${items ? ` · 시험 항목 ${items}건` : ""}<br>
       요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${cda ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
       <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b>${joinBy ? ` · 참여 결정 기한 ${esc(joinBy)}` : ""} · 링크는 회신 기한 +7일까지 열립니다.</p>
-      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#2A55A5;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">${INVITE_MAIL_ACTION}</a></p>
+      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">${INVITE_MAIL_ACTION}</a></p>
       <p style="font-size:14px">${how}</p>
       <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개됩니다.</p>
       <p style="font-size:13px;color:#6F6A63">${guide}</p>`);

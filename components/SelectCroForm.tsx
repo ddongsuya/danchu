@@ -105,7 +105,7 @@ export function SelectCroForm({
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button type="button" className="b1 blg" style={{ flex: 1 }} disabled={!ready || busy} onClick={go}>
-          {busy ? "저장 중…" : `${croName}으로 진행`}
+          {busy ? "저장 중…" : "이 기관으로 진행"}
         </button>
         <Link href={`/app/r/${no}/compare`} className="b2" style={{ height: 56 }}>비교표로</Link>
       </div>

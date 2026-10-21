@@ -49,6 +49,7 @@ export default async function CroInbox() {
         replyBy: i.reply_by,
         expiresAt: i.expires_at,
         stage: inviteStage(i),
+        cancelled: !!i.revoked_at,
         rfqStatus: i.rfq?.status ?? "",
         total: i.quote?.total_amount ?? null,
         quoteStatus: i.quote?.status ?? null,
