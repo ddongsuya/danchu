@@ -41,6 +41,20 @@ export function closeRepliesDue(rfq: { compared_at: string | null; reply_by: str
 }
 
 /**
+ * 이 회신 기한에 "기한 경과 · 회신 없음" 안내를 이미 보냈는지 (cron close-replies, 같은 기한에는 한 번만).
+ * 지금 코드는 기록(rfq_events kind no_reply)의 meta.reply_by 에 기한을 남긴다. 0019 전 코드가 남긴 기록은 meta 가 비어 있으므로,
+ * 그 기한이 지난 뒤에 남은 기록이면 이 기한의 안내로 본다. 배포 뒤 회신 기한은 늘리기만 하므로(0026), 기한을 늘렸다면
+ * 예전 기록은 새 기한보다 앞서 남아 다시 알린다
+ */
+export function noReplyNotified(events: { created_at: string; meta?: unknown }[], replyBy: string): boolean {
+  return events.some((e) => {
+    const logged = (e.meta as { reply_by?: unknown } | null | undefined)?.reply_by;
+    if (typeof logged === "string") return logged === replyBy;
+    return Date.parse(e.created_at) > endOfDaySeoul(replyBy);
+  });
+}
+
+/**
  * 참여한 기관 중 아직 제출하지 않은 수 (0023). 참여 결정 전 안내, 불참·철회·취소·만료는 세지 않는다.
  * 의뢰자는 참여한 기관만 보므로 "아직 회신하지 않은 기관"도 참여한 기관 안에서 센다
  */

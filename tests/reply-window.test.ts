@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as replyWindow from "@/lib/reply-window";
-import { beforeDeadline, closeRepliesDue, comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-window";
+import { beforeDeadline, closeRepliesDue, comparisonOpened, noReplyNotified, pendingInvites, repliesClosed } from "@/lib/reply-window";
 
 // 2026-10-10 서울 정오
 const NOON = new Date("2026-10-10T12:00:00+09:00").getTime();
@@ -25,6 +25,22 @@ describe("회신 기한과 마감", () => {
     expect(closeRepliesDue({ ...base, compared_at: "2026-10-11T00:00:00Z" }, "2026-10-12")).toBe(false);
     expect(closeRepliesDue({ ...base, status: "selected" }, "2026-10-12")).toBe(false);
     expect(closeRepliesDue({ ...base, reply_by: null }, "2026-10-12")).toBe(false);
+  });
+  it("'회신 없음' 안내는 같은 기한에 한 번만 (기한을 남긴 기록)", () => {
+    expect(noReplyNotified([], "2026-10-08")).toBe(false);
+    expect(noReplyNotified([{ created_at: "2026-10-09T00:06:48Z", meta: { reply_by: "2026-10-08" } }], "2026-10-08")).toBe(true);
+    // 기한을 늘렸으면 지난 기한의 기록은 새 기한의 안내가 아니다
+    expect(noReplyNotified([{ created_at: "2026-10-09T00:06:48Z", meta: { reply_by: "2026-10-08" } }], "2026-10-20")).toBe(false);
+  });
+  it("0019 전 코드의 기록(meta 비어 있음)도 기한이 지난 뒤 남았으면 이미 보낸 것으로 본다", () => {
+    // 운영 DB 의 실제 모양: 기한 2026-10-08, 다음 날 09:06 KST 기록, meta {}
+    const legacy = [{ created_at: "2026-10-09T00:06:48.96633+00:00", meta: {} }];
+    expect(noReplyNotified(legacy, "2026-10-08")).toBe(true);
+    expect(noReplyNotified([{ created_at: "2026-10-09T00:06:48Z", meta: null }], "2026-10-08")).toBe(true);
+    // 기한 당일 안(서울 23:59:59 전)의 기록은 이 기한의 안내가 아니다
+    expect(noReplyNotified([{ created_at: "2026-10-08T14:59:58Z", meta: {} }], "2026-10-08")).toBe(false);
+    // 그 뒤 기한을 늘렸으면 새 기한이 지나 다시 알린다
+    expect(noReplyNotified(legacy, "2026-10-30")).toBe(false);
   });
 });
 
