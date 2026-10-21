@@ -1,0 +1,21 @@
+Scenario exploration, not a forecast.
+
+Context: Danchu is a Korean B2B platform for non-clinical (preclinical) study quotes and contracting, in a pilot stage. It says publicly that it does not recommend or give priority exposure to any CRO, that where guidelines leave room it shows each CRO's own explanation side by side instead of setting a standard, that the sponsor chooses the sort order, that the CRO's PDF quote is the authoritative version, and that its study suggestions are based on public international and domestic guidelines but are a draft not yet reviewed by practitioners. Its terms also say Danchu may receive fees from participating CROs under separate contracts, while sponsors pay nothing.
+
+Participants: use the fictional archetypes in the seed documents (sponsors, CROs, observers, and the Danchu operator). Do not create participants that represent real companies, real people, regulators or standards bodies.
+
+Task: Explore whether these fictional stakeholders might find Danchu's neutrality claim credible, based mainly on what they could read on Danchu's public pages. Look at:
+- whether "CROs may pay fees under separate contracts while sponsors pay nothing" raises doubts about neutrality, and what would ease those doubts;
+- whether the study suggestion feature reads as a sign of expertise or as a liability risk;
+- which specific points raise or lower trust: when the comparison table opens, hiding CRO names from the sponsor before the reply deadline, hiding the sponsor's name from CROs before selection, the manual CDA confirmation, the pilot stage, and the absence of any track record;
+- the places where Danchu's own documents, or its implemented behaviour and its public wording, disagree (marked "확인 필요", needs confirmation), for example when the sponsor's company name is revealed and when the comparison table can open. Treat these as things an attentive reader or an early user might notice, and explore how each archetype might react on noticing them.
+
+Report:
+1. Trust concerns and supporting reasons by archetype.
+2. The main doubts in the order they appear in the simulation.
+3. What Danchu could explain publicly or change.
+4. Hypotheses and open questions to validate with real interviews.
+
+Rules:
+- Do not invent facts, market size, counts, prices, fees or company names. If something is not in the seed documents, write "no data".
+- Present every finding as a hypothesis from a simulation of fictional personas, not as a prediction of real behavior.

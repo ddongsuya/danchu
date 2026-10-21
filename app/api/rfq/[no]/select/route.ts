@@ -1,38 +1,45 @@
 import { quoteSelectable } from "@/lib/quote-policy";
+import { occupiesSeat } from "@/lib/request-policy";
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo, ownsRfq, type QuoteRow } from "@/lib/data";
-import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo } from "@/lib/notify";
+import { replyPath } from "@/lib/concierge";
+import { inviteMailTo, notifyInvitedOrgs, orgMailTargets } from "@/lib/distribute";
 import { won } from "@/lib/format";
 import { SELECT_QUOTE_ERRORS, selectQuote } from "@/lib/rpc";
-import { findExistingClient } from "@/lib/request-policy";
 
 export const runtime = "nodejs";
 
 /**
- * POST { quoteId } — 의뢰자가 CRO를 선택한다.
- * rfq_awards 생성, 상태 selected, 선택된 CRO에 의뢰자 연락처 공개 알림, 나머지 CRO에 결과 안내.
+ * POST { quoteId, revision } — 의뢰자가 CRO를 선택한다. revision 은 선정 확인 화면이 보여 준 견적 판이다.
+ * 화면을 연 뒤 기관이 견적을 고쳤으면 선정하지 않고 409 quote_changed 로 다시 확인하게 한다 (0022).
+ * rfq_awards 생성, 상태 selected, 선택된 CRO에 의뢰자 연락처 공개 알림, 의뢰자에게 기관 담당자 연락처, 나머지 CRO에 결과 안내.
+ * 선택은 비교표가 열린 뒤에만 된다 (2026-10-20 결정 1, 0025 select_quote not_compared). 기한 전 확인 단계 선택은 없다.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
   if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
 
-  const b = (await req.json().catch(() => ({}))) as { quoteId?: unknown };
+  const b = (await req.json().catch(() => ({}))) as { quoteId?: unknown; revision?: unknown };
   const quoteId = typeof b.quoteId === "string" && /^[0-9a-f-]{36}$/.test(b.quoteId) ? b.quoteId : "";
   if (!quoteId) return NextResponse.json({ error: "선택할 수 없는 견적입니다." }, { status: 400 });
+  // 확인 화면이 본 판이 없으면 무엇에 동의했는지 알 수 없다. 화면을 다시 열게 한다
+  const revision = typeof b.revision === "number" && Number.isInteger(b.revision) && b.revision > 0 ? b.revision : 0;
+  if (!revision) return NextResponse.json({ error: "선정 화면을 새로 고친 뒤 견적을 다시 확인하고 선택해 주세요.", code: "quote_changed" }, { status: 409 });
   const sb = getSupabaseAdmin()!;
 
   const { data: candidate } = await sb.from("cro_quotes").select("auto, pdf_path, start_date, valid_until").eq("id", quoteId).eq("rfq_id", rfq.id).eq("status", "submitted").maybeSingle();
   if (!candidate || !quoteSelectable(candidate)) return NextResponse.json({ error: "정식 견적서와 유효기간을 확인한 뒤 기관을 선택해 주세요." }, { status: 409 });
   // award 삽입과 요청 상태 갱신을 한 트랜잭션으로 (동시 선택은 DB 가 한 건만 받는다)
-  const sel = await selectQuote(rfq.id, quoteId, s.userId);
+  const sel = await selectQuote(rfq.id, quoteId, s.userId, revision);
   if (!sel.ok) {
     const e = SELECT_QUOTE_ERRORS[sel.code];
-    return NextResponse.json({ error: e?.message ?? "선택을 저장하지 못했습니다." }, { status: e?.status ?? 500 });
+    return NextResponse.json({ error: e?.message ?? "선택을 저장하지 못했습니다.", code: sel.code }, { status: e?.status ?? 500 });
   }
   const award = { id: sel.award_id };
   const { data: q } = await sb.from("cro_quotes").select("*").eq("id", quoteId).maybeSingle();
@@ -42,51 +49,67 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   await logEvent(rfq.id, "selected", `${quote.cro_name} 선택`, `총 ${won(quote.total_amount ?? 0)} · 의뢰자 연락처가 CRO에 전달되었습니다.`, s.userId, { quoteId: quote.id });
 
   // 선택된 CRO: 연락처 공개
+  // 담당자 계정이 없거나 운영자 관리 기관은 포털(/cro, 로그인 필요)을 열 수 없다. 로그인 없는 회신 링크로 보내고 체결 여부는 운영자가 메일로 묻는다
   const winners: string[] = [];
   const winnerMails: string[] = [];
-  if (quote.cro_org_id) {
-    const { data: ms } = await sb.from("profiles").select("id, email").eq("cro_org_id", quote.cro_org_id);
-    for (const m of ms ?? []) {
-      winners.push(m.id);
-      winnerMails.push(m.email);
-    }
+  let winnerManaged = false;
+  // 받는 사람은 지금 소속 담당자, 없으면 지금의 기관 대표 메일. 초대의 cro_email(배포 당시 주소)은 기관 없는 초대에만 쓴다
+  const t = quote.cro_org_id ? (await orgMailTargets(sb, [quote.cro_org_id])).get(quote.cro_org_id) : undefined;
+  for (const m of t?.members ?? []) {
+    winners.push(m.id);
+    if (m.email) winnerMails.push(m.email);
   }
-  if (!winnerMails.length && invite?.cro_email) winnerMails.push(invite.cro_email);
+  winnerManaged = !!t?.managed;
+  if (!winnerMails.length) winnerMails.push(...inviteMailTo({ cro_org_id: quote.cro_org_id, cro_email: invite?.cro_email ?? null }, t));
+  const winnerPath = invite ? replyPath(invite, { managed: winnerManaged, members: winners.length }) : "/cro/awards";
+  const winnerPortal = winnerPath.startsWith("/cro/");
+  const contact = `${rfq.company} ${rfq.contact_name} · ${rfq.email}${rfq.phone ? ` · ${rfq.phone}` : ""}`;
   await notifyUsers(
     winners,
-    { kind: "선정", title: `선정되었습니다 · ${rfq.rfq_no} ${rfq.substance}`, body: `${rfq.company} ${rfq.contact_name} · ${rfq.email}${rfq.phone ? ` · ${rfq.phone}` : ""}\n의뢰자와 직접 계약을 진행하고, 체결 후 계약 정보를 보고해 주세요.`, href: "/cro/awards" },
-    { to: winnerMails, replyTo: rfq.email },
+    {
+      kind: "선정",
+      title: `선정되었습니다 · ${rfq.rfq_no} ${rfq.substance}`,
+      body: winnerPortal
+        ? `${contact}\n의뢰자와 직접 계약을 진행하고, 체결 후 계약 정보를 보고해 주세요.`
+        : `${contact}\n의뢰자와 직접 계약을 진행해 주세요. 계약 진행 상황은 단추 운영자가 이 메일 주소로 여쭙겠습니다.`,
+      href: winnerPortal ? "/cro/awards" : winnerPath,
+    },
+    // 운영자 관리 기관은 단추 메일의 회신이 운영 주소로 가도록 안내받았다. 그 밖에는 의뢰자에게 바로 닿게 둔다
+    { to: winnerMails, replyTo: winnerManaged ? operatorReplyTo() : rfq.email },
   );
 
-  // 나머지 제출 CRO: 결과 안내 (금액·타사명은 알리지 않는다)
-  const { data: others } = await sb.from("cro_quotes").select("cro_org_id, cro_name, invite_id").eq("rfq_id", rfq.id).eq("status", "submitted").neq("id", quote.id);
-  for (const o of others ?? []) {
-    let ids: string[] = [];
-    let mails: string[] = [];
-    if (o.cro_org_id) {
-      const { data: ms } = await sb.from("profiles").select("id, email").eq("cro_org_id", o.cro_org_id);
-      ids = (ms ?? []).map((m) => m.id);
-      mails = (ms ?? []).map((m) => m.email);
-    }
-    if (!mails.length) {
-      const { data: oi } = await sb.from("rfq_invites").select("cro_email").eq("id", o.invite_id).maybeSingle();
-      if (oi?.cro_email) mails = [oi.cro_email];
-    }
-    await notifyUsers(ids, { kind: "선정", title: `미선정 · ${rfq.rfq_no} ${rfq.substance}`, body: "의뢰자가 다른 기관을 선택했습니다. 참여해 주셔서 감사합니다.", href: "/cro/quotes" }, { to: mails });
-  }
+  // 나머지 기관: 결과 안내 (금액·타사명은 알리지 않는다). 기관마다 따로, 계정 없는 기관은 /q 링크로
+  // 제출한 기관에는 미선정, 회신이 열려 있던 중에 아직 내지 않은 기관에는 회신 마감 (마감 뒤 선정이면 이미 닫혀 있어 보내지 않는다)
+  const { data: rest } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]).neq("id", quote.invite_id);
+  const losers = (rest ?? []).filter((i) => i.status === "submitted");
+  const unreplied = rfq.compared_at ? [] : (rest ?? []).filter((i) => i.status === "sent" || i.status === "draft");
+  await notifyInvitedOrgs(losers, { kind: "선정", title: `미선정 · ${rfq.rfq_no} ${rfq.substance}`, body: "의뢰자가 다른 기관을 선택했습니다. 참여해 주셔서 감사합니다.", portalHref: "/cro/quotes" });
+  await notifyInvitedOrgs(unreplied.filter((i) => occupiesSeat(i)), { kind: "선정", title: `${rfq.rfq_no} 회신이 마감되었습니다`, body: `${rfq.substance} · 의뢰자가 기관을 선정해 이 요청의 회신이 마감되었습니다. 참여해 주셔서 감사합니다.`, portalHref: "/cro" });
+  // 참여 결정 전 기관에는 시험물질명 없이 안내가 닫혔다는 것만 알린다 (0023)
+  await notifyInvitedOrgs(unreplied.filter((i) => !occupiesSeat(i)), { kind: "선정", title: `${rfq.rfq_no} 참여 안내가 마감되었습니다`, body: "의뢰자가 기관을 선정해 이 요청은 더 참여를 받지 않습니다. 안내를 확인해 주셔서 감사합니다.", portalHref: "/cro" });
 
-  // 기관의 기존 고객 목록과 대조: 맞으면 성사수수료 면제 후보로 표시하고 운영자에게 알린다 (확정은 운영자)
-  let existing = "";
+  // 거래 귀속은 선정 시점의 기록(rfq_awards)으로 본다. 기존 거래 여부로 따로 판정하지 않는다
+  await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+  // 의뢰자에게도 기관 담당자 연락처를 준다 (연락처는 선정 때 서로 주고받는다. 의뢰자 정보는 위에서 선정 기관에만 갔다)
+  let contactLine = "";
+  let croReplyTo: string | undefined;
   if (quote.cro_org_id) {
-    const { data: list } = await sb.from("cro_org_clients").select("name, business_no, last_contract_on").eq("org_id", quote.cro_org_id).limit(500);
-    const hit = findExistingClient(rfq.company, list ?? []);
-    if (hit) {
-      existing = `기존 고객 목록 일치: ${hit.name}${hit.last_contract_on ? ` (마지막 계약 ${hit.last_contract_on})` : ""}`;
-      await sb.from("rfq_awards").update({ existing_client_claim: existing, existing_client_claimed_at: new Date().toISOString() }).eq("id", award.id);
-    }
+    const { data: org } = await sb.from("cro_orgs").select("contact_name, contact_email, contact_phone").eq("id", quote.cro_org_id).maybeSingle();
+    const email = org?.contact_email || winnerMails[0] || "";
+    contactLine = [org?.contact_name, email, org?.contact_phone].filter(Boolean).join(" · ");
+    croReplyTo = email || undefined;
   }
-  await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}${existing ? `\n${existing} · 성사수수료 면제 여부를 수주·계약 화면에서 정해 주세요.` : ""}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-  await notifyUsers([s.userId], { kind: "선정", title: `${quote.cro_name} 선정 완료 · ${rfq.rfq_no}`, body: "선정한 기관에 연락처를 전달했습니다. 기관이 곧 연락드리며, 계약은 기관과 직접 진행합니다. 계약이 체결되면 기관이 단추에 보고하고 알림으로 알려 드립니다.", href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+  // 체결 기록은 기관 보고로 남고, 의뢰자가 확인한다 (7일 안에 이의가 없으면 보고대로 확정, 0025)
+  await notifyUsers(
+    [s.userId],
+    {
+      kind: "선정",
+      title: `${quote.cro_name} 선정 완료 · ${rfq.rfq_no}`,
+      body: `선정한 기관과 서로 연락처를 주고받았습니다.${contactLine ? ` 기관 담당: ${contactLine}.` : ""} 계약은 기관과 직접 진행합니다. 기관이 체결을 보고하면 내용을 확인해 주세요.`,
+      href: `/app/r/${rfq.rfq_no}`,
+    },
+    { to: [rfq.email], replyTo: croReplyTo },
+  );
 
   return NextResponse.json({ ok: true, awardId: award.id });
 }

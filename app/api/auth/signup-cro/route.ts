@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { captureError } from "@/lib/observe";
 import { likeExact } from "@/lib/sql";
 import { normalizeBusinessNo } from "@/lib/request-policy";
+import { findDuplicateOrg } from "@/lib/concierge";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { EMAIL_RE, authErrorKo, sendLoginLink } from "@/lib/auth-links";
 import { adminEmails, adminUserIds, notifyUsers } from "@/lib/notify";
@@ -45,9 +47,16 @@ export async function POST(req: Request) {
   // 같은 기관이 이미 있으면 합류 신청으로 받는다 (연결은 기관 대표 또는 운영자가 한다).
   // 사업자번호가 같으면 이름이 달라도 같은 기관이다. 없으면 이름(대소문자·양끝 공백 무시)으로 본다
   const bizNo = normalizeBusinessNo(s(o, "businessNo", 40));
-  let existing: { id: string; status: string } | null = null;
-  if (bizNo) existing = (await admin.from("cro_orgs").select("id, status").eq("business_no_norm", bizNo).limit(1).maybeSingle()).data;
-  if (!existing) existing = (await admin.from("cro_orgs").select("id, status").ilike("name", likeExact(orgName.trim())).limit(1).maybeSingle()).data;
+  // 운영자가 먼저 등록한 기관(managed)도 같은 규칙으로 찾아 합류 신청으로 받는다. 운영자가 연결하면 managed 가 풀린다
+  let existing: { id: string; status: string; managed?: boolean; contact_email?: string | null } | null = null;
+  if (bizNo) existing = (await admin.from("cro_orgs").select("id, status, managed, contact_email").eq("business_no_norm", bizNo).limit(1).maybeSingle()).data;
+  if (!existing) existing = (await admin.from("cro_orgs").select("id, status, managed, contact_email").ilike("name", likeExact(orgName.trim())).limit(1).maybeSingle()).data;
+  if (!existing) {
+    // 운영자가 "㈜○○" 로 등록하고 기관이 "○○ 주식회사" 로 가입하는 경우: 운영자 관리 기관만 법인 표기를 뗀 이름으로 한 번 더 본다.
+    // 양쪽 사업자번호가 다르면 이름이 같아도 다른 회사다. 남의 기관에 합류 신청을 붙이지 않는다
+    const { data: managed } = await admin.from("cro_orgs").select("id, status, managed, name, business_no, contact_email").eq("managed", true).limit(1000);
+    existing = findDuplicateOrg({ name: orgName, business_no: bizNo }, managed ?? [], { strictBusinessNo: true });
+  }
   if (existing && (existing.status === "rejected" || existing.status === "suspended")) {
     // 반려·중지된 기관에 합류 신청을 받으면 신청자는 영원히 "대기 중"만 본다. 여기서 끝낸다
     return NextResponse.json({ error: existing.status === "rejected" ? "이 기관은 가입 신청이 반려된 상태라 담당자 합류를 받을 수 없습니다. hello@danchu.kr로 문의해 주세요." : "이 기관은 참여가 중지되어 담당자 합류를 받을 수 없습니다. hello@danchu.kr로 문의해 주세요." }, { status: 400 });
@@ -106,12 +115,17 @@ export async function POST(req: Request) {
     .from("profiles")
     .update({ role: "cro", cro_org_id: existing ? null : orgId, pending_org_id: existing ? orgId : null, phone: s(b, "phone", 40) || null, org_role: existing ? "member" : "owner" })
     .eq("id", created.user.id);
-  if (pe) console.error("signup-cro profile update", pe);
+  if (pe) captureError(pe, "signup-cro:profile-update", { existing: !!existing });
 
   const sent = await sendLoginLink("signup", email);
   await notifyUsers(
     await adminUserIds(),
-    { kind: "기관", title: `CRO 가입 신청 · ${orgName}`, body: `${name} (${email})${existing ? " · 기존 기관에 담당자 합류 신청 (기관 화면에서 연결)" : ""}`, href: existing ? `/admin/cros/${orgId}` : "/admin/cros" },
+    {
+      kind: "기관",
+      title: `CRO 가입 신청 · ${orgName}`,
+      body: `${name} (${email})${existing ? existing.managed ? ` · 운영자 관리 기관에 담당자 합류 신청 (기관 화면에서 연결하면 기관이 직접 회신). 등록된 대표 이메일 ${existing.contact_email || "-"} 와 신청자 이메일 도메인을 비교해 본인 여부를 확인한 뒤 연결해 주세요.` : " · 기존 기관에 담당자 합류 신청 (기관 화면에서 연결)" : ""}`,
+      href: existing ? `/admin/cros/${orgId}` : "/admin/cros",
+    },
     { to: adminEmails(), replyTo: email },
   );
   return NextResponse.json({ ok: true, mailed: sent.ok, joined: !!existing });

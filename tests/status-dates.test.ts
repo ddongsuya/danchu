@@ -17,8 +17,8 @@ describe("요청 상태", () => {
     expect(stageIndex(undefined)).toBe(0);
     expect(statusLabel("contracting")).toBe("계약 진행");
   });
-  it("회신하지 않음 라벨은 화면 전체에서 같다", () => {
-    expect(INVITE_LABEL.declined).toBe("회신하지 않음");
+  it("불참 라벨은 화면 전체에서 같다 (0023: 회신하지 않음 → 불참·철회)", () => {
+    expect(INVITE_LABEL.declined).toBe("불참");
   });
 });
 
@@ -71,7 +71,7 @@ describe("청구", () => {
   });
   it("성사수수료는 요율이 없으면 null, 있으면 원 단위 반올림", () => {
     expect(successFee(1_000_000, null)).toBeNull();
-    expect(successFee(1_000_000, 0.05)).toBe(50_000);
-    expect(successFee(333_333, 0.05)).toBe(Math.round(333_333 * 0.05));
+    expect(successFee(1_000_000, 0.03)).toBe(30_000);
+    expect(successFee(333_333, 0.03)).toBe(Math.round(333_333 * 0.03));
   });
 });

@@ -4,17 +4,26 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo } from "@/lib/data";
 import { distributeTo, ORG_COLUMNS } from "@/lib/distribute";
 import { todaySeoul } from "@/lib/format";
+import { audit } from "@/lib/audit";
+import { startRfq } from "@/lib/rfq-create";
+import { captureError } from "@/lib/observe";
 
 export const runtime = "nodejs";
 
 /**
- * POST { orgIds: string[], replyBy: 'YYYY-MM-DD', autoDistribute?: boolean } — 운영자가 고른 승인 기관에 초대(회신 링크)를 보낸다.
- * 접수 시 자동 배포에서 빠진 기관을 추가하거나, 자동 배포가 없었을 때 쓴다.
- * autoDistribute 를 false 로 주면 이후 cron 보충 배포가 이 요청을 건드리지 않는다 (운영자가 고른 기관만 유지).
+ * 참여 안내 추가 (0023). POST { orgIds: string[], replyBy: 'YYYY-MM-DD', autoDistribute?: boolean }
+ * 운영자가 고른 승인 기관(분야 밖 기관, 운영자 관리 기관 포함)에 참여 안내(source = manual)를 만든다.
+ * 안내만 만들고 참여 기록은 쓰지 않는다. 참여는 기관이 링크에서 직접 눌러야 한다 (join_offer, 운영자는 operator_not_allowed).
+ * autoDistribute 를 false 로 주면 이후 cron 보충 안내가 이 요청을 건드리지 않는다 (운영자가 고른 기관만 유지).
+ * 회신 기한은 모든 기관이 같다 (설계 규칙표 "기한"). 요청에 회신 기한이 있으면 그 값으로 고정하고 body 의 replyBy 는 쓰지 않는다.
+ *   기한을 바꾸려면 "회신 기한 변경"(deadline 라우트)을 쓴다. 요청에 기한이 없을 때(0023 전 요청 등)만 replyBy 를 받는다.
+ * "지명 기관에만 안내"(nominees_only) 요청: 의뢰자가 따로 요청한 경우에만 다른 기관에 안내한다 (약관 제4조2항).
+ *   overrideNomineesOnly: true 와 사유(overrideReason)가 없으면 409. 보내면 감사 기록(rfq.distribute_override)에 사유를 남긴다.
  */
 const BLOCKED_MSG = {
-  request_not_open: "비교표가 공개되었거나 선정이 끝난 요청이라 더 배포할 수 없습니다. 다시 열려면 운영자 문의 후 SQL 로 compared_at 을 비워야 합니다.",
-  invitation_limit_reached: "의뢰자가 요청한 기관 수에 이미 닿았습니다. 회신하지 않음·만료 초대는 한도에서 빠지므로, 다른 초대를 정리한 뒤 다시 시도하세요.",
+  request_not_open: "비교표가 열렸거나 선정이 끝난 요청이라 참여 안내를 더 보낼 수 없습니다. 열린 비교표는 다시 열 수 없으니, 더 받아야 하면 새 요청으로 안내해 주세요.",
+  // 운영자 수동 안내(manual)는 막히지 않는다. 자동 매칭 안내만 해당 (0023)
+  nominees_only: "의뢰자가 지명 기관에만 안내하도록 고른 요청입니다. 자동 매칭 안내는 보내지 않습니다.",
 };
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");
@@ -24,18 +33,37 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (!rfq) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
   if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "종료된 요청입니다." }, { status: 400 });
 
-  const b = (await req.json().catch(() => ({}))) as { orgIds?: unknown; replyBy?: unknown; autoDistribute?: unknown };
+  const b = (await req.json().catch(() => ({}))) as { orgIds?: unknown; replyBy?: unknown; autoDistribute?: unknown; overrideNomineesOnly?: unknown; overrideReason?: unknown };
   const orgIds = Array.isArray(b.orgIds) ? (b.orgIds as unknown[]).filter((x): x is string => typeof x === "string" && /^[0-9a-f-]{36}$/.test(x)) : [];
-  const replyBy = typeof b.replyBy === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.replyBy) ? b.replyBy : "";
+  // 요청에 회신 기한이 있으면 모든 기관이 같은 기한이다 (기관마다 다른 기한을 고를 수 없다)
+  const asked = typeof b.replyBy === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.replyBy) ? b.replyBy : "";
+  const replyBy = rfq.reply_by || asked;
   if (!orgIds.length || !replyBy) return NextResponse.json({ error: "기관과 회신 기한을 선택해 주세요." }, { status: 400 });
   if (replyBy < todaySeoul()) return NextResponse.json({ error: "회신 기한은 오늘 이후여야 합니다. 지난 기한이면 먼저 '회신 기한 변경'으로 늘려 주세요." }, { status: 400 });
+  const overrideReason = typeof b.overrideReason === "string" ? b.overrideReason.trim().slice(0, 300) : "";
+  if (rfq.nominees_only && (b.overrideNomineesOnly !== true || overrideReason.length < 2)) {
+    return NextResponse.json({ error: "의뢰자가 '지명 기관에만 안내'를 고른 요청입니다. 의뢰자가 다른 기관에도 안내해 달라고 요청한 경우에만 보낼 수 있습니다. 확인란을 체크하고 요청 내용(사유)을 적어 주세요." }, { status: 409 });
+  }
 
   const sb = getSupabaseAdmin()!;
   if (b.autoDistribute === false && rfq.auto_distribute !== false) {
     await sb.from("rfq_requests").update({ auto_distribute: false }).eq("id", rfq.id);
   }
+  // 아직 시작하지 않은 요청(첨부 업로드 중, started_at 없음)은 먼저 시작한다: 분야 매칭 안내 + 의뢰자 접수 메일 한 통.
+  // 시작하지 않고 수동 안내만 하면 상태가 배포로 바뀌어 예약 작업의 시작 단계(received 만)도 건너뛰고, 의뢰자 접수 메일과 보충 안내가 영영 빠진다
+  let target = rfq;
+  if (!rfq.started_at) {
+    try {
+      if ((await startRfq(rfq.id)).started) target = (await getRfqByNo(no)) ?? rfq;
+    } catch (e) {
+      captureError(e, "admin:distribute-start", { rfqNo: rfq.rfq_no });
+    }
+  }
   const { data: orgs } = await sb.from("cro_orgs").select(ORG_COLUMNS).in("id", orgIds).eq("status", "approved");
-  const r = await distributeTo(rfq, orgs ?? [], replyBy, s.userId, false, "manual");
+  const r = await distributeTo(target, orgs ?? [], replyBy, s.userId, false, "manual");
   if (r.blocked && !r.sent) return NextResponse.json({ error: BLOCKED_MSG[r.blocked] }, { status: 409 });
-  return NextResponse.json({ ok: true, sent: r.sent, mailed: r.mailed, skipped: r.skipped, capped: r.capped, blocked: r.blocked ? BLOCKED_MSG[r.blocked] : undefined });
+  if (rfq.nominees_only && r.sent) {
+    await audit({ userId: s.userId, email: s.email }, "rfq.distribute_override", { type: "rfq_request", id: rfq.id, label: rfq.rfq_no }, { after: { orgs: (orgs ?? []).map((o) => o.name), sent: r.sent }, note: overrideReason });
+  }
+  return NextResponse.json({ ok: true, sent: r.sent, mailed: r.mailed, skipped: r.skipped, blocked: r.blocked ? BLOCKED_MSG[r.blocked] : undefined });
 }

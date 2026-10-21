@@ -18,7 +18,7 @@ export default async function CroQuotes() {
       <div className="ph">
         <div>
           <h1>제출한 견적</h1>
-          <p>회신 기한 안에는 수정할 수 있습니다. 결과는 의뢰자 선택 후 안내됩니다.</p>
+          <p>제출한 견적은 비교표가 열릴 때 의뢰자에게 보입니다. 비교표가 열리기 전까지 수정할 수 있고, 열린 뒤에는 수정하거나 다시 제출할 수 없습니다. 결과는 의뢰자 선정 후 안내됩니다.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/awards" className="b2 bsm">수주·계약 보고</Link>

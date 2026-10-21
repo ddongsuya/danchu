@@ -2,16 +2,14 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listAwardsForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { ContractReport } from "@/components/cro/ContractReport";
-import { ExemptClaim } from "@/components/cro/ExemptClaim";
-import { addBusinessDays } from "@/lib/dates";
-import { EXEMPT_CLAIM_BUSINESS_DAYS } from "@/lib/request-policy";
 import { ymd, won } from "@/lib/format";
+import { contractConfirmState } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
 
 const NEXT = [
   ["의뢰자와 계약 협의", "단추는 조건에 관여하지 않습니다. 직접 진행하세요."],
-  ["계약 체결 보고", "체결일·계약금액을 아래에 입력 (수수료 정산 기준)"],
+  ["계약 체결 보고", "체결일·계약금액을 아래에 입력 (계약 진행 확인용). 보고하면 의뢰자가 내용을 확인합니다. 의뢰자가 확인하거나 7일 안에 이의가 없으면 확정되고 요청이 종료됩니다"],
   ["시험물질 수령", "회신에 적은 필요량·시점 기준"],
 ];
 
@@ -20,8 +18,6 @@ export default async function CroAwards() {
   const org = s.org;
   if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   const list = dbReady() ? await listAwardsForOrg(org.id) : [];
-  const nowSeoul = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const canClaim = (awardedAt: string) => nowSeoul <= addBusinessDays(new Date(new Date(awardedAt).toLocaleString("en-US", { timeZone: "Asia/Seoul" })), EXEMPT_CLAIM_BUSINESS_DAYS);
 
   return (
     <>
@@ -57,7 +53,6 @@ export default async function CroAwards() {
                 </span>
               </div>
 
-              <ExemptClaim awardId={a.id} claim={a.existing_client_claim} decided={!!a.fee_exempt_at} exempt={a.fee_exempt} reason={a.fee_exempt_reason} canClaim={canClaim(a.awarded_at)} />
               {!a.contract_reported_at && (
                 <div className="grid2" style={{ alignItems: "start" }}>
                   <div className="stack" style={{ gap: 10 }}>
@@ -79,6 +74,7 @@ export default async function CroAwards() {
                   <span className="kv__k">보고</span>
                   <span className="kv__v" style={{ fontWeight: 500 }}>
                     체결일 {a.contract_date} · {won(a.contract_amount ?? 0)}{a.contract_note ? ` · ${a.contract_note}` : ""}
+                    {contractConfirmState(a, { includeNote: false }) && <span style={{ display: "block", color: "var(--muted)" }}>{contractConfirmState(a, { includeNote: false })!.label}</span>}
                   </span>
                 </div>
               )}

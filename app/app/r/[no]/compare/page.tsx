@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
@@ -6,6 +7,9 @@ import { glpCoverage } from "@/lib/quote-items";
 import { designSummary, explainOf } from "@/lib/catalog";
 import { Crumb } from "@/components/app/ui";
 import { CompareBoard, type CompareCol } from "@/components/CompareBoard";
+import { md } from "@/lib/format";
+import { comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-window";
+import { occupiesSeat } from "@/lib/request-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -13,15 +17,38 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   const s = await requireSession("requester");
   const { no } = await params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin")) notFound();
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
-  if (!rfq.compared_at && s.profile.role !== "admin") {
+  // 비교표 공개 전 (2026-10-20 결정 1): 의뢰자에게는 진행 숫자만 보인다. 기관명·금액·견적은 열릴 때 함께 공개한다
+  const open = !repliesClosed(rfq);
+  // 참여한 기관 중 아직 제출하지 않은 곳만 센다 (0023). 참여 결정 전 안내는 의뢰자에게 보이지 않는다
+  const pending = pendingInvites(d.invites);
+  if (!comparisonOpened(rfq) && s.profile.role !== "admin") {
+    const joined = d.invites.filter((i) => occupiesSeat(i)).length;
+    const submittedCount = d.invites.filter((i) => occupiesSeat(i) && i.status === "submitted").length;
+    const ended = ["closed", "cancelled"].includes(rfq.status);
     return (
       <>
         <Crumb href={`/app/r/${rfq.rfq_no}`} label={rfq.rfq_no} />
+        <div className="ph">
+          <div>
+            <h1>견적 비교</h1>
+            <p>{rfq.substance}</p>
+          </div>
+        </div>
+        <dl className="compare-status" aria-label="회신 현황">
+          <div><dt>참여</dt><dd className="tnum">{joined}곳</dd></div>
+          <div><dt>제출</dt><dd className="tnum">{submittedCount}곳</dd></div>
+          <div><dt>회신 기한</dt><dd className="tnum">{rfq.reply_by ? md(rfq.reply_by) : "미정"}</dd></div>
+        </dl>
         <div className="empty">
-          <b>비교표가 아직 공개되지 않았습니다</b>
-          회신 기한이 지난 뒤 도착한 견적을 비교할 수 있습니다. 공개되면 앱 안의 알림으로 알려 드립니다.
+          <b>{ended ? "비교표가 열리기 전에 마무리한 요청입니다" : "비교표가 아직 열리지 않았습니다"}</b>
+          {ended
+            ? "비교표가 열리지 않아 기관 이름과 견적은 공개되지 않습니다."
+            : `비교표는 ${rfq.reply_by ? `회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열리고, ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 더 빨리 열립니다. 열리면 기관 이름과 견적을 함께 보여 드리고 알림으로 알려 드립니다.`}
+          <div style={{ marginTop: 14 }}>
+            <Link href={`/app/r/${rfq.rfq_no}`} className="b2">요청 상세로 돌아가기</Link>
+          </div>
         </div>
       </>
     );
@@ -62,6 +89,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
+      operator: q.entry_source === "operator",
     };
   });
 
@@ -72,17 +100,27 @@ export default async function Compare({ params }: { params: Promise<{ no: string
         <div>
           <h1>견적 비교</h1>
           <p>
-            {rfq.substance} · {d.invites.length}곳 중 {quotes.length}곳 회신 · 금액은 VAT 별도{authorities.length ? ` · 제출처 ${authorities.join(", ")}` : ""}
+            {rfq.substance} · 금액은 VAT 별도{authorities.length ? ` · 제출처 ${authorities.join(", ")}` : ""}
           </p>
         </div>
       </div>
+      <dl className="compare-status" aria-label="회신 현황">
+        <div><dt>도착한 견적</dt><dd className="tnum">{quotes.length}건</dd></div>
+        <div><dt>참여했지만 아직 제출하지 않은 기관</dt><dd className="tnum">{open ? `${pending}곳` : "마감"}</dd></div>
+        <div><dt>회신 기한</dt><dd className="tnum">{rfq.reply_by ? md(rfq.reply_by) : "미정"}{!open ? " · 마감" : ""}</dd></div>
+      </dl>
+      {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (
+        <p className="note" style={{ marginBottom: 16 }}>비교표가 열려 회신이 마감되었습니다. 견적은 더 바뀌지 않습니다. 비교한 뒤 진행할 기관을 선택해 주세요.</p>
+      ) : (
+        <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기입니다. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있습니다.</p>
+      )}
       {cols.length === 0 ? (
         <div className="empty">
-          <b>비교할 회신이 없습니다</b>
-          회신한 CRO가 없어 비교표를 만들 수 없습니다. 단추가 재배포 여부를 안내합니다.
+          <b>아직 도착한 견적이 없습니다</b>
+          제출한 기관이 없어 비교할 견적이 없습니다. 운영자가 기한 연장이나 참여 안내 추가를 안내합니다.
         </div>
       ) : (
-        <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={!rfq.selected_quote_id && !!rfq.compared_at} />
+        <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status)} />
       )}
     </>
   );

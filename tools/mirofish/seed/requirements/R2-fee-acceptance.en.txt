@@ -1,0 +1,24 @@
+Scenario exploration, not a forecast.
+
+Context: Danchu is a Korean B2B platform for non-clinical (preclinical) study quotes and contracting, in a pilot stage. Sponsors pay nothing. Danchu's public terms only say that it may receive fees from participating CROs under separate contracts. The optional internal file describes a draft billing structure for participating CROs: a fee per delivered request with an optional monthly delivery cap, a success fee based on a quote or contract amount (basis not yet confirmed), an exemption from the success fee for a CRO's existing clients (confirmed by the operator), contract reporting with reminders, and monthly statements. All amounts and rates are undecided.
+
+Participants: use the fictional archetypes in the seed documents. Do not create participants that represent real companies, real people, regulators or standards bodies.
+
+Simulation assumption: Danchu is considering explaining this draft billing structure to CROs when they apply. This is an assumption for the simulation, not a stated plan.
+
+Task: Explore how the fictional CRO archetypes (large GLP CRO sales, specialist CRO quoting staff, new CRO owner) might react if this structure were explained to them, and how the sponsor archetypes, the observers and the Danchu operator might respond to that discussion. Look at:
+- which part of the structure (per-delivery fee, monthly cap, success fee, contract reporting, existing-client exemption) draws the most questions or objections from each archetype, and why;
+- whether the existing-client exemption and the reporting duty are described as fair, as a burden, or as unclear;
+- what CRO archetypes say about sponsor anonymity before selection;
+- what Danchu would need to decide or explain first (for example the fee basis amount, billing timing, and the undecided values).
+
+Report:
+1. Conditions each archetype states for joining, and reasons for hesitation.
+2. Disagreements between CRO archetypes, and between CROs and sponsors.
+3. A prioritized list of undecided points Danchu must resolve, as raised in the simulation.
+4. Hypotheses and open questions to validate with real CRO interviews.
+
+Rules:
+- Do not invent fee amounts, rates, prices, revenue, market size, counts of companies or company names. Amounts and rates are undecided: write "undecided" or "no data".
+- Do not estimate adoption or revenue numbers.
+- Present every finding as a hypothesis from a simulation of fictional personas, not as a prediction of real behavior.

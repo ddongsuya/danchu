@@ -1,0 +1,23 @@
+Scenario exploration, not a forecast.
+
+Context: Danchu is a Korean B2B platform for non-clinical (preclinical) study quotes and contracting. It is in a pilot stage. The seed documents describe what Danchu is, its public statements about cost, the problems it says it addresses, and a set of clearly fictional Korea-based stakeholder archetypes.
+
+Participants: use the fictional archetypes in the seed documents (sponsor side, CRO side, observers, and the Danchu operator). Do not create participants that represent real companies, real people, regulators or standards bodies.
+
+Task: Explore how these fictional stakeholders might react in roughly the first day after Danchu's launch announcement is posted, based only on what they could read on Danchu's public pages.
+- Sponsor side (early-stage biotech developer, pharmaceutical nonclinical lead, cosmetics, medical device and health functional food company staff): reactions to "submit one request and several CROs reply in the same format, compared item by item", "free for sponsors", and "your company name is hidden from CROs until you select one".
+- CRO side (large GLP CRO sales, specialist CRO quoting staff, new CRO owner): reactions to "you only receive requests that match your fields", "reply drafts are pre-filled from your capability catalog", "you cannot see other CROs' replies", and "the sponsor's identity is hidden before selection".
+- Observers (bio cluster startup-support staff, regulatory consultant) and the Danchu operator may join the discussion.
+
+Report:
+1. First reactions by archetype, with the reasons each one gives.
+2. Where sponsors and CROs disagree, or read the same feature differently.
+3. Which archetypes say they would try Danchu soon and which say they would wait, and the reasons they give, stated as hypotheses.
+4. The questions and doubts that come up first, and what the operator would need to clarify.
+5. Possible barriers before a first request and a first reply.
+6. A list of hypotheses and open questions to validate with real sponsor and CRO interviews.
+
+Rules:
+- Do not invent market size, counts of companies or users, prices, fees, timelines, statistics or company names. If something is not in the seed documents, write "no data".
+- Present every finding as a hypothesis from a simulation of fictional personas, not as a prediction of real behavior.
+- Where Danchu's own documents disagree with each other (marked "확인 필요", needs confirmation), treat the point as unresolved.

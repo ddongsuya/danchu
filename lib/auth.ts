@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createSessionClient } from "./supabase-server";
 import { getSupabaseAdmin } from "./supabase";
+import { loadOptsFor } from "./concierge";
 
 export type Role = "requester" | "cro" | "admin";
 
@@ -43,11 +44,16 @@ export type CroOrg = {
   approved_at: string | null;
   /** 기한까지 손대지 않은 초안을 예비 견적으로 자동 제출 */
   auto_reply?: boolean;
-  /** 약정: 월 전달 한도(null 이면 없음), 전달 1건당 이용료(원, null 이면 미정) */
-  monthly_cap?: number | null;
+  /** 약정 (0020): 건당 이용료(원, 1,000만 원 이상 견적 1건마다, null 이면 미정) */
   per_request_fee?: number | null;
-  /** 성사수수료율 (0.05 = 5%). null 이면 미정 */
+  /** 성사수수료율 (0.03 = 3%). 선정 견적 5,000만 원 이상이 체결되면 계약 금액에 곱한다. null 이면 미정 */
   fee_rate?: number | null;
+  /** 월 구독료 (원, 1,000만 원 미만 견적 포함). null 이면 구독하지 않음 */
+  monthly_fee?: number | null;
+  /** 구독 시작 월 (그 달 1일). 이 달부터 명세에 월 구독료가 나온다 */
+  monthly_fee_from?: string | null;
+  /** 운영자가 등록·관리하는 기관 (담당자 계정 없음, 메일 링크는 /q 토큰) */
+  managed?: boolean;
 };
 
 export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null; /** 합류 신청 중인 기관 */ pendingOrg: CroOrg | null };
@@ -67,6 +73,8 @@ export const getSession = cache(async (): Promise<Session | null> => {
   const { data } = await sb.auth.getUser();
   const user = data.user;
   if (!user || !user.email) return null;
+  // 이메일 확인이 끝나지 않은 계정은 세션 쿠키가 있어도 로그인하지 않은 것으로 본다 (보호된 화면·API 모두 이 함수를 거친다)
+  if (!user.email_confirmed_at) return null;
 
   const admin = getSupabaseAdmin();
   if (!admin) return null;
@@ -110,6 +118,12 @@ export async function requireSession(role?: Role, next?: string): Promise<Sessio
   if (!s) redirect(`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   if (role && s.profile.role !== role && s.profile.role !== "admin") redirect(homeOf(s.profile.role));
   return s;
+}
+
+/** 회신 링크(/q)를 연 사람에 맞춘 불러오기 옵션. 운영자가 연 것은 기관 열람으로 남기지 않고, 회신 마감 전이면 기한 잠금을 풀어 준다 */
+export async function viewerLoadOpts(): Promise<{ markOpened: boolean; operator: boolean }> {
+  const s = await getSession();
+  return loadOptsFor(s?.profile.role);
 }
 
 /** 라우트 핸들러용: 세션이 없으면 null (redirect 대신) */

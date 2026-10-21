@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** 회신 기한 변경. 기한이 지났는데 회신이 없을 때 여기서 늘린 뒤 재배포한다 */
+/** 회신 기한 변경. 기한이 지났는데 회신이 없을 때 여기서 늘린 뒤 참여 안내를 더한다. 비교표가 열린 요청에는 보이지 않는다 (2026-10-21 결정 3).
+ *  배포한 요청은 늘리기만 된다: min 은 페이지가 max(오늘, 지금 기한 다음 날)로 넘긴다 (결정 2) */
 export function DeadlineForm({ no, current, min }: { no: string; current: string | null; min: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);

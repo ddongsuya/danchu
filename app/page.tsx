@@ -52,7 +52,7 @@ export default function Home() {
           <div className="wrap process-layout">
             <div className="section-intro"><h2>흩어져 있던 견적을,<br />하나의 흐름으로.</h2><p>기관마다 같은 내용을 설명하는 수고를 줄이고, 중요한 조건을 함께 살펴보세요.</p><Link href="/how-it-works" className="text-link">이용 절차 자세히 <ArrowUpRight size={18} aria-hidden="true" /></Link></div>
             <ol className="process-list">
-              <li><span className="process-icon"><FileText size={24} aria-hidden="true" /></span><div><h3>요청서는 한 번만</h3><p>시험 항목과 희망 일정을 입력하면, 수행 분야가 맞는 기관에 전달합니다.</p></div></li>
+              <li><span className="process-icon"><FileText size={24} aria-hidden="true" /></span><div><h3>요청서는 한 번만</h3><p>시험 항목과 희망 일정을 입력하면, 수행 분야가 맞는 기관에 참여 안내를 보냅니다.</p></div></li>
               <li><span className="process-icon"><ListChecks size={24} aria-hidden="true" /></span><div><h3>견적은 같은 자리에서</h3><p>금액, 기간, 설계와 포함 항목을 나란히 살펴보고 직접 비교합니다.</p></div></li>
               <li><span className="process-icon"><Handshake size={24} aria-hidden="true" /></span><div><h3>선택한 기관과 직접 계약</h3><p>기관을 선택하면 담당자 연락처를 확인하고 계약을 진행합니다.</p></div></li>
             </ol>

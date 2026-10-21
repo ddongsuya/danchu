@@ -113,7 +113,13 @@ type Loaded = {
   expired?: boolean;
   locked?: boolean;
   declined?: boolean;
+  closedMessage?: string;
   closed?: boolean;
+  /** 참여 전이면 false (0023). 회신 화면은 참여 뒤에만 열리지만, 그 사이 상태가 바뀐 경우를 막는다 */
+  joined?: boolean;
+  withdrawn?: boolean;
+  /** 참여 전 불참을 되돌릴 수 있는지 (참여 결정 기한 전, 2026-10-20 결정 3) */
+  canRejoin?: boolean;
 };
 
 /**
@@ -142,6 +148,11 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       .then((r) => r.json())
       .then((d: Loaded & { error?: string }) => {
         if (d.error) throw new Error(d.error);
+        if (d.joined === false) {
+          // 참여 전 요약에는 회신 표를 채울 내용이 없다. 요청 화면으로 돌려보내 참여를 먼저 결정하게 한다
+          router.replace(backHref);
+          return;
+        }
         setData(d);
         setItems(d.draft?.items ?? d.rfq.rows.map((r) => ({ seq: r.seq, avail: "", amount: "", weeks: "", reason: "" })));
         setCommon(d.draft?.common ?? EMPTY_COMMON);
@@ -150,7 +161,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         if (d.draft && !d.draft.prefilled) setSaved("saved");
       })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했습니다."));
-  }, [token]);
+  }, [token, backHref, router]);
 
   // 화면을 떠날 때 대기 중인 자동 저장을 정리한다
   useEffect(() => () => { window.clearTimeout(timer.current); saveAbort.current?.abort(); }, []);
@@ -250,7 +261,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     : filled < items.length
       ? `항목 ${items.length - filled}개 남음`
       : allNo
-        ? "전 항목 불가 - 회신하지 않음으로 처리"
+        ? "전 항목 불가 - 참여 철회로 처리"
         : pending
           ? `확인 필요 ${pending}건 남음`
         : !commonOk
@@ -328,7 +339,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.closed ? "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 회신이 닫혔습니다." : data.declined ? "회신하지 않음으로 처리된 요청입니다." : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 
@@ -478,7 +489,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
               <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "-"}</span>
             </div>
             {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
-            {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">회신하지 않음으로 처리</Link>}
+            {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
+            {!readOnly && <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
             <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
               {busy ? "제출 중…" : blockedLabel}
             </button>

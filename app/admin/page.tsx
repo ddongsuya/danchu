@@ -6,21 +6,28 @@ import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { md, ymd } from "@/lib/format";
 import { missingProdEnv } from "@/lib/env";
+import { readSchemaStatus } from "@/lib/schema-version";
 import { sentryEnabled } from "@/lib/observe";
 import { SearchBox } from "@/components/admin/SearchBox";
 import { Pager } from "@/components/admin/Pager";
+import { OptInTransition, type TransitionRow } from "@/components/admin/OptInTransition";
+import { planOptInTransition } from "@/lib/opt-in-transition";
+import { getSupabaseAdmin } from "@/lib/supabase";
+import { todaySeoul } from "@/lib/format";
+import { captureError } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
-const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "비교표"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"], ["cancelled", "취소"]];
+const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "회신 마감"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"], ["cancelled", "취소"]];
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; page?: string }> }) {
   await requireSession("admin");
   const { status = "", q = "", page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr, 10) || 1);
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
-  const [{ list, hasMore }, counts] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy()]);
+  const [{ list, hasMore }, counts, schema] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus()]);
   const href = (p: number) => `/admin?${new URLSearchParams({ ...(status ? { status } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
+  const transition = schema.ok ? await transitionRows() : [];
   const missingEnv = missingProdEnv();
   const noSentry = process.env.NODE_ENV === "production" && !sentryEnabled();
   const todo = {
@@ -32,24 +39,26 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      {(missingEnv.length > 0 || noSentry) && (
+      {(missingEnv.length > 0 || noSentry || !schema.ok) && (
         <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>
           <b>운영 설정 확인</b>
+          {!schema.ok && <div>{schema.message} 배포(기관에 요청 보내기)가 멈춰 있습니다. README의 배포 순서대로 마이그레이션을 적용한 뒤 npm run check:schema 로 확인해 주세요.</div>}
           {missingEnv.length > 0 && <div>환경변수 누락: {missingEnv.join(", ")}. 접수·메일·예약 작업이 제대로 동작하지 않습니다. Vercel → Settings → Environment Variables 에 넣고 다시 배포해 주세요.</div>}
           {noSentry && <div>오류 모니터링(SENTRY_DSN)이 꺼져 있습니다. 서버 오류가 어디에도 기록되지 않습니다.</div>}
         </div>
       )}
+      {transition.length > 0 && <OptInTransition rows={transition} />}
       <div className="ph">
         <div>
           <h1>접수 현황</h1>
-          <p>배포 대기 {todo.receive} · 비교표 대기 {todo.quoted} · CRO 승인 대기 {todo.pendingOrg} · 계약 진행 {todo.contracting}</p>
+          <p>배포 대기 {todo.receive} · 회신 중 {todo.quoted} · CRO 승인 대기 {todo.pendingOrg} · 계약 진행 {todo.contracting}</p>
         </div>
       </div>
 
       <div className="tiles4" style={{ marginBottom: 20 }}>
         {[
           ["배포 대기", todo.receive, "/admin?status=received"],
-          ["비교표 대기", todo.quoted, "/admin?status=quoted"],
+          ["회신 중 (견적 도착)", todo.quoted, "/admin?status=quoted"],
           ["CRO 승인 대기", todo.pendingOrg, "/admin/cros?status=pending"],
           ["계약 진행", todo.contracting, "/admin/awards"],
         ].map(([label, n, href]) => (
@@ -99,7 +108,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     <div style={{ fontWeight: 600 }}>{r.substance}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.categories.join(" · ")}{needsCda(r.confidentiality) ? " · CDA" : ""}</div>
                   </td>
-                  <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status)}</StatusPill></td>
+                  <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill></td>
                   <td className="tnum" data-label="회신">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
                   <td className="tnum" data-label="회신 기한">{r.reply_by ? md(r.reply_by) : "-"}</td>
                   <td className="tnum" data-label="접수일">{ymd(r.created_at)}</td>
@@ -113,4 +122,17 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <p style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>단계: {STAGES.map((s) => s.label).join(" → ")}</p>
     </>
   );
+}
+
+/** 참여 선택형 전환이 남은 열린 요청 (0023 적용 뒤 한 번 실행, lib/opt-in-transition.ts). 읽지 못하면 카드를 숨기고 오류만 남긴다 */
+async function transitionRows(): Promise<TransitionRow[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  try {
+    const plan = await planOptInTransition(sb, todaySeoul());
+    return plan.requests.map((r) => ({ rfqNo: r.rfqNo, replyBy: r.replyBy, joinBy: new Date(r.joinBy).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }), offers: r.offers.map((o) => o.croName) }));
+  } catch (e) {
+    captureError(e, "admin:opt-in-transition");
+    return [];
+  }
 }

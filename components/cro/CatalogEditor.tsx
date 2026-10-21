@@ -143,7 +143,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
               </span>
             </summary>
             <div style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 요청서가 배포되지 않습니다. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
+              {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 참여 안내가 오지 않습니다. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
               {list.map((it) => (
                 <ItemBlock key={it.key} item={it} rows={rowsOf(it.key)} cat={cat as Cat} onAdd={() => addVariant(it)} onPatch={patch} onDuplicate={duplicate} onRemove={remove} />
               ))}
@@ -190,7 +190,7 @@ function PresetPanel({ orgPresets, rows, onApply, note }: { orgPresets: OrgPrese
     <div className="card card--pad stack" style={{ gap: 12 }}>
       <div>
         <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>패키지 프리셋</h2>
-        <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>자주 묶이는 시험 세트입니다. 고르면 해당 항목의 조합이 한 번에 만들어져 설계·단가만 채우면 됩니다. "제공"을 켜 두면 의뢰자가 패키지로 요청할 때 우선 안내됩니다.</p>
+        <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>자주 묶이는 시험 세트입니다. 고르면 해당 항목의 조합이 한 번에 만들어져 설계·단가만 채우면 됩니다. "제공"은 귀 기관이 이 패키지를 묶어 수행하는지 기록해 두는 표시입니다. 요청 전달 순서나 비교표 노출에는 영향을 주지 않습니다.</p>
       </div>
       {audiences.map((a) => (
         <div key={a} className="fld" style={{ gap: 6 }}>

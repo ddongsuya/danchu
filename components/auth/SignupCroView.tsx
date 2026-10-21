@@ -63,7 +63,7 @@ export function SignupCroView() {
     <div className="auth__card auth__card--wide">
       <div>
         <h1 className="auth__title">CRO 가입 신청</h1>
-        <p className="auth__sub">참여 기관으로 등록되면 요청서가 배포되고, 단추 표준 양식으로 견적을 회신할 수 있습니다.</p>
+        <p className="auth__sub">참여 기관으로 등록되면 수행 분야가 맞는 요청의 참여 안내를 받고, 참여한 요청에 단추 표준 양식으로 견적을 회신할 수 있습니다.</p>
       </div>
 
       <form className="auth__form" onSubmit={submit}>

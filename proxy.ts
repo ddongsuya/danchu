@@ -24,6 +24,8 @@ export async function proxy(req: NextRequest) {
   // 세션 쿠키가 없는 공개 페이지·API 요청은 Auth 서버를 부르지 않는다 (랜딩 LCP, Auth 호출 한도)
   const hasSession = req.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
   if (!hasSession && !needsAuth) return NextResponse.next();
+  // 세션 쿠키가 없는 보호 영역은 Auth 서버를 부를 필요도 없다
+  if (!hasSession) return redirectGuest(req);
 
   let res = NextResponse.next({ request: req });
   const sb = createServerClient(url, anon, {
@@ -40,13 +42,23 @@ export async function proxy(req: NextRequest) {
   // getUser()가 만료된 액세스 토큰을 갱신하고 쿠키를 다시 써 준다
   const { data } = await sb.auth.getUser();
 
-  if (needsAuth && !data.user) {
-    // 견적 요청 진입(/app/new)은 신규 방문자가 대부분이라 가입으로, 나머지는 로그인으로
-    const to = new URL(pathname.startsWith("/app/new") ? "/signup" : "/login", req.url);
-    to.searchParams.set("next", pathname + (req.nextUrl.search || ""));
-    return NextResponse.redirect(to);
-  }
+  if (needsAuth && !data.user) return redirectGuest(req);
   return res;
+}
+
+/**
+ * 로그인 전 방문자.
+ * - 견적 요청(/app/new): 로그인 없이 쓰는 공개 요청서(/request)로. 가입은 보내기 직전에 그 화면에서 한다
+ * - 나머지 보호 영역: 로그인으로
+ */
+function redirectGuest(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
+  if (pathname === "/app/new") {
+    return NextResponse.redirect(new URL(`/request${search || ""}`, req.url));
+  }
+  const to = new URL("/login", req.url);
+  to.searchParams.set("next", pathname + (search || ""));
+  return NextResponse.redirect(to);
 }
 
 export const config = {

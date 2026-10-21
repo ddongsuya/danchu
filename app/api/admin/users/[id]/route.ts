@@ -12,6 +12,8 @@ export const runtime = "nodejs";
 /**
  * POST { role, croOrgId } — 역할·기관 연결 변경 (본인 역할은 바꿀 수 없다).
  * 어떤 변경이든 합류 신청(pending_org_id)은 지운다: 연결했으면 끝난 것이고, 아니면 거절한 것이다.
+ * 기관이 바뀌면 기관 내 역할은 member 로 돌린다. 이전 기관의 대표 권한이 새 기관으로 따라가지 않는다 (DB 트리거도 같은 규칙, 0021).
+ * 이전 기관의 회신 링크는 DB 트리거가 모두 새로 발급한다.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull("admin");
@@ -31,12 +33,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const { count } = await sb.from("profiles").select("id", { count: "exact", head: true }).eq("role", "admin");
     if ((count ?? 0) <= 1) return NextResponse.json({ error: "마지막 운영자는 강등할 수 없습니다. 먼저 다른 운영자를 지정해 주세요." }, { status: 400 });
   }
-  const { error } = await sb.from("profiles").update({ role, cro_org_id: linkOrg, pending_org_id: null }).eq("id", id);
+  const orgChanged = (before?.cro_org_id ?? null) !== linkOrg;
+  const { error } = await sb.from("profiles").update({ role, cro_org_id: linkOrg, pending_org_id: null, ...(orgChanged ? { org_role: "member" } : {}) }).eq("id", id);
   if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
   await audit({ userId: s.userId, email: s.email }, "user.role", { type: "profile", id, label: before?.email ?? id }, { before: { role: before?.role, cro_org_id: before?.cro_org_id, pending_org_id: before?.pending_org_id }, after: { role, cro_org_id: linkOrg, pending_org_id: null } });
 
   if (linkOrg && before?.cro_org_id !== linkOrg) {
-    const { data: org } = await sb.from("cro_orgs").select("name").eq("id", linkOrg).maybeSingle();
+    const { data: org } = await sb.from("cro_orgs").select("name, managed").eq("id", linkOrg).maybeSingle();
+    // 운영자 관리 기관에 실제 담당자가 연결되면 이제 기관이 직접 회신한다. 이력(초대·견적·수주)은 같은 기관에 그대로 남는다
+    if (org?.managed) {
+      await sb.from("cro_orgs").update({ managed: false }).eq("id", linkOrg);
+      await audit({ userId: s.userId, email: s.email }, "org.terms", { type: "cro_org", id: linkOrg, label: org.name }, { before: { managed: true }, after: { managed: false }, note: `담당자 연결 · ${before?.email ?? id}` });
+    }
     await notifyUsers([id], { kind: "기관", title: `${org?.name ?? "기관"}에 담당자로 연결되었습니다`, body: "이제 기관에 배포된 요청서를 보고 회신할 수 있습니다.", href: "/cro" });
     // 기관 담당자로 연결하면 그 기관이 받을 요청을 바로 채운다
     try {

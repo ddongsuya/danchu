@@ -223,6 +223,7 @@
 .tbl th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 10px 12px; border-bottom: 1px solid var(--cline); white-space: nowrap; }
 .tbl td { padding: 12px; border-bottom: 1px solid var(--track); vertical-align: top; }
 .tbl tr:last-child td { border-bottom: 0; }
+.tbl tfoot td { border-top: 1px solid var(--cline); font-weight: 600; }
 .tbl--sticky th:first-child, .tbl--sticky td:first-child { position: sticky; left: 0; background: var(--wh); z-index: 1; }
 /* 좁은 화면에서는 행을 카드처럼 세운다. 셀 라벨은 data-label 로 (가로 스크롤 표는 엄지로 읽기 어렵다) */
 @media (max-width: 639px) {
@@ -323,6 +324,12 @@
 .request-summary strong { display: block; font-size: 36px; font-weight: 600; letter-spacing: -.035em; margin-top: 10px; font-variant-numeric: tabular-nums; }
 .request-summary strong small { font-size: 13px; margin-left: 9px; color: var(--muted); font-weight: 400; }
 .request-summary__accent { color: var(--brand); }
+/* 실시간 비교표 위의 회신 현황 (도착 견적 · 미회신 · 기한). 640px 미만에서는 세로로 쌓는다 */
+.compare-status { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 16px; background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-md); }
+.compare-status > div { padding: 14px 18px; border-left: 1px solid var(--cline); }
+.compare-status > div:first-child { border-left: 0; }
+.compare-status dt { font-size: 12px; color: var(--muted); }
+.compare-status dd { margin: 4px 0 0; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .request-attention { display: flex; align-items: center; gap: 14px; padding: 20px 22px; border-radius: var(--r-md); background: var(--tint); margin-bottom: 30px; border: 1px solid var(--bline); }
 .request-attention__icon { color: var(--brand); flex: none; }
 .request-attention b { font-size: 14px; font-weight: 650; }
@@ -379,6 +386,9 @@
   .pt .ph h1 { font-size: 25px; }
   .pt .ph p { font-size: 13px; }
   .request-summary { padding: 18px 0; }
+  .compare-status { grid-template-columns: 1fr; }
+  .compare-status > div { border-left: 0; border-top: 1px solid var(--cline); padding: 12px 16px; }
+  .compare-status > div:first-child { border-top: 0; }
   .request-summary > div { padding: 0 13px; }
   .request-summary span { font-size: 11px; }
   .request-summary strong { font-size: 27px; }
@@ -405,3 +415,57 @@
 .pt .grid2 > *, .pt .numin, .pt .stack { min-width: 0; }
 .pt .numin input { min-width: 0; }
 @media (min-width: 640px) { .pt .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── 참여 결정 (0023, components/cro/JoinPanel.tsx) ── */
+.pt .join, .join { padding: 24px; margin-bottom: 24px; border-color: var(--bline); display: grid; gap: 14px; }
+.join__head { display: grid; gap: 6px; }
+.join__head h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.join__lead { color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 70ch; }
+.join__consent { margin: 0; padding: 14px 16px; background: var(--sf); border-radius: var(--r-md); font-size: 14px; line-height: 1.7; color: var(--body); max-width: 75ch; }
+.join__meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.join__meta a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.join__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.join__err { margin: 0; }
+/* 참여 선택형 전환 카드 (운영자 홈, 0023 적용 뒤 한 번) */
+.optin-tr { display: grid; gap: 10px; margin-bottom: 16px; padding: 16px 18px; }
+.optin-tr__title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.optin-tr__body { margin: 0; max-width: 75ch; line-height: 1.7; }
+.optin-tr__list summary { font-size: 13px; color: var(--muted); width: fit-content; }
+.optin-tr__list ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; }
+.optin-tr__list a { text-underline-offset: 3px; }
+.optin-tr__actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.optin-tr__ok { font-size: 13px; color: var(--ok); }
+.optin-tr__err { font-size: 13px; color: var(--err); }
+.pt .optin-tr .b1 { transition: transform 160ms var(--ease-out); }
+.pt .join .b1, .pt .join .b2 { transition: transform 160ms var(--ease-out); }
+.pt .join .b1[aria-busy="true"] { cursor: progress; }
+@media (max-width: 639px) {
+  .pt .join, .join { padding: 18px; }
+  .join__actions > * { flex: 1 1 100%; }
+}
+/* 청구 명세 (0024): 마감 버튼 · 조정 항목 · 참고 수치 */
+.billclose { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.billclose--arm { font-size: 13px; gap: 6px; }
+.billclose__hint { font-size: 13px; color: var(--muted); align-self: center; }
+.billclose__err { font-size: 12px; color: var(--err); }
+.fld__err { font-size: 13px; color: var(--err); line-height: 1.5; }
+.billadj-card__foot { padding: 16px; border-top: 1px solid var(--cline); }
+.billadj { display: grid; gap: 12px; }
+.billadj__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.billadj__actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.billadj__ok { font-size: 13px; color: var(--ok); }
+.billadj__err { font-size: 13px; color: var(--err); }
+.billref__lead { margin: 0; padding: 0 16px 12px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 75ch; }
+.pt .billadj .b1, .pt .billclose .b1, .pt .billclose .b2 { transition: transform 160ms var(--ease-out); }
+.pt .billadj .b1[aria-busy="true"], .pt .billclose .b1[aria-busy="true"] { cursor: progress; }
+@media (min-width: 768px) {
+  .billadj__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .billadj__reason { grid-column: 1 / -1; }
+}
+/* ── 로그인 전 요청서 (GuestShell) ── 메뉴 없이 상단 바만 */
+.pt--guest .pt__top { display: block; }
+.pt--guest .pt__topin { max-width: 1080px; margin: 0 auto; }
+.pt--guest .pt__topin > .pt__brand { display: flex; }
+.pt--guest .pt__main { padding-bottom: calc(48px + var(--bot)); }
+.pt .pt__guest-login { font-size: 14px; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .pt .pt__guest-login:hover { color: var(--ink); text-decoration: underline; } }

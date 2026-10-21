@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getRfqByNo, ownsRfq } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { safeName } from "@/lib/upload";
+import { opaqueObjectName } from "@/lib/upload";
 import { rateLimited } from "@/lib/rate-limit";
 export async function POST(
   req: Request,
@@ -16,7 +16,7 @@ export async function POST(
     );
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId, s.email) || s.profile.role === "admin"))
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin"))
     return NextResponse.json(
       { error: "요청을 찾을 수 없습니다." },
       { status: 404 },
@@ -65,7 +65,7 @@ export async function POST(
     );
   const path =
     existing?.storage_path ||
-    `${no}/${crypto.randomUUID()}-${safeName(b.name)}`;
+    `${no}/${opaqueObjectName(b.name)}`;
   if (!existing) {
     const { error: insertError } = await sb
       .from("rfq_files")

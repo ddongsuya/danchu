@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "./supabase";
 import type { Tables } from "./db-types";
 import type { CroOrg } from "./auth";
 import { likeExact, orValue } from "./sql";
+import { occupiesSeat } from "./request-policy";
 
 /* ── 표 행 타입 — lib/db-types.ts 의 별칭. 컬럼이 바뀌면 그쪽을 고친다 ── */
 
@@ -27,22 +28,23 @@ export function dbReady(): boolean {
 
 export type RfqSummary = RfqRow & { invites: number; submitted: number };
 
-export async function listRequestsForUser(userId: string, email: string): Promise<RfqSummary[]> {
+export async function listRequestsForUser(userId: string): Promise<RfqSummary[]> {
   const c = sb();
   const { data: rows } = await c
     .from("rfq_requests")
     .select("*")
-    // 이메일은 대소문자만 무시하고 정확히 같아야 한다. `%`·`_` 를 이스케이프하지 않으면
-    // a_c@corp.com 계정이 abc@corp.com 의 요청을 보게 된다.
-    .or(`user_id.eq.${userId},email.ilike.${orValue(likeExact(email))}`)
+    // 소유는 user_id 로만 본다. 연락 이메일은 바뀌거나 다른 계정이 다시 쓸 수 있다 (미귀속 요청 연결은 claim_rfqs_by_email, 0021)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(200);
   const list = rows ?? [];
   if (!list.length) return [];
   const ids = list.map((r) => r.id);
-  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status").in("rfq_id", ids);
+  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at").in("rfq_id", ids);
+  // 의뢰자 목록의 분모는 참여한 기관(자리를 차지한 초대)만 센다. 안내 수·불참 수는 의뢰자에게 보이지 않는다 (0023)
   const byRfq = new Map<string, { invites: number; submitted: number }>();
   for (const i of inv ?? []) {
+    if (!occupiesSeat(i)) continue;
     const e = byRfq.get(i.rfq_id) ?? { invites: 0, submitted: 0 };
     e.invites++;
     if (i.status === "submitted") e.submitted++;
@@ -86,9 +88,9 @@ export async function getRfqDetail(rfq: RfqRow): Promise<RfqDetail> {
   };
 }
 
-/** 의뢰자가 이 요청을 볼 수 있는가 */
-export function ownsRfq(rfq: RfqRow, userId: string, email: string): boolean {
-  return rfq.user_id === userId || rfq.email.toLowerCase() === email.toLowerCase();
+/** 의뢰자가 이 요청을 볼 수 있는가. user_id 로만 판단한다 (이메일 일치는 소유가 아니다) */
+export function ownsRfq(rfq: Pick<RfqRow, "user_id">, userId: string): boolean {
+  return !!rfq.user_id && rfq.user_id === userId;
 }
 
 /* ── 알림 ── */
@@ -141,12 +143,6 @@ export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq
   const { data: rs } = await c.from("rfq_requests").select("id, rfq_no, substance, categories, company, contact_name, email, phone, status").in("id", list.map((a) => a.rfq_id));
   const rBy = new Map((rs ?? []).map((r) => [r.id, r]));
   return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null }));
-}
-
-export type OrgClientRow = Tables<"cro_org_clients">;
-export async function listOrgClients(orgId: string): Promise<OrgClientRow[]> {
-  const { data } = await sb().from("cro_org_clients").select("*").eq("org_id", orgId).order("name");
-  return data ?? [];
 }
 
 export type MemberRow = { id: string; name: string | null; email: string; phone: string | null; created_at: string; org_role?: string };

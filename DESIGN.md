@@ -65,7 +65,7 @@ components:
 
 ## Elevation & Depth
 
-테두리 또는 표면색으로 그룹을 구분한다. 광고성 부유 카드나 그림자 중첩을 쓰지 않는다. 실험실 이미지는 생성한 브랜드 분위기 자료이며 특정 기관의 사진이나 시험 수행 증거가 아니다. `public/images/lab-glassware.prompt.txt`에 출처를 기록한다.
+테두리 또는 표면색으로 그룹을 구분한다. 광고성 부유 카드나 그림자 중첩을 쓰지 않는다. 실험실 이미지는 생성한 브랜드 분위기 자료이며 특정 기관의 사진이나 시험 수행 증거가 아니다. `public/images/lab-glassware.prompt.txt`에 출처를 기록한다. 브랜드 필름 C안의 배경(AI 생성, 화면에 "AI 생성 이미지"로 표시)은 `docs/brand-film/PROMPTS.txt`에 기록하며, 비용·계정 정보는 남기지 않는다.
 
 ## Shapes
 
@@ -79,6 +79,7 @@ components:
 - 시험 제안은 기존 규칙을 그대로 사용한다. 네이티브 select가 상태 변경 때 재마운트되지 않도록 컴포넌트를 바깥에 정의한다.
 - 포털 목록은 검색·상태 필터·비어 있음·일치 결과 없음 상태를 제공한다.
 - 키보드 focus-visible을 유지하고 축소 모션 설정을 존중한다. 반복 업무는 불필요한 진입 애니메이션을 쓰지 않는다.
+- 콘텐츠 필름 예외: 브랜드 필름(`components/site/BrandFilm.tsx`)은 UI가 아니라 콘텐츠이므로 장면 전환 600~900ms와 필름 길이의 keyframes 타임라인을 쓴다. 키프레임은 `lib/brand-film.ts`의 시각(초)에서 `components/site/brand-film-motion.ts`가 만든다. 움직이는 속성은 transform·opacity·clip-path뿐이고, 구간 커브는 ease-out·in-out(sine 포함)·linear만 쓴다(ease-in 없음). will-change는 쓰지 않으며, 동작 줄이기에서는 엔드카드 정지 화면만 보인다. 재생 제어 버튼 같은 UI는 그대로 300ms 이하.
 - `/design-preview`는 `DANCHU_DESIGN_PREVIEW=1`에서만 보이는 합성 데이터 검토 화면. 기존 인증이나 데이터 접근 규칙을 바꾸지 않는다.
 
 ## Do's and Don'ts

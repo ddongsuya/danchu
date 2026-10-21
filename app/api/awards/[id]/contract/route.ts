@@ -8,7 +8,11 @@ import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
-/** POST { date, amount, note? } — 선정된 CRO가 계약 체결을 보고한다 → 상태 contracting → 운영자가 종료 처리 */
+/**
+ * POST { date, amount, note? } — 선정된 CRO가 계약 체결을 보고한다 → 상태 contracting → 의뢰자 확인 또는 이의 → 확정·종료.
+ * 7일 안에 이의가 없으면 예약 작업이 보고대로 확정한다 (0025 auto_confirm_contracts). 성사수수료는 확정한 달에 정산한다.
+ * 운영자는 기관에 확인해 대신 기록하거나 정정할 수 있다 (감사 기록). 확인 열은 DB 함수만 쓴다 (rfq_awards_guard_confirm).
+ */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull();
   if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
@@ -37,15 +41,36 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const r = { rfq_no: rc.rfq_no, user_id: rc.user_id, substance: rc.substance };
   const corrected = rc.corrected === true;
 
-  await logEvent(award.rfq_id, "contract", `${award.cro_name} 계약 체결 ${corrected ? "정정" : "보고"}`, `체결일 ${date} · ${won(amount)}`, s.userId);
+  // 운영자가 기관에 확인해 대신 남긴 기록은 기관의 보고가 아니다. 성사수수료의 근거라 처음 기록부터 감사 로그를 남긴다
+  const what = `계약 체결 ${corrected ? "정정" : isAdmin ? "확인" : "보고"}${isAdmin ? " (운영자 기록)" : ""}`;
+  // 의뢰자 확인 기한 (보고 + 7일, 0025). 확인 전 정정이면 DB 가 기한을 다시 잡는다. 확정된 계약의 정정은 확정을 그대로 둔다
+  const due = rc.confirm_due_at ? new Date(rc.confirm_due_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : "";
+  const confirmed = rc.confirmed === true;
+  await logEvent(award.rfq_id, "contract", `${award.cro_name} ${what}`, `체결일 ${date} · ${won(amount)}${!confirmed && due ? ` · 의뢰자 확인 기한 ${due}` : ""}`, s.userId);
+  if (isAdmin || corrected) {
+    await audit({ userId: s.userId, email: s.email }, "award.contract", { type: "rfq_award", id, label: `${r.rfq_no} · ${award.cro_name}` }, { before: { contract_date: award.contract_date, contract_amount: award.contract_amount, contract_status: award.contract_status }, after: { contract_date: date, contract_amount: amount, contract_status: "signed" }, note: [corrected ? "정정" : isAdmin ? "운영자 기록" : "", confirmed ? "확정된 계약" : "", note].filter(Boolean).join(" · ") || undefined });
+  }
   if (corrected) {
-    await audit({ userId: s.userId, email: s.email }, "award.contract", { type: "rfq_award", id, label: `${r.rfq_no} · ${award.cro_name}` }, { before: { contract_date: award.contract_date, contract_amount: award.contract_amount }, after: { contract_date: date, contract_amount: amount }, note: note || undefined });
-    return NextResponse.json({ ok: true, corrected: true });
+    // 확인 전 정정이면 의뢰자가 바뀐 내용을 다시 확인한다 (새 기한). 확정 뒤 정정은 운영자 정정이라 의뢰자 확인을 다시 받지 않는다
+    if (!confirmed && r.user_id) {
+      await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용이 정정되었습니다`, body: `체결일 ${date} · ${won(amount)}. 맞는지 요청 화면에서 다시 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 이 내용대로 확정합니다.` : ""}`, href: `/app/r/${r.rfq_no}` });
+    }
+    return NextResponse.json({ ok: true, corrected: true, confirmDueAt: rc.confirm_due_at ?? null });
   }
   if (r?.user_id) {
     const { data: rq } = await getSupabaseAdmin()!.from("rfq_requests").select("email").eq("id", award.rfq_id).maybeSingle();
-    await notifyUsers([r.user_id], { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 보고 내용이 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${r.rfq_no}` }, rq?.email ? { to: [rq.email] } : undefined);
+    // 기관 보고(운영자 기록 포함)는 의뢰자가 확인한다. 기한 안에 이의가 없으면 보고대로 확정한다 (2026-10-20 결정 2)
+    const tail = `맞는지 요청 화면에서 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 보고 내용대로 확정합니다.` : ""}`;
+    await notifyUsers(
+      [r.user_id],
+      isAdmin
+        ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 단추가 기관에 확인해 기록했습니다. ${tail}`, href: `/app/r/${r.rfq_no}` }
+        : { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. ${tail}`, href: `/app/r/${r.rfq_no}` },
+      rq?.email ? { to: [rq.email] } : undefined,
+    );
   }
-  await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} 계약 체결 보고 · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}`, href: `/admin/awards` }, { to: adminEmails() });
-  return NextResponse.json({ ok: true });
+  // 의뢰자 계정이 없는 요청(계정 삭제 등)은 의뢰자가 확인·이의를 할 수 없다. 자동 확정 전에 운영자가 의뢰자 연락처로 확인하도록 알린다
+  const orphan = !r?.user_id ? ` · 의뢰자 계정이 없어 확인 요청을 보내지 못했습니다. ${due ? `${due}에 자동 확정되기 전에 ` : ""}의뢰자 연락처로 확인하고, 다르면 수주·계약 화면에서 체결 정보를 정정해 주세요` : "";
+  await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} ${what} · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}${orphan}`, href: `/admin/awards` }, { to: adminEmails() });
+  return NextResponse.json({ ok: true, confirmDueAt: rc.confirm_due_at ?? null });
 }

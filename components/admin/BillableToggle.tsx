@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 
 const REASONS = ["허위 요청", "동일 요청 중복", "수행 범위 불일치", "의뢰자 철회", "기타"];
 
-/** 전달 1건의 청구 가능 여부. 제외할 때는 사유를 고른다 */
+/** 초대 1건(그 초대의 견적 1건)의 청구 대상 여부. 제외할 때는 사유를 고른다 */
 export function BillableToggle({ inviteId, billable, reason, locked = false }: { inviteId: string; billable: boolean; reason: string | null; locked?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);

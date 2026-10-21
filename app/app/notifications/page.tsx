@@ -41,7 +41,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
       {list.length === 0 ? (
         <div className="empty">
           <b>알림이 없습니다</b>
-          견적 도착, 비교표 공개, 계약 진행 소식이 여기에 쌓입니다.
+          견적 도착, 회신 마감, 계약 진행 소식이 여기에 쌓입니다.
         </div>
       ) : (
         <div className="stack" style={{ gap: 8 }}>

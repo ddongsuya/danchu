@@ -37,12 +37,28 @@ function condOf(payload: Values, cat: string): string {
   return parts.join(" · ");
 }
 
-export function quoteRowsFromPayload(payload: Values): QuoteLineDef[] {
+/**
+ * 참여 전 요약에 보여 주는 조건: 동물종 · 회복 기간 · GLP 여부만 (설계 규칙표 "참여 전에 보이는 것").
+ * 시험법·질환 모델처럼 의뢰자가 직접 적는 칸과 TK·조제물분석 같은 세부 설계는 참여 뒤 요청서 전체에서 본다
+ */
+function summaryCondOf(payload: Values, cat: string): string {
+  const parts: string[] = [];
+  const species = detail(payload, cat, "species");
+  if (Array.isArray(species) && species.length) parts.push(species.join("·"));
+  const recovery = detail(payload, cat, "recovery");
+  if (typeof recovery === "string" && ["2주", "4주"].includes(recovery)) parts.push(`회복 ${recovery}`);
+  const glp = detail(payload, cat, "glpLevel");
+  if (glp === "GLP" || glp === "Non-GLP") parts.push(glp);
+  return parts.join(" · ");
+}
+
+/** summary: 참여 전 요약용 행 (조건 칸을 동물종·회복 기간·GLP 여부로 줄인다). 행 번호·이름·분야는 같다 */
+export function quoteRowsFromPayload(payload: Values, opts: { summary?: boolean } = {}): QuoteLineDef[] {
   const cats = Array.isArray(payload.categories) ? payload.categories : [];
   const rows: QuoteLineDef[] = [];
   for (const cat of cats) {
     if (!(CATS as readonly string[]).includes(cat)) continue;
-    const cond = condOf(payload, cat);
+    const cond = opts.summary ? summaryCondOf(payload, cat) : condOf(payload, cat);
     const picked = detail(payload, cat, "items") ?? detail(payload, cat, "segment");
     const names = Array.isArray(picked) && picked.length ? picked : [cat];
     for (const name of names) {

@@ -5,8 +5,17 @@
 import type { QuoteLineDef } from "./quote-items";
 
 export type RfqView = {
+  /**
+   * false: 참여 전 요약 (0023). 설계 규칙표 "참여 전에 보이는 것"만 채운다: 분야, 시험 항목(종·기간·GLP), 제출처, 요청 성격,
+   * 의뢰자 기관 유형, 희망 착수, 회신 기한, 참여 결정 기한, 기밀 등급·CDA 필요 여부, 첨부 개수, 자리, 이용 조건 판.
+   * 시험물질명(substance)·의뢰자 설명(situation·ask·common)·첨부 목록(files)은 비어 있다. true: 참여 뒤 요청서 전체
+   */
+  full: boolean;
   no: string;
+  /** 참여 전 요약에서는 빈 문자열 */
   substance: string;
+  /** 요청 시험 분야 (대분류) */
+  categories: string[];
   client: string;
   /** CDA 요청의 첨부·상세가 체결 확인 전이라 비공개 */
   masked: boolean;

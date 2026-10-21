@@ -52,7 +52,7 @@ export async function POST(
   await logEvent(
     rfq.id,
     "cda",
-    `${data.cro_name} · ${b.signed ? "체결 확인 후 회사명·첨부 공개" : "회사명·첨부 비공개 전환"}`,
+    `${data.cro_name} · ${b.signed ? "체결 확인 후 첨부 공개" : "첨부 비공개 전환"}`,
     reference,
     s.userId,
   );

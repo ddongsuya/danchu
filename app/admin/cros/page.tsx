@@ -4,6 +4,8 @@ import { dbReady, listCroOrgs } from "@/lib/data";
 import { ymd } from "@/lib/format";
 import { QuickApprove } from "@/components/admin/QuickApprove";
 import { SearchBox } from "@/components/admin/SearchBox";
+import { ManagedBadge } from "@/components/admin/ManagedBadge";
+import { ManagedOrgForm } from "@/components/admin/ManagedOrgForm";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
           {rows.map((o) => (
             <tr key={o.id}>
               <td>
-                <Link href={`/admin/cros/${o.id}`} style={{ fontWeight: 700 }}>{o.name}</Link>
+                <Link href={`/admin/cros/${o.id}`} style={{ fontWeight: 700 }}>{o.name}</Link>{o.managed && <ManagedBadge />}
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.contact_name} · {o.contact_email}</div>
               </td>
               <td data-label="상태"><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
@@ -52,7 +54,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
       <div className="ph">
         <div>
           <h1>CRO 기관</h1>
-          <p>가입 신청을 검토하고 승인합니다. 승인된 기관에만 요청서가 배포됩니다.</p>
+          <p>가입 신청을 검토하고 승인합니다. 아직 가입하지 않은 기관은 운영자 관리 기관으로 직접 추가합니다. 승인된 기관에만 참여 안내가 갑니다.</p>
         </div>
         <div className="ph__actions">
           <Link href="/admin/cros" className={`b2 bsm`} aria-pressed={!status}>전체</Link>
@@ -61,6 +63,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
           <SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} />
         </div>
       </div>
+      <ManagedOrgForm />
       {!status && pending.length > 0 && (
         <>
           <div className="sec-title" style={{ marginTop: 0 }}><h2>승인 대기 {pending.length}</h2></div>
@@ -68,7 +71,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
         </>
       )}
       <div className="sec-title"><h2>{status ? ST[status]?.[0] ?? "기관" : "전체 기관"} {rest.length}</h2></div>
-      {rest.length === 0 ? <div className="empty"><b>기관이 없습니다</b>CRO가 가입 신청하면 여기에 나타납니다.</div> : <Table rows={rest} />}
+      {rest.length === 0 ? <div className="empty"><b>기관이 없습니다</b>CRO가 가입 신청하거나 운영자가 기관을 추가하면 여기에 나타납니다.</div> : <Table rows={rest} />}
     </>
   );
 }

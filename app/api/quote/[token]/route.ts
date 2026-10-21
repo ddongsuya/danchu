@@ -3,12 +3,16 @@ import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { QuoteLineDef } from "@/lib/quote-items";
 import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib/cro-data";
-import { loadQuote as load, type Loaded } from "@/lib/quote-load";
+import { closedMessage, loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
-import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { announceCompareOpened } from "@/lib/compare";
+import { captureError } from "@/lib/observe";
 import { todaySeoul, won } from "@/lib/format";
 import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
+import { entrySourceFor, loadOptsFor, PROXY_BEFORE_JOIN, proxyEntryAllowed } from "@/lib/concierge";
+import { audit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,21 +22,68 @@ const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 type PdfRef = { path: string; name: string; size: number };
 
+/** 요청을 보낸 사람. 로그인 CRO·운영자면 계정, 토큰 접근이면 null */
+type Actor = { userId: string; email: string; role: string } | null;
+async function actorOf(): Promise<Actor> {
+  const s = await sessionOrNull();
+  return s ? { userId: s.userId, email: s.email, role: s.profile.role } : null;
+}
+
 /** GET — 회신 화면에 필요한 모든 것 */
 export async function GET(_req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await load(token);
+  const a = await actorOf();
+  const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  return NextResponse.json({ rfq: got.rfq, draft: got.draft, expired: got.expired, locked: got.locked, declined: got.declined, closed: got.closed });
+  // 참여 전(joined false)에는 rfq 가 요약이고 draft 는 null 이다 (lib/quote-load.ts rfqSummaryOf)
+  // canRejoin: 참여 전 불참을 참여 결정 기한 전에 되돌릴 수 있는지 (2026-10-20 결정 3). 철회(withdrawn)는 되돌릴 수 없다
+  return NextResponse.json({
+    rfq: got.rfq,
+    draft: got.draft,
+    expired: got.expired,
+    locked: got.locked,
+    declined: got.declined,
+    closed: got.closed,
+    closedMessage: got.closed ? closedMessage(got.closedReason) : "",
+    joined: got.joined,
+    withdrawn: got.withdrawn,
+    canRejoin: got.canRejoin,
+    joinBy: got.joinBy,
+  });
 }
 
-/** 저장·제출이 막힌 상태면 그 이유 */
-function blocked(got: Loaded): string {
-  if (got.expired) return "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.";
-  if (got.locked) return "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.";
-  if (got.closed) return "회신 기한이 지나 비교표가 공개되었거나 의뢰자가 기관을 선택해 이 요청의 회신이 닫혔습니다.";
-  if (got.declined) return "회신하지 않음으로 처리된 요청입니다. 다시 회신하려면 단추(hello@danchu.kr)에 문의해 주세요.";
-  return "";
+const LINK_GONE = "유효하지 않거나 만료된 링크입니다.";
+
+/** save_quote 가 잠금 뒤 재검사에서 거절한 이유 (0021, 0023, 0025). closed 는 지금 닫힌 이유로 따로 안내한다 */
+const SAVE_DENIED: Record<string, { error: string; status: number }> = {
+  revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(hello@danchu.kr)에서 새 링크를 받아 주세요.`, status: 403 },
+  expired: { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 },
+  declined: { error: "불참으로 처리한 요청이라 저장할 수 없습니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다.", status: 403 },
+  org_inactive: { error: "기관 참여가 중지되어 저장할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
+  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관 견적을 저장할 수 없습니다. 이 기관의 견적이라면 로그아웃한 뒤 메일의 링크로 다시 열어 회신해 주세요.", status: 403 },
+  // 0023: 기관 본인이 참여하기를 누르기 전에는 기관도 운영자(대리 입력)도 저장할 수 없다
+  not_joined: { error: "기관이 이 요청에 참여한 뒤에 견적을 저장할 수 있습니다. 요청 화면에서 참여하기를 먼저 눌러 주세요.", status: 409 },
+  // 철회는 되돌릴 수 없다 (2026-10-20 결정 3)
+  withdrawn: { error: "참여를 철회한 요청입니다. 철회한 요청에는 다시 참여하거나 견적을 낼 수 없습니다.", status: 403 },
+};
+
+/**
+ * 저장·제출이 막힌 상태면 그 이유와 상태 코드. 참여 전에는 기관도 운영자(대리 입력)도 저장할 수 없다 (0023).
+ * 비교표가 열리면(compared_at) 제출한 견적도 더 고칠 수 없다 (2026-10-20 결정 1).
+ * DB(save_quote)도 같은 규칙으로 다시 거절한다. 여기서는 화면 검사와 문구를 맡는다
+ */
+function blocked(got: Loaded): { error: string; status: number } | null {
+  if (got.expired) return { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 };
+  if (got.locked) return { error: "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.", status: 403 };
+  if (got.closed) return { error: closedMessage(got.closedReason), status: 403 };
+  if (got.withdrawn) return SAVE_DENIED.withdrawn;
+  if (got.declined) {
+    return got.canRejoin
+      ? { error: "불참으로 처리한 요청입니다. 다시 참여하면 견적을 쓸 수 있습니다. 요청 화면에서 참여하기를 눌러 주세요.", status: 409 }
+      : { error: "불참으로 처리한 요청입니다. 참여 결정 기한이 지나 다시 참여할 수 없습니다.", status: 403 };
+  }
+  if (!proxyEntryAllowed(got)) return got.operator ? { error: PROXY_BEFORE_JOIN, status: 409 } : SAVE_DENIED.not_joined;
+  return null;
 }
 
 type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef };
@@ -107,8 +158,11 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf };
 }
 
-async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string | null, who?: { ip: string; ua: string }) {
+async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who?: { ip: string; ua: string }) {
   const sb = getSupabaseAdmin()!;
+  const actorId = actor?.userId ?? null;
+  // 운영자가 회신 링크로 제출하면 기관 PDF 를 보고 옮겨 적은 대리 입력이다 (비교표 표기·카탈로그 학습 제외)
+  const source = entrySourceFor(actor?.role);
   const { items, note, common, pdf } = p;
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const weeks = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
@@ -125,6 +179,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     report_lang: common.reportLang || null,
     includes: common.includes,
     note,
+    // 입력 주체는 제출과 같은 트랜잭션에서 남긴다 (save_quote, 0019). 따로 갱신하다 실패하면 대리 입력이 기관 제출로 보인다
+    entry_source: source,
   };
 
   if (pdf) {
@@ -156,13 +212,22 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
   });
 
   // 헤더 + 항목 + 초대 상태 + 요청 상태를 한 트랜잭션으로. 초안 저장은 제출본을 절대 덮지 않는다.
-  const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId);
+  // 토큰을 함께 넘긴다: 화면 검사 뒤 취소·담당자 제외(토큰 재발급)·기관 중지가 끼어들면 save_quote 가 잠금 뒤에 거절한다 (0021)
+  const r = await saveQuote(got.inviteId, header, itemRows, submit, actorId, got.token);
   // 토큰 제출은 행위자가 없다. 금전 구속력이 있는 제출이라 누가 보냈는지 IP·브라우저라도 남긴다
-  if (submit && r.ok && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
-  if (!r.ok) return { error: "저장에 실패했습니다.", status: 500 };
+  if (submit && r.ok && !r.skipped && who) await sb.from("cro_quotes").update({ submitted_ip: who.ip === "unknown" ? null : who.ip, submitted_ua: who.ua.slice(0, 300) || null }).eq("id", r.quote_id);
+  if (!r.ok) {
+    if (r.code === "closed") {
+      // 화면을 연 뒤에 비교표가 열렸거나, 의뢰자가 선정·마무리했거나, 운영자가 초대를 취소했다. 지금 닫힌 이유로 안내한다
+      const now = await load(got.token).catch(() => null);
+      return { error: closedMessage(now?.closedReason ?? null), status: 409 };
+    }
+    return SAVE_DENIED[r.code] ?? { error: "저장에 실패했습니다.", status: 500 };
+  }
   if (r.skipped) return { ok: true, skipped: true };
 
-  if (submit && got.croOrgId) {
+  if (submit && got.croOrgId && source === "cro") {
+    // 운영자가 옮겨 적은 금액은 기관이 정한 값이 아니므로 기관 카탈로그로 되돌리지 않는다
     // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (응답 뒤에 실행, 실패해도 제출은 성공)
     const orgId = got.croOrgId;
     const learned = itemRows.map((x) => ({ category: x.category, name: x.name, avail: x.avail, amount: x.amount, weeks: x.weeks, unit: x.unit, unitPrice: x.unit_price, design: x.design }));
@@ -173,39 +238,49 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actorId: string |
     const first = r.first ?? true;
     const done = r.submitted_invites ?? 0;
     const count = r.total_invites ?? 0;
-    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}`, `총 ${won(total)} · ${weeks}주`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null });
-    const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
-    if (rq?.user_id) {
-      // 메일은 첫 견적이 왔을 때와 전원이 회신했을 때만. 그 사이 도착은 앱 알림으로 충분하다
-      const mailWorthy = first && (done === 1 || (count > 0 && done >= count));
-      await notifyUsers(
-        [rq.user_id],
-        { kind: "견적", title: first ? `견적이 도착했습니다 · ${got.rfq.no}` : `견적이 수정되었습니다 · ${got.rfq.no}`, body: `${done}/${count}곳 회신 · 비교표는 회신 기한 후 공개됩니다.${done >= count && count > 0 ? " 전달한 기관이 모두 회신해 곧 비교표가 열립니다." : ""}`, href: `/app/r/${got.rfq.no}` },
-        mailWorthy && rq.email ? { to: [rq.email] } : undefined,
-      );
+    // 의뢰자에게는 참여한 기관 수만 분모로 보인다 (안내 수·불참 수를 알리지 않는다, 0023)
+    const joinedCount = Math.max(r.joined_invites ?? count, done);
+    await logEvent(got.rfqId, "quote_submitted", `${got.croName} 견적 ${first ? "도착" : "수정"}${source === "operator" ? " (운영자 대리 입력)" : ""}`, `총 ${won(total)} · ${weeks}주${source === "operator" ? " · 기관 PDF 기준" : ""}`, actorId, { quoteId: r.quote_id, ip: who?.ip ?? null, entrySource: source });
+    if (source === "operator" && actor) {
+      await audit({ userId: actor.userId, email: actor.email }, "quote.proxy", { type: "cro_quote", id: r.quote_id, label: `${got.rfq.no} · ${got.croName}` }, { after: { entry_source: source, total_amount: total, total_weeks: weeks, pdf_name: pdf?.name ?? got.draft?.pdfName ?? null }, note: first ? "대리 입력" : "대리 입력 수정" });
     }
-    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` }, { to: adminEmails() });
+    if (r.compare_opened) {
+      // 참여한 기관이 모두 제출해 save_quote 가 같은 트랜잭션에서 비교표를 열었다 (0025, 2026-10-20 결정 1).
+      // 견적마다 보내던 의뢰자 알림 대신 "비교표가 열렸습니다"를 한 번 보낸다 (의뢰자·기관)
+      const rfqId = got.rfqId;
+      await logEvent(rfqId, "compared", `비교표 공개 · 견적 ${done}건 (참여 기관 모두 제출)`, undefined, null, { auto: "all" });
+      after(() => announceCompareOpened(rfqId, "all").catch((e) => captureError(e, "quote:compare-opened", { rfq: got.rfq.no })));
+    } else if (first) {
+      const { data: rq } = await sb.from("rfq_requests").select("user_id, email").eq("id", got.rfqId).maybeSingle();
+      if (rq?.user_id) {
+        // 비교표가 열리기 전에는 진행 현황(참여 n곳, 제출 m곳)만 알린다. 기관 이름·금액·견적은 열린 뒤에 보인다 (2026-10-20 결정 1).
+        // 수정은 진행 현황을 바꾸지 않으므로 알리지 않는다. 메일은 이 요청의 첫 견적일 때만 (save_quote 가 요청 행을 잠그고 세므로 done === 1 은 한 번)
+        const mailWorthy = done === 1;
+        await notifyUsers(
+          [rq.user_id],
+          { kind: "견적", title: `견적이 도착했습니다 · ${got.rfq.no}`, body: `참여 ${joinedCount}곳 중 ${done}곳 제출. 기관 이름과 금액은 비교표가 열리면 함께 보입니다. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열립니다.`, href: `/app/r/${got.rfq.no}` },
+          mailWorthy && rq.email ? { to: [rq.email], subject: `[단추] ${got.rfq.no} 첫 견적이 도착했습니다` } : undefined,
+        );
+      }
+    }
+    // 운영자는 앱 알림만. 메일은 예약 작업이 하루 한 번 모아서 보낸다
+    await notifyUsers(await adminUserIds(), { kind: "견적", title: `${got.rfq.no} 회신 ${done}/${count} · ${got.croName}`, body: `총 ${won(total)} · ${weeks}주${first ? "" : " (수정)"}`, href: `/admin/r/${got.rfq.no}` });
   }
   return { ok: true, total, weeks };
-}
-
-/** 로그인 CRO면 행위자 ID, 토큰 접근이면 null */
-async function actor(_got: Loaded): Promise<string | null> {
-  const s = await sessionOrNull();
-  return s ? s.userId : null;
 }
 
 /** PUT — 초안 자동 저장 (JSON) */
 export async function PUT(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await load(token);
+  const a = await actorOf();
+  const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   const why = blocked(got);
-  if (why) return NextResponse.json({ error: why }, { status: 403 });
+  if (why) return NextResponse.json({ error: why.error }, { status: why.status });
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
   if (got.draft?.status === "submitted") return NextResponse.json({ ok: true, skipped: true }); // 제출본은 자동 저장으로 덮지 않는다
-  const r = await upsert(got, parsed, false, await actor(got));
+  const r = await upsert(got, parsed, false, a);
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, skipped: !!r.skipped });
 }
@@ -213,10 +288,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
 /** POST — 제출 (JSON: { items, note, common, pdf? }). 전 항목 답변 + 공통 필수 + PDF 필수. */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
-  const got = await load(token);
+  const a = await actorOf();
+  const got = await load(token, loadOptsFor(a?.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
   const why = blocked(got);
-  if (why) return NextResponse.json({ error: why }, { status: 403 });
+  if (why) return NextResponse.json({ error: why.error }, { status: why.status });
 
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
   if (typeof parsed === "string") return NextResponse.json({ error: parsed }, { status: 400 });
@@ -225,7 +301,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const incomplete = parsed.items.some((it) => !(it.avail === "불가" || (it.avail && it.amount && it.weeks)));
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });
-  if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 '회신하지 않음'으로 처리해 주세요." }, { status: 400 });
+  if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 견적 대신 요청 화면에서 '참여 철회'로 처리해 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "불가" && Number(it.amount) < 1)) return NextResponse.json({ error: "가능·조건부 가능 항목의 금액은 1원 이상이어야 합니다." }, { status: 400 });
   if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
   const today = todaySeoul();
@@ -233,7 +309,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났습니다. 날짜를 확인해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
-  const r = await upsert(got, parsed, true, await actor(got), { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
+  const r = await upsert(got, parsed, true, a, { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, total: r.total ?? null, weeks: r.weeks ?? null });
 }
