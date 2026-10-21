@@ -12,7 +12,7 @@ import { daysSince, reminderStage } from "@/lib/contract-reminder";
 import { contractFollowupMail, esc, mailWrap, sendMail } from "@/lib/mail";
 import { notificationRecipients } from "@/lib/mail-preferences";
 import { needsContractReminder, replyPath } from "@/lib/concierge";
-import { closeRepliesDue, repliesClosed } from "@/lib/reply-window";
+import { closeRepliesDue, noReplyNotified, repliesClosed } from "@/lib/reply-window";
 import { occupiesSeat } from "@/lib/request-policy";
 import { runOptInSteps } from "@/lib/opt-in-cron";
 import { startRfq } from "@/lib/rfq-create";
@@ -183,8 +183,13 @@ export async function GET(req: Request) {
       await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 비교표 공개 · 견적 ${r.count}건${r.pending ? ` · 미회신 ${r.pending}곳` : ""}`, body: names, href: `/admin/r/${rfq.rfq_no}` });
     } else if (!r.count) {
       // 회신이 하나도 없으면 열지 않고(늦은 회신을 받을 수 있게) 운영자에게 판단을 넘긴다. 같은 기한에는 한 번만 (기한을 늘렸다 다시 지나면 다시 알린다)
-      const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "no_reply").contains("meta", { reply_by: rfq.reply_by }).limit(1);
-      if (!ev?.length) {
+      // 0019 전 기록은 meta 에 기한이 없다. 기한이 지난 뒤 남은 기록이면 같은 기한의 안내로 본다 (lib/reply-window.ts noReplyNotified)
+      const { data: ev, error: evErr } = await sb.from("rfq_events").select("created_at, meta").eq("rfq_id", rfq.id).eq("kind", "no_reply");
+      if (evErr) {
+        out.errors.push(`close-replies ${rfq.rfq_no}: ${evErr.message}`);
+        continue;
+      }
+      if (!noReplyNotified(ev ?? [], rfq.reply_by ?? "")) {
         await logEvent(rfq.id, "no_reply", "기한 경과 · 회신 없음", "참여 안내 추가 또는 기한 연장 판단 필요", null, { reply_by: rfq.reply_by });
         await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "제출된 견적이 없어 비교표를 열지 않았습니다. 의뢰자와 상의해 회신 기한을 늘리고, 필요하면 참여 안내를 추가해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
         // 의뢰자에게도 한 번: 기다리는 이유와 선택지
