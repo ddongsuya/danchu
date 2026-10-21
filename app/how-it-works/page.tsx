@@ -279,7 +279,7 @@ export default function HowItWorks() {
                 <span>의뢰자</span>
                 <h3>요청서 하나로 여러 기관의 견적을 같은 양식으로 받습니다</h3>
                 <p>가입은 업무용 이메일이면 됩니다. 비용은 없습니다.</p>
-                <RfqLink className="b b--fill">요청서 작성</RfqLink>
+                <RfqLink className="b b--fill">견적 요청하기</RfqLink>
               </div>
               <div className="door">
                 <span>기관</span>

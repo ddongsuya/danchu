@@ -3,7 +3,7 @@ import { HeaderAuth } from "@/components/HeaderAuth";
 import { RfqLink } from "@/components/RfqLink";
 import { SiteNav } from "@/components/SiteNav";
 
-/** 공개 사이트 헤더. 한 줄 64px: 워드마크 · 메뉴 · 로그인 · 요청서 작성 */
+/** 공개 사이트 헤더. 한 줄 64px: 워드마크 · 메뉴 · 로그인 · 견적 요청하기 */
 export function SiteHeader() {
   return (
     <header className="hd">

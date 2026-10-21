@@ -29,7 +29,7 @@
 .tnum { font-variant-numeric: tabular-nums; }
 
 @keyframes mrise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.rise-in { animation: mrise .28s ease-out; }
+.rise-in { animation: mrise 240ms var(--ease-out); }
 @media (prefers-reduced-motion: reduce) { .rise-in { animation: none; } }
 
 /* ── 골격 ── */
@@ -109,6 +109,8 @@
 .pt .btxt { background: none; border: 0; padding: 8px 10px; font-size: 14px; color: var(--muted); }
 .pt .btxt:hover { color: var(--ink); }
 .pt .bfull { width: 100%; }
+/* 누름 피드백: 축소는 globals.css 의 button:active (키보드로 누를 때는 줄이지 않음), 여기서는 되돌아오는 전환만 */
+.pt .b1, .pt .b2 { transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease; }
 .pt .b1.blg { height: 56px; font-size: 17px; border-radius: var(--r-lg); }
 
 /* ── 입력 ── */
@@ -198,9 +200,11 @@
 .seg--full button[aria-pressed="true"] { background: var(--brand); color: var(--onbrand); }
 .seg--full button[aria-pressed="true"][data-no="1"] { background: var(--ink); color: var(--wh); }
 
-.tgl { width: 51px; height: 31px; border-radius: var(--r-lg); border: 0; padding: 2px; flex: none; background: var(--dash); display: flex; justify-content: flex-start; transition: background .2s; }
-.tgl[aria-pressed="true"] { background: var(--brand); justify-content: flex-end; }
-.tgl > span { width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
+/* 토글: 손잡이는 transform 으로 미끄러진다 (자리 바꾸기 대신). 동작 줄이기는 globals.css 가 전환 시간을 0 으로 만든다 */
+.tgl { width: 51px; height: 31px; border-radius: var(--r-lg); border: 0; padding: 2px; flex: none; background: var(--dash); display: flex; justify-content: flex-start; transition: background-color 160ms ease; }
+.tgl[aria-pressed="true"] { background: var(--brand); }
+.tgl > span { width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); transition: transform 160ms var(--ease-out); }
+.tgl[aria-pressed="true"] > span { transform: translateX(20px); }
 
 .numin { position: relative; }
 .numin input {

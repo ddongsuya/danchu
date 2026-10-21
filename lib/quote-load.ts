@@ -300,7 +300,7 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
   const expired = !opts.operator && !!inv.expires_at && new Date(inv.expires_at).getTime() < now;
   const locked = !opts.operator && draft?.status === "submitted" && now > endOfDaySeoul(inv.reply_by);
   // 비교표가 열리면(compared_at: 참여한 기관이 모두 제출, 회신 기한 경과, 운영자 회신 마감) 아직 제출하지 않은 기관도 닫힌다.
-  // 제때 낸 기관만 잠기고 안 낸 기관은 링크 만료까지 지각 제출할 수 있던 역차별을 없앤다. 운영자가 기한을 늘리면 compared_at 을 비우므로 다시 열린다
+  // 제때 낸 기관만 잠기고 안 낸 기관은 링크 만료까지 지각 제출할 수 있던 역차별을 없앤다. 한 번 열린 비교표는 다시 열지 않고 기한도 늘리지 않으므로(2026-10-21 결정 3, 0026) 열린 뒤에는 모두 닫힌 채로 남는다
   // 참여가 중지된 기관의 초대는 위에서 막았다. 운영자가 열면 닫힌 화면으로 보인다. 운영자가 이 초대만 취소한(expired) 초대도 닫는다 (DB save_quote·join_offer 도 거절)
   const closedReason: ClosedReason | null = r.selected_quote_id || ["selected", "contracting"].includes(r.status)
     ? "selected"
