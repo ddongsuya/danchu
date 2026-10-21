@@ -249,6 +249,22 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     // 운영자 마감 버튼은 회신 기한이 지난 요청에서만 보인다
     expect(src("components/admin/AdminActions.tsx")).toMatch(/canClose = [^;]*!early/);
   });
+  it("견적 수를 읽지 못하면 '견적 없음'이 아니라 실패로 돌려준다 (예약 작업이 회신 없음 안내를 보내지 않게)", async () => {
+    fx.respond = (q) => (q.table === "cro_quotes" ? { data: null, error: { message: "timeout" }, count: undefined } : db(true)(q));
+    const r = await closeReplies(rfq, null, true);
+    expect(r).toMatchObject({ ok: false, failed: true });
+    expect(fx.calls.some((c) => c.op === "update")).toBe(false);
+    expect(fx.notifyUsers).not.toHaveBeenCalled();
+    fx.respond = (q) => (q.table === "rfq_invites" ? { data: null, error: { message: "timeout" } } : db(true)(q));
+    expect(await closeReplies(rfq, null, true)).toMatchObject({ ok: false, failed: true });
+  });
+  it("운영자 회신 마감도 읽기 오류는 500 으로 알린다", async () => {
+    fx.session = admin;
+    fx.rfq = rfq;
+    fx.respond = (q) => (q.table === "cro_quotes" ? { data: null, error: { message: "timeout" } } : db(true)(q));
+    expect((await closeRoute(json({}), ctxNo)).status).toBe(500);
+    expect(fx.audit).not.toHaveBeenCalled();
+  });
   it("제출된 견적이 없으면 마감하지 않는다", async () => {
     fx.respond = (q) => (q.table === "cro_quotes" ? { data: null, error: null, count: 0 } : { data: [], error: null });
     const r = await closeReplies(rfq, null, true);

@@ -175,6 +175,11 @@ export async function GET(req: Request) {
   for (const rfq of rfqs ?? []) {
     if (!closeRepliesDue(rfq, today)) continue;
     const r = await closeReplies(rfq, null, true);
+    if (r.failed) {
+      // 견적 수를 읽지 못했으면 "견적 없음"으로 알리지 않고 다음 실행에 다시 본다
+      out.errors.push(`close-replies ${rfq.rfq_no}: ${r.message}`);
+      continue;
+    }
     if (r.ok) {
       out.compared++;
       // 참여했지만 내지 않은 기관 이름을 적는다 (운영자 앱 알림만, 하루 요약 메일에 모인다).
