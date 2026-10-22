@@ -5,3 +5,8 @@ node_modules
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# 모션 점검 스킬이 만드는 로컬 보고서 (.claude/skills/design-motion-principles)
+motion-audits/
+# 스킬 검색 스크립트 캐시
+__pycache__/
