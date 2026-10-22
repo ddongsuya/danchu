@@ -15,7 +15,9 @@
 
 
 > 스택: Next.js(App Router) + React + Tailwind. 아래 규칙은 emil-design-eng, impeccable, design-taste-frontend 3개 스킬의 핵심을 단추 프로젝트에 맞게 압축한 것이다. UI 파일(`app/**`, `components/**`, `*.css`)을 만들거나 고칠 때 항상 적용한다.
-> 스킬 자체가 설치되어 있으면 원문이 우선한다. 이 문서는 스킬이 로드되지 않은 세션에서도 같은 기준을 유지하기 위한 요약본이다.
+> 스킬 자체가 설치되어 있으면 위 3개 스킬은 원문이 우선한다. 이 문서는 스킬이 로드되지 않은 세션에서도 같은 기준을 유지하기 위한 요약본이다.
+> 다만 맨 위 "이 프로젝트에서 먼저 알아야 할 것"(Tailwind 미사용, 중립, 리디자인 범위)과 DESIGN.md 토큰은 어떤 스킬보다 우선한다.
+> 2026-10-22에 추가한 `ui-ux-pro-max`(UX 근거 조회)와 `design-motion-principles`(모션 관점·점검)는 참고용이다. 이 문서와 다르면 이 문서를 따른다. 출처와 고친 내용은 각 스킬 폴더의 SOURCE.md.
 
 ## 0. UI 작업 순서 (매번)
 
@@ -123,6 +125,8 @@
 | 기존 화면 점검 | `/impeccable critique <경로>` (UX) / `/impeccable audit <경로>` (a11y·perf·반응형) |
 | 밋밋함 / 과함 | `/impeccable bolder` / `/impeccable quieter` |
 | 모션 추가·리뷰 | `emil-design-eng` 기준으로 `/impeccable animate`, 리뷰는 Before/After 표 |
+| 모션 관점 비교·점검 | `design-motion-principles` (Emil 쪽 가중, 결과는 Before/After/Why 표). 기준은 4절과 `emil-design-eng` |
+| UX 근거 찾기 (접근성·폼·내비게이션·차트·아이콘·Next.js 성능) | `ui-ux-pro-max` 조회: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<질의>" --domain ux` (`chart`·`icons`·`react`, `--stack nextjs`). 색·글꼴·디자인 시스템을 새로 정하는 데는 쓰지 않는다 |
 | 타이포·간격만 | `/impeccable typeset`, `/impeccable layout` |
 | 출고 직전 | `/impeccable harden` → Playwright 1440/390 스크린샷 → 7절 체크 |
 | 피그마 시안 반영 | Figma MCP로 파일의 색·간격·타이포 토큰을 읽어 `tailwind.config`/`globals.css` 변수에 매핑 후 구현 |
