@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
-import { comma, dday, md, won } from "@/lib/format";
+import { dday, md, won } from "@/lib/format";
 import { quoteKindLabel } from "@/lib/concierge";
 
 export type CompareCol = {
@@ -233,8 +233,8 @@ export function CompareBoard({
         </select>
       </label>
       <p className="fld__help">
-        표를 좌우로 움직여 기관별 조건을 비교하세요. 위 요약과 아래 시험별
-        금액은 같은 열에 표시됩니다.
+        기관이 많으면 표를 좌우로 넘겨 보세요. 휴대폰에서는 두 기관씩 나란히
+        보입니다. 위 요약과 아래 시험별 금액은 같은 열에 표시됩니다.
       </p>
       <div
         className="card tbl-wrap"
@@ -243,8 +243,8 @@ export function CompareBoard({
         aria-label="기관별 견적 비교표"
       >
         <table
-          className="tbl tbl--sticky"
-          style={{ minWidth: 150 + sorted.length * 240 }}
+          className="tbl tbl--sticky tbl--cmp"
+          style={{ "--cols": sorted.length } as React.CSSProperties}
         >
           <caption style={{ textAlign: "left", padding: 12 }}>
             기관이 회신한 조건과 금액 · VAT 별도
@@ -297,9 +297,7 @@ export function CompareBoard({
                       ) : (
                         <>
                           <b className="tnum">
-                            {it.amount == null
-                              ? "미입력"
-                              : comma(it.amount)}
+                            {it.amount == null ? "미입력" : won(it.amount)}
                           </b>
                           <p>
                             {it.weeks ? `${it.weeks}주` : "기간 미입력"}

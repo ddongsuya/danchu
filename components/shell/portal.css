@@ -244,8 +244,19 @@
   .tbl--stack td.tbl__act > span > * { flex: 1; }
 }
 /* 기관 회신 화면의 제출 상자: 모바일에서는 바닥에 붙어 스크롤 없이 총액·제출 버튼이 보인다 */
+.reply-submit { display: grid; gap: 12px; }
+.reply-submit__sum { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.reply-submit__sum > span:first-child { font-size: 13px; color: var(--muted); }
+.reply-submit__sum > span:last-child { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+.reply-submit__actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.reply-submit__actions > :last-child { grid-column: span 2; }
+.reply-submit__actions > :only-child { grid-column: auto; }
 @media (max-width: 959px) {
-  .reply-submit { position: sticky; bottom: 0; z-index: 5; box-shadow: 0 -8px 24px -12px rgba(20, 24, 33, 0.18); }
+  /* 바닥에 붙는 막대는 총액과 버튼만. 안내 문장은 위에 두어 화면을 덜 가린다 */
+  .reply-submit { position: sticky; bottom: 0; z-index: 5; gap: 8px; padding: 12px 16px; box-shadow: 0 -8px 24px -12px rgba(20, 24, 33, 0.18); }
+  .reply-submit__sum > span:first-child { font-size: 12px; }
+  .reply-submit__sum > span:last-child { font-size: 18px; }
+  .reply-submit .b1.blg, .pt .reply-submit .b1.blg { height: 48px; font-size: 16px; }
 }
 
 /* 타임라인 */
@@ -473,3 +484,20 @@
 .pt--guest .pt__main { padding-bottom: calc(48px + var(--bot)); }
 .pt .pt__guest-login { font-size: 14px; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) { .pt .pt__guest-login:hover { color: var(--ink); text-decoration: underline; } }
+
+/* 견적 비교표: 기관 수(--cols)에 맞춰 폭을 정한다. 휴대폰에서는 두 기관이 한 화면에 나란히 보이고, 셋째부터는 넘겨 본다 */
+.tbl.tbl--cmp { min-width: calc(150px + var(--cols, 2) * 240px); }
+.tbl.tbl--cmp tbody th { white-space: normal; }
+@media (max-width: 639px) {
+  .tbl-wrap:has(> .tbl--cmp) { scroll-snap-type: x proximity; scroll-padding-left: 84px; }
+  .tbl.tbl--cmp { min-width: calc(84px + var(--cols, 2) * 132px); font-size: 13px; table-layout: fixed; }
+  .tbl.tbl--cmp th:first-child, .tbl.tbl--cmp td:first-child { width: 84px; }
+  .tbl.tbl--cmp th, .tbl.tbl--cmp td { padding: 10px 8px; overflow-wrap: anywhere; }
+  .tbl.tbl--cmp thead th:not(:first-child), .tbl.tbl--cmp td { scroll-snap-align: start; }
+  .tbl.tbl--cmp thead th { white-space: normal; }
+  .tbl.tbl--cmp ul { padding-left: 14px !important; }
+}
+
+/* 금액 입력 (components/cro/MoneyInput.tsx): 아래에 한글 읽기를 붙여 자릿수 실수를 바로 보이게 */
+.money { display: grid; gap: 4px; min-width: 0; }
+.money__read { min-height: 16px; font-size: 12px; line-height: 16px; color: var(--muted); text-align: right; padding-right: 2px; }

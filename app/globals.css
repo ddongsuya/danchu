@@ -108,8 +108,8 @@ html, body {
   word-break: keep-all;
   text-underline-offset: 3px;
 }
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* 부드러운 스크롤은 공개 페이지의 목차 이동에만. 앱 화면의 '항목으로 이동'은 바로 간다 */
+@media (prefers-reduced-motion: no-preference) { html:has(.site) { scroll-behavior: smooth; } }
 
 a { color: var(--brand); text-decoration: none; }
 a:hover { color: var(--brand-dark); }

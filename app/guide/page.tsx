@@ -24,7 +24,7 @@ export default function Guide() {
             <h1>의약품 비임상, 무슨 시험을 어떤 설계로 해야 할까요</h1>
             <p className="ph__lead">처음 비임상을 준비하면 견적보다 먼저 막히는 곳이 시험 구성입니다. 공개된 가이드라인을 기준으로 출발점을 정리했습니다. 여기서 구성을 잡고 그대로 요청서를 만들 수 있습니다.</p>
             <p className="ph__note">{DISCLAIMER}</p>
-            {!GUIDE_REVIEWED && <span className="ph__warn">검토 중인 초안입니다. 메뉴에는 아직 연결하지 않았습니다.</span>}
+            {!GUIDE_REVIEWED && <span className="ph__warn">검토 중인 초안입니다. 실제 시험 계획은 기관과 확인하세요.</span>}
           </div>
         </section>
 

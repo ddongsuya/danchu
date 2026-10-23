@@ -9,6 +9,7 @@ import { won } from "@/lib/format";
 import { uploadToSigned } from "@/lib/upload";
 import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
 import type { Cat } from "@/lib/rfq-schema";
+import { MoneyInput } from "@/components/cro/MoneyInput";
 import { EfficacyCosts } from "@/components/cro/EfficacyCosts";
 import { EFFICACY_CAT } from "@/lib/efficacy";
 
@@ -382,10 +383,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 </div>
                 {perSample && !no && (
                   <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)", gap: 8 }}>
-                    <div className="numin">
-                      <input type="text" inputMode="numeric" placeholder="검체당 단가" style={{ paddingRight: 70 }} disabled={readOnly || busy} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
-                      <span>원/검체</span>
-                    </div>
+                    <MoneyInput label={`${r.name} 검체당 단가`} placeholder="검체당 단가" unit="원/검체" inputStyle={{ paddingRight: 70 }} disabled={readOnly || busy} value={it.unitPrice} onChange={(v) => update(r.seq, { unitPrice: v })} />
                     <div className="numin">
                       <input type="text" inputMode="numeric" placeholder="검체 수" disabled={readOnly || busy} value={it.sampleCount ?? ""} onChange={(e) => update(r.seq, { sampleCount: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })} aria-label={`${r.name} 검체 수`} />
                       <span>건</span>
@@ -393,10 +391,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                   </div>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: 8 }}>
-                  <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder={perSample ? "총액 (단가×검체 수)" : "금액"} disabled={no || readOnly || busy || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
-                    <span>원</span>
-                  </div>
+                  <MoneyInput label={`${r.name} 금액`} placeholder={perSample ? "총액 (단가×검체 수)" : "금액"} disabled={no || readOnly || busy || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount} onChange={(v) => update(r.seq, { amount: v })} />
                   <div className="numin">
                     <input type="text" inputMode="numeric" placeholder="예상 소요기간" disabled={no || readOnly || busy} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 예상 소요기간`} />
                     <span>주</span>
@@ -483,17 +478,19 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
           {error && <p className="note note--err" role="alert">{error}</p>}
 
-          <div className="card card--pad stack reply-submit" style={{ gap: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {maxW ? `병렬 수행 ${maxW}주` : "기간 미입력"}</span>
-              <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "-"}</span>
+          {!readOnly && <p className="fld__help" style={{ margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
+          <div className="card card--pad reply-submit">
+            <div className="reply-submit__sum">
+              <span>총 견적액 · VAT 별도 · {maxW ? `병렬 수행 ${maxW}주` : "기간 미입력"}</span>
+              <span className="tnum">{total ? won(total) : "-"}</span>
             </div>
-            {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
-            {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
-            {!readOnly && <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
-            <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
-              {busy ? "제출 중…" : blockedLabel}
-            </button>
+            <div className="reply-submit__actions">
+              {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로</button>}
+              {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
+              <button type="button" className="b1 blg" disabled={!canSubmit || busy} onClick={submit}>
+                {busy ? "제출 중…" : blockedLabel}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { COST_PARTS, costTotal } from "@/lib/efficacy";
+import { MoneyInput } from "@/components/cro/MoneyInput";
 
 type Design = Record<string, unknown>;
 
@@ -27,10 +28,7 @@ export function EfficacyCosts({ value, disabled, onChange }: { value: Design; di
         {COST_PARTS.map(([key, label, hint]) => (
           <div key={key} className="fld" style={{ gap: 4 }}>
             <label className="fld__lab" style={{ fontSize: 12 }} title={hint}>{label}</label>
-            <div className="numin">
-              <input type="text" inputMode="numeric" disabled={disabled} placeholder={hint} value={typeof extra[key] === "string" && extra[key] ? Number(extra[key]).toLocaleString("ko-KR") : ""} onChange={(e) => set(key, e.target.value)} aria-label={label} />
-              <span>원</span>
-            </div>
+            <MoneyInput label={label} placeholder={hint} disabled={disabled} maxDigits={12} value={typeof extra[key] === "string" ? (extra[key] as string) : ""} onChange={(v) => set(key, v)} />
           </div>
         ))}
       </div>
