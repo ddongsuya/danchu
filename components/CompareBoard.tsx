@@ -47,6 +47,12 @@ const SORTS: [SortKey, string][] = [
   ["start", "착수 빠른 순"],
 ];
 
+/** 머리글 범위 표시: 합계만 보고 비교하지 않도록 몇 항목의 금액인지 함께 적는다 */
+export function scopeLabel(c: Pick<CompareCol, "items">, total: number): string {
+  const priced = c.items.filter((i) => i.avail !== "불가" && i.amount != null).length;
+  return `${priced}/${total} 항목 금액 · VAT 별도`;
+}
+
 export function CompareBoard({
   no,
   cols,
@@ -237,7 +243,7 @@ export function CompareBoard({
         보입니다. 위 요약과 아래 시험별 금액은 같은 열에 표시됩니다.
       </p>
       <div
-        className="card tbl-wrap"
+        className="card tbl-wrap cmp-wrap"
         tabIndex={0}
         role="region"
         aria-label="기관별 견적 비교표"
@@ -247,20 +253,22 @@ export function CompareBoard({
           style={{ "--cols": sorted.length } as React.CSSProperties}
         >
           <caption style={{ textAlign: "left", padding: 12 }}>
-            기관이 회신한 조건과 금액 · VAT 별도
+            기관이 회신한 조건과 금액 · VAT 별도. 표시 순서는 위에서 고른 기준을 따르며 추천 순위가 아닙니다.
           </caption>
           <thead>
             <tr>
               <th scope="col">비교 항목</th>
               {sorted.map((c) => (
-                <th scope="col" key={c.id}>
-                  <div>{c.name}</div>
-                  {c.selected && <span>선택한 기관</span>}
-                  <div>
-                    <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
-                      견적 상세 보기
-                    </Link>
-                  </div>
+                <th scope="col" key={c.id} className="cmp-head">
+                  <span className="cmp-head__name">{c.name}</span>
+                  {c.selected && <span className="pill pill--tint">선택한 기관</span>}
+                  <b className="cmp-head__total tnum">{c.total ? won(c.total) : "금액 미입력"}</b>
+                  <span className="cmp-head__scope">
+                    {scopeLabel(c, rows.length)}
+                  </span>
+                  <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
+                    견적 상세 보기
+                  </Link>
                 </th>
               ))}
             </tr>

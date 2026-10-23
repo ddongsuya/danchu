@@ -24,3 +24,15 @@ describe("MoneyInput caret", () => {
     expect(caretAfterDigits("1,000", 0)).toBe(0);
   });
 });
+
+import { scopeLabel } from "@/components/CompareBoard";
+describe("비교표 머리글 범위", () => {
+  it("불가·미입력 항목은 금액 항목 수에서 뺀다", () => {
+    const items = [
+      { seq: 1, avail: "가능", amount: 1, weeks: 1 },
+      { seq: 2, avail: "불가", amount: null, weeks: null },
+      { seq: 3, avail: "조건부 가능", amount: null, weeks: null },
+    ];
+    expect(scopeLabel({ items }, 3)).toBe("1/3 항목 금액 · VAT 별도");
+  });
+});
