@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { RfqLink } from "@/components/RfqLink";
+import { FlowFilm } from "@/components/site/FlowFilm";
 import "../site.css";
 
 export const metadata: Metadata = {
@@ -44,6 +45,16 @@ export default function About() {
             <span className="ph__k">서비스 소개</span>
             <h1>비임상 시험의 견적과 계약을 한곳에서 처리하는 발주 플랫폼</h1>
             <p className="ph__lead">의뢰자가 한 번 요청하면 여러 기관이 같은 양식으로 회신하고, 의뢰자는 항목별로 나란히 비교해 기관을 고릅니다. 어떤 시험이 필요한지부터 막막하면, 상황을 답하고 공개 가이드라인에 근거한 제안을 받습니다.</p>
+          </div>
+        </section>
+
+        <section className="doc">
+          <div className="wrap doc__grid">
+            <div className="doc__aside">
+              <h2>요청 한 건이 흐르는 길</h2>
+              <p>접수부터 계약 완료까지 7단계. 단계별 공개 범위는 <Link href="/how-it-works">이용 안내</Link>에 있습니다.</p>
+            </div>
+            <div className="doc__body"><FlowFilm /></div>
           </div>
         </section>
 
