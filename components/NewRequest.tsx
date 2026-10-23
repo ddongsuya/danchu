@@ -13,6 +13,7 @@ import {
   type Cat,
   type Field,
   type Values,
+  listMissing,
 } from "@/lib/rfq-schema";
 import { RfqField } from "@/components/RfqField";
 import { Advisor } from "@/components/Advisor";
@@ -287,19 +288,16 @@ export function NewRequest({
       guest ? { ...payload, company: "-", name: "-", email: "check@danchu.kr" } : payload,
     );
     if (invalid) {
-      const missing = WIZ.flatMap((w) => w.fields).find(
-        (f) => f.required && !filled(values, f.id),
-      );
-      if (missing)
-        setStep(
-          ["purpose", "intent", "categories", "substance"].includes(missing.id)
-            ? 0
-            : missing.id === "croCount"
-              ? 1
-              : missing.id === "confid"
-                ? 2
-                : 3,
+      const missing = listMissing(values);
+      if (missing.length) {
+        setStep(missing[0].step);
+        setError(
+          missing.length === 1
+            ? `필수 항목을 확인해 주세요: ${missing[0].label}`
+            : `필수 항목 ${missing.length}개를 확인해 주세요: ${missing.map((m) => m.label).join(", ")}`,
         );
+        return;
+      }
       setError(invalid);
       return;
     }

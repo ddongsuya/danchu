@@ -26,8 +26,8 @@ export default function Home() {
         <section className="home-hero">
           <div className="wrap home-hero__grid">
             <div className="home-hero__copy">
-              <h1>비임상 시험의 시작,<br /><strong>단추를 채우다.</strong></h1>
-              <p>필요한 시험부터 기관별 견적 비교까지.<br />한 번의 요청으로, 연구의 다음 단계를 준비하세요.</p>
+              <h1>비임상 시험 견적을<br /><strong>한 번에 비교하세요.</strong></h1>
+              <p>한 번 요청하면 참여 기관이 같은 양식으로 회신합니다.<br />수행 범위, 금액, 일정을 나란히 확인하세요.</p>
               <div className="home-hero__actions">
                 <RfqLink className="b b--fill b--lg">견적 요청하기 <ArrowUpRight size={19} aria-hidden="true" /></RfqLink>
                 <a href="#fields" className="b b--line b--lg">시험 분야 살펴보기</a>

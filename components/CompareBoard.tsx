@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
-import { comma, dday, md, won } from "@/lib/format";
+import { dday, md, won } from "@/lib/format";
 import { quoteKindLabel } from "@/lib/concierge";
 
 export type CompareCol = {
@@ -46,6 +46,12 @@ const SORTS: [SortKey, string][] = [
   ["weeks", "기간 짧은 순"],
   ["start", "착수 빠른 순"],
 ];
+
+/** 머리글 범위 표시: 합계만 보고 비교하지 않도록 몇 항목의 금액인지 함께 적는다 */
+export function scopeLabel(c: Pick<CompareCol, "items">, total: number): string {
+  const priced = c.items.filter((i) => i.avail !== "불가" && i.amount != null).length;
+  return `${priced}/${total} 항목 금액 · VAT 별도`;
+}
 
 export function CompareBoard({
   no,
@@ -233,34 +239,36 @@ export function CompareBoard({
         </select>
       </label>
       <p className="fld__help">
-        표를 좌우로 움직여 기관별 조건을 비교하세요. 위 요약과 아래 시험별
-        금액은 같은 열에 표시됩니다.
+        기관이 많으면 표를 좌우로 넘겨 보세요. 휴대폰에서는 두 기관씩 나란히
+        보입니다. 위 요약과 아래 시험별 금액은 같은 열에 표시됩니다.
       </p>
       <div
-        className="card tbl-wrap"
+        className="card tbl-wrap cmp-wrap"
         tabIndex={0}
         role="region"
         aria-label="기관별 견적 비교표"
       >
         <table
-          className="tbl tbl--sticky"
-          style={{ minWidth: 150 + sorted.length * 240 }}
+          className="tbl tbl--sticky tbl--cmp"
+          style={{ "--cols": sorted.length } as React.CSSProperties}
         >
           <caption style={{ textAlign: "left", padding: 12 }}>
-            기관이 회신한 조건과 금액 · VAT 별도
+            기관이 회신한 조건과 금액 · VAT 별도. 표시 순서는 위에서 고른 기준을 따르며 추천 순위가 아닙니다.
           </caption>
           <thead>
             <tr>
               <th scope="col">비교 항목</th>
               {sorted.map((c) => (
-                <th scope="col" key={c.id}>
-                  <div>{c.name}</div>
-                  {c.selected && <span>선택한 기관</span>}
-                  <div>
-                    <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
-                      견적 상세 보기
-                    </Link>
-                  </div>
+                <th scope="col" key={c.id} className="cmp-head">
+                  <span className="cmp-head__name">{c.name}</span>
+                  {c.selected && <span className="pill pill--tint">선택한 기관</span>}
+                  <b className="cmp-head__total tnum">{c.total ? won(c.total) : "금액 미입력"}</b>
+                  <span className="cmp-head__scope">
+                    {scopeLabel(c, rows.length)}
+                  </span>
+                  <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
+                    견적 상세 보기
+                  </Link>
                 </th>
               ))}
             </tr>
@@ -297,9 +305,7 @@ export function CompareBoard({
                       ) : (
                         <>
                           <b className="tnum">
-                            {it.amount == null
-                              ? "미입력"
-                              : comma(it.amount)}
+                            {it.amount == null ? "미입력" : won(it.amount)}
                           </b>
                           <p>
                             {it.weeks ? `${it.weeks}주` : "기간 미입력"}

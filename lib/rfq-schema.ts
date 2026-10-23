@@ -753,6 +753,18 @@ export function validateRequired(values: Values): string {
   return "";
 }
 
+/** 요청서 4단계 중 이 칸이 있는 단계 (0 시험, 1 기관 수, 2 정보 공개, 3 나머지) */
+export function stepOfField(id: string): number {
+  return ["purpose", "intent", "categories", "substance"].includes(id) ? 0 : id === "croCount" ? 1 : id === "confid" ? 2 : 3;
+}
+
+/** 아직 채우지 않은 필수 칸 전부 (단계 순). 첫 항목만 알려 주면 고치고 다시 눌러야 다음 누락을 알 수 있다 */
+export function listMissing(values: Values): { id: string; label: string; step: number }[] {
+  const out: { id: string; label: string; step: number }[] = [];
+  for (const s of WIZ) for (const f of s.fields) if (f.required && !filled(values, f.id)) out.push({ id: f.id, label: f.label || s.q, step: stepOfField(f.id) });
+  return out.sort((a, b) => a.step - b.step);
+}
+
 /** id → 사람이 읽는 라벨 (메일 본문·관리용) */
 export function labelMap(): Record<string, string> {
   const m: Record<string, string> = {};

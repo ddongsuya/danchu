@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const TITLE = "단추 · 비임상 시험의 시작, 단추를 채우다.";
+const TITLE = "단추 · 비임상 시험 견적을 한 번에 비교하세요";
 const DESC =
   "필요한 시험부터 기관별 견적 비교까지. 한 번의 요청으로 여러 비임상 CRO의 수행 범위, 금액과 일정을 비교하세요.";
 
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* 같은 도메인에서 서비스하는 Pretendard 가변 폰트 (public/fonts/pretendard) */}
         <link rel="stylesheet" href="/fonts/pretendard/pretendard.css" />

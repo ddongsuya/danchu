@@ -109,7 +109,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <div className="card card--rows">
             {[
               ["GLP 인증", certs.join(" · ") || "-"],
-              ["제출처 대응", cov.ok ? "대응 가능 ✓" : `등록 정보 확인 필요 · ${cov.missing.join(", ")} 미보유`],
+              ["제출처 등록 정보", cov.ok ? "선택한 제출처의 등록 정보 있음 · 적용 범위는 기관에 확인" : `기관 등록 정보에서 ${cov.missing.join(", ")} 확인 안 됨 · 기관에 확인`],
               ["AAALAC", org?.aaalac == null ? "-" : org.aaalac ? "인증" : "없음"],
               ["착수 가능일", md(q.start_date)],
               ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (병렬 수행 기준)` : "-"],
@@ -120,7 +120,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
             ].map(([k, v]) => (
               <div key={k} className="kv">
                 <span className="kv__k">{k}</span>
-                <span className="kv__v" style={{ color: k === "제출처 대응" ? (cov.ok ? "var(--ok)" : "var(--err)") : undefined }}>{v}</span>
+                <span className="kv__v" >{v}</span>
               </div>
             ))}
           </div>

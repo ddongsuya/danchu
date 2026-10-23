@@ -1,12 +1,19 @@
 /** 표기 헬퍼 - 금액·날짜 */
 
-/** 187000000 → "1억 8,700만 원" */
+/** 187000000 → "1억 8,700만 원", 12345678 → "1,234만 5,678원". 반올림하지 않는다 (견적 금액은 원 단위까지 그대로) */
 export function won(n: number): string {
   if (!n) return "0원";
-  if (n < 1e4) return `${n.toLocaleString("ko-KR")}원`; // 만 원 미만은 반올림하지 않는다
-  const e = Math.floor(n / 1e8);
-  const m = Math.round((n % 1e8) / 1e4);
-  return (e ? `${e}억 ` : "") + (m ? `${m.toLocaleString("ko-KR")}만 원` : e ? "" : `${n.toLocaleString("ko-KR")}원`);
+  const sign = n < 0 ? "-" : "";
+  const a = Math.abs(Math.round(n));
+  const e = Math.floor(a / 1e8);
+  const m = Math.floor((a % 1e8) / 1e4);
+  const r = a % 1e4;
+  const parts: string[] = [];
+  if (e) parts.push(`${e.toLocaleString("ko-KR")}억`);
+  if (m) parts.push(`${m.toLocaleString("ko-KR")}만`);
+  if (r) parts.push(`${r.toLocaleString("ko-KR")}원`);
+  else parts[parts.length - 1] += " 원";
+  return sign + parts.join(" ");
 }
 export function comma(n: number): string {
   return `${n.toLocaleString("ko-KR")}원`;

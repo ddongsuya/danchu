@@ -6,7 +6,9 @@ import { addBusinessDays } from "@/lib/dates";
 describe("won — 금액 한글 표기", () => {
   it("억·만 단위", () => {
     expect(won(187_000_000)).toBe("1억 8,700만 원");
-    expect(won(100_000_000)).toBe("1억 ");
+    expect(won(100_000_000)).toBe("1억 원");
+    expect(won(12_345_678)).toBe("1,234만 5,678원");
+    expect(won(180_050_000)).toBe("1억 8,005만 원");
     expect(won(35_000_000)).toBe("3,500만 원");
   });
   it("만 원 미만과 0", () => {
@@ -52,5 +54,19 @@ describe("addBusinessDays — 토·일 제외", () => {
     const mon = new Date("2026-10-05T09:00:00");
     const d = addBusinessDays(mon, 5);
     expect((d.getTime() - mon.getTime()) / 864e5).toBe(7);
+  });
+});
+
+import { listMissing, stepOfField } from "@/lib/rfq-schema";
+describe("listMissing — 요청서 누락 항목 전부", () => {
+  it("빈 요청서는 여러 칸을 단계 순으로 돌려준다", () => {
+    const m = listMissing({});
+    expect(m.length).toBeGreaterThan(1);
+    expect(m.map((x) => x.step)).toEqual([...m.map((x) => x.step)].sort((a, b) => a - b));
+  });
+  it("단계 매핑", () => {
+    expect(stepOfField("substance")).toBe(0);
+    expect(stepOfField("croCount")).toBe(1);
+    expect(stepOfField("confid")).toBe(2);
   });
 });
