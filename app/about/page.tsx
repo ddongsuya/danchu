@@ -4,28 +4,16 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { RfqLink } from "@/components/RfqLink";
 import { FlowFilm } from "@/components/site/FlowFilm";
+import { ScatterFilm } from "@/components/site/ScatterFilm";
+import { FormFilm } from "@/components/site/FormFilm";
+import { Reveal } from "@/components/site/Reveal";
+import "@/components/site/flow-film.css";
 import "../site.css";
 
 export const metadata: Metadata = {
   title: "서비스 소개 · 단추",
   description: "비임상 시험의 견적과 계약을 한곳에서. 의뢰자가 한 번 요청하면 여러 기관이 같은 양식으로 회신하고, 항목별로 나란히 비교해 기관을 고릅니다.",
 };
-
-const PAIN: [string, string][] = [
-  ["기관마다 따로 설명", "같은 시험을 기관 수만큼 설명하고, 같은 질문을 기관 수만큼 받습니다."],
-  ["양식이 달라 나란히 놓을 수 없음", "포함 항목과 단위가 달라 총액만 비교하게 됩니다."],
-  ["견적서 자체를 받기 어려움", "담당자를 찾고 답을 기다리는 시간이 시험보다 먼저 듭니다."],
-  ["물질 정보가 흩어짐", "메일과 첨부가 기관마다 흩어져 기밀 관리가 어렵습니다."],
-];
-
-const SAME: [string, string][] = [
-  ["항목별 금액", "요청서의 시험 항목이 그대로 행이 됩니다. VAT 별도."],
-  ["예상 소요기간", "동물 입고일부터 최종보고서(안) 발행일까지, 주 단위."],
-  ["기본 포함 항목", "임상병리, 조직병리, TK 분석, 조제물분석, 통계분석, QA 점검, 영문 보고서, 시험물질 보관."],
-  ["설계 요약", "동물종·계통, 군 구성, 회복기간, 투여경로와 빈도, 시험법."],
-  ["기관마다 다른 부분", "가이드라인이 정하지 않은 것은 기관의 설명을 그대로 나란히 보여 줍니다."],
-  ["GLP 대응 · 유효기간 · 착수 가능일 · 결제 조건", "제출처와 보유 인증을 짝지어 대응 여부를 표시합니다."],
-];
 
 const PRINCIPLES: [string, string][] = [
   ["근거를 보여 준다", "안내와 제안에는 출처 조항이 따라붙습니다. ICH, 식약처 고시, OECD 시험법."],
@@ -60,12 +48,11 @@ export default function About() {
 
         <section className="doc">
           <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>지금의 견적은 왜 어려운가</h2></div>
-            <div className="doc__body">
-              <dl className="dl">
-                {PAIN.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-              </dl>
+            <div className="doc__aside">
+              <h2>지금의 견적은 왜 어려운가</h2>
+              <p>기관마다 따로 묻고, 제각각인 답을 받습니다.</p>
             </div>
+            <div className="doc__body"><ScatterFilm /></div>
           </div>
         </section>
 
@@ -76,9 +63,7 @@ export default function About() {
               <p>기관의 회신은 모두 이 칸에 들어옵니다.</p>
             </div>
             <div className="doc__body">
-              <dl className="dl dl--wide">
-                {SAME.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-              </dl>
+              <FormFilm />
               <p>정본은 기관이 첨부한 PDF 견적서입니다. 비교표와 PDF가 다르면 PDF가 우선하고, 불일치가 있으면 단추가 확인을 요청합니다. 기관이 PDF만 보낸 경우 단추가 옮겨 정리한 칸에는 &lsquo;단추 정리 · 기관 PDF 기준&rsquo;이 표시됩니다.</p>
             </div>
           </div>
@@ -88,7 +73,7 @@ export default function About() {
           <div className="wrap doc__grid">
             <div className="doc__aside"><h2>하는 일과 하지 않는 일</h2></div>
             <div className="doc__body">
-              <div className="pair">
+              <Reveal className="pair">
                 <div>
                   <h3>하는 일</h3>
                   <ul>
@@ -109,7 +94,7 @@ export default function About() {
                     <li><b>의뢰자 비용 청구</b></li>
                   </ul>
                 </div>
-              </div>
+              </Reveal>
             </div>
           </div>
         </section>
@@ -118,9 +103,11 @@ export default function About() {
           <div className="wrap doc__grid">
             <div className="doc__aside"><h2>원칙</h2></div>
             <div className="doc__body">
-              <dl className="dl dl--num">
-                {PRINCIPLES.map(([k, v], i) => <div key={k}><dt data-n={String(i + 1).padStart(2, "0")}>{k}</dt><dd>{v}</dd></div>)}
-              </dl>
+              <Reveal>
+                <dl className="dl dl--num">
+                  {PRINCIPLES.map(([k, v], i) => <div key={k}><dt data-n={String(i + 1).padStart(2, "0")}>{k}</dt><dd>{v}</dd></div>)}
+                </dl>
+              </Reveal>
             </div>
           </div>
         </section>
