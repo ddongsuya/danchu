@@ -1,18 +1,26 @@
-import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { Orbit } from "@/components/site/Orbit";
+import "@/app/site.css";
 import "./auth.css";
-import { ArrowUpRight, Check } from "@phosphor-icons/react/dist/ssr";
 
+/**
+ * 로그인·가입·비밀번호 화면 골격. 왼쪽은 로고와 첫 화면의 궤도(계속 반복)만, 오른쪽은 양식.
+ * PC에서는 왼쪽 패널이 스크롤에도 고정되고, 휴대폰에서는 로고 아래 작은 궤도 띠가 된다.
+ */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="auth">
-      <header className="auth__head">
-        <div className="fm__head-in">
-          <Logo />
-          <Link href="/" style={{ fontSize: 14, color: "var(--muted)" }}>홈으로</Link>
-        </div>
-      </header>
-      <main className="auth__main"><aside className="auth__intro"><h2>연구의 다음 단계,<br /><strong>단추에서 시작하세요.</strong></h2><p>필요한 시험을 요청하고,<br />기관의 견적을 한곳에서 비교합니다.</p><ul><li><Check size={18} aria-hidden="true" /> 한 번의 요청, 같은 양식의 회신</li><li><Check size={18} aria-hidden="true" /> 설계와 포함 범위까지 비교</li><li><Check size={18} aria-hidden="true" /> 기밀 등급에 따른 정보 보호</li></ul><Link href="/about">단추 서비스 알아보기 <ArrowUpRight size={17} aria-hidden="true" /></Link></aside><div className="auth__form-area">{children}</div></main>
+    <div className="a">
+      <div className="wrap">
+        <main id="main">
+          <div className="auth">
+            <aside className="brand">
+              <Logo />
+              <div className="lo" aria-hidden="true"><Orbit /></div>
+            </aside>
+            <div className="formside">{children}</div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

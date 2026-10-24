@@ -1,10 +1,40 @@
 import Link from "next/link";
 
-/** A four-hole button: the same mark on the public site and every workspace. */
-export function LogoMark({ size = 32 }: { size?: number; plain?: boolean; ring?: boolean }) {
-  return <span className="brand-mark" style={{ width: size, height: size, padding: size * .25, gap: size * .125, borderRadius: size * .3 }} aria-hidden="true"><i /><i /><i /><i /></span>;
+/** "danchu" 워드마크 윤곽선 (Host Grotesk 600, 자간 -0.06em). 꼬리말과 상단 로고가 같은 경로를 쓴다. */
+const WORDMARK = "M268 812Q198 812 142.5 778.0Q87 744 55.5 684.5Q24 625 24 551Q24 476 55.5 417.5Q87 359 142.5 325.5Q198 292 269 292Q326 292 369.0 314.0Q412 336 437 375V80H557V800H437V727Q414 760 373.0 786.0Q332 812 268 812ZM292 707Q335 707 368.0 687.0Q401 667 420.0 632.0Q439 597 439 552Q439 506 420.0 471.0Q401 436 368.0 416.5Q335 397 292 397Q250 397 217.0 416.5Q184 436 165.0 471.0Q146 506 146 551Q146 597 165.0 632.0Q184 667 217.0 687.0Q250 707 292 707ZM744 812Q687 812 647.0 791.5Q607 771 586.0 737.0Q565 703 565 663Q565 585 621.5 542.0Q678 499 770 499Q812 499 844.5 505.5Q877 512 897 518V495Q897 440 866.5 414.0Q836 388 787 388Q751 388 723.0 402.5Q695 417 687 455H573Q579 401 609.0 365.0Q639 329 685.5 310.5Q732 292 787 292Q896 292 956.5 345.5Q1017 399 1017 495V616Q1017 654 1021.5 671.5Q1026 689 1036.5 693.5Q1047 698 1064 698H1069V800H1042Q991 800 956.5 785.5Q922 771 908 728Q883 764 842.0 788.0Q801 812 744 812ZM770 719Q805 719 830.0 702.5Q855 686 870.5 658.5Q886 631 891 598Q870 592 841.0 586.0Q812 580 782 580Q737 580 711.5 600.0Q686 620 686 654Q686 682 708.5 700.5Q731 719 770 719ZM1092 800V304H1212V381Q1237 340 1279.5 316.0Q1322 292 1377 292Q1469 292 1520.0 349.5Q1571 407 1571 518V800H1451V530Q1451 463 1423.5 428.5Q1396 394 1340 394Q1285 394 1248.5 433.0Q1212 472 1212 544V800ZM1837 812Q1762 812 1704.0 779.0Q1646 746 1613.0 687.5Q1580 629 1580 552Q1580 475 1613.0 416.5Q1646 358 1704.0 325.0Q1762 292 1837 292Q1930 292 1994.0 341.0Q2058 390 2076 475H1951Q1941 437 1910.0 416.0Q1879 395 1836 395Q1800 395 1769.5 413.5Q1739 432 1721.0 466.5Q1703 501 1703 552Q1703 602 1721.0 637.5Q1739 673 1769.5 691.5Q1800 710 1836 710Q1879 710 1910.0 689.0Q1941 668 1951 629H2076Q2059 711 1994.5 761.5Q1930 812 1837 812ZM2088 800V80H2208V381Q2233 340 2276.5 316.0Q2320 292 2375 292Q2465 292 2516.0 349.5Q2567 407 2567 518V800H2448V530Q2448 463 2421.5 428.5Q2395 394 2338 394Q2282 394 2245.0 433.0Q2208 472 2208 544V800ZM2773 812Q2689 812 2639.5 754.5Q2590 697 2590 586V304H2709V574Q2709 641 2735.0 675.5Q2761 710 2810 710Q2865 710 2896.5 671.0Q2928 632 2928 560V304H3048V800H2928V725Q2906 766 2867.0 789.0Q2828 812 2773 812Z";
+
+/** 단추 마크: 원 + 구멍 4개(지름 0.228D, 간격 0.136D). 구멍은 CSS mask로 뚫린다(site.css / globals.css의 span.mark 규칙). */
+export function LogoMark({ size, className = "mark" }: { size?: number; className?: string }) {
+  return (
+    <span className={className} aria-hidden="true" style={size ? ({ "--d": `${size}px` } as React.CSSProperties) : undefined}>
+      <i /><i /><i /><i />
+    </span>
+  );
 }
 
-export function Logo({ href = "/", nameSize = 23 }: { href?: string; size?: number; nameSize?: number }) {
-  return <Link href={href} className="wordmark" aria-label="단추 홈" style={{ fontSize: nameSize }}><LogoMark />단추<small>danchu</small></Link>;
+export function Wordmark({ className = "lw" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 3091 900" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d={WORDMARK} />
+    </svg>
+  );
+}
+
+/** 공식 로고 락업: 마크 + danchu. 크기는 font-size로 정한다(기본 28px). */
+export function Lockup({ size, className = "lockup" }: { size?: number; className?: string }) {
+  return (
+    <span className={className} role="img" aria-label="단추" style={size ? { fontSize: size } : undefined}>
+      <LogoMark />
+      <Wordmark />
+    </span>
+  );
+}
+
+/** 홈으로 가는 로고 링크 (공개 사이트·인증·법적 고지 화면 공통) */
+export function Logo({ href = "/", size }: { href?: string; size?: number }) {
+  return (
+    <Link href={href} className="logo" aria-label="단추 홈">
+      <Lockup size={size} />
+    </Link>
+  );
 }

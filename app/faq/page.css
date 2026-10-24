@@ -1,0 +1,38 @@
+@keyframes rise{from{opacity:0;transform:translateY(24px)}}
+@keyframes pop{from{opacity:0;transform:scale(.94)}}
+@keyframes slideL{from{opacity:0;transform:translateX(-28px)}}
+@keyframes slideR{from{opacity:0;transform:translateX(28px)}}
+@supports (animation-timeline: view()){ @media (max-height:1200px){
+ .a .sv{animation:var(--k,rise) linear both;animation-timeline:--sc;animation-range:var(--r,entry 20% entry 80%)}
+}}
+.a .faq{display:grid;grid-template-columns:minmax(0,14em) minmax(0,1fr);gap:64px;padding:64px 0 96px;border-bottom:1px solid var(--line)}
+.a .faq > input{position:absolute;opacity:0;pointer-events:none}
+.a .fc{position:sticky;top:108px;align-self:start;display:grid;gap:2px}
+.a .fc label{padding:8px 0 8px 16px;border-left:2px solid var(--line);color:var(--muted);font-size:15px;cursor:pointer;transition:color 160ms ease,border-color 160ms ease}
+.a .faq:has(#f-cost:checked) .q:not(.c-cost){display:none}
+.a .faq:has(#f-plan:checked) .q:not(.c-plan){display:none}
+.a .faq:has(#f-time:checked) .q:not(.c-time){display:none}
+.a .faq:has(#f-conf:checked) .q:not(.c-conf){display:none}
+.a .faq:has(#f-cmp:checked) .q:not(.c-cmp){display:none}
+.a .faq:has(#f-deal:checked) .q:not(.c-deal){display:none}
+.a .faq:has(#f-cro:checked) .q:not(.c-cro){display:none}
+.a #f-all:checked ~ .fc label[for=f-all],.a #f-cost:checked ~ .fc label[for=f-cost],.a #f-plan:checked ~ .fc label[for=f-plan],.a #f-time:checked ~ .fc label[for=f-time],.a #f-conf:checked ~ .fc label[for=f-conf],.a #f-cmp:checked ~ .fc label[for=f-cmp],.a #f-deal:checked ~ .fc label[for=f-deal],.a #f-cro:checked ~ .fc label[for=f-cro]{color:var(--ink);font-weight:500;border-left-color:var(--ink)}
+.a #f-all:focus-visible ~ .fc label[for=f-all],.a #f-cost:focus-visible ~ .fc label[for=f-cost],.a #f-plan:focus-visible ~ .fc label[for=f-plan],.a #f-time:focus-visible ~ .fc label[for=f-time],.a #f-conf:focus-visible ~ .fc label[for=f-conf],.a #f-cmp:focus-visible ~ .fc label[for=f-cmp],.a #f-deal:focus-visible ~ .fc label[for=f-deal],.a #f-cro:focus-visible ~ .fc label[for=f-cro]{outline:2px solid var(--acc);outline-offset:2px}
+.a .qs{border-top:1px solid var(--ink)}
+.a .q{border-bottom:1px solid var(--line)}
+.a .q summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:24px;align-items:center;padding:24px 0;font-size:19px;font-weight:500;letter-spacing:-.01em}
+.a .q summary::-webkit-details-marker{display:none}
+.a .q summary::after{content:"+";flex:none;font-size:24px;font-weight:400;color:var(--muted);transition:transform 200ms var(--eo)}
+.a .q[open] summary::after{transform:rotate(45deg)}
+.a .ans{display:grid;gap:12px;padding:0 0 28px;max-width:46em}
+.a .ans p{font-size:16px;line-height:1.75;color:var(--ink2)}
+.a .q[open] .ans{animation:ansIn 220ms var(--eo)}
+@keyframes ansIn{from{opacity:0;transform:translateY(-4px)}}
+@media (hover:hover) and (pointer:fine){ .a .fc label:hover{color:var(--ink)} .a .q summary:hover{color:var(--ink2)} }
+@media (max-width:860px){
+ .a .faq{grid-template-columns:1fr;gap:24px;padding:32px 0 64px}
+ .a .fc{position:static;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none}
+ .a .fc label{border:1px solid var(--line);border-radius:2px;padding:0 12px;height:36px;display:inline-flex;align-items:center;white-space:nowrap}
+ .a .q summary{font-size:17px;padding:20px 0}
+ .a .ans p{font-size:15px}
+}

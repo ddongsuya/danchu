@@ -125,6 +125,11 @@ export function NewRequest({
       if (!alive) return;
       setResume(draft);
       setReady(true);
+      // 시작 화면(/request)에서 고른 길: 제안 받기 또는 바로 작성 (작성 중인 초안이 있으면 이어 쓰기를 먼저 보여 준다)
+      const sp = new URLSearchParams(window.location.search);
+      const chosen = sp.get("start");
+      if (chosen === "advisor" && !draft) setPhase("advisor");
+      else if ((chosen === "manual" || sp.get("preset")) && !draft) start();
     })();
     return () => {
       alive = false;

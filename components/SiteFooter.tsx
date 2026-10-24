@@ -1,38 +1,36 @@
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
+import { LogoMark, Wordmark } from "@/components/Logo";
 
 const COLS: [string, [string, string][]][] = [
-  ["서비스", [["/about", "서비스 소개"], ["/how-it-works", "이용 안내"], ["/#fields", "시험 분야"], ["/faq", "자주 묻는 질문"]]],
-  ["참여", [["/for-cro", "기관 참여 안내"], ["/partners", "협력기관"]]],
-  ["정책", [["/terms", "이용약관"], ["/privacy", "개인정보처리방침"]]],
+  ["서비스", [["/about", "서비스 소개"], ["/how-it-works", "이용 안내"], ["/request", "견적 요청"]]],
+  ["안내", [["/guide", "시험 가이드"], ["/faq", "자주 묻는 질문"]]],
+  ["기관", [["/for-cro", "기관 참여 안내"], ["/login", "기관 로그인"], ["/partners", "협력기관"]]],
+  ["문의", [["mailto:hello@danchu.kr", "hello@danchu.kr"], ["/terms", "이용약관"], ["/privacy", "개인정보처리방침"]]],
 ];
 
-/** 공개 사이트 꼬리말. 유일한 반전 면 */
+/** 공개 사이트 꼬리말. 큰 연회색 로고(마크 + danchu)가 공식 로고이며 줄이거나 색을 바꾸지 않는다. */
 export function SiteFooter({ current }: { current?: string }) {
   return (
-    <footer className="ft">
-      <div className="wrap">
-        <div className="ft__top">
-          <div className="ft__brand">
-            <Logo />
-            <p>비임상 시험의 견적과 계약을 한곳에서. 의뢰자가 한 번 요청하면 여러 기관이 같은 양식으로 회신합니다.</p>
-          </div>
-          {COLS.map(([title, links]) => (
-            <nav key={title} className="ft__col" aria-label={title}>
-              <span>{title}</span>
-              {links.map(([href, label]) => (
+    <footer>
+      <div className="cols">
+        {COLS.map(([title, links]) => (
+          <div key={title}>
+            <b>{title}</b>
+            {links.map(([href, label]) =>
+              href.startsWith("mailto:") ? (
+                <a key={href} href={href}>{label}</a>
+              ) : (
                 <Link key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</Link>
-              ))}
-            </nav>
-          ))}
-        </div>
-        <div className="ft__legal">
-          <span>
-            비임상 시험 견적 플랫폼 · <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
-          </span>
-          <span>© 2026 Danchu</span>
-        </div>
+              ),
+            )}
+          </div>
+        ))}
       </div>
+      <div className="word" aria-hidden="true">
+        <LogoMark className="bigmark" />
+        <span className="wm"><Wordmark /></span>
+      </div>
+      <div className="legal mono"><span>© 2026 단추</span><span>비임상 시험 견적 플랫폼</span></div>
     </footer>
   );
 }

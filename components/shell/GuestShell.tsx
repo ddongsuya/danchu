@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mark } from "@/components/app/ui";
+import { Lockup } from "@/components/Logo";
 import "./portal.css";
 
 /**
@@ -14,8 +14,7 @@ export function GuestShell({ children, loginNext = "/app/new" }: { children: Rea
         <header className="pt__top">
           <div className="pt__topin">
             <Link href="/" className="pt__brand">
-              <Mark size={24} />
-              <span>단추</span>
+              <Lockup size={20} />
             </Link>
             <Link href={`/login?next=${encodeURIComponent(loginNext)}`} className="pt__guest-login">
               이미 계정이 있다면 로그인

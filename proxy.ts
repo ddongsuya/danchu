@@ -48,13 +48,13 @@ export async function proxy(req: NextRequest) {
 
 /**
  * 로그인 전 방문자.
- * - 견적 요청(/app/new): 로그인 없이 쓰는 공개 요청서(/request)로. 가입은 보내기 직전에 그 화면에서 한다
+ * - 견적 요청(/app/new): 로그인 없이 쓰는 공개 요청서(/request/new)로. 가입은 보내기 직전에 그 화면에서 한다
  * - 나머지 보호 영역: 로그인으로
  */
 function redirectGuest(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   if (pathname === "/app/new") {
-    return NextResponse.redirect(new URL(`/request${search || ""}`, req.url));
+    return NextResponse.redirect(new URL(`/request/new${search || ""}`, req.url));
   }
   const to = new URL("/login", req.url);
   to.searchParams.set("next", pathname + (search || ""));

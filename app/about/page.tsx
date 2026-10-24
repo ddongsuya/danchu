@@ -1,133 +1,134 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
-import { RfqLink } from "@/components/RfqLink";
-import "../site.css";
+import { Site } from "@/components/site/Site";
+import "./page.css";
 
 export const metadata: Metadata = {
   title: "서비스 소개 · 단추",
-  description: "비임상 시험의 견적과 계약을 한곳에서. 의뢰자가 한 번 요청하면 여러 기관이 같은 양식으로 회신하고, 항목별로 나란히 비교해 기관을 고릅니다.",
+  description: "한번의 요청으로 여러 기관에. 비임상 시험 견적을 같은 양식으로 받아 편하게 비교하세요.",
 };
 
-const PAIN: [string, string][] = [
-  ["기관마다 따로 설명", "같은 시험을 기관 수만큼 설명하고, 같은 질문을 기관 수만큼 받습니다."],
-  ["양식이 달라 나란히 놓을 수 없음", "포함 항목과 단위가 달라 총액만 비교하게 됩니다."],
-  ["견적서 자체를 받기 어려움", "담당자를 찾고 답을 기다리는 시간이 시험보다 먼저 듭니다."],
-  ["물질 정보가 흩어짐", "메일과 첨부가 기관마다 흩어져 기밀 관리가 어렵습니다."],
-];
-
-const SAME: [string, string][] = [
-  ["항목별 금액", "요청서의 시험 항목이 그대로 행이 됩니다. VAT 별도."],
-  ["예상 소요기간", "동물 입고일부터 최종보고서(안) 발행일까지, 주 단위."],
-  ["기본 포함 항목", "임상병리, 조직병리, TK 분석, 조제물분석, 통계분석, QA 점검, 영문 보고서, 시험물질 보관."],
-  ["설계 요약", "동물종·계통, 군 구성, 회복기간, 투여경로와 빈도, 시험법."],
-  ["기관마다 다른 부분", "가이드라인이 정하지 않은 것은 기관의 설명을 그대로 나란히 보여 줍니다."],
-  ["GLP 대응 · 유효기간 · 착수 가능일 · 결제 조건", "제출처와 보유 인증을 짝지어 대응 여부를 표시합니다."],
-];
-
-const PRINCIPLES: [string, string][] = [
-  ["근거를 보여 준다", "안내와 제안에는 출처 조항이 따라붙습니다. ICH, 식약처 고시, OECD 시험법."],
-  ["중립을 지킨다", "기관마다 다른 것은 나란히 보여 주고, 단추가 기준을 정하거나 특정 기관을 권하지 않습니다."],
-  ["의뢰자와 기관을 같은 무게로", "한쪽의 편의를 위해 다른 쪽의 화면을 희생하지 않습니다."],
-  ["아는 만큼만 말한다", "확인하지 못한 것은 확인 필요로 표시하고, 없는 사례와 수치를 만들지 않습니다."],
-  ["작은 화면에서도 일을 끝낼 수 있게", "요청서 작성부터 비교표까지 휴대전화에서 끝낼 수 있습니다."],
-];
-
-export default function About() {
+export default function Page() {
   return (
-    <div className="site">
-      <SiteHeader />
-      <main id="main-content">
-        <section className="ph">
-          <div className="wrap ph__grid">
-            <span className="ph__k">서비스 소개</span>
-            <h1>비임상 시험의 견적과 계약을 한곳에서 처리하는 발주 플랫폼</h1>
-            <p className="ph__lead">의뢰자가 한 번 요청하면 여러 기관이 같은 양식으로 회신하고, 의뢰자는 항목별로 나란히 비교해 기관을 고릅니다. 어떤 시험이 필요한지부터 막막하면, 상황을 답하고 공개 가이드라인에 근거한 제안을 받습니다.</p>
-          </div>
-        </section>
+    <Site current="/about" next={{ href: "/how-it-works", label: "이용 안내" }}>
+<section className="ph2" aria-labelledby="t">
+<h1 id="t">단추는?</h1>
+<p className="lead">단추는 다양한 비임상시험 비교 견적을 제공합니다.</p>
+</section>
+<div className="bandw fwrap"><section className="film big" style={{ "--T": "24s", "--F": "-20.5s" }} aria-label="요청 한 번이 여러 기관으로 가고, 같은 양식의 회신이 비교표로 모이는 과정">
+<div className="fside">
+<div className="cap"><p><span className="cl" aria-label="기관마다"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab100", "--cd": "0ms" }}>기</span><span className="fe ch" style={{ "--n": "ab100", "--cd": "16ms" }}>관</span><span className="fe ch" style={{ "--n": "ab100", "--cd": "32ms" }}>마</span><span className="fe ch" style={{ "--n": "ab100", "--cd": "48ms" }}>다</span></span></span></span><span className="cl mu" aria-label="따로 묻고,"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab101", "--cd": "0ms" }}>따</span><span className="fe ch" style={{ "--n": "ab101", "--cd": "16ms" }}>로</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab101", "--cd": "48ms" }}>묻</span><span className="fe ch" style={{ "--n": "ab101", "--cd": "64ms" }}>고</span><span className="fe ch" style={{ "--n": "ab101", "--cd": "80ms" }}>,</span></span></span></span></p><p><span className="cl" aria-label="제각각 받은 견적,"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab102", "--cd": "0ms" }}>제</span><span className="fe ch" style={{ "--n": "ab102", "--cd": "16ms" }}>각</span><span className="fe ch" style={{ "--n": "ab102", "--cd": "32ms" }}>각</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab102", "--cd": "64ms" }}>받</span><span className="fe ch" style={{ "--n": "ab102", "--cd": "80ms" }}>은</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab102", "--cd": "112ms" }}>견</span><span className="fe ch" style={{ "--n": "ab102", "--cd": "128ms" }}>적</span><span className="fe ch" style={{ "--n": "ab102", "--cd": "144ms" }}>,</span></span></span></span><span className="cl mu" aria-label="비교가 번거롭죠."><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab103", "--cd": "0ms" }}>비</span><span className="fe ch" style={{ "--n": "ab103", "--cd": "16ms" }}>교</span><span className="fe ch" style={{ "--n": "ab103", "--cd": "32ms" }}>가</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab103", "--cd": "64ms" }}>번</span><span className="fe ch" style={{ "--n": "ab103", "--cd": "80ms" }}>거</span><span className="fe ch" style={{ "--n": "ab103", "--cd": "96ms" }}>롭</span><span className="fe ch" style={{ "--n": "ab103", "--cd": "112ms" }}>죠</span><span className="fe ch" style={{ "--n": "ab103", "--cd": "128ms" }}>.</span></span></span></span></p><p><span className="cl" aria-label="번거로운 비교견적,"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab104", "--cd": "0ms" }}>번</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "16ms" }}>거</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "32ms" }}>로</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "48ms" }}>운</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab104", "--cd": "80ms" }}>비</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "96ms" }}>교</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "112ms" }}>견</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "128ms" }}>적</span><span className="fe ch" style={{ "--n": "ab104", "--cd": "144ms" }}>,</span></span></span></span><span className="cl mu" aria-label="단추에서 편하게 하세요."><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab105", "--cd": "0ms" }}>단</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "16ms" }}>추</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "32ms" }}>에</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "48ms" }}>서</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab105", "--cd": "80ms" }}>편</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "96ms" }}>하</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "112ms" }}>게</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab105", "--cd": "144ms" }}>하</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "160ms" }}>세</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "176ms" }}>요</span><span className="fe ch" style={{ "--n": "ab105", "--cd": "192ms" }}>.</span></span></span></span></p><p><span className="cl" aria-label="한번의 요청으로"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab106", "--cd": "0ms" }}>한</span><span className="fe ch" style={{ "--n": "ab106", "--cd": "16ms" }}>번</span><span className="fe ch" style={{ "--n": "ab106", "--cd": "32ms" }}>의</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab106", "--cd": "64ms" }}>요</span><span className="fe ch" style={{ "--n": "ab106", "--cd": "80ms" }}>청</span><span className="fe ch" style={{ "--n": "ab106", "--cd": "96ms" }}>으</span><span className="fe ch" style={{ "--n": "ab106", "--cd": "112ms" }}>로</span></span></span></span><span className="cl mu" aria-label="여러 기관에."><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab107", "--cd": "0ms" }}>여</span><span className="fe ch" style={{ "--n": "ab107", "--cd": "16ms" }}>러</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab107", "--cd": "48ms" }}>기</span><span className="fe ch" style={{ "--n": "ab107", "--cd": "64ms" }}>관</span><span className="fe ch" style={{ "--n": "ab107", "--cd": "80ms" }}>에</span><span className="fe ch" style={{ "--n": "ab107", "--cd": "96ms" }}>.</span></span></span></span></p><p><span className="cl" aria-label="회신은"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab108", "--cd": "0ms" }}>회</span><span className="fe ch" style={{ "--n": "ab108", "--cd": "16ms" }}>신</span><span className="fe ch" style={{ "--n": "ab108", "--cd": "32ms" }}>은</span></span></span></span><span className="cl mu" aria-label="같은 양식으로."><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab109", "--cd": "0ms" }}>같</span><span className="fe ch" style={{ "--n": "ab109", "--cd": "16ms" }}>은</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab109", "--cd": "48ms" }}>양</span><span className="fe ch" style={{ "--n": "ab109", "--cd": "64ms" }}>식</span><span className="fe ch" style={{ "--n": "ab109", "--cd": "80ms" }}>으</span><span className="fe ch" style={{ "--n": "ab109", "--cd": "96ms" }}>로</span><span className="fe ch" style={{ "--n": "ab109", "--cd": "112ms" }}>.</span></span></span></span></p><p><span className="cl" aria-label="같은 칸에서"><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab110", "--cd": "0ms" }}>같</span><span className="fe ch" style={{ "--n": "ab110", "--cd": "16ms" }}>은</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab110", "--cd": "48ms" }}>칸</span><span className="fe ch" style={{ "--n": "ab110", "--cd": "64ms" }}>에</span><span className="fe ch" style={{ "--n": "ab110", "--cd": "80ms" }}>서</span></span></span></span><span className="cl mu" aria-label="나란히 비교하세요."><span aria-hidden="true"><span className="wd"><span className="fe ch" style={{ "--n": "ab111", "--cd": "0ms" }}>나</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "16ms" }}>란</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "32ms" }}>히</span></span> <span className="wd"><span className="fe ch" style={{ "--n": "ab111", "--cd": "64ms" }}>비</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "80ms" }}>교</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "96ms" }}>하</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "112ms" }}>세</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "128ms" }}>요</span><span className="fe ch" style={{ "--n": "ab111", "--cd": "144ms" }}>.</span></span></span></span></p></div>
 
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>지금의 견적은 왜 어려운가</h2></div>
-            <div className="doc__body">
-              <dl className="dl">
-                {PAIN.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-              </dl>
-            </div>
-          </div>
-        </section>
-
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside">
-              <h2>같은 양식에 담기는 것</h2>
-              <p>기관의 회신은 모두 이 칸에 들어옵니다.</p>
-            </div>
-            <div className="doc__body">
-              <dl className="dl dl--wide">
-                {SAME.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
-              </dl>
-              <p>정본은 기관이 첨부한 PDF 견적서입니다. 비교표와 PDF가 다르면 PDF가 우선하고, 불일치가 있으면 단추가 확인을 요청합니다. 기관이 PDF만 보낸 경우 단추가 옮겨 정리한 칸에는 &lsquo;단추 정리 · 기관 PDF 기준&rsquo;이 표시됩니다.</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>하는 일과 하지 않는 일</h2></div>
-            <div className="doc__body">
-              <div className="pair">
-                <div>
-                  <h3>하는 일</h3>
-                  <ul>
-                    <li><b>필요한 시험 제안</b> · 상황을 묻고 가이드라인 근거와 함께 제안합니다</li>
-                    <li><b>같은 양식의 요청서 배포</b> · 수행 분야가 맞는 승인 기관에 참여 안내를 보냅니다</li>
-                    <li><b>회신 취합과 비교표</b> · 도착한 견적을 같은 양식으로 정리하고, 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 비교표를 엽니다</li>
-                    <li><b>기밀 관리</b> · 회사명과 연락처는 선정한 기관에만 공개하고, CDA 등급이면 첨부도 체결 확인 뒤 공개합니다</li>
-                    <li><b>기록</b> · 접수부터 선정, 계약 확인까지 시각과 함께 남깁니다</li>
-                  </ul>
-                </div>
-                <div>
-                  <h3>하지 않는 일</h3>
-                  <ul>
-                    <li><b>특정 기관 추천, 최저가 권유</b> · 정렬 기준은 의뢰자가 고릅니다</li>
-                    <li><b>기관 간 견적 공개</b> · 비교표는 의뢰자에게만 갑니다</li>
-                    <li><b>설계 기준 결정</b> · 가이드라인이 정하지 않은 것은 기관의 방식을 그대로 보여 줍니다</li>
-                    <li><b>계약 조건 개입</b> · 계약은 의뢰자와 기관이 직접 합니다</li>
-                    <li><b>의뢰자 비용 청구</b></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>원칙</h2></div>
-            <div className="doc__body">
-              <dl className="dl dl--num">
-                {PRINCIPLES.map(([k, v], i) => <div key={k}><dt data-n={String(i + 1).padStart(2, "0")}>{k}</dt><dd>{v}</dd></div>)}
-              </dl>
-            </div>
-          </div>
-        </section>
-
-        <section className="doc doc--tight">
-          <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>지금 할 수 있는 것</h2></div>
-            <div className="doc__body">
-              <p>제안 받기는 합성의약품, 바이오의약품, 세포·유전자치료제, 건강기능식품, 화장품, 의료기기, 화학물질·농약을 지원합니다. 제안 규칙은 초안이며 실무 검토 전입니다. 효력시험 구조, 질의응답과 재견적, 회사 단위 계정, 계약 이후의 시험 진행 관리는 아직 없습니다.</p>
-              <div className="hero__cta">
-                <RfqLink className="b b--fill">견적 요청하기</RfqLink>
-                <Link href="/for-cro" className="b b--line">기관 참여 안내</Link>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-      <SiteFooter current="/about" />
-    </div>
+<div className="fctl"><span className="fbar" aria-hidden="true"><i className="fe" style={{ "--n": "ab113" }}></i><b style={{ left: "17.5%" }}></b><b style={{ left: "35.0%" }}></b><b style={{ left: "45.0%" }}></b><b style={{ left: "65.0%" }}></b></span></div>
+</div>
+<div className="fst" role="img" aria-label="요청 한 번이 여러 기관으로 가고, 같은 양식의 회신이 비교표로 모이는 과정">
+<div className="shk fe" style={{ "--n": "ab114" }}>
+<div className="cam fe" style={{ "--n": "ab0" }}>
+<div className="grid fe" style={{ "--n": "ab112" }}></div>
+<div className="fe who" style={{ "--n": "ab1", left: "38.5cqw", top: "7.2cqw", width: "23.0cqw", height: "7.6cqw" }}>의뢰자</div>
+<div className="fe nd" style={{ "--n": "ab2", left: "5.0cqw", top: "77.2cqw", width: "26.0cqw", height: "9.6cqw" }}><span className="mo">A</span>기관 A</div>
+<div className="fe nd on" style={{ "--n": "ab3", left: "5.0cqw", top: "77.2cqw", width: "26.0cqw", height: "9.6cqw" }}><span className="mo">A</span>기관 A</div>
+<div className="fe st" style={{ "--n": "ab4", left: "5.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>회신 대기</div>
+<div className="fe st" style={{ "--n": "ab5", left: "5.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>형식 제각각</div>
+<div className="fe st ac" style={{ "--n": "ab6", left: "5.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>요청 받음</div>
+<div className="fe st ac" style={{ "--n": "ab7", left: "5.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>회신 완료</div>
+<div className="fe nd" style={{ "--n": "ab8", left: "37.0cqw", top: "77.2cqw", width: "26.0cqw", height: "9.6cqw" }}><span className="mo">B</span>기관 B</div>
+<div className="fe nd on" style={{ "--n": "ab9", left: "37.0cqw", top: "77.2cqw", width: "26.0cqw", height: "9.6cqw" }}><span className="mo">B</span>기관 B</div>
+<div className="fe st" style={{ "--n": "ab10", left: "37.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>회신 대기</div>
+<div className="fe st" style={{ "--n": "ab11", left: "37.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>형식 제각각</div>
+<div className="fe st ac" style={{ "--n": "ab12", left: "37.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>요청 받음</div>
+<div className="fe st ac" style={{ "--n": "ab13", left: "37.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>회신 완료</div>
+<div className="fe nd" style={{ "--n": "ab14", left: "69.0cqw", top: "77.2cqw", width: "26.0cqw", height: "9.6cqw" }}><span className="mo">C</span>기관 C</div>
+<div className="fe nd on" style={{ "--n": "ab15", left: "69.0cqw", top: "77.2cqw", width: "26.0cqw", height: "9.6cqw" }}><span className="mo">C</span>기관 C</div>
+<div className="fe st" style={{ "--n": "ab16", left: "69.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>회신 대기</div>
+<div className="fe st" style={{ "--n": "ab17", left: "69.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>형식 제각각</div>
+<div className="fe st ac" style={{ "--n": "ab18", left: "69.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>요청 받음</div>
+<div className="fe st ac" style={{ "--n": "ab19", left: "69.0cqw", top: "88.0cqw", width: "26.0cqw", height: "4.0cqw", justifyContent: "center" }}>회신 완료</div>
+<div className="fe ln d" style={{ "--n": "ab20", left: "50.0cqw", top: "14.8cqw", width: "70.12674240259561cqw" }}></div>
+<div className="fe tg" style={{ "--n": "ab21", left: "25.1cqw", top: "44.7cqw", width: "11.0cqw", height: "4.6cqw" }}>메일</div>
+<div className="fe sht gh" style={{ "--n": "ab22", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht gh" style={{ "--n": "ab23", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht" style={{ "--n": "ab24", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe ln d" style={{ "--n": "ab25", left: "50.0cqw", top: "14.8cqw", width: "62.4cqw" }}></div>
+<div className="fe tg" style={{ "--n": "ab26", left: "44.5cqw", top: "40.7cqw", width: "11.0cqw", height: "4.6cqw" }}>전화</div>
+<div className="fe sht gh" style={{ "--n": "ab27", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht gh" style={{ "--n": "ab28", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht" style={{ "--n": "ab29", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe ln d" style={{ "--n": "ab30", left: "50.0cqw", top: "14.8cqw", width: "70.12674240259561cqw" }}></div>
+<div className="fe tg" style={{ "--n": "ab31", left: "63.9cqw", top: "44.7cqw", width: "11.0cqw", height: "4.6cqw" }}>메신저</div>
+<div className="fe sht gh" style={{ "--n": "ab32", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht gh" style={{ "--n": "ab33", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht" style={{ "--n": "ab34", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe cd" style={{ "--n": "ab35", left: "8.5cqw", top: "33.0cqw", width: "30.0cqw", height: "20.0cqw" }}><em>PDF</em><span>합계 3억 1,200만</span><s>항목별 없음</s></div>
+<div className="fe cd" style={{ "--n": "ab36", left: "35.0cqw", top: "37.0cqw", width: "30.0cqw", height: "20.0cqw" }}><em>엑셀</em><span>반복투여 9,200만</span><span className="w">TK 없음</span></div>
+<div className="fe cd" style={{ "--n": "ab37", left: "61.5cqw", top: "32.0cqw", width: "30.0cqw", height: "20.0cqw" }}><em>메일 본문</em><span>반복투여 1억 600만</span><s>TK는 별도 문의</s></div>
+<div className="fe mk" style={{ "--n": "ab38", left: "38.5cqw", top: "35.5cqw", width: "23.0cqw", height: "23.0cqw" }}><span className="mark" aria-hidden="true" style={{ "--d": "23.0cqw" }}><i></i><i></i><i></i><i></i></span></div>
+<div className="fe hole" style={{ "--n": "ab39", left: "43.19199999999999cqw", top: "40.19199999999999cqw", width: "5.244000000000001cqw", height: "5.244000000000001cqw" }}></div>
+<div className="fe hole" style={{ "--n": "ab40", left: "51.564cqw", top: "40.19199999999999cqw", width: "5.244000000000001cqw", height: "5.244000000000001cqw" }}></div>
+<div className="fe hole" style={{ "--n": "ab41", left: "51.564cqw", top: "48.564cqw", width: "5.244000000000001cqw", height: "5.244000000000001cqw" }}></div>
+<div className="fe hole" style={{ "--n": "ab42", left: "43.19199999999999cqw", top: "48.564cqw", width: "5.244000000000001cqw", height: "5.244000000000001cqw" }}></div>
+<div className="fe rp " style={{ "--n": "ab43", left: "40.0cqw", top: "37.0cqw", width: "20.0cqw", height: "20.0cqw" }}></div>
+<div className="fe rp " style={{ "--n": "ab44", left: "34.0cqw", top: "31.0cqw", width: "32.0cqw", height: "32.0cqw" }}></div>
+<div className="fe rp " style={{ "--n": "ab45", left: "24.0cqw", top: "21.0cqw", width: "52.0cqw", height: "52.0cqw" }}></div>
+<div className="fe ln " style={{ "--n": "ab46", left: "50.0cqw", top: "14.8cqw", width: "20.4cqw" }}></div>
+<div className="fe sht gh" style={{ "--n": "ab47", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht gh" style={{ "--n": "ab48", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht" style={{ "--n": "ab49", left: "46.4cqw", top: "15.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe ln " style={{ "--n": "ab50", left: "50.0cqw", top: "58.8cqw", width: "36.912870384189844cqw" }}></div>
+<div className="fe sht ac gh" style={{ "--n": "ab51", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab52", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac" style={{ "--n": "ab53", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab54", left: "14.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab55", left: "14.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac" style={{ "--n": "ab56", left: "14.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe pu " style={{ "--n": "ab57", left: "17.1cqw", top: "76.3cqw", width: "1.8cqw", height: "1.8cqw" }}></div>
+<div className="fe ln " style={{ "--n": "ab58", left: "50.0cqw", top: "58.8cqw", width: "18.4cqw" }}></div>
+<div className="fe sht ac gh" style={{ "--n": "ab59", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab60", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac" style={{ "--n": "ab61", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab62", left: "46.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab63", left: "46.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac" style={{ "--n": "ab64", left: "46.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe pu " style={{ "--n": "ab65", left: "49.1cqw", top: "76.3cqw", width: "1.8cqw", height: "1.8cqw" }}></div>
+<div className="fe ln " style={{ "--n": "ab66", left: "50.0cqw", top: "58.8cqw", width: "36.912870384189844cqw" }}></div>
+<div className="fe sht ac gh" style={{ "--n": "ab67", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab68", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac" style={{ "--n": "ab69", left: "46.4cqw", top: "56.3cqw", width: "7.2cqw", height: "9.4cqw" }}><b>요청서</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab70", left: "78.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac gh" style={{ "--n": "ab71", left: "78.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe sht ac" style={{ "--n": "ab72", left: "78.4cqw", top: "68.8cqw", width: "7.2cqw", height: "9.4cqw" }}><b>회신</b><i></i><i></i><i className="s"></i></div>
+<div className="fe pu " style={{ "--n": "ab73", left: "81.1cqw", top: "76.3cqw", width: "1.8cqw", height: "1.8cqw" }}></div>
+<div className="fe rp " style={{ "--n": "ab74", left: "37.0cqw", top: "34.0cqw", width: "26.0cqw", height: "26.0cqw" }}></div>
+<div className="fe bx" style={{ "--n": "ab75", left: "7.0cqw", top: "50.0cqw", width: "86.0cqw", height: "10.0cqw" }}></div>
+<div className="fe tx h" style={{ "--n": "ab76", left: "28.5cqw", top: "23.0cqw", width: "21.5cqw", height: "7.0cqw" }}>기관 A</div>
+<div className="fe tx h" style={{ "--n": "ab77", left: "50.0cqw", top: "23.0cqw", width: "21.5cqw", height: "7.0cqw" }}>기관 B</div>
+<div className="fe tx h" style={{ "--n": "ab78", left: "71.5cqw", top: "23.0cqw", width: "21.5cqw", height: "7.0cqw" }}>기관 C</div>
+<div className="fe ln " style={{ "--n": "ab79", left: "7.0cqw", top: "30.0cqw", width: "86.0cqw" }}></div>
+<div className="fe tx k" style={{ "--n": "ab80", left: "7.0cqw", top: "30.0cqw", width: "21.5cqw", height: "10.0cqw" }}>반복투여 4주</div>
+<div className="fe tx" style={{ "--n": "ab81", left: "28.5cqw", top: "30.0cqw", width: "21.5cqw", height: "10.0cqw" }}>9,800만</div>
+<div className="fe tx" style={{ "--n": "ab82", left: "50.0cqw", top: "30.0cqw", width: "21.5cqw", height: "10.0cqw" }}>9,200만</div>
+<div className="fe tx" style={{ "--n": "ab83", left: "71.5cqw", top: "30.0cqw", width: "21.5cqw", height: "10.0cqw" }}>1억 600만</div>
+<div className="fe ln f" style={{ "--n": "ab84", left: "7.0cqw", top: "40.0cqw", width: "86.0cqw" }}></div>
+<div className="fe tx k" style={{ "--n": "ab85", left: "7.0cqw", top: "40.0cqw", width: "21.5cqw", height: "10.0cqw" }}>Ames</div>
+<div className="fe tx" style={{ "--n": "ab86", left: "28.5cqw", top: "40.0cqw", width: "21.5cqw", height: "10.0cqw" }}>1,100만</div>
+<div className="fe tx" style={{ "--n": "ab87", left: "50.0cqw", top: "40.0cqw", width: "21.5cqw", height: "10.0cqw" }}>1,050만</div>
+<div className="fe tx" style={{ "--n": "ab88", left: "71.5cqw", top: "40.0cqw", width: "21.5cqw", height: "10.0cqw" }}>1,250만</div>
+<div className="fe ln f" style={{ "--n": "ab89", left: "7.0cqw", top: "50.0cqw", width: "86.0cqw" }}></div>
+<div className="fe tx k" style={{ "--n": "ab90", left: "7.0cqw", top: "50.0cqw", width: "21.5cqw", height: "10.0cqw" }}>TK 분석</div>
+<div className="fe tx" style={{ "--n": "ab91", left: "28.5cqw", top: "50.0cqw", width: "21.5cqw", height: "10.0cqw" }}>포함</div>
+<div className="fe tx" style={{ "--n": "ab92", left: "50.0cqw", top: "50.0cqw", width: "21.5cqw", height: "10.0cqw" }}><span className="w">없음</span></div>
+<div className="fe tx" style={{ "--n": "ab93", left: "71.5cqw", top: "50.0cqw", width: "21.5cqw", height: "10.0cqw" }}>포함</div>
+<div className="fe ln f" style={{ "--n": "ab94", left: "7.0cqw", top: "60.0cqw", width: "86.0cqw" }}></div>
+<div className="fe tx k" style={{ "--n": "ab95", left: "7.0cqw", top: "60.0cqw", width: "21.5cqw", height: "10.0cqw" }}>합계</div>
+<div className="fe tx b" style={{ "--n": "ab96", left: "28.5cqw", top: "60.0cqw", width: "21.5cqw", height: "10.0cqw" }}>3억 1,200만</div>
+<div className="fe tx b" style={{ "--n": "ab97", left: "50.0cqw", top: "60.0cqw", width: "21.5cqw", height: "10.0cqw" }}>2억 9,800만</div>
+<div className="fe tx b" style={{ "--n": "ab98", left: "71.5cqw", top: "60.0cqw", width: "21.5cqw", height: "10.0cqw" }}>3억 4,500만</div>
+<div className="fe ln f" style={{ "--n": "ab99", left: "7.0cqw", top: "70.0cqw", width: "86.0cqw" }}></div>
+</div>
+</div>
+</div>
+</section></div>
+<section className="say scene" aria-label="단추로 바뀌는 것"><p className="sv" style={{ "--k": "litc", "--r": "entry 40% cover 38%" }}>한번의 요청으로 여러 기관에.</p><p className="sv" style={{ "--k": "litc", "--r": "entry 52% cover 46%" }}>편하게 비교하세요.</p></section>
+<section className="lavc" aria-labelledby="go"><div><h2 id="go" className="huge">지금 견적을<br /><span>요청해보세요.</span></h2></div><div className="act"><div><p className="actk">어떤 시험이 필요하세요?</p><div className="pick"><a href="/request/new?start=manual">일반독성</a><a href="/request/new?start=manual">유전독성</a><a href="/request/new?start=manual">안전성약리</a><a href="/request/new?start=manual">생식발생독성</a><a href="/request/new?start=manual">발암성</a><a href="/request/new?start=manual">국소내성</a></div></div><div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a><a className="btn ghost" href="/request/new?start=advisor">제안부터 받기</a></div></div></section>
+    </Site>
   );
 }
