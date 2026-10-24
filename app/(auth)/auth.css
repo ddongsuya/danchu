@@ -1,11 +1,11 @@
 /* ── 인증 화면 (로그인·가입·재설정) ── 공개 사이트 토큰(.a) 위에서. 왼쪽 궤도 패널 + 오른쪽 양식 */
 .a > .wrap{max-width:none;padding:0}
-.a .auth{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:min(100dvh,1000px)}
+.a .auth{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100dvh}
 .a .brand{background:var(--band);padding:28px 56px 48px;display:flex;flex-direction:column}
 .a .brand .logo{margin-bottom:auto}
 .a .brand .lo{flex:1;position:relative;min-height:520px;overflow:hidden;margin:0 -56px -48px}
 .a .brand .lo .orb{transform:scale(1.08)}
-@media (min-width:861px){.a .brand{position:sticky;top:0;align-self:start;height:100dvh;max-height:1000px}}
+@media (min-width:861px){.a .brand{position:sticky;top:0;align-self:start;height:100dvh}}
 .a .formside{display:flex;align-items:center;justify-content:center;padding:48px 56px;min-width:0}
 
 /* 양식 카드: 바탕 없이 종이 위에 바로 */
@@ -34,7 +34,7 @@
 .a details[open] > summary::before{content:"- "}
 
 @media (max-width:860px){
- .a .auth{grid-template-columns:1fr;min-height:0}
+ .a .auth{grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:100dvh}
  .a .brand{padding:16px 20px 0}
  .a .brand .lo{min-height:270px;margin:8px -20px 0}
  .a .brand .lo .orb{transform:scale(.44)}

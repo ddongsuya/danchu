@@ -218,10 +218,6 @@
 .a .fst .hole{border-radius:50%;background:var(--accfill)}
 .a .fst .tick{border-radius:50%;background:var(--line)}
 .a .fst .tick.on{background:var(--acc)}
-@media (prefers-reduced-motion: reduce){
- .a .film .fe{animation:var(--n) var(--T) linear var(--F) 1 paused both !important}
- .a .film .fe.ch{animation-delay:var(--F) !important}
-}
 @media (max-width:860px){
  .a .film{grid-template-columns:1fr;gap:20px;padding:32px 0 64px}
  .a .fside{gap:14px}
@@ -240,7 +236,7 @@
 .a .hfilm{margin:0}
 .a .hfilm .nd{justify-content:center}
 .a .fst .tg.cli{font-size:3cqw;color:var(--ink);font-weight:500;box-shadow:0 .6cqw 2cqw -1cqw rgba(27,27,25,.16)}
-@media (prefers-reduced-motion: reduce){.a .hfilm .fe{animation:var(--n) var(--T) linear var(--F) 1 paused both !important}}
+
 /* rhythm: paper, band, paper, paper, lavender */
 .a .bandw{background:var(--band);box-shadow:0 0 0 100vmax var(--band);clip-path:inset(0 -100vmax)}
 .a .huge{font-size:clamp(40px,6vw,88px);line-height:1.04;letter-spacing:-.045em;font-weight:500}
@@ -261,7 +257,7 @@
 .a .film2:has(label:active) .fe{display:none}
 .a .tbi:focus-visible + label{outline:2px solid var(--acc);outline-offset:4px}
 @media (hover:hover) and (pointer:fine){.a .tabs2 label:hover .tb{color:var(--acc)}}
-@media (prefers-reduced-motion: reduce){.a .film2 .fe{animation:var(--n) var(--T) linear var(--F) 1 paused both !important}}
+
 .a .film2:has(#cs-k0:checked) {--jd:-0s}
 .a .film2:has(#cs-k1:checked) {--jd:-3.3s}
 .a .film2:has(#cs-k2:checked) {--jd:-6.6s}
@@ -296,7 +292,7 @@
 .a .film.rev{grid-template-columns:minmax(0,660px) minmax(0,1fr)}
 .a .film.rev .fside{order:2}
 .a .rst{max-width:660px;margin-left:auto}
-@media (prefers-reduced-motion: reduce){.a .rst .fe{animation:var(--n) var(--T) linear var(--F) 1 paused both !important}}
+
 @media (max-width:860px){.a .film.rev{grid-template-columns:1fr}.a .film.rev .fside{order:0}}
 /* typographic pause */
 .a .rsec .huge{margin-bottom:56px}

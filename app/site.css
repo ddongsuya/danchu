@@ -118,7 +118,7 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 /* login orbit panel */
 .a .brand .lo{flex:1;position:relative;min-height:520px;overflow:hidden;margin:0 -56px -48px}
 .a .brand .lo .orb{transform:scale(1.08)}
-@media (min-width:861px){.a .brand{position:sticky;top:0;align-self:start;height:100dvh;max-height:1000px}}
+@media (min-width:861px){.a .brand{position:sticky;top:0;align-self:start;height:100dvh}}
 @media (max-width:860px){.a .brand{padding-bottom:0}.a .brand .lo{min-height:270px;margin:8px -20px 0}.a .brand .lo .orb{transform:scale(.44)}}
 
 
@@ -131,7 +131,8 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
  .a .btn:hover .ar{transform:translateX(3px)}
  .a nav.top .links a:hover,.a .cols a:hover{text-decoration:underline;text-underline-offset:5px}
 }
-@media (prefers-reduced-motion: reduce){ .a *,.a *::before,.a *::after{animation:none !important;transition-property:opacity,background-color,color,border-color !important} }
+@media (prefers-reduced-motion: reduce){ .a *:not(.fe):not(.fe *),.a *::before,.a *::after{animation:none !important;transition-property:opacity,background-color,color,border-color !important} }
+/* 설명 영상(.fe)은 내용이라 동작 줄이기에서도 재생한다. 장식 모션(궤도·등장)만 멈춘다 */
 @media (max-width:860px){
  .a .wrap{padding:0 20px}
  .a nav.top{height:60px;gap:16px}
@@ -176,7 +177,7 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 @media (max-width:860px){.a .burger{display:flex;margin-left:auto}}
 
 /* ---- one section per screen + snap (public pages only; the landing has pinned scenes and stays free) ---- */
-.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:68px;min-height:min(calc(100dvh - var(--navh)),1012px);display:grid;align-content:center}
+.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:68px;min-height:calc(100dvh - var(--navh));display:grid;align-content:center}
 @media (max-width:860px){.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:60px}}
 @media (min-width:861px){.a.onescreen main > section .fst,.a.onescreen main > div.bandw .fst{max-width:min(100%,calc(100dvh - 280px));margin-inline:auto}}
 html:has(.a.onescreen){scroll-snap-type:y mandatory}

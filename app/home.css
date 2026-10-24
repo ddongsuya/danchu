@@ -1,6 +1,6 @@
 .a{--paper:#F4F4F0;--band:#E9E9E4;--ink:#1B1B19;--muted:#61615C;--line:#D9D9D3;--acc:#1B1B19;--accfill:#EDEF5C;--accsoft:#F5F6B4;
   --eo:cubic-bezier(.23,1,.32,1);--eio:cubic-bezier(.77,0,.175,1);
-  font-family:"Host Grotesk","Noto Sans KR",sans-serif;color:var(--ink);background:var(--paper);word-break:keep-all;-webkit-font-smoothing:antialiased}
+  font-family:var(--font-sans);color:var(--ink);background:var(--paper);word-break:keep-all;-webkit-font-smoothing:antialiased}
 .a .mono{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
 .a nav{height:68px;display:flex;align-items:center;gap:36px;border-bottom:1px solid var(--line)}
 .a nav .links{display:flex;gap:28px;font-size:14px}

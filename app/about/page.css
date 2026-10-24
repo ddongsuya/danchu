@@ -125,10 +125,6 @@
 .a .fst .hole{border-radius:50%;background:var(--accfill)}
 .a .fst .tick{border-radius:50%;background:var(--line)}
 .a .fst .tick.on{background:var(--acc)}
-@media (prefers-reduced-motion: reduce){
- .a .film .fe{animation:var(--n) var(--T) linear var(--F) 1 paused both !important}
- .a .film .fe.ch{animation-delay:var(--F) !important}
-}
 @media (max-width:860px){
  .a .film{grid-template-columns:1fr;gap:20px;padding:32px 0 64px}
  .a .fside{gap:14px}
@@ -169,7 +165,7 @@
 .a .tbi:focus-visible + label{outline:2px solid var(--acc);outline-offset:4px}
 @media (hover:hover) and (pointer:fine){.a .tabs2 label:hover .tb{color:var(--acc)}}
 .a .film2 .cap{margin-bottom:28px}
-@media (prefers-reduced-motion: reduce){.a .film2 .fe{animation:var(--n) var(--T) linear var(--F) 1 paused both !important}}
+
 /* scroll-lit statement */
 .a .say{padding:120px 0;display:grid;gap:.12em}
 .a .say p{font-size:clamp(34px,5.2vw,76px);line-height:1.08;letter-spacing:-.045em;font-weight:500;color:var(--ink)}
