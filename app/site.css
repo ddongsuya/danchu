@@ -184,3 +184,5 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--navh)}
 .a.onescreen footer{scroll-snap-align:end}
 @media (prefers-reduced-motion: reduce){html:has(.a.onescreen){scroll-snap-type:y proximity}}
+/* 설명 영상은 화면에 들어올 때까지 0초에 멈춰 둔다 (FilmPlay가 hold를 붙였다 뗀다) */
+.a .hold .fe{animation-play-state:paused}
