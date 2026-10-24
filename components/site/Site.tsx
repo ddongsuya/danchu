@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { Diag } from "@/components/site/Diag";
 import "@/app/site.css";
 
 /**
@@ -21,6 +22,7 @@ export function Site({ children, current, next, onescreen = true }: { children: 
         )}
         <SiteFooter current={current} />
       </div>
+      <Diag />
     </div>
   );
 }

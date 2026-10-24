@@ -6,7 +6,7 @@ import gsap from "gsap";
 /**
  * 랜딩 아래 세 장면(금액 비교 · 한번 요청 · 근거)의 GSAP 타임라인.
  * CSS 기본값이 완성 상태이므로, 동작 줄이기에서는 아무것도 하지 않는다.
- * 장면이 화면 65% 지점을 지나면 재생하고, 완전히 벗어나면 초기화해 다시 재생한다.
+ * 장면 그림이 화면 아래 12% 선을 넘어 들어오면 바로 재생하고, 완전히 벗어나면 초기화해 다시 재생한다.
  */
 export function HomeMotion() {
   useEffect(() => {
@@ -173,7 +173,7 @@ export function HomeMotion() {
       fresh();
       const vis = s.querySelector(".gm-sheet, .gm-dia, .gm-adv");
       if (!vis) return;
-      const start = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting && !played) { played = true; fresh(); tl!.play(0); } }), { rootMargin: "0px 0px -35% 0px" });
+      const start = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting && !played) { played = true; fresh(); tl!.play(0); } }), { rootMargin: "0px 0px -12% 0px" });
       start.observe(vis);
       const reset = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && played) { played = false; fresh(); } }));
       reset.observe(s);
