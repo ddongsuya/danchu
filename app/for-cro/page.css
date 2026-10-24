@@ -290,7 +290,7 @@
 }}
 .a .film.rev{grid-template-columns:minmax(0,660px) minmax(0,1fr)}
 .a .film.rev .fside{order:2}
-.a .rst{max-width:660px;margin-left:auto}
+.a .rst{width:min(100%,660px);margin-left:auto}
 
 @media (max-width:860px){.a .film.rev{grid-template-columns:1fr}.a .film.rev .fside{order:0}}
 /* typographic pause */

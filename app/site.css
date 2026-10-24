@@ -179,7 +179,7 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 /* ---- one section per screen + snap (public pages only; the landing has pinned scenes and stays free) ---- */
 .a.onescreen main > section,.a.onescreen main > div.bandw{--navh:68px;min-height:calc(100dvh - var(--navh));display:grid;align-content:center}
 @media (max-width:860px){.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:60px}}
-@media (min-width:861px){.a.onescreen main > section .fst,.a.onescreen main > div.bandw .fst{max-width:min(100%,calc(100dvh - 280px));margin-inline:auto}}
+@media (min-width:861px){.a.onescreen main > section .fst,.a.onescreen main > div.bandw .fst{width:min(100%,calc(100dvh - 280px));max-width:none;margin-inline:auto}}
 html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--navh)}
 .a.onescreen footer{scroll-snap-align:end}
