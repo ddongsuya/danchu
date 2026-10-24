@@ -16,7 +16,7 @@
 .a .h1l + .h1l{animation-delay:70ms}
 .a .sub{font-size:18px;line-height:1.7;color:var(--muted);max-width:30em;margin:28px 0 36px;animation:lineIn 640ms var(--eo) 140ms both}
 .a .hero .ctas{animation:lineIn 640ms var(--eo) 200ms both}
-@keyframes lineIn{from{opacity:0;transform:translateY(14px)}}
+@keyframes lineIn{from{transform:translateY(14px)}}
 .a .iso svg{width:100%;height:auto;display:block;overflow:visible}
 .a .iso .layer{transform-box:fill-box;animation:layIn 760ms var(--eo) both}
 .a .iso .l3{animation-delay:120ms}
@@ -176,7 +176,7 @@
  .a .bigmark{animation:turn linear both;animation-timeline:--ft;animation-range:entry 0% cover 60%}
  .a .word .wm{animation:rise linear both;animation-timeline:--ft;animation-range:entry 10% cover 50%}
 }
-@keyframes rise{from{opacity:0;transform:translateY(24px)}}
+@keyframes rise{from{transform:translateY(24px)}}
 @keyframes rowIn{from{opacity:0;transform:translateX(-10px)}}
 @keyframes sweep{from{transform:scaleX(0)}}
 @keyframes chip{from{opacity:0;transform:scale(.95)}}

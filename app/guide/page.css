@@ -1,4 +1,4 @@
-@keyframes rise{from{opacity:0;transform:translateY(24px);filter:blur(6px)}}
+@keyframes rise{from{transform:translateY(24px)}}
 @keyframes pop{from{opacity:0;transform:scale(.94);filter:blur(4px)}}
 @keyframes slideL{from{opacity:0;transform:translateX(-28px);filter:blur(6px)}}
 @keyframes slideR{from{opacity:0;transform:translateX(28px);filter:blur(6px)}}
@@ -144,7 +144,7 @@
 .a .lat > div{display:flex;flex-wrap:wrap;gap:8px}
 .a .lat > div span{height:34px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid var(--line);color:var(--muted);font-size:14px;border-radius:2px}
 .a .side{align-content:end}
-@keyframes drop{from{opacity:0;transform:translateY(-22px);filter:blur(6px)}}
+@keyframes drop{from{transform:translateY(-22px)}}
 /* design dots */
 .a .dz{border-top:1px solid var(--ink);padding-top:24px}
 .a .dz input{position:absolute;opacity:0;pointer-events:none}

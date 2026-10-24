@@ -44,7 +44,7 @@
 .a .ph > div > *{animation:lineIn 560ms var(--eo) both}
 .a .ph > div > *:nth-child(2){animation-delay:60ms}.a .ph > div > *:nth-child(3){animation-delay:120ms}
 .a .ph > div:nth-child(2) > *{animation-delay:140ms}
-@keyframes lineIn{from{opacity:0;transform:translateY(12px)}}
+@keyframes lineIn{from{transform:translateY(12px)}}
 /* doc sections */
 .a .sec{padding:96px 0;border-bottom:1px solid var(--line)}
 .a .sec.tight{padding:72px 0}
@@ -149,7 +149,7 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 }
 /* scenes: scroll-linked, final state is the default */
 .a .scene{view-timeline:--sc block}
-@keyframes fade{from{opacity:0}}
+@keyframes fade{from{opacity:.35}}
 @keyframes drawX{from{transform:scaleX(0)}}
 @keyframes drawY{from{transform:scaleY(0)}}
 @keyframes reveal{from{clip-path:inset(0 100% 0 0)}}

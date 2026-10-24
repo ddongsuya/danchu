@@ -1,4 +1,4 @@
-@keyframes rise{from{opacity:0;transform:translateY(24px)}}
+@keyframes rise{from{transform:translateY(24px)}}
 @keyframes pop{from{opacity:0;transform:scale(.94)}}
 @keyframes slideL{from{opacity:0;transform:translateX(-28px)}}
 @keyframes slideR{from{opacity:0;transform:translateX(28px)}}

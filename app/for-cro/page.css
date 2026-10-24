@@ -1,4 +1,4 @@
-@keyframes rise{from{opacity:0;transform:translateY(24px);filter:blur(6px)}}
+@keyframes rise{from{transform:translateY(24px)}}
 @keyframes pop{from{opacity:0;transform:scale(.94);filter:blur(4px)}}
 @keyframes slideL{from{opacity:0;transform:translateX(-28px);filter:blur(6px)}}
 @keyframes slideR{from{opacity:0;transform:translateX(28px);filter:blur(6px)}}
