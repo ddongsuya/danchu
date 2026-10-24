@@ -145,7 +145,7 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
  .a .rows > div{grid-template-columns:1fr;gap:6px;padding:18px 0}
  .a .close{padding:64px 0;flex-direction:column;align-items:flex-start}
  .a .cols{grid-template-columns:1fr 1fr;row-gap:28px}
- .a .word{margin-top:40px}
+ .a .word{margin-top:40px;font-size:min(19vw,270px)}
 }
 /* scenes: scroll-linked, final state is the default */
 .a .scene{view-timeline:--sc block}
@@ -158,22 +158,22 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 /* ---- mobile menu (SiteNav): native dialog sheet ---- */
 .a .burger{display:none;width:44px;height:44px;margin-right:-10px;border:0;background:none;color:var(--ink);flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
 .a .burger i{display:block;width:20px;height:2px;background:currentColor}
-.sheet{position:fixed;inset:0;width:100%;max-width:none;height:100dvh;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--ink);z-index:var(--z-overlay);font-family:var(--font-sans)}
-.sheet::backdrop{background:transparent}
-.sheet__bg{position:absolute;inset:0;background:rgba(27,27,25,.4)}
-.sheet__panel{position:absolute;top:0;right:0;bottom:0;width:min(88vw,360px);background:var(--paper,#F4F4F0);display:flex;flex-direction:column;padding:12px 20px 28px;border-left:1px solid var(--line,#D9D9D3);animation:sheet-in 220ms var(--ease-drawer)}
-@keyframes sheet-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
-.sheet__top{display:flex;align-items:center;justify-content:space-between;height:52px}
-.sheet__ttl{font-weight:500;font-size:14px;color:var(--muted)}
-.sheet__x{width:44px;height:44px;margin-right:-12px;border:0;background:none;color:var(--ink);font-size:22px;line-height:1;cursor:pointer}
-.sheet__links{display:flex;flex-direction:column;margin-top:8px}
-.sheet__links a{display:flex;align-items:center;min-height:52px;font-size:19px;font-weight:500;color:var(--ink);border-top:1px solid var(--line,#D9D9D3);text-decoration:none}
-.sheet__links a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px}
-.sheet__foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
-.sheet__foot .btn{width:100%}
-.sheet__sub{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted);margin-top:8px}
-.sheet__sub a{color:var(--muted);text-decoration:none}
-@media (prefers-reduced-motion: reduce){.sheet__panel{animation:none}}
+.mnav{position:fixed;inset:0;width:100%;max-width:none;height:100dvh;max-height:none;margin:0;padding:0;border:0;background:transparent;color:var(--ink);z-index:var(--z-overlay);font-family:var(--font-sans)}
+.mnav::backdrop{background:transparent}
+.mnav__bg{position:absolute;inset:0;background:rgba(27,27,25,.4)}
+.mnav__panel{position:absolute;top:0;right:0;bottom:0;width:min(88vw,360px);background:var(--paper,#F4F4F0);display:flex;flex-direction:column;padding:12px 20px 28px;border-left:1px solid var(--line,#D9D9D3);animation:mnav-in 220ms var(--ease-drawer)}
+@keyframes mnav-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+.mnav__top{display:flex;align-items:center;justify-content:space-between;height:52px}
+.mnav__ttl{font-weight:500;font-size:14px;color:var(--muted)}
+.mnav__x{width:44px;height:44px;margin-right:-12px;border:0;background:none;color:var(--ink);font-size:22px;line-height:1;cursor:pointer}
+.mnav__links{display:flex;flex-direction:column;margin-top:8px}
+.mnav__links a{display:flex;align-items:center;min-height:52px;font-size:19px;font-weight:500;color:var(--ink);border-top:1px solid var(--line,#D9D9D3);text-decoration:none}
+.mnav__links a[aria-current="page"]{text-decoration:underline;text-underline-offset:6px}
+.mnav__foot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+.mnav__foot .btn{width:100%}
+.mnav__sub{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted);margin-top:8px}
+.mnav__sub a{color:var(--muted);text-decoration:none}
+@media (prefers-reduced-motion: reduce){.mnav__panel{animation:none}}
 @media (max-width:860px){.a .burger{display:flex;margin-left:auto}}
 
 /* ---- one section per screen + snap (public pages only; the landing has pinned scenes and stays free) ---- */

@@ -61,14 +61,14 @@ export function SiteNav() {
       </button>
 
       {open && (
-        <dialog className="sheet" ref={dialog} aria-label="메뉴" onCancel={() => setOpen(false)}>
-          <div className="sheet__bg" onClick={() => setOpen(false)} />
-          <div className="sheet__panel">
-            <div className="sheet__top">
-              <span className="sheet__ttl">메뉴</span>
-              <button type="button" className="sheet__x" aria-label="메뉴 닫기" onClick={() => setOpen(false)}>×</button>
+        <dialog className="mnav" ref={dialog} aria-label="메뉴" onCancel={() => setOpen(false)}>
+          <div className="mnav__bg" onClick={() => setOpen(false)} />
+          <div className="mnav__panel">
+            <div className="mnav__top">
+              <span className="mnav__ttl">메뉴</span>
+              <button type="button" className="mnav__x" aria-label="메뉴 닫기" onClick={() => setOpen(false)}>×</button>
             </div>
-            <nav className="sheet__links" aria-label="사이트 메뉴">
+            <nav className="mnav__links" aria-label="사이트 메뉴">
               <Link href="/" aria-current={on("/") ? "page" : undefined}>홈</Link>
               {SITE_LINKS.map(([href, label]) => (
                 <Link key={href} href={href} aria-current={on(href) ? "page" : undefined}>
@@ -76,10 +76,10 @@ export function SiteNav() {
                 </Link>
               ))}
             </nav>
-            <div className="sheet__foot">
+            <div className="mnav__foot">
               <Link href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></Link>
               <Link href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</Link>
-              <div className="sheet__sub">
+              <div className="mnav__sub">
                 <Link href="/privacy">개인정보처리방침</Link>
                 <Link href="/terms">이용약관</Link>
                 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>

@@ -35,7 +35,6 @@
 }
 @media (max-width:860px){
  .a .nextp{padding:48px 0 40px}
- .a .lockup{font-size:44px}
  .a .ft2 .ftop{flex-direction:column;align-items:flex-start;gap:20px}
 }
 .a .film{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,660px);gap:64px;align-items:center;padding:64px 0 104px;border-bottom:1px solid var(--line)}

@@ -31,7 +31,7 @@
 @media (hover:hover) and (pointer:fine){ .a .fc label:hover{color:var(--ink)} .a .q summary:hover{color:var(--ink2)} }
 @media (max-width:860px){
  .a .faq{grid-template-columns:1fr;gap:24px;padding:32px 0 64px}
- .a .fc{position:static;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none}
+ .a .fc{position:static;display:flex;flex-wrap:wrap;gap:8px;padding-bottom:4px}
  .a .fc label{border:1px solid var(--line);border-radius:2px;padding:0 12px;height:36px;display:inline-flex;align-items:center;white-space:nowrap}
  .a .q summary{font-size:17px;padding:20px 0}
  .a .ans p{font-size:15px}
