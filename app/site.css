@@ -188,6 +188,11 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a.onescreen footer{scroll-snap-align:end}
 @media (prefers-reduced-motion: reduce){html:has(.a.onescreen){scroll-snap-type:y proximity}}
 /* 모바일(iOS): mandatory+stop:always는 주소창 접힘과 겹쳐 스크롤이 튄다. 가까울 때만 맞춘다 */
-@media (max-width:860px){html:has(.a.onescreen){scroll-snap-type:y proximity}.a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-stop:normal}}
+@media (max-width:860px){
+ html:has(.a.onescreen){scroll-snap-type:none}
+ .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-stop:normal;scroll-snap-align:none}
+ /* 스크롤 중 블러 재계산이 iOS에서 프레임을 떨어뜨린다. 모바일은 블러 없이 거의 불투명한 바탕 */
+ .a nav.top::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(244,244,240,.96)}
+}
 /* 설명 영상은 화면에 들어올 때까지 0초에 멈춰 둔다 (FilmPlay가 hold를 붙였다 뗀다) */
 .a .hold .fe{animation-play-state:paused}
