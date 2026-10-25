@@ -28,7 +28,7 @@ export function Diag() {
       const rect = (sel: string) => { const el = document.querySelector(sel); if (!el) return `${sel} 없음`; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return `${sel} y${Math.round(r.top + scrollY)} h${Math.round(r.height)} w${Math.round(r.width)} ${cs.display}/${cs.visibility}/op${cs.opacity}`; };
       setLines([
         `단위 ${units} · vv ${Math.round(visualViewport?.height ?? 0)} · 문서높이 ${document.documentElement.scrollHeight} · scrollY ${Math.round(scrollY)}`,
-        rect("nav.top"), rect(".first"), rect("main h1"), rect(".fd"), rect(".strip"), rect(".cue"),
+        rect("nav.top"), rect("main > :first-child"), rect(".first"), rect("main h1"), rect(".fd"), rect(".strip"), rect(".cue"),
         `h1 글꼴 ${h1 ? getComputedStyle(h1).fontFamily.split(",")[0] : "-"} · 색 ${h1 ? getComputedStyle(h1).color : "-"}`,
         `UA ${navigator.userAgent}`,
         `화면 ${innerWidth}x${innerHeight} dpr ${devicePixelRatio}`,
