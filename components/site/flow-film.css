@@ -1,0 +1,99 @@
+/* 흐름 필름 (components/site/FlowFilm.tsx). 기본 스타일은 마지막 장면이다. 키프레임은 flow-film-motion.ts 가 만든다. */
+.flowf__stage { aspect-ratio: 4 / 3; }
+.flowf__stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.flowf__stage text { font-family: inherit; fill: var(--ink); }
+.flowf .ff-lane { font-size: 22px; font-weight: 600; fill: var(--muted); }
+.flowf .ff-step { font-size: 20px; font-weight: 600; fill: var(--ink); }
+.flowf .ff-step tspan { font-family: var(--font-mono); font-size: 15px; fill: var(--muted); font-weight: 500; }
+.flowf .ff-rail { stroke: var(--card-line); stroke-width: 2; }
+.flowf .ff-box { fill: var(--white); stroke: var(--card-line); stroke-width: 2; }
+.flowf .ff-box--hub { fill: var(--brand-tint); stroke: var(--brand-line); }
+.flowf .ff-box--org { fill: var(--white); }
+.flowf .ff-label { font-size: 24px; font-weight: 700; }
+.flowf .ff-sub { font-size: 18px; fill: var(--muted); }
+.flowf .ff-card { fill: var(--white); stroke: var(--ink); stroke-width: 2.5; }
+.flowf .ff-card line { stroke: var(--dash); stroke-width: 3; stroke-linecap: round; }
+.flowf .ff-note rect { fill: var(--surface); stroke: var(--brand); stroke-width: 2; }
+.flowf .ff-badge text { font-size: 17px; font-weight: 600; fill: var(--brand-dark); }
+.flowf .ff-badge--c text { fill: var(--muted); }
+.flowf .ff-wall { stroke: var(--ink); stroke-width: 3; stroke-dasharray: 8 8; }
+.flowf .ff-table rect.bg { fill: var(--white); stroke: var(--ink); stroke-width: 2.5; }
+.flowf .ff-table line { stroke: var(--card-line); stroke-width: 2; }
+.flowf .ff-table text { font-size: 16px; fill: var(--body); }
+.flowf .ff-table .hd { font-weight: 600; fill: var(--ink); }
+.flowf .ff-pick { fill: var(--brand-tint); stroke: var(--brand); stroke-width: 2.5; }
+.flowf .ff-link { stroke: var(--brand); stroke-width: 4; transform-origin: 360px 280px; }
+.flowf .ff-link circle { fill: var(--brand); stroke: none; }
+.flowf .ff-direct text { font-size: 18px; font-weight: 600; fill: var(--brand-dark); }
+.flowf .ff-done circle { fill: var(--brand); }
+.flowf .ff-done path { stroke: var(--on-brand); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+/* transform 은 요소 자신을 기준으로 */
+.flowf .ff-req, .flowf .ff-note, .flowf .ff-reply, .flowf .ff-table, .flowf .ff-done { transform-box: fill-box; transform-origin: center; }
+.flowf .ff-done { transform-origin: center; }
+.flowf .ff-req, .flowf .ff-note, .flowf .ff-reply { opacity: 0; }
+.flowf .ff-hub { opacity: 0.35; }
+.flowf .ff-step { opacity: 1; }
+.flowf .ff-link { transform: scaleY(1); }
+
+/* 아래 문장은 무대 밖에 있어 같은 타임라인 규칙을 따로 붙인다 */
+.flowf .flowf__cue { animation-duration: var(--bfilm-dur); animation-timing-function: linear; animation-fill-mode: both; animation-iteration-count: 1; animation-play-state: paused; }
+.flowf[data-motion="still"] .flowf__cue { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .flowf:not([data-motion="on"]) .flowf__cue { animation: none !important; } }
+/* 아래 문장: 한 줄 자리에 7개를 겹치고 하나만 보인다 */
+.flowf__cues { position: relative; min-height: 1.6em; margin-top: 14px; font-size: 17px; color: var(--body); }
+.flowf__cue { position: absolute; inset: 0; margin: 0; text-align: center; opacity: 0; }
+.flowf__cue b { color: var(--ink); margin-right: 10px; }
+.flowf__cue--6 { opacity: 1; }
+@media (max-width: 599px) { .flowf__cues { font-size: 15px; min-height: 3.4em; } }
+
+/* 좁은 화면: 무대가 346px 안팎으로 줄어 viewBox 글자가 1/3 크기가 된다. 단계 레일은 아래 문장이 대신하고 나머지는 키운다 */
+@media (max-width: 599px) {
+  .flowf__stage { aspect-ratio: 4 / 3; }
+  .flowf .ff-step, .flowf .ff-rail, .flowf .ff-sub { display: none; }
+  .flowf .ff-lane { font-size: 34px; }
+  .flowf .ff-label { font-size: 32px; }
+  .flowf .ff-badge text { font-size: 26px; }
+  .flowf .ff-direct text { font-size: 28px; }
+  .flowf .ff-table text { font-size: 21px; }
+  .flowf .ff-card line, .flowf .ff-wall { stroke-width: 4; }
+  .flowf .ff-link { stroke-width: 6; }
+}
+
+/* ── 흩어진 견적 (ScatterFilm) ── */
+.flowf .sf-wait { opacity: 0; }
+.flowf .sf-wait text { font-size: 18px; fill: var(--muted); }
+.flowf .sf-out, .flowf .sf-back { transform-box: fill-box; transform-origin: center; }
+.flowf .sf-out { opacity: 0; }
+.flowf .sf-shape--1 rect { fill: var(--surface); }
+.flowf .sf-shape--2 rect { stroke: var(--brand); stroke-dasharray: 10 6; }
+.flowf .sf-shape--3 rect { rx: 2; }
+.flowf .sf-clip { opacity: 0.9; }
+.flowf .sf-clip rect { fill: none; stroke: var(--muted); stroke-width: 3; }
+
+/* ── 같은 양식 (FormFilm) ── */
+.flowf .fm-sheet { fill: var(--white); stroke: var(--ink); stroke-width: 2.5; }
+.flowf .fm-title { font-size: 20px; font-weight: 700; }
+.flowf .fm-rule { stroke: var(--card-line); stroke-width: 2; }
+.flowf .fm-k { font-size: 20px; font-weight: 600; fill: var(--ink); }
+.flowf .fm-v { font-size: 19px; fill: var(--body); }
+.flowf .fm-focus { fill: var(--brand-tint); opacity: 0; transform: translateY(500px); }
+.flowf .fm-stamp { transform-box: fill-box; transform-origin: center; transform: rotate(-12deg); }
+.flowf .fm-stamp rect { fill: none; stroke: var(--brand-dark); stroke-width: 4; }
+.flowf .fm-stamp text { font-size: 24px; font-weight: 700; fill: var(--brand-dark); }
+@media (max-width: 599px) {
+  .flowf .sf-wait text { font-size: 28px; }
+  .flowf .fm-v { display: none; }
+  .flowf .fm-k { font-size: 34px; }
+  .flowf .fm-title { font-size: 28px; }
+  .flowf .fm-stamp text { font-size: 30px; }
+}
+
+/* ── 목록이 차례로 나타남 (Reveal) ── */
+.rv[data-in] :is(li, .dl > div) { animation: rv-in 320ms var(--ease-out) both; }
+.rv[data-in] :is(li, .dl > div):nth-child(2) { animation-delay: 60ms; }
+.rv[data-in] :is(li, .dl > div):nth-child(3) { animation-delay: 120ms; }
+.rv[data-in] :is(li, .dl > div):nth-child(4) { animation-delay: 180ms; }
+.rv[data-in] :is(li, .dl > div):nth-child(5) { animation-delay: 240ms; }
+.rv[data-in] :is(li, .dl > div):nth-child(6) { animation-delay: 300ms; }
+@keyframes rv-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .rv[data-in] :is(li, .dl > div) { animation: none; } }
