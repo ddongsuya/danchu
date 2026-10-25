@@ -33,7 +33,6 @@ export default function Home() {
 </div>
 </div>
 </div>
-<a className="cue" href="#cmp"><span>아래로 내려 보세요</span><i aria-hidden="true"></i></a>
 
 </div>
 
