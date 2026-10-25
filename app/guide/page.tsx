@@ -1,121 +1,102 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
-import { DurationCalc } from "@/components/guide/DurationCalc";
-import { DESIGN_CARDS, DISCLAIMER, GLOSSARY, GUIDE_REVIEWED, M3_TABLE1, M3_TABLE2, PACKAGE_WHY } from "@/lib/design-guide";
-import { PRESETS, presetItems } from "@/lib/presets";
-import "../site.css";
+import { Site } from "@/components/site/Site";
+import "./page.css";
 
 export const metadata: Metadata = {
-  title: "비임상 시험 가이드 · 의약품 · 단추",
-  description: "임상 진입 전에 어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주를 해야 하는지, 통상 어떻게 설계하는지 ICH·식약처 기준으로 정리했습니다.",
-  robots: GUIDE_REVIEWED ? undefined : { index: false, follow: false },
+  title: "시험 가이드 · 단추",
+  description: "어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주가 필요한지 ICH·식약처 가이드라인으로 확인하세요.",
 };
 
-export default function Guide() {
+export default function Page() {
   return (
-    <div className="site">
-      <SiteHeader />
-      <main id="main-content">
-        <section className="ph">
-          <div className="wrap ph__grid">
-            <span className="ph__k">가이드 · 의약품</span>
-            <h1>의약품 비임상, 무슨 시험을 어떤 설계로 해야 할까요</h1>
-            <p className="ph__lead">처음 비임상을 준비하면 견적보다 먼저 막히는 곳이 시험 구성입니다. 공개된 가이드라인을 기준으로 출발점을 정리했습니다. 여기서 구성을 잡고 그대로 요청서를 만들 수 있습니다.</p>
-            <p className="ph__note">{DISCLAIMER}</p>
-            {!GUIDE_REVIEWED && <span className="ph__warn">검토 중인 초안입니다. 메뉴에는 아직 연결하지 않았습니다.</span>}
-          </div>
-        </section>
+    <Site current="/guide" next={{ href: "/faq", label: "자주 묻는 질문" }}>
+<section className="ph big" aria-labelledby="t">
+<div><h1 id="t">어떤 시험이 필요한지<br /><span>가이드라인으로 확인하세요.</span></h1></div>
+<div><p className="lead">가이드라인으로 시험 구성의 출발점을 잡아보세요.</p></div>
+</section>
 
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside">
-              <h2>반복투여독성은 몇 주를 해야 할까요</h2>
-              <p>임상에서 투여할 기간이 비임상 기간을 정합니다. ICH M3(R2)의 기간 대응표를 그대로 옮겼습니다.</p>
-            </div>
-            <div className="doc__body">
-              <DurationCalc />
-              <div className="gt2">
-                {([["임상시험을 뒷받침하는 최소 기간 (표 1)", M3_TABLE1], ["품목허가 신청 시 권장 기간 (표 2)", M3_TABLE2]] as const).map(([cap, rows]) => (
-                  <table key={cap} className="gt">
-                    <caption>{cap}</caption>
-                    <thead><tr><th>임상 투여기간</th><th>설치류</th><th>비설치류</th></tr></thead>
-                    <tbody>{rows.map(([a, b, c]) => <tr key={a}><td>{a}</td><td>{b}</td><td>{c}</td></tr>)}</tbody>
-                  </table>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
+<section className="film2 bandw" style={{ "--T": "13.5s", "--F": "-11.5s" }} aria-labelledby="du">
+<div className="s2g">
+<div className="fst" role="img" aria-label="임상 투여기간에 따라 설치류와 비설치류 반복투여독성 기간이 정해지는 과정">
+<div className="shk fe" style={{ "--n": "gd42" }}>
+<div className="cam fe" style={{ "--n": "gd0" }}>
+<div className="grid fe" style={{ "--n": "gd40" }}></div>
+<div className="fe tx k" style={{ "--n": "gd1", left: "7.0cqw", top: "33.0cqw", width: "24.0cqw", height: "8.0cqw" }}>임상 투여</div>
+<div className="fe tx k" style={{ "--n": "gd2", left: "7.0cqw", top: "52.0cqw", width: "24.0cqw", height: "8.0cqw" }}>설치류</div>
+<div className="fe tx k" style={{ "--n": "gd3", left: "7.0cqw", top: "64.0cqw", width: "24.0cqw", height: "8.0cqw" }}>비설치류</div>
+<div className="fe ln f" style={{ "--n": "gd4", left: "7.0cqw", top: "45.0cqw", width: "86.0cqw" }}></div>
+<div className="fe grp" style={{ "--n": "gd5" }}><div className="fe tg ink" style={{ "--n": "gd6", left: "29.0cqw", top: "13.8cqw", width: "42.0cqw", height: "6.4cqw", fontSize: "3.2cqw" }}>임상 2주 이내</div><div className="fe gbar ink" style={{ "--n": "gd7", left: "29.0cqw", top: "34.5cqw", width: "4.8cqw", height: "5.0cqw" }}></div><div className="fe tx" style={{ "--n": "gd8", left: "35.8cqw", top: "33.0cqw", width: "30.0cqw", height: "8.0cqw" }}>2주</div><div className="fe gbar" style={{ "--n": "gd9", left: "29.0cqw", top: "53.5cqw", width: "4.8cqw", height: "5.0cqw" }}></div><div className="fe gbar" style={{ "--n": "gd10", left: "29.0cqw", top: "65.5cqw", width: "4.8cqw", height: "5.0cqw" }}></div><div className="fe tx h" style={{ "--n": "gd11", left: "35.8cqw", top: "52.0cqw", width: "30.0cqw", height: "8.0cqw" }}>2주</div><div className="fe tx h" style={{ "--n": "gd12", left: "35.8cqw", top: "64.0cqw", width: "30.0cqw", height: "8.0cqw" }}>2주</div><div className="fe tg" style={{ "--n": "gd13", left: "26.5cqw", top: "81.0cqw", width: "47.0cqw", height: "6.0cqw" }}>요청서 항목 · 반복투여 2주</div></div>
+<div className="fe grp" style={{ "--n": "gd14" }}><div className="fe tg ink" style={{ "--n": "gd15", left: "29.0cqw", top: "13.8cqw", width: "42.0cqw", height: "6.4cqw", fontSize: "3.2cqw" }}>임상 2주 초과 ~ 6개월</div><div className="fe gbar ink" style={{ "--n": "gd16", left: "29.0cqw", top: "34.5cqw", width: "16.0cqw", height: "5.0cqw" }}></div><div className="fe tx" style={{ "--n": "gd17", left: "47.0cqw", top: "33.0cqw", width: "30.0cqw", height: "8.0cqw" }}>예: 3개월</div><div className="fe gbar" style={{ "--n": "gd18", left: "29.0cqw", top: "53.5cqw", width: "16.0cqw", height: "5.0cqw" }}></div><div className="fe gbar" style={{ "--n": "gd19", left: "29.0cqw", top: "65.5cqw", width: "16.0cqw", height: "5.0cqw" }}></div><div className="fe tx h" style={{ "--n": "gd20", left: "47.0cqw", top: "52.0cqw", width: "30.0cqw", height: "8.0cqw" }}>3개월</div><div className="fe tx h" style={{ "--n": "gd21", left: "47.0cqw", top: "64.0cqw", width: "30.0cqw", height: "8.0cqw" }}>3개월</div><div className="fe tg ac" style={{ "--n": "gd22", left: "62.0cqw", top: "59.5cqw", width: "20.0cqw", height: "5.0cqw" }}>임상과 같게</div><div className="fe tg" style={{ "--n": "gd23", left: "26.5cqw", top: "81.0cqw", width: "47.0cqw", height: "6.0cqw" }}>요청서 항목 · 반복투여 13주</div></div>
+<div className="fe grp" style={{ "--n": "gd24" }}><div className="fe tg ink" style={{ "--n": "gd25", left: "29.0cqw", top: "13.8cqw", width: "42.0cqw", height: "6.4cqw", fontSize: "3.2cqw" }}>임상 6개월 초과</div><div className="fe gbar ink" style={{ "--n": "gd26", left: "29.0cqw", top: "34.5cqw", width: "48.0cqw", height: "5.0cqw" }}></div><div className="fe tx" style={{ "--n": "gd27", left: "79.0cqw", top: "33.0cqw", width: "30.0cqw", height: "8.0cqw" }}>6개월 넘게</div><div className="fe tx k" style={{ "--n": "gd28", left: "73.0cqw", top: "33.0cqw", width: "6.0cqw", height: "8.0cqw", color: "var(--paper)" }}>→</div><div className="fe gbar" style={{ "--n": "gd29", left: "29.0cqw", top: "53.5cqw", width: "32.0cqw", height: "5.0cqw" }}></div><div className="fe gbar" style={{ "--n": "gd30", left: "29.0cqw", top: "65.5cqw", width: "48.0cqw", height: "5.0cqw" }}></div><div className="fe tx h" style={{ "--n": "gd31", left: "63.0cqw", top: "52.0cqw", width: "30.0cqw", height: "8.0cqw" }}>6개월</div><div className="fe tx h" style={{ "--n": "gd32", left: "79.0cqw", top: "64.0cqw", width: "30.0cqw", height: "8.0cqw" }}>9개월</div><div className="fe tg" style={{ "--n": "gd33", left: "26.5cqw", top: "81.0cqw", width: "47.0cqw", height: "6.0cqw" }}>요청서 항목 · 반복투여 26주 · 39주</div></div>
+</div>
+</div>
+</div>
 
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>임상 1상 전에 필요한 시험 묶음</h2></div>
-            <div className="doc__body">
-              {PACKAGE_WHY.map((w) => {
-                const p = PRESETS.find((x) => x.key === w.presetKey);
-                if (!p) return null;
-                const cats = [...new Set(presetItems(p).map((i) => i.category))];
-                return (
-                  <article key={w.presetKey} className="pack">
-                    <header className="pack__head">
-                      <h3>{p.name}</h3>
-                      <p>{w.headline}</p>
-                    </header>
-                    <ol>
-                      {w.blocks.map((b) => <li key={b.t}><b>{b.t}</b><span>{b.why}</span></li>)}
-                    </ol>
-                    <p className="pack__meta"><b>나중 단계에서 검토</b> · {w.later.join(" · ")}</p>
-                    <p className="cite">근거 · {w.basis.join(" · ")}</p>
-                    <div className="pack__cta">
-                      <Link href={`/app/new?preset=${p.key}`} className="b b--line b--sm">이 구성으로 요청서 만들기</Link>
-                      <span>{cats.join(" · ")} · {presetItems(p).length}개 항목이 요청서에 채워집니다</span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
+<div><h2 id="du">반복투여독성 시험은<br /><span>몇 주가 필요할까요?</span></h2>
+<div className="tabs2" role="group" aria-label="임상 투여기간 고르기" style={{ marginTop: "32px" }}><input className="tbi" type="radio" name="gd-step" id="gd-k0" /><label htmlFor="gd-k0"><span className="tb">2주 이내</span><span className="fe tt" style={{ "--n": "gd34" }}>2주 이내</span><i className="fe" style={{ "--n": "gd35" }}></i></label><input className="tbi" type="radio" name="gd-step" id="gd-k1" /><label htmlFor="gd-k1"><span className="tb">2주 초과 ~ 6개월</span><span className="fe tt" style={{ "--n": "gd36" }}>2주 초과 ~ 6개월</span><i className="fe" style={{ "--n": "gd37" }}></i></label><input className="tbi" type="radio" name="gd-step" id="gd-k2" /><label htmlFor="gd-k2"><span className="tb">6개월 초과</span><span className="fe tt" style={{ "--n": "gd38" }}>6개월 초과</span><i className="fe" style={{ "--n": "gd39" }}></i></label><p className="hint">임상 투여기간을 누르면 그 경우를 보여 드립니다. 근거 · ICH M3(R2) 표 1</p></div></div>
+</div>
+</section>
+<section className="film gsec" aria-labelledby="pk" style={{ "--T": "15s", "--F": "-5.5s" }} aria-label="임상 1상 전에 필요한 시험이 합성의약품과 바이오의약품별로 채워지는 과정">
+<div className="fside">
+<h2 id="pk">IND 제출을 고려중이신가요?</h2><div className="ctas" style={{ marginTop: "28px" }}><a className="btn solid" href="/request/new?preset=ind_small">이 구성으로 요청서 만들기 <span className="ar">→</span></a></div>
 
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside">
-              <h2>항목별 설계 예</h2>
-              <p>단추가 정한 기준이 아니라 가이드라인에 근거한 예입니다. 세부는 기관마다 다릅니다.</p>
-            </div>
-            <div className="doc__body">
-              <div className="cards">
-                {DESIGN_CARDS.map((c) => (
-                  <article key={c.title} className="card">
-                    <h3>{c.title}</h3>
-                    <p className="card__p">{c.purpose}</p>
-                    <dl>
-                      {c.rows.map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt>{k}</dt><dd>{v}</dd></div>)}
-                    </dl>
-                    <p className="cite">근거 · {c.basis.join(" · ")}</p>
-                  </article>
-                ))}
-              </div>
-              <p className="small muted">요청서에서 "이 예로 채우기"를 누르면 조건이 채워지고, 기관은 자신의 방식을 회신에 설명합니다.</p>
-            </div>
-          </div>
-        </section>
+<div className="fctl"><span className="fbar" aria-hidden="true"><i className="fe" style={{ "--n": "gp28" }}></i></span></div>
+</div>
+<div className="fst" role="img" aria-label="임상 1상 전에 필요한 시험이 합성의약품과 바이오의약품별로 채워지는 과정">
+<div className="shk fe" style={{ "--n": "gp29" }}>
+<div className="cam fe" style={{ "--n": "gp1" }}>
+<div className="grid fe" style={{ "--n": "gp27" }}></div>
+<div className="fe fm" style={{ "--n": "gp0", left: "7.0cqw", top: "16.0cqw", width: "86.0cqw", height: "62.0cqw" }}></div>
+<div className="fe grp" style={{ "--n": "gp2" }}><div className="fe tg ink" style={{ "--n": "gp3", left: "28.0cqw", top: "18.5cqw", width: "44.0cqw", height: "6.0cqw" }}>합성의약품 (저분자·경구)</div><div className="fe tx k" style={{ "--n": "gp4", left: "12.0cqw", top: "26.0cqw", width: "30.0cqw", height: "5.0cqw" }}>임상 1상 전</div><div className="fe tile" style={{ "--n": "gp5", left: "11.5cqw", top: "31.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>반복투여독성</b><small>설치류 + 비설치류 · ICH M3(R2)</small></div><div className="fe tile" style={{ "--n": "gp6", left: "51.5cqw", top: "31.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>용량결정시험(DRF)</b><small>보통 Non-GLP</small></div><div className="fe tile" style={{ "--n": "gp7", left: "11.5cqw", top: "43.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>단회투여독성</b><small>DRF로 갈음 가능</small></div><div className="fe tile" style={{ "--n": "gp8", left: "51.5cqw", top: "43.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>유전독성</b><small>Ames + 염색체이상 · ICH S2(R1)</small></div><div className="fe tile" style={{ "--n": "gp9", left: "11.5cqw", top: "55.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>안전성약리 · hERG</b><small>ICH S7A·S7B</small></div><div className="fe tile" style={{ "--n": "gp10", left: "51.5cqw", top: "55.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>TK · 조제물분석</b><small>GLP 시험에 병행</small></div><div className="fe tx k" style={{ "--n": "gp11", left: "12.0cqw", top: "71.0cqw", width: "30.0cqw", height: "5.0cqw" }}>나중 단계에서 검토</div><div className="fe tg" style={{ "--n": "gp12", left: "12.0cqw", top: "77.0cqw", width: "19.6cqw", height: "5.0cqw" }}>생식발생독성</div><div className="fe tg" style={{ "--n": "gp13", left: "33.0cqw", top: "77.0cqw", width: "11.8cqw", height: "5.0cqw" }}>발암성</div><div className="fe tg" style={{ "--n": "gp14", left: "46.2cqw", top: "77.0cqw", width: "14.4cqw", height: "5.0cqw" }}>국소내성</div><div className="fe tg" style={{ "--n": "gp15", left: "62.0cqw", top: "77.0cqw", width: "27.4cqw", height: "5.0cqw" }}>면역독성·광안전성</div></div>
+<div className="fe grp" style={{ "--n": "gp16" }}><div className="fe tg ink" style={{ "--n": "gp17", left: "28.0cqw", top: "18.5cqw", width: "44.0cqw", height: "6.0cqw" }}>바이오의약품</div><div className="fe tx k" style={{ "--n": "gp18", left: "12.0cqw", top: "26.0cqw", width: "30.0cqw", height: "5.0cqw" }}>임상 1상 전</div><div className="fe tile" style={{ "--n": "gp19", left: "11.5cqw", top: "31.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>관련 동물종 선정</b><small>ICH S6(R1)</small></div><div className="fe tile" style={{ "--n": "gp20", left: "51.5cqw", top: "31.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>반복투여독성</b><small>회복군 + TK + ADA · ICH S6(R1)</small></div><div className="fe tile" style={{ "--n": "gp21", left: "11.5cqw", top: "43.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>안전성약리</b><small>독성시험에 통합 가능</small></div><div className="fe tile dim" style={{ "--n": "gp22", left: "51.5cqw", top: "43.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>유전독성</b><small>통상 불필요</small></div><div className="fe tile" style={{ "--n": "gp23", left: "11.5cqw", top: "55.0cqw", width: "37.0cqw", height: "10.0cqw" }}><b>국소내성 · 조직교차반응성</b><small>주사제 · 항체 의약품</small></div><div className="fe tx k" style={{ "--n": "gp24", left: "12.0cqw", top: "71.0cqw", width: "30.0cqw", height: "5.0cqw" }}>나중 단계에서 검토</div><div className="fe tg" style={{ "--n": "gp25", left: "12.0cqw", top: "77.0cqw", width: "40.4cqw", height: "5.0cqw" }}>생식발생독성 (ePPND)</div><div className="fe tg" style={{ "--n": "gp26", left: "53.8cqw", top: "77.0cqw", width: "19.6cqw", height: "5.0cqw" }}>발암성 평가</div></div>
+</div>
+</div>
+</div>
+</section>
+<section className="film gsec rev" aria-labelledby="ex" style={{ "--T": "14s", "--F": "-5.5s" }} aria-label="반복투여독성 군 구성: 대조군과 저·중·고용량군의 수컷·암컷 마릿수와 회복군">
+<div className="fside">
+<h2 id="ex">다양한 시험들의&nbsp;<br /><span>정보를 확인하세요.</span></h2>
 
-        <section className="doc">
-          <div className="wrap doc__grid">
-            <div className="doc__aside"><h2>견적서에서 자주 만나는 말</h2></div>
-            <div className="doc__body">
-              <dl className="gloss">
-                {GLOSSARY.map(([t, d]) => <div key={t}><dt>{t}</dt><dd>{d}</dd></div>)}
-              </dl>
-              <p className="small muted">{DISCLAIMER} 건강기능식품, 의료기기, 화학물질 편은 준비 중입니다.</p>
-            </div>
-          </div>
-        </section>
-      </main>
-      <SiteFooter current="/guide" />
-    </div>
+<div className="fctl"><span className="fbar" aria-hidden="true"><i className="fe" style={{ "--n": "gx148" }}></i></span></div>
+</div>
+<div className="fst" role="img" aria-label="반복투여독성 군 구성: 대조군과 저·중·고용량군의 수컷·암컷 마릿수와 회복군">
+<div className="shk fe" style={{ "--n": "gx149" }}>
+<div className="cam fe" style={{ "--n": "gx0" }}>
+<div className="grid fe" style={{ "--n": "gx147" }}></div>
+<div className="fe tx h c" style={{ "--n": "gx1", left: "23.5cqw", top: "22.0cqw", width: "15.0cqw", height: "6.0cqw" }}>대조군</div>
+<div className="fe tx h c" style={{ "--n": "gx2", left: "39.5cqw", top: "22.0cqw", width: "15.0cqw", height: "6.0cqw" }}>저용량</div>
+<div className="fe tx h c" style={{ "--n": "gx3", left: "55.5cqw", top: "22.0cqw", width: "15.0cqw", height: "6.0cqw" }}>중용량</div>
+<div className="fe tx h c" style={{ "--n": "gx4", left: "71.5cqw", top: "22.0cqw", width: "15.0cqw", height: "6.0cqw" }}>고용량</div>
+<div className="fe ln " style={{ "--n": "gx5", left: "9.0cqw", top: "29.0cqw", width: "82.0cqw" }}></div>
+<div className="fe tx k" style={{ "--n": "gx6", left: "2.0cqw", top: "34.0cqw", width: "14.0cqw", height: "6.0cqw" }}>수컷</div>
+<div className="fe tx k" style={{ "--n": "gx7", left: "2.0cqw", top: "49.0cqw", width: "14.0cqw", height: "6.0cqw" }}>암컷</div>
+<div className="fe tx k" style={{ "--n": "gx8", left: "2.0cqw", top: "65.0cqw", width: "14.0cqw", height: "6.0cqw" }}>회복군</div>
+<div className="fe grp" style={{ "--n": "gx9" }}><div className="fe tg ink" style={{ "--n": "gx10", left: "37.0cqw", top: "11.1cqw", width: "26.0cqw", height: "5.8cqw" }}>설치류</div><div className="fe tx k" style={{ "--n": "gx11", left: "2.0cqw", top: "34.0cqw", width: "14.0cqw", height: "6.0cqw", color: "var(--ink)", fontWeight: "500" }}>수컷 10</div><div className="fe tx k" style={{ "--n": "gx12", left: "2.0cqw", top: "49.0cqw", width: "14.0cqw", height: "6.0cqw", color: "var(--ink)", fontWeight: "500" }}>암컷 10</div><div className="fe dt" style={{ "--n": "gx13", left: "24.9cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx14", left: "27.5cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx15", left: "30.1cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx16", left: "32.7cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx17", left: "35.3cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx18", left: "24.9cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx19", left: "27.5cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx20", left: "30.1cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx21", left: "32.7cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx22", left: "35.3cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx23", left: "24.9cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx24", left: "27.5cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx25", left: "30.1cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx26", left: "32.7cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx27", left: "35.3cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx28", left: "24.9cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx29", left: "27.5cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx30", left: "30.1cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx31", left: "32.7cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx32", left: "35.3cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx33", left: "24.9cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx34", left: "27.5cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx35", left: "30.1cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx36", left: "32.7cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx37", left: "35.3cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx38", left: "23.5cqw", top: "70.5cqw", width: "15.0cqw", height: "5.0cqw", fontSize: "2.4cqw" }}>기관마다</div><div className="fe dt" style={{ "--n": "gx39", left: "40.9cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx40", left: "43.5cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx41", left: "46.1cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx42", left: "48.7cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx43", left: "51.3cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx44", left: "40.9cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx45", left: "43.5cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx46", left: "46.1cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx47", left: "48.7cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx48", left: "51.3cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx49", left: "40.9cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx50", left: "43.5cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx51", left: "46.1cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx52", left: "48.7cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx53", left: "51.3cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx54", left: "40.9cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx55", left: "43.5cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx56", left: "46.1cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx57", left: "48.7cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx58", left: "51.3cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx59", left: "39.5cqw", top: "65.5cqw", width: "15.0cqw", height: "5.0cqw", color: "var(--faint)" }}>없음</div><div className="fe dt" style={{ "--n": "gx60", left: "56.9cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx61", left: "59.5cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx62", left: "62.1cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx63", left: "64.7cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx64", left: "67.3cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx65", left: "56.9cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx66", left: "59.5cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx67", left: "62.1cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx68", left: "64.7cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx69", left: "67.3cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx70", left: "56.9cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx71", left: "59.5cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx72", left: "62.1cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx73", left: "64.7cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx74", left: "67.3cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx75", left: "56.9cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx76", left: "59.5cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx77", left: "62.1cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx78", left: "64.7cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx79", left: "67.3cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx80", left: "55.5cqw", top: "65.5cqw", width: "15.0cqw", height: "5.0cqw", color: "var(--faint)" }}>없음</div><div className="fe dt" style={{ "--n": "gx81", left: "72.9cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx82", left: "75.5cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx83", left: "78.1cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx84", left: "80.7cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx85", left: "83.3cqw", top: "34.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx86", left: "72.9cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx87", left: "75.5cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx88", left: "78.1cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx89", left: "80.7cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx90", left: "83.3cqw", top: "37.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx91", left: "72.9cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx92", left: "75.5cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx93", left: "78.1cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx94", left: "80.7cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx95", left: "83.3cqw", top: "49.8cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx96", left: "72.9cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx97", left: "75.5cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx98", left: "78.1cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx99", left: "80.7cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx100", left: "83.3cqw", top: "52.4cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx101", left: "72.9cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx102", left: "75.5cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx103", left: "78.1cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx104", left: "80.7cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx105", left: "83.3cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx106", left: "71.5cqw", top: "70.5cqw", width: "15.0cqw", height: "5.0cqw", fontSize: "2.4cqw" }}>기관마다</div></div>
+<div className="fe grp" style={{ "--n": "gx107" }}><div className="fe tg ink" style={{ "--n": "gx108", left: "37.0cqw", top: "11.1cqw", width: "26.0cqw", height: "5.8cqw" }}>비설치류</div><div className="fe tx k" style={{ "--n": "gx109", left: "2.0cqw", top: "34.0cqw", width: "14.0cqw", height: "6.0cqw", color: "var(--ink)", fontWeight: "500" }}>수컷 3</div><div className="fe tx k" style={{ "--n": "gx110", left: "2.0cqw", top: "49.0cqw", width: "14.0cqw", height: "6.0cqw", color: "var(--ink)", fontWeight: "500" }}>암컷 3</div><div className="fe dt" style={{ "--n": "gx111", left: "27.5cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx112", left: "30.1cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx113", left: "32.7cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx114", left: "27.5cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx115", left: "30.1cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx116", left: "32.7cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx117", left: "28.8cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx118", left: "31.4cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx119", left: "23.5cqw", top: "70.5cqw", width: "15.0cqw", height: "5.0cqw", fontSize: "2.4cqw" }}>기관마다</div><div className="fe dt" style={{ "--n": "gx120", left: "43.5cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx121", left: "46.1cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx122", left: "48.7cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx123", left: "43.5cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx124", left: "46.1cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx125", left: "48.7cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx126", left: "39.5cqw", top: "65.5cqw", width: "15.0cqw", height: "5.0cqw", color: "var(--faint)" }}>없음</div><div className="fe dt" style={{ "--n": "gx127", left: "59.5cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx128", left: "62.1cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx129", left: "64.7cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx130", left: "59.5cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx131", left: "62.1cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx132", left: "64.7cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx133", left: "55.5cqw", top: "65.5cqw", width: "15.0cqw", height: "5.0cqw", color: "var(--faint)" }}>없음</div><div className="fe dt" style={{ "--n": "gx134", left: "75.5cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx135", left: "78.1cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt" style={{ "--n": "gx136", left: "80.7cqw", top: "36.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx137", left: "75.5cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx138", left: "78.1cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ac" style={{ "--n": "gx139", left: "80.7cqw", top: "51.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx140", left: "76.8cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe dt ring" style={{ "--n": "gx141", left: "79.4cqw", top: "67.1cqw", width: "1.8cqw", height: "1.8cqw" }}></div><div className="fe tx k c" style={{ "--n": "gx142", left: "71.5cqw", top: "70.5cqw", width: "15.0cqw", height: "5.0cqw", fontSize: "2.4cqw" }}>기관마다</div></div>
+<div className="fe tg" style={{ "--n": "gx143", left: "9.0cqw", top: "82.0cqw", width: "19.0cqw", height: "5.0cqw" }}>대조군 + 3용량</div>
+<div className="fe tg" style={{ "--n": "gx144", left: "29.5cqw", top: "82.0cqw", width: "19.0cqw", height: "5.0cqw" }}>회복 2~4주</div>
+<div className="fe tg" style={{ "--n": "gx145", left: "50.0cqw", top: "82.0cqw", width: "19.0cqw", height: "5.0cqw" }}>TK 병행</div>
+<div className="fe tg" style={{ "--n": "gx146", left: "70.5cqw", top: "82.0cqw", width: "19.0cqw", height: "5.0cqw" }}>GLP</div>
+</div>
+</div>
+</div>
+</section>
+<div className="gmore"><details className="more2"><summary>다른 시험 설계 예 보기</summary>
+<div className="ex">
+
+<details><summary><b>반복투여독성 (13주)</b><span>3개월까지의 임상, 1개월 이내 의약품의 허가 신청</span></summary>
+<dl><dt>동물종</dt><dd>설치류 1종 + 비설치류 1종</dd><dt>동물 수</dt><dd>설치류 군당 암수 각 10마리 이상, 비설치류 암수 각 3~4마리</dd><dt>회복군</dt><dd>대조군과 고용량군, 회복 4주가 일반적</dd><dt>TK</dt><dd>병행 (투여 첫날과 마지막 주)</dd><dt>GLP</dt><dd>GLP</dd><p className="basis">근거 · 식약처 「의약품등의 독성시험기준」 · ICH M3(R2)</p></dl></details>
+<details><summary><b>만성 반복투여독성 (26주 이상)</b><span>6개월을 넘는 임상과 장기 투여 의약품</span></summary>
+<dl><dt>기간</dt><dd>설치류 6개월(26주), 비설치류 9개월(39주)</dd><dt>동물 수</dt><dd>설치류 군당 암수 각 10마리 이상, 비설치류 암수 각 4마리 수준</dd><dt>TK</dt><dd>병행</dd><dt>GLP</dt><dd>GLP</dd><p className="basis">근거 · ICH M3(R2) · ICH S4 · 식약처 「의약품등의 독성시험기준」</p></dl></details>
+<details><summary><b>용량결정시험(DRF)</b><span>본시험의 고용량과 용량 간격을 정하는 예비시험</span></summary>
+<dl><dt>동물종</dt><dd>본시험과 같은 종·계통</dd><dt>동물 수</dt><dd>설치류 군당 암수 각 3~5마리, 비설치류 암수 각 1~2마리 수준</dd><dt>평가</dt><dd>일반증상·체중·사료섭취·임상병리·부검. 조직병리는 선택</dd><dt>GLP</dt><dd>보통 Non-GLP</dd><p className="basis">근거 · ICH M3(R2) · 식약처 「의약품등의 독성시험기준」 해설</p></dl></details>
+<details><summary><b>단회투여독성</b><span>한 번 투여했을 때의 독성 양상과 개략의 치사량</span></summary>
+<dl><dt>동물종</dt><dd>설치류 1종 + 비설치류 1종 (통상 랫드, 비글)</dd><dt>동물 수</dt><dd>설치류 군당 암수 각 5마리 이상, 비설치류 암수 각 2마리 이상</dd><dt>관찰</dt><dd>투여 후 14일, 일반증상·체중·부검</dd><dt>GLP</dt><dd>허가 제출용이면 GLP</dd><p className="basis">근거 · 식약처 「의약품등의 독성시험기준」 · ICH M3(R2)</p></dl></details>
+</div>
+</details></div>
+<section className="lavc" aria-labelledby="go"><div>
+<h2 id="go" className="huge">구성이 막막하다면<br /><span>제안부터 받아보세요.</span></h2></div><div className="act"><div><p className="actk">개발 단계</p><div className="pick"><input type="radio" name="gs" id="gs0" /><label htmlFor="gs0">임상시험 진입</label><input type="radio" name="gs" id="gs1" /><label htmlFor="gs1">품목허가 신청</label></div></div><div><p className="actk">제품 유형</p><div className="pick"><input type="radio" name="gt" id="gt0" /><label htmlFor="gt0">합성의약품</label><input type="radio" name="gt" id="gt1" /><label htmlFor="gt1">바이오의약품</label><input type="radio" name="gt" id="gt2" /><label htmlFor="gt2">세포·유전자치료제</label><input type="radio" name="gt" id="gt3" /><label htmlFor="gt3">건강기능식품</label><input type="radio" name="gt" id="gt4" /><label htmlFor="gt4">화장품</label><input type="radio" name="gt" id="gt5" /><label htmlFor="gt5">의료기기</label><input type="radio" name="gt" id="gt6" /><label htmlFor="gt6">화학물질·농약</label></div></div><div className="ctas"><a className="btn solid gate gate2" href="/request/new?start=advisor">필요한 시험 찾기 <span className="ar">→</span></a></div></div>
+</section>
+    </Site>
   );
 }

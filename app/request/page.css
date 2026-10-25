@@ -1,0 +1,44 @@
+@keyframes rise{from{transform:translateY(24px)}}
+@keyframes pop{from{opacity:0;transform:scale(.94)}}
+@keyframes slideL{from{opacity:0;transform:translateX(-28px)}}
+@keyframes slideR{from{opacity:0;transform:translateX(28px)}}
+@supports (animation-timeline: view()){ @media (max-height:1200px){
+ .a .sv{animation:var(--k,rise) linear both;animation-timeline:--sc;animation-range:var(--r,entry 20% entry 80%)}
+}}
+.a .rq{padding:72px 0 96px}
+.a .rq h1{margin-bottom:20px}
+.a .rq .lead{margin-bottom:48px}
+.a .pick{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink)}
+.a .opt{display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:32px 40px 32px 0;color:var(--ink);text-decoration:none;position:relative;transition:background-color 200ms ease}
+.a .opt + .opt{padding-left:40px;border-left:1px solid var(--line)}
+.a .opt h2{font-size:clamp(24px,2.4vw,32px)}
+.a .opt p{color:var(--muted);font-size:16px;line-height:1.65;max-width:28em}
+.a .opt .go{display:inline-flex;align-items:center;gap:8px;font-weight:500;font-size:15px;margin-top:12px}
+.a .opt .go .ar{transition:transform 200ms var(--eo)}
+.a .opt:active{transform:scale(.99)}
+.a .opt .q{display:grid;gap:0;margin:8px 0 0;border-top:1px solid var(--line)}
+.a .opt .q span{padding:10px 0;border-bottom:1px solid var(--line);font-size:14.5px;display:flex;justify-content:space-between;color:var(--ink2)}
+.a .opt .q span i{font-style:normal;color:var(--muted);font-size:13px}
+.a .cats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.a .cats span{height:30px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid var(--line);border-radius:2px;font-size:13.5px}
+.a .four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-top:64px;padding-top:24px;border-top:1px solid var(--line);list-style:none;padding-left:0}
+.a .four li{font-size:15px}
+.a .four li b{display:block;font-weight:500;margin-bottom:4px}
+.a .four li span{color:var(--muted);font-size:14px;line-height:1.6}
+.a .guest{margin-top:40px;display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 20px;background:var(--band);font-size:15px}
+.a .guest a{color:var(--ink);text-underline-offset:4px;white-space:nowrap}
+@media (hover:hover) and (pointer:fine){ .a .opt:hover .go .ar{transform:translateX(4px)} .a .opt:hover h2{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:1px} }
+@media (max-width:860px){
+ /* 모바일은 두 선택지만: 예시 줄·분야 칩·단계 목록은 숨기고 큰 선택 줄로 */
+ .a .rq{padding:32px 0 48px}
+ .a .rq .lead{margin-bottom:28px}
+ .a .pick{grid-template-columns:1fr;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+ .a .opt{grid-template-rows:auto auto;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;row-gap:6px;align-items:center;padding:24px 0;border:0;border-radius:0;background:transparent}
+ .a .opt + .opt{padding-left:0;border-left:0;border-top:1px solid var(--line)}
+ .a .opt h2{font-size:24px;grid-column:1}
+ .a .opt p{font-size:15px;line-height:1.5;grid-column:1;margin:0}
+ .a .opt .q,.a .cats,.a .four{display:none}
+ .a .opt .go{grid-column:2;grid-row:1 / span 2;margin:0;font-size:0;gap:0}
+ .a .opt .go .ar{font-size:24px;line-height:1}
+ .a .guest{flex-direction:column;align-items:flex-start;margin-top:28px;padding:16px;font-size:14px}
+}

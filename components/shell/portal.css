@@ -473,3 +473,50 @@
 .pt--guest .pt__main { padding-bottom: calc(48px + var(--bot)); }
 .pt .pt__guest-login { font-size: 14px; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) { .pt .pt__guest-login:hover { color: var(--ink); text-decoration: underline; } }
+
+
+/* ── B안 "흑연과 형광" 맞춤: 종이 바탕, 2px 모서리, 흑연 기본 행동, 형광은 차이에만 ── */
+.pt { --tint: var(--band); --bline: var(--card-line); }
+.pt .lockup { color: var(--ink); }
+.pt__sbrand, .pt__brand { font-weight: 500; }
+.pt__role { font-size: 11px; font-weight: 500; color: var(--muted); background: transparent; border: 1px solid var(--cline); border-radius: var(--r-sm); padding: 2px 6px; letter-spacing: 0; }
+.pt__tokenhint { font-size: 13px; color: var(--muted); }
+.pt__tokenhint a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.pt__top { background: var(--sf); }
+.pt__side { background: var(--sf); }
+.pt__avatar { background: var(--band); color: var(--ink); border-radius: 50%; font-weight: 500; }
+.pt__tab[data-on="1"] { color: var(--ink); }
+.pt__dot { background: var(--ink); color: var(--sf); border-radius: 10px; }
+@media (min-width: 960px) {
+  .pt__navi { border-radius: var(--r-sm); color: var(--ink2); font-weight: 400; height: 38px; padding: 0 10px; }
+  .pt__navi[data-on="1"] { background: var(--band); color: var(--ink); font-weight: 500; }
+  .pt__navi[data-on="1"]::before { content: ""; width: 3px; height: 18px; background: var(--ink); margin-left: -10px; margin-right: 7px; }
+}
+.pt .ph h1 { font-weight: 500; letter-spacing: -.03em; }
+.pt .card { border-radius: var(--r-sm); }
+.pt .card--link:hover { border-color: var(--ink); box-shadow: none; }
+.pt .b1 { font-weight: 500; }
+.pt .b2 { font-weight: 500; background: transparent; border-color: var(--cline); }
+.pt .b2:hover:not(:disabled) { border-color: var(--ink); }
+.pt .pill { font-weight: 500; border-radius: var(--r-sm); }
+.pt .pill--tint { background: var(--brand-tint); color: var(--ink); }
+.pt .pill--ink { background: var(--ink); color: var(--sf); }
+.pt .tag { border-radius: var(--r-sm); background: var(--sf); }
+.pt .chip, .pt .chip--sm { border-radius: var(--r-sm); }
+.pt .tl__dot--done { background: var(--ink); border-color: var(--ink); }
+.pt .tl__dot--now { background: var(--brand-tint); border-color: var(--ink); }
+.pt .tl__line--done { background: var(--ink); }
+.pt .bar > i { background: var(--ink); }
+.pt .seg--full button[aria-pressed="true"] { background: var(--ink); color: var(--sf); }
+.pt .request-summary__accent, .pt .request-row__replies b, .pt .request-empty > svg, .pt .request-attention__icon, .pt .request-attention > span:last-child, .pt .hints__hd b { color: var(--ink); }
+.pt .request-attention { background: var(--brand-tint); border-color: var(--brand-line); }
+.pt .request-filters button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); }
+.pt .note--tint { background: var(--band); border-color: var(--cline); }
+.pt .inp:focus, .pt .ta:focus, .pt .sel:focus, .pt .numin input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px var(--band); }
+.pt .optcard:hover, .pt .optcard[aria-pressed="true"], .pt .chkcard[aria-pressed="true"] { border-color: var(--ink); }
+.pt .optcard[aria-pressed="true"], .pt .chkcard[aria-pressed="true"] { background: var(--band); }
+.pt .chkcard[aria-pressed="true"] .chkcard__box { border-color: var(--ink); background: var(--ink); }
+.pt .tgl[aria-pressed="true"] { background: var(--ink); }
+.pt .tile span:last-child { font-weight: 500; }
+.pt .req { color: var(--err); }
+.pt .request-summary strong, .pt .request-summary, .pt .compare-status, .pt .request-panel { border-radius: var(--r-sm); }

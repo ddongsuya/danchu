@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Role, Session } from "@/lib/auth";
-import { Mark } from "@/components/app/ui";
+import { Lockup } from "@/components/Logo";
 import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import "./portal.css";
@@ -25,8 +25,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <aside className="pt__side">
         <Link href={nav[0]?.href ?? "/"} className="pt__sbrand">
-          <Mark size={28} />
-          <span>단추</span>
+          <Lockup size={24} />
           <span className="pt__role" style={{ marginLeft: "auto" }}>{ROLE_LABEL[role]}</span>
         </Link>
         <div className="pt__nav-label">내 워크스페이스</div>
@@ -47,8 +46,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
         <header className="pt__top">
           <div className="pt__topin">
             <Link href={nav[0]?.href ?? "/"} className="pt__brand">
-              <Mark size={24} />
-              <span>단추</span>
+              <Lockup size={20} />
               <span className="pt__role">{ROLE_LABEL[role]}</span>
             </Link>
             <span className="pt__workspace-title">{ROLE_LABEL[role]} 워크스페이스</span>

@@ -3,21 +3,19 @@ import { HeaderAuth } from "@/components/HeaderAuth";
 import { RfqLink } from "@/components/RfqLink";
 import { SiteNav } from "@/components/SiteNav";
 
-/** 공개 사이트 헤더. 한 줄 64px: 워드마크 · 메뉴 · 로그인 · 견적 요청하기 */
+/** 공개 사이트 상단 바. 한 줄 68px: 로고 락업 · 메뉴 · 로그인 · 견적 요청하기. 스타일은 app/site.css 의 nav.top */
 export function SiteHeader() {
   return (
-    <header className="hd">
-      <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
-      <div className="wrap hd__in">
-        <div className="hd__left">
-          <Logo />
-          <SiteNav />
+    <>
+      <a className="skip" href="#main">본문으로 건너뛰기</a>
+      <nav className="top" aria-label="주요 메뉴">
+        <Logo />
+        <SiteNav />
+        <div className="right">
+          <HeaderAuth className="si" />
+          <RfqLink className="btn solid sm">견적 요청하기 <span className="ar">→</span></RfqLink>
         </div>
-        <div className="hd__right">
-          <HeaderAuth className="hd__login" />
-          <RfqLink className="b b--fill b--sm hd__cta">견적 요청하기</RfqLink>
-        </div>
-      </div>
-    </header>
+      </nav>
+    </>
   );
 }

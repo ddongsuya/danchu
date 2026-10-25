@@ -1,88 +1,160 @@
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Check, FileText, ListChecks, Handshake, LockKey, Buildings } from "@phosphor-icons/react/dist/ssr";
-import { SiteHeader } from "@/components/SiteHeader";
-import { SiteFooter } from "@/components/SiteFooter";
-import { RfqLink } from "@/components/RfqLink";
-import { HeroAdvisor } from "@/components/site/HeroAdvisor";
-import { StudyExplorer } from "@/components/site/StudyExplorer";
-import { FaqList } from "@/components/site/FaqList";
-import { FAQ } from "@/lib/faq";
-import "./site.css";
+import { Site } from "@/components/site/Site";
+import { Orbit } from "@/components/site/Orbit";
+import { HomeMotion } from "@/components/site/HomeMotion";
 import "./home.css";
 
-const COMPARISON = [
-  ["수행 범위", "가능 여부와 조건부 수행 사항"],
-  ["금액과 일정", "항목별 금액, 착수 가능일, 예상 소요기간"],
-  ["설계와 포함 항목", "군 구성, 분석 범위, 별도 옵션"],
-  ["기관별 조건", "결제 조건, 유효기간, 정식 견적서"],
-];
-
+/** 랜딩. 첫 화면은 궤도(순수 CSS), 아래 세 장면은 GSAP(HomeMotion)이 화면에 들어올 때 재생한다. 고정 장면이 있어 스크롤 스냅은 쓰지 않는다. */
 export default function Home() {
   return (
-    <div className="site home">
-      <SiteHeader />
-      <main id="main-content">
-        <section className="home-hero">
-          <div className="wrap home-hero__grid">
-            <div className="home-hero__copy">
-              <h1>비임상 시험의 시작,<br /><strong>단추를 채우다.</strong></h1>
-              <p>필요한 시험부터 기관별 견적 비교까지.<br />한 번의 요청으로, 연구의 다음 단계를 준비하세요.</p>
-              <div className="home-hero__actions">
-                <RfqLink className="b b--fill b--lg">견적 요청하기 <ArrowUpRight size={19} aria-hidden="true" /></RfqLink>
-                <a href="#fields" className="b b--line b--lg">시험 분야 살펴보기</a>
-              </div>
-            </div>
-            <figure className="home-hero__visual">
-              <Image src="/images/lab-glassware.webp" alt="" width={1200} height={800} sizes="(max-width: 899px) 100vw, 48vw" preload />
-              <figcaption><span>연구에 집중할 수 있도록.</span><span>견적의 시작부터, 단추</span></figcaption>
-            </figure>
-          </div>
-          <div className="wrap"><div className="home-assurances"><span><Check size={16} aria-hidden="true" /> 의뢰자 이용 무료</span><span><Check size={16} aria-hidden="true" /> 항목별 견적 비교</span><span><LockKey size={16} aria-hidden="true" /> 기밀 등급에 따른 정보 보호</span><Link href="/for-cro">CRO 기관이신가요? <ArrowUpRight size={16} aria-hidden="true" /></Link></div></div>
-        </section>
+    <Site onescreen={false}>
+<div className="first">
+<div className="hero">
+<div>
+<h1><span className="h1l" style={{ color: "inherit" }}>비임상 시험 견적<br />단추에 요청하세요.</span></h1>
+<p className="sub">한번의 요청으로 여러 기관의 견적서를 받아보세요.</p>
+<div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a><a className="btn ghost" href="/#fields">시험 분야 보기</a></div>
+</div>
 
-        <section className="home-section" id="fields">
-          <div className="wrap">
-            <div className="section-heading"><div><h2>어떤 시험을 준비하고 계신가요?</h2><p>시험 분야를 살펴보고, 필요한 항목부터 시작하세요.</p></div><span className="section-count">15개 시험 분야</span></div>
-            <StudyExplorer />
-          </div>
-        </section>
+<div className="fd fo" aria-hidden="true"><Orbit /></div>
+</div>
 
-        <section className="home-section home-section--surface" id="process">
-          <div className="wrap process-layout">
-            <div className="section-intro"><h2>흩어져 있던 견적을,<br />하나의 흐름으로.</h2><p>기관마다 같은 내용을 설명하는 수고를 줄이고, 중요한 조건을 함께 살펴보세요.</p><Link href="/how-it-works" className="text-link">이용 절차 자세히 <ArrowUpRight size={18} aria-hidden="true" /></Link></div>
-            <ol className="process-list">
-              <li><span className="process-icon"><FileText size={24} aria-hidden="true" /></span><div><h3>요청서는 한 번만</h3><p>시험 항목과 희망 일정을 입력하면, 수행 분야가 맞는 기관에 참여 안내를 보냅니다.</p></div></li>
-              <li><span className="process-icon"><ListChecks size={24} aria-hidden="true" /></span><div><h3>견적은 같은 자리에서</h3><p>금액, 기간, 설계와 포함 항목을 나란히 살펴보고 직접 비교합니다.</p></div></li>
-              <li><span className="process-icon"><Handshake size={24} aria-hidden="true" /></span><div><h3>선택한 기관과 직접 계약</h3><p>기관을 선택하면 담당자 연락처를 확인하고 계약을 진행합니다.</p></div></li>
-            </ol>
-          </div>
-        </section>
+<div className="strip">
+<div><span className="mono">비용</span>무료로 이용해보세요!</div>
+<div><span className="mono">회신</span>비교표로 나란히</div>
+<div><span className="mono">기밀</span>CDA 체결로 안전하게</div>
+<div><span className="mono">제안</span>가이드라인 기반</div>
+</div>
+<div className="mq">
+<span className="lbl mono">다양한 시험 분야</span>
+<div className="vp">
+<div className="track">
+<span>일반독성</span><span>발암성·종양원성</span><span>유전독성</span><span>생식발생독성</span><span>항원성·면역독성</span><span>국소독성</span><span>국소내성</span><span>안전성약리</span><span>동물대체시험</span><span>조제물분석</span><span>PK/TK/ADME·생체시료분석</span><span>효력시험(약효)</span><span>환경유해성</span><span>의료기기 생물학적 안전성</span><span>임상병리·조직병리</span>
+<span aria-hidden="true">일반독성</span><span aria-hidden="true">발암성·종양원성</span><span aria-hidden="true">유전독성</span><span aria-hidden="true">생식발생독성</span><span aria-hidden="true">항원성·면역독성</span><span aria-hidden="true">국소독성</span><span aria-hidden="true">국소내성</span><span aria-hidden="true">안전성약리</span><span aria-hidden="true">동물대체시험</span><span aria-hidden="true">조제물분석</span><span aria-hidden="true">PK/TK/ADME·생체시료분석</span><span aria-hidden="true">효력시험(약효)</span><span aria-hidden="true">환경유해성</span><span aria-hidden="true">의료기기 생물학적 안전성</span><span aria-hidden="true">임상병리·조직병리</span>
+</div>
+</div>
+</div>
 
-        <section className="home-section">
-          <div className="wrap comparison-layout">
-            <div className="comparison-content"><h2>같은 금액도,<br />같은 견적은 아니니까.</h2><p>총액 뒤에 있는 시험 설계와 포함 범위까지.<br />기관의 회신을 같은 항목으로 정리합니다.</p><div className="comparison-note"><LockKey size={19} aria-hidden="true" /><p>비교표는 의뢰자에게만 공개됩니다.<br />기관은 다른 기관의 견적을 볼 수 없습니다.</p></div><Link href="/how-it-works#comparison" className="text-link">비교 항목 자세히 <ArrowUpRight size={18} aria-hidden="true" /></Link></div>
-            <div className="comparison-index"><div className="comparison-index__head"><span>비교표에서 확인하는 것</span><ListChecks size={22} aria-hidden="true" /></div><dl>{COMPARISON.map(([title, description]) => <div key={title}><dt>{title}</dt><dd>{description}</dd><Check size={18} aria-hidden="true" /></div>)}</dl><p>최종 조건은 각 기관의 정식 PDF 견적서를 확인하세요.</p></div>
-          </div>
-        </section>
+</div>
 
-        <section className="home-section home-advisor" id="advisor">
-          <div className="wrap">
-            <details className="advisor-disclosure">
-              <summary><div><h2>필요한 시험이 아직 막막하다면.</h2><p>개발 상황을 선택하고, 근거가 붙은 시험 제안을 살펴보세요.</p></div><span className="advisor-disclosure__action">시험 제안 열기 <ArrowRight size={20} aria-hidden="true" /></span></summary>
-              <div className="advisor-disclosure__body"><div><h3>상황에 맞는 시작점을 찾으세요.</h3><p>제안은 공개 가이드라인을 바탕으로 한 참고 자료입니다. 규칙은 초안이며, 실제 시험 계획은 기관과 확인해야 합니다.</p><Link href="/guide" className="text-link">시험 가이드 읽기 <ArrowUpRight size={18} aria-hidden="true" /></Link></div><HeroAdvisor /></div>
-            </details>
-          </div>
-        </section>
+<section className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
+<div className="gm-cmp-grid">
+<div className="gm-copy">
+<h2 id="cmp-h">금액만 비교 마시고<br /><span>구성도 함께 비교하세요.</span></h2>
+<ol className="gm-ph">
+<li><span className="mono">총액만 볼 때</span><p>B가 <b>300만 원</b> 싸 보입니다.</p></li>
+<li><span className="mono">항목을 펼치면</span><p>B 견적에는 TK 분석이 없습니다. 차이 300만 원 중 <b>200만 원</b>이 여기서 생깁니다.</p></li>
+<li><span className="mono">같은 시험끼리 보면</span><p>4주 투여 반복독성 시험의 차이는 100만원 입니다.</p></li>
+</ol>
+</div>
+<figure className="gm-sheet" aria-label="예시 기관 A와 B의 견적 비교">
+<header><b>반복투여독성 4주 · 설치류</b></header>
+<div className="gm-plot">
+<div className="gm-r gm-scale mono" aria-hidden="true"><span></span><div className="gm-tr"><span style={{ left: "0" }}>0</span><span style={{ left: "25%" }}>300</span><span style={{ left: "50%" }}>600</span><span style={{ left: "75%" }}>900</span><span style={{ left: "100%" }}>1,200</span></div><span></span></div>
+<div className="gm-guides" aria-hidden="true"><div className="gm-tr"><i style={{ left: "75%" }}></i><i style={{ left: "83.333%" }}></i></div></div>
+<div className="gm-r gm-bar" data-r="a"><span className="g-who">기관 A</span>
+<div className="gm-tr"><span className="g-seg g-main" style={{ left: "0", width: "83.333%" }}><em>반복투여 4주</em></span><span className="g-seg g-tk" style={{ left: "83.333%", width: "16.667%" }}><em>TK</em></span></div>
+<span className="g-sum"><b data-to="1200">1,200</b>만 원</span></div>
+<div className="gm-r gm-bar" data-r="b"><span className="g-who">기관 B</span>
+<div className="gm-tr"><span className="g-seg g-main" style={{ left: "0", width: "75%" }}><em>반복투여 4주</em></span>
+<span className="g-seg g-ghost" style={{ left: "83.333%", width: "16.667%" }}><svg preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100%" height="100%" pathLength="100"></rect></svg><em>TK 없음</em></span></div>
+<span className="g-sum"><b data-to="900">900</b>만 원</span></div>
+<div className="gm-r gm-brks" aria-hidden="true"><span></span>
+<div className="gm-tr">
+<div className="g-brk g-tot" style={{ left: "75%", width: "25%" }}><i></i><span>총액 차이 300만 원</span></div>
+<div className="g-brk g-tkb" style={{ left: "83.333%", width: "16.667%" }}><i></i><span>TK 200만 원</span></div>
+<div className="g-brk g-same" style={{ left: "75%", width: "8.333%" }}><i></i><span>같은 시험 100만 원</span></div>
+</div><span></span></div>
+</div>
+<table className="gm-items">
+<thead><tr><th scope="col">항목</th><th scope="col">기관 A</th><th scope="col">기관 B</th></tr></thead>
+<tbody>
+<tr className="g-r1"><th scope="row">반복투여독성 4주</th><td><span className="g-v"><i className="g-mk"></i>1,000만 원</span></td><td><span className="g-v"><i className="g-mk"></i>900만 원</span></td></tr>
+<tr className="g-r2"><th scope="row">TK 분석</th><td>200만 원</td><td><span className="g-v g-flag"><i className="g-mk"></i>미포함 · 기관 확인</span></td></tr>
+<tr className="g-r3"><th scope="row">영문 보고서</th><td>별도 견적</td><td><span className="g-v g-flag"><i className="g-mk"></i>미포함</span></td></tr>
+<tr className="g-r4 g-total"><th scope="row">합계</th><td>1,200만 원</td><td>900만 원</td></tr>
+</tbody>
+</table>
+<figcaption className="mono">최종 조건은 각 기관의 정식 견적서로 확인합니다.</figcaption>
+</figure>
+</div>
+</section>
 
-        <section className="home-section">
-          <div className="wrap cro-invitation"><div className="cro-invitation__symbol"><Buildings size={48} weight="light" aria-hidden="true" /></div><div><h2>기관의 전문성이,<br />필요한 연구와 만날 수 있도록.</h2><p>수행 분야에 맞는 요청을 받고, 역량 카탈로그로 회신을 준비하세요.</p></div><Link href="/for-cro" className="b b--line b--lg">기관 참여 안내 <ArrowUpRight size={18} aria-hidden="true" /></Link></div>
-        </section>
+<section className="gm gm-fl" data-gm="fl" aria-labelledby="fl-h">
+<h2 id="fl-h">한번 요청으로,<br /><span>다양한 기관의 견적서를 받아보세요.</span></h2>
+<div className="gm-dia">
+<svg className="gm-wires" aria-hidden="true"><path className="w o"></path><path className="w o"></path><path className="w o"></path><path className="w i"></path><path className="w i"></path></svg>
+<div className="gm-doc">
+<span className="mono">요청서</span>
+<b>반복투여독성 4주</b>
+<dl><div><dt>동물</dt><dd>설치류</dd></div><div><dt>기밀 등급</dt><dd>CDA 필요</dd></div><div><dt>보낸 곳</dt><dd>수행 분야가 맞는 기관</dd></div></dl>
+</div>
+<div className="gm-orgs">
+<div className="g-org"><div><b>예시 기관 A</b><small>1,000만 원 · 8주</small></div><span className="g-st g-ok">회신 완료</span></div>
+<div className="g-org"><div><b>예시 기관 B</b><small>900만 원 · 7주</small></div><span className="g-st g-pre">예비 견적</span></div>
+<div className="g-org"><div><b>예시 기관 C</b><small>회신 기한 전</small></div><span className="g-st g-wip"><span className="g-dots"><b></b><b></b><b></b></span>작성 중</span></div>
+</div>
+<div className="gm-card">
+<span className="mono">비교표</span>
+<div className="g-mrow"><span>기관 A</span><span className="g-bt"><i style={{ "--w": "1" }}></i></span><em data-to="1000">1,000</em></div>
+<div className="g-mrow"><span>기관 B</span><span className="g-bt"><i style={{ "--w": ".9" }}></i></span><em data-to="900">900</em></div>
+<div className="g-mrow g-wait"><span>기관 C</span><span className="g-bt"><i style={{ "--w": "0" }}></i></span><em>대기</em></div>
+<small>회신 2/3 · 기한 전에도 선택할 수 있습니다</small>
+</div>
+<span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span>
+<span className="g-rp" aria-hidden="true">1,000</span><span className="g-rp" aria-hidden="true">900</span>
+</div>
+<ol className="gm-steps"><li>요청서 작성</li><li>기관 회신</li><li>비교하고 선택</li><i className="prog" aria-hidden="true"></i></ol>
+</section>
 
-        <section className="home-section home-faq"><div className="wrap faq-layout"><div className="section-intro"><h2>궁금한 점을<br />먼저 확인하세요.</h2><Link href="/faq" className="text-link">자주 묻는 질문 전체 <ArrowUpRight size={18} aria-hidden="true" /></Link></div><FaqList items={FAQ.slice(0, 4)} /></div></section>
-        <section className="home-closing"><div className="wrap"><div><h2>연구의 다음 단계를 열어보세요.</h2><p>첫 견적 요청부터, 단추와 함께.</p></div><RfqLink className="b b--fill b--lg">견적 요청하기 <ArrowUpRight size={19} aria-hidden="true" /></RfqLink></div></section>
-      </main>
-      <SiteFooter />
-    </div>
+<section className="gm gm-ev" data-gm="ev">
+<div className="gm-ev-grid">
+<div>
+<h2>제안에는<br /><span>근거가 따라붙습니다.</span></h2>
+<p className="lead">공개 가이드라인에 근거한 시험을 제안합니다.</p>
+<div className="ctas" style={{ marginTop: "32px" }}><a className="btn g-ghost" href="/request/new?start=advisor">시험 제안 열기</a></div>
+</div>
+<div className="gm-adv" aria-label="시험 제안 예시">
+<div className="gm-ans"><span className="mono">답변</span><span className="g-chip">합성의약품</span><span className="g-chip">임상 1상</span><span className="g-chip">2주 투여</span></div>
+<ul className="gm-sg">
+<li className="g-sr"><div className="g-t"><b>반복투여독성 2주</b><small>설치류 1종, 비설치류 1종</small></div><span className="g-src"><i className="g-mk"></i>ICH M3(R2) 표 1</span><span className="g-pg" aria-hidden="true"><span>ICH M3(R2)</span><i style={{ "--w": ".8" }}></i><i className="g-hl" style={{ "--w": ".64" }}></i><i style={{ "--w": ".72" }}></i><i style={{ "--w": ".5" }}></i></span></li>
+<li className="g-sr"><div className="g-t"><b>복귀돌연변이시험</b><small>임상 단회 투여 전</small></div><span className="g-src"><i className="g-mk"></i>OECD TG 471</span><span className="g-pg" aria-hidden="true"><span>OECD TG 471</span><i style={{ "--w": ".7" }}></i><i style={{ "--w": ".84" }}></i><i className="g-hl" style={{ "--w": ".58" }}></i><i style={{ "--w": ".66" }}></i></span></li>
+<li className="g-sr"><div className="g-t"><b>안전성약리 핵심 시험</b><small>심혈관, 호흡, 중추신경</small></div><span className="g-src"><i className="g-mk"></i>ICH S7A</span><span className="g-pg" aria-hidden="true"><span>ICH S7A</span><i className="g-hl" style={{ "--w": ".74" }}></i><i style={{ "--w": ".62" }}></i><i style={{ "--w": ".8" }}></i><i style={{ "--w": ".54" }}></i></span></li>
+</ul>
+<p className="g-foot">참고용 제안입니다. 실제 시험 계획은 기관과 확인하세요.</p>
+</div>
+</div>
+</section>
+
+<section className="fin" aria-labelledby="fin-h">
+<div className="fin-pin">
+<div className="fin-grid">
+<div className="copyin">
+<h2 id="fin-h">비임상 시험<br /><span>단추에서.</span></h2>
+<p className="lead">비임상 시험의 시작은 조건에 맞는 기관을 고르는 일입니다.&nbsp;</p>
+<div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a></div>
+</div>
+<div className="bm" aria-hidden="true">
+<div className="qs h" style={{ left: "33.6%", top: "33.6%", "--dx": "-300px", "--dy": "-190px", "--r": "-16deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "66.4%", top: "33.6%", "--dx": "280px", "--dy": "-220px", "--r": "13deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "33.6%", top: "66.4%", "--dx": "-320px", "--dy": "170px", "--r": "10deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "66.4%", top: "66.4%", "--dx": "300px", "--dy": "200px", "--r": "-11deg", "--s": "1" }}></div>
+<div className="qs b" style={{ left: "50%", top: "50%", "--dx": "-20px", "--dy": "-300px", "--r": "5deg", "--s": ".7" }}></div>
+<div className="qs b" style={{ left: "50%", top: "50%", "--dx": "-360px", "--dy": "-10px", "--r": "-7deg", "--s": ".7" }}></div>
+<div className="qs b" style={{ left: "50%", top: "50%", "--dx": "360px", "--dy": "-30px", "--r": "8deg", "--s": ".7" }}></div>
+<div className="qs b" style={{ left: "50%", top: "50%", "--dx": "30px", "--dy": "300px", "--r": "-4deg", "--s": ".7" }}></div>
+<svg viewBox="0 0 400 400">
+<g className="body">
+<ellipse cx="212" cy="222" rx="184" ry="182" fill="#E3E3DE" opacity=".8"></ellipse>
+<circle cx="200" cy="200" r="180" fill="#1B1B19"></circle>
+</g>
+<g className="holes" fill="#F4F4F0"><circle cx="134.5" cy="134.5" r="41"></circle><circle cx="265.5" cy="134.5" r="41"></circle><circle cx="134.5" cy="265.5" r="41"></circle><circle cx="265.5" cy="265.5" r="41"></circle></g>
+</svg>
+</div>
+</div>
+<div className="cro"><p>기관의 영업·견적 담당자라면, 수행 분야에 맞는 요청서를 받아 보세요.</p><a className="btn ghost" href="/for-cro">기관 참여 안내 <span className="ar">→</span></a></div>
+</div>
+</section>
+      <HomeMotion />
+    </Site>
   );
 }

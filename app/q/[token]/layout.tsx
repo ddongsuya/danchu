@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mark } from "@/components/app/ui";
+import { Lockup } from "@/components/Logo";
 import "@/components/shell/portal.css";
 
 export const metadata: Metadata = { title: "단추 · 견적 회신", robots: { index: false, follow: false } };
@@ -13,11 +13,10 @@ export default function TokenLayout({ children }: { children: React.ReactNode })
         <header className="pt__top" style={{ display: "block" }}>
           <div className="pt__topin" style={{ maxWidth: 1080, margin: "0 auto" }}>
             <Link href="/" className="pt__brand">
-              <Mark size={24} />
-              <span>단추</span>
-              <span className="pt__role">CRO</span>
+              <Lockup size={20} />
+              <span className="pt__role">기관</span>
             </Link>
-            <Link href="/signup/cro" style={{ fontSize: 13, color: "var(--muted)" }}>CRO 계정 만들기</Link>
+            <span className="pt__tokenhint">로그인 없이 열린 참여 안내 · <Link href="/signup/cro">기관 계정 만들기</Link></span>
           </div>
         </header>
         <main className="pt__main" style={{ paddingBottom: 48 }}>{children}</main>

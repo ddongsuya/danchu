@@ -12,7 +12,7 @@
 import { repeatDoseFor, type ClinDuration, type Stage as TableStage } from "./design-guide";
 import type { Values } from "./rfq-schema";
 
-export const ADVISOR_DISCLAIMER = "공개 가이드라인에 근거한 참고용 제안입니다. 최종 시험 구성과 설계는 시험기관 및 규제기관 상담으로 확정하세요.";
+export const ADVISOR_DISCLAIMER = "이 제안은 공개 가이드라인에 따른 참고용 추천입니다. 정확한 시험 구성은 식약처와 시험기관(CRO)과 충분히 논의해 확정하세요.";
 
 export type Answers = Record<string, string | string[] | undefined>;
 

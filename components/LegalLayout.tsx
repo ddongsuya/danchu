@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { SiteHeader } from "./SiteHeader";
-import { SiteFooter } from "./SiteFooter";
-import "@/app/site.css";
+import { Site } from "@/components/site/Site";
 
-/** 약관·개인정보처리방침 공통 레이아웃 */
+/** 약관·개인정보처리방침 공통 레이아웃 (공개 사이트 골격, 한 화면 스냅은 쓰지 않는다) */
 export function LegalLayout({
   title,
   effectiveDate,
@@ -21,9 +19,8 @@ export function LegalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="site">
-      <SiteHeader />
-      <main className="legal-main">
+    <Site current={current} onescreen={false}>
+      <div className="legal-main">
         <article className="legal">
           <h1 className="legal__title">{title}</h1>
           <p className="legal__meta">
@@ -32,14 +29,13 @@ export function LegalLayout({
           {notice && <aside className="legal__notice">{notice}</aside>}
           {children}
           <div className="legal__back">
-            <Link href="/" className="b b--line b--sm">
+            <Link href="/" className="btn ghost sm">
               홈으로
             </Link>
           </div>
         </article>
-      </main>
-      <SiteFooter current={current} />
-    </div>
+      </div>
+    </Site>
   );
 }
 
