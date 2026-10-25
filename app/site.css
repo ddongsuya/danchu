@@ -72,7 +72,7 @@
 .a .word{font-size:clamp(96px,19vw,270px);line-height:.9;font-weight:600;letter-spacing:-.06em;color:#E2E2DC;margin:64px 0 12px;display:flex;align-items:center;gap:.12em;overflow:hidden}
 .a .bigmark{--d:.78em;width:var(--d);height:var(--d);border-radius:50%;background:#E2E2DC;display:grid;grid-template-columns:repeat(2,calc(var(--d)*.228));grid-auto-rows:calc(var(--d)*.228);gap:calc(var(--d)*.136);place-content:center;flex:none}
 .a .bigmark i{border-radius:50%;background:var(--paper)}
-.a .legal{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.a .fine{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 /* forms */
 .a .fld{display:grid;gap:8px}
 .a .fld label,.a .fld .lab{font-size:14px;font-weight:500}
@@ -189,13 +189,14 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 @media (prefers-reduced-motion: reduce){html:has(.a.onescreen){scroll-snap-type:y proximity}}
 /* 모바일(iOS): mandatory+stop:always는 주소창 접힘과 겹쳐 스크롤이 튄다. 가까울 때만 맞춘다 */
 @media (max-width:860px){
- /* 한 화면 섹션 높이는 px로 상한을 두고, 첫 섹션(제목)은 세로 가운데가 아니라 맨 위에 놓는다.
-    앱 내 브라우저가 svh를 크게 계산하면 제목이 화면 밖으로 밀려 첫 화면이 비어 보였다 */
- .a.onescreen main > section,.a.onescreen main > div.bandw{min-height:min(calc(100svh - var(--navh)),720px)}
- .a.onescreen main > :first-child{min-height:0;align-content:start}
+ /* 한 스크롤에 한 장면: 섹션마다 화면 한 칸을 채워 다음 장면이 같이 보이지 않게 한다.
+    첫 섹션(제목)은 세로 가운데가 아니라 위쪽에 놓는다. 앱 내 브라우저가 svh를 크게 계산해도 제목은 화면 위에 남는다 */
+ .a.onescreen main > section,.a.onescreen main > div.bandw{min-height:calc(var(--vhpx,100svh) - var(--navh));align-content:safe center}
+ .a.onescreen main > :first-child{align-content:start;padding-top:clamp(48px,14svh,120px)}
  .a .ph > div > *,.a .ph2 > *{animation:none}
- html:has(.a.onescreen){scroll-snap-type:none}
- .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-stop:normal;scroll-snap-align:none}
+ /* 장면 높이가 주소창 접힘에 따라 바뀌지 않으므로(--vhpx) 가까울 때만 장면 첫머리에 맞춘다 */
+ html:has(.a.onescreen){scroll-snap-type:y proximity}
+ .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-stop:normal;scroll-snap-align:start}
  /* 스크롤 중 블러 재계산이 iOS에서 프레임을 떨어뜨린다. 모바일은 블러 없이 거의 불투명한 바탕 */
  .a nav.top::before{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(244,244,240,.96)}
 }
@@ -211,3 +212,34 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 @media (hover:hover) and (pointer:fine){.a .cue:hover{color:var(--ink)}}
 .a .cue:active i{transform:translateY(2px)}
 @media (prefers-reduced-motion: reduce){.a .cue i{animation:none}}
+
+/* ---- 작은 휴대폰(400px 이하, 360·320 안드로이드 포함): 상단 줄이 한 줄 안에 들어오게. 버튼 화살표를 빼고 여백을 줄인다 ---- */
+@media (max-width:400px){
+ .a .wrap{padding:0 16px}
+ .a nav.top{gap:10px}
+ .a nav.top .right{gap:10px}
+ .a nav.top .right .btn .ar{display:none}
+ .a nav.top .right .btn{padding:0 12px}
+ .a .menu{padding:0 10px}
+}
+@media (max-width:340px){
+ .a nav.top .lockup,.a nav.top .logo{font-size:24px}
+}
+
+/* ---- 영상처럼 보는 설명(.player, 단계 이름 = 자막): 위 단계 진행 막대, 가운데 장면, 아래 자막.
+   단계 이름(.tt)은 이미 장면에 맞춰 켜지고 꺼지므로 영상 아래 한자리에 겹쳐 놓으면 자막이 된다 ---- */
+.a .film2.player:not(:has(.cap)) .s2g{grid-template-columns:minmax(0,1fr);gap:0;width:min(100%,760px,calc(var(--vhpx,100svh) - 300px));margin-inline:auto;position:relative;padding-bottom:3.4em}
+.a .film2.player:not(:has(.cap)) .s2g > div:not(.fst){display:contents}
+.a .film2.player:not(:has(.cap)) .s2g h2{order:-2;margin-bottom:24px}
+.a .film2.player:not(:has(.cap)) .tabs2{order:-1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none;gap:6px;margin:0 0 14px !important}
+.a .film2.player:not(:has(.cap)) .tabs2 label{position:static;height:20px;padding:0;border:0;font-size:0;line-height:0;background:linear-gradient(rgba(27,27,25,.16),rgba(27,27,25,.16)) top/100% 2px no-repeat}
+.a .film2.player:not(:has(.cap)) .tabs2 label i{position:relative;display:block;inset:auto;height:2px;background:var(--ink)}
+.a .film2.player:not(:has(.cap)) .tabs2 .tb{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.a .film2.player:not(:has(.cap)) .tabs2 .tt{position:absolute;left:0;right:0;top:auto;bottom:0;text-align:center;white-space:normal;font-size:clamp(22px,2.2vw,30px);font-weight:500;letter-spacing:-.03em;line-height:1.25;color:var(--ink)}
+.a .film2.player:not(:has(.cap)) .tabs2 .hint{display:none}
+.a .film2.player:not(:has(.cap)) .fst{width:100%;margin:0}
+@media (max-width:860px){
+ .a .film2.player:not(:has(.cap)) .s2g{width:100%;padding-bottom:2.8em}
+ .a .film2.player:not(:has(.cap)) .tabs2{gap:4px;margin-bottom:10px !important}
+ .a .film2.player:not(:has(.cap)) .tabs2 .tt{font-size:20px}
+}

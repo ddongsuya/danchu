@@ -321,8 +321,9 @@
 .pt .empty b { font-size: 18px; margin-bottom: 10px; }
 .pt .bar > i { transition: none; }
 .pt .tgl > span { background: var(--wh); }
-.request-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-lg); margin-bottom: 24px; padding: 24px 0; }
-.request-summary > div { padding: 0 30px; border-right: 1px solid var(--cline); }
+.request-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--cline); margin-bottom: 28px; padding: 18px 0 20px; }
+.request-summary > div { padding: 0 24px; border-right: 1px solid var(--cline); }
+.request-summary > div:first-child { padding-left: 0; }
 .request-summary > div:last-child { border: 0; }
 .request-summary span { font-size: 13px; color: var(--muted); }
 .request-summary strong { display: block; font-size: 36px; font-weight: 600; letter-spacing: -.035em; margin-top: 10px; font-variant-numeric: tabular-nums; }
@@ -339,18 +340,18 @@
 .request-attention b { font-size: 14px; font-weight: 650; }
 .request-attention p { font-size: 13px; color: var(--muted); margin-top: 3px; }
 .request-attention > span:last-child { display: flex; align-items: center; gap: 10px; margin-left: auto; font-size: 13px; font-weight: 600; color: var(--brand); white-space: nowrap; }
-.request-panel { background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-lg); overflow: hidden; }
-.request-panel__heading { padding: 24px 26px 15px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.request-panel { border-top: 1px solid var(--ink); }
+.request-panel__heading { padding: 22px 0 14px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .request-panel__heading h2 { font-size: 17px; font-weight: 650; white-space: nowrap; }
 .request-panel__heading h2 span { color: var(--muted); font-size: 13px; margin-left: 8px; font-weight: 500; }
 .request-search { display: flex; align-items: center; gap: 9px; border: 1px solid var(--iline); border-radius: var(--r-sm); padding: 0 12px; color: var(--muted); }
 .request-search:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
 .request-search input { height: 38px; width: 195px; border: 0; background: transparent; color: var(--ink); outline: none; font-size: 13px; min-width: 0; }
-.request-filters { display: flex; gap: 24px; padding: 0 26px; border-bottom: 1px solid var(--cline); overflow-x: auto; }
+.request-filters { display: flex; gap: 24px; padding: 0; border-bottom: 1px solid var(--cline); overflow-x: auto; }
 .request-filters button { font-size: 13px; padding: 13px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); white-space: nowrap; }
 .request-filters button[aria-pressed="true"] { border-color: var(--brand); color: var(--brand); font-weight: 650; }
-.request-table-head, .request-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px 82px 85px; align-items: center; gap: 20px; padding: 12px 26px; }
-.request-table-head { font-size: 11px; color: var(--muted); background: var(--sf); }
+.request-table-head, .request-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px 96px 85px; align-items: center; gap: 20px; padding: 12px 12px; margin: 0 -12px; }
+.request-table-head { font-size: 11px; color: var(--muted); }
 .request-row { padding-top: 22px; padding-bottom: 22px; border-top: 1px solid var(--cline); }
 .request-row__title { min-width: 0; }
 .request-row__title small { display: block; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; margin-bottom: 5px; }
@@ -360,6 +361,9 @@
 .request-row__replies { font-size: 13px; font-variant-numeric: tabular-nums; }
 .request-row__replies b { color: var(--brand); font-weight: 650; }
 .request-row__replies span { color: var(--muted); }
+/* 회신 진행 막대: 초대한 기관 중 회신한 비율 */
+.request-row__meter { display: block; height: 3px; margin-top: 8px; background: var(--track); position: relative; overflow: hidden; border-radius: 2px; }
+.request-row__meter::after { content: ""; position: absolute; inset: 0; background: var(--ink); transform: scaleX(var(--p, 0)); transform-origin: left; }
 .request-row__date { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .request-empty { padding: 58px 25px; text-align: center; display: flex; flex-direction: column; align-items: center; color: var(--muted); }
 .request-empty > svg { margin-bottom: 18px; color: var(--brand); }
@@ -368,7 +372,7 @@
 .request-empty .b1, .request-empty .b2 { margin-top: 25px; }
 .request-help { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--muted); margin-top: 28px; }
 .pt .request-help a { display: flex; gap: 6px; align-items: center; color: var(--brand); min-height: 36px; }
-@media (hover: hover) and (pointer: fine) { .request-row:hover { background: var(--sf); } }
+@media (hover: hover) and (pointer: fine) { .request-row:hover { background: var(--wh); } }
 @media (min-width: 960px) {
   .pt__side { padding: 28px 18px 22px; }
   .pt__sbrand { padding: 0 8px 37px; gap: 11px; font-size: 22px; }
@@ -394,20 +398,22 @@
   .compare-status > div { border-left: 0; border-top: 1px solid var(--cline); padding: 12px 16px; }
   .compare-status > div:first-child { border-top: 0; }
   .request-summary > div { padding: 0 13px; }
+  .request-summary > div:first-child { padding-left: 0; }
   .request-summary span { font-size: 11px; }
   .request-summary strong { font-size: 27px; }
   .request-summary strong small { margin-left: 4px; font-size: 11px; }
   .request-attention { flex-wrap: wrap; padding: 17px; gap: 10px; }
   .request-attention > div { flex: 1; }
   .request-attention > span:last-child { margin-left: 30px; }
-  .request-panel__heading { padding: 20px 18px 13px; flex-direction: column; align-items: stretch; }
+  .request-panel__heading { padding: 20px 0 13px; flex-direction: column; align-items: stretch; }
   .request-search input { width: 100%; }
-  .request-filters { padding: 0 18px; gap: 22px; }
+  .request-filters { padding: 0; gap: 22px; }
   .request-table-head { display: none; }
-  .request-row { grid-template-columns: 1fr auto; padding: 20px 18px; gap: 16px 10px; }
+  .request-row { grid-template-columns: 1fr auto; padding: 20px 0; margin: 0; gap: 16px 10px; }
   .request-row__title { grid-column: 1; }
   .request-row > .pill { grid-column: 2; grid-row: 1; align-self: start; }
   .request-row__date { justify-content: flex-end; }
+  .request-row__meter { width: 120px; }
   .request-row__replies::before { content: "기관 회신 "; color: var(--muted); font-size: 11px; margin-right: 8px; }
   .request-empty { padding: 40px 22px; }
   .request-empty h3 { font-size: 17px; }
@@ -520,3 +526,7 @@
 .pt .tile span:last-child { font-weight: 500; }
 .pt .req { color: var(--err); }
 .pt .request-summary strong, .pt .request-summary, .pt .compare-status, .pt .request-panel { border-radius: var(--r-sm); }
+
+/* 비교표: 기관마다 다른 부분(미포함·확인 필요)만 형광펜으로. 포함은 그대로 둔다 */
+.pt .cmp-gap { background: var(--brand-tint); color: var(--ink); padding: 0 3px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.pt .cmp-head__link .btxt { padding-left: 0; text-decoration: underline; text-underline-offset: 4px; }

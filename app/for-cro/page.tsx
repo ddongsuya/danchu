@@ -110,7 +110,7 @@ export default function Page() {
 </figure>
 </section>
 
-<section className="film2 bandw" style={{ "--T": "21s", "--F": "-18.4s" }} aria-labelledby="st">
+<section className="film2 bandw player" style={{ "--T": "21s", "--F": "-18.4s" }} aria-labelledby="st">
 <div className="s2h"><h2 id="st">참여부터 계약까지<br /><span>이렇게 진행됩니다.</span></h2></div>
 <div className="s2g">
 <div className="fst" role="img" aria-label="기관이 참여를 신청하고, 표준 가격을 등록하고, 참여 안내를 받아 참여를 정하고, 견적서를 회신한 뒤 선정되어 계약하는 과정">

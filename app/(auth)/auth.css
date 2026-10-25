@@ -14,7 +14,7 @@
 .auth__title{margin:0;font-size:32px;font-weight:500;letter-spacing:-.03em;line-height:1.15}
 .auth__sub{margin:8px 0 0;color:var(--muted);font-size:15.5px;line-height:1.6}
 .auth__tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--card-line);border-radius:2px;padding:3px;gap:3px;background:var(--white)}
-.auth__tabs button{height:36px;border:0;background:transparent;font-size:14px;color:var(--muted);border-radius:1px;transition:background-color 160ms ease,color 160ms ease}
+.auth__tabs button{min-height:36px;padding:6px 8px;line-height:1.3;border:0;background:transparent;font-size:14px;color:var(--muted);border-radius:1px;transition:background-color 160ms ease,color 160ms ease}
 .auth__tabs button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:500}
 .auth__form{display:flex;flex-direction:column;gap:16px}
 .auth__grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -36,9 +36,10 @@
 @media (max-width:860px){
  .a .auth{grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:100dvh}
  .a .brand{padding:16px 20px 0}
- .a .brand .lo{min-height:270px;margin:8px -20px 0}
- .a .brand .lo .orb{transform:scale(.44)}
- .a .formside{padding:32px 20px 56px;align-items:flex-start}
+ /* 휴대폰: 궤도는 로고 아래 얇은 띠로. 제목·입력칸·버튼이 첫 화면에 들어온다 */
+ .a .brand .lo{min-height:120px;margin:8px -20px 0}
+ .a .brand .lo .orb{transform:scale(.5)}
+ .a .formside{padding:28px 20px 56px;align-items:flex-start}
  .auth__grid{grid-template-columns:1fr}
  .auth__title{font-size:28px}
 }

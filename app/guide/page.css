@@ -213,7 +213,7 @@
 .a .tabs2.sm label{font-size:clamp(16px,1.4vw,19px);padding:12px 0;letter-spacing:-.01em}
 .a .tabs2 label:first-of-type{border-top:1px solid var(--line)}
 .a .tabs2 label:active{transform:scale(.985)}
-.a .tabs2 .tb{color:#9C9C95}
+.a .tabs2 .tb{color:var(--muted)}
 .a .tabs2 .tt{left:0;top:16px;white-space:nowrap}
 .a .tabs2.sm .tt{top:12px}
 .a .tabs2 label i{left:0;right:0;bottom:-1px;height:2px;background:var(--acc);transform-origin:left}
@@ -583,3 +583,7 @@
 @keyframes gx147{0.0%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:linear}100.0%{opacity:1;transform:translate(-8.0cqw,-4.0cqw) rotate(0deg) scale(1,1);animation-timing-function:linear}}
 @keyframes gx148{0.0%{opacity:1;transform:translate(0px,0px) rotate(0deg) scale(0,1);animation-timing-function:linear}100.0%{opacity:1;transform:translate(0px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}}
 @keyframes gx149{0.0%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}13.564%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.0%{opacity:1;transform:translate(0.0cqw,0.36cqw) rotate(0deg) scale(1.007,1.007);animation-timing-function:cubic-bezier(.23,1,.32,1)}14.714%{opacity:1;transform:translate(0.0cqw,-0.12cqw) rotate(0deg) scale(0.998,0.998);animation-timing-function:cubic-bezier(.23,1,.32,1)}15.857%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}61.421%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}61.857%{opacity:1;transform:translate(0.0cqw,0.36cqw) rotate(0deg) scale(1.007,1.007);animation-timing-function:cubic-bezier(.23,1,.32,1)}62.571%{opacity:1;transform:translate(0.0cqw,-0.12cqw) rotate(0deg) scale(0.998,0.998);animation-timing-function:cubic-bezier(.23,1,.32,1)}63.714%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}100.0%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}}
+
+/* 2026-10-25 품질 3차: 영상 무대의 회색 상자·점 격자를 걷고 종이 위에 바로 (랜딩 아래 섹션과 같은 방식) */
+.a .fst,.a .film2 .fst,.a .fwrap .fst{background-color:transparent;box-shadow:none}
+.a .fst .grid{display:none}

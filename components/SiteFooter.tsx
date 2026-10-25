@@ -30,7 +30,7 @@ export function SiteFooter({ current }: { current?: string }) {
         <LogoMark className="bigmark" />
         <span className="wm"><Wordmark /></span>
       </div>
-      <div className="legal mono"><span>© 2026 단추</span><span>비임상 시험 견적 플랫폼</span></div>
+      <div className="fine mono"><span>© 2026 단추</span><span>비임상 시험 견적 플랫폼</span></div>
     </footer>
   );
 }

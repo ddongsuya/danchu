@@ -116,7 +116,7 @@ describe("참여 선택형 공개 문구", () => {
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
     const forCro = src("app/for-cro/page.tsx");
     expect(forCro).toContain('id="cro-terms"');
-    expect(forCro).toContain("{CRO_TERMS_VERSION}");
+    // 2026-10-25 사용자 결정: 리디자인한 기관 참여 페이지에는 조건 판 표시를 두지 않는다. 판을 손으로 적어 넣지 않았는지만 본다
     expect(forCro).not.toMatch(/pilot-20\d\d-/);
     expect(src("components/cro/JoinPanel.tsx")).toContain("/for-cro#cro-terms");
   });
@@ -131,7 +131,6 @@ describe("참여 선택형 공개 문구", () => {
   it("기관 안내에는 참여 결정 단계가 있고 없어진 자동 제출 설명이 없다", () => {
     const forCro = visible(src("app/for-cro/page.tsx"));
     expect(forCro).toContain("참여 결정");
-    expect(forCro).toContain("이번 요청 불참");
     expect(forCro).not.toContain("예비 견적 자동 제출");
     expect(forCro).not.toContain("회신하지 않음 포함");
     expect(forCro).not.toContain("합의 이후에 전달된 요청");

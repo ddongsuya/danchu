@@ -124,7 +124,15 @@ export function CompareBoard({
           <ul style={{ margin: 0, paddingLeft: 16 }}>
             {INCL_KEYS.map((k) => (
               <li key={k}>
-                {k}: {c.includes.includes(k) ? "포함" : "미포함·확인 필요"}
+                {k}:{" "}
+                {c.includes.includes(k) ? (
+                  "포함"
+                ) : cols.some((o) => o.includes.includes(k)) ? (
+                  // 다른 기관은 포함한 항목만 형광펜으로 (기관 사이 차이)
+                  <mark className="cmp-gap">미포함·확인 필요</mark>
+                ) : (
+                  "미포함·확인 필요"
+                )}
               </li>
             ))}
           </ul>
@@ -256,7 +264,7 @@ export function CompareBoard({
                 <th scope="col" key={c.id}>
                   <div>{c.name}</div>
                   {c.selected && <span>선택한 기관</span>}
-                  <div>
+                  <div className="cmp-head__link">
                     <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
                       견적 상세 보기
                     </Link>

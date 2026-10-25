@@ -284,8 +284,8 @@ svg.lw { display: block; height: .9em; width: auto; flex: none; overflow: visibl
 .legal-main { flex: 1; padding: 56px 0 88px; }
 .legal { max-width: 800px; margin: 0 auto; font-size: 17px; line-height: 1.65; }
 .legal__title { margin: 0 0 8px; font-size: clamp(28px, 3.4vw, 40px); font-weight: 500; letter-spacing: -0.03em; }
-.legal__meta { margin: 0 0 40px; font-size: 14px; color: var(--muted); }
-.legal__notice { margin: -24px 0 32px; padding: 14px 16px; border: 1px solid var(--card-line); border-radius: var(--r-md); background: var(--white); font-size: 15px; line-height: 1.6; color: var(--ink); }
+.legal__meta { margin: 0 0 24px; font-size: 14px; color: var(--muted); }
+.legal__notice { margin: 0 0 32px; padding: 14px 16px; border: 1px solid var(--card-line); border-radius: var(--r-md); background: var(--white); font-size: 15px; line-height: 1.6; color: var(--ink); }
 .legal__notice p { margin: 0; color: inherit; }
 .legal h2 { margin: 40px 0 12px; font-size: 19px; font-weight: 500; letter-spacing: -0.01em; padding-top: 24px; border-top: 1px solid var(--card-line); }
 .legal h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 32px; }
@@ -301,8 +301,18 @@ svg.lw { display: block; height: .9em; width: auto; flex: none; overflow: visibl
 .legal td { color: var(--body); }
 .legal__note { margin: 32px 0 0; padding: 16px 18px; background: var(--white); border: 1px solid var(--card-line); border-radius: var(--r-md); font-size: 14px; color: var(--body); }
 .legal__back { margin-top: 40px; display: flex; }
+/* 개정 안내: 요약 한 줄을 늘 보이고, 긴 본문은 펼쳐 본다 */
+.legal__notice > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-weight: 500; }
+.legal__notice > summary::-webkit-details-marker { display: none; }
+.legal__notice > summary::after { content: "펼쳐 보기"; flex: none; font-size: 13px; font-weight: 400; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
+.legal__notice[open] > summary::after { content: "접기"; }
+.legal__notice[open] > summary { margin-bottom: 10px; }
 @media (max-width: 640px) {
-  .legal__table-wrap::after { content: "← 좌우로 밀어서 보기"; display: block; font-size: 12px; color: var(--muted); padding: 6px 2px 0; }
+  /* 휴대폰: 표를 가로로 밀지 않고 화면 폭 안에서 줄바꿈해 다 보이게 */
+  .legal table { min-width: 0; font-size: 13.5px; }
+  .legal th, .legal td { padding: 9px 8px; }
+  .legal th { white-space: normal; }
+  .legal td { overflow-wrap: anywhere; }
 }
 
 /* 접근성 보조 */
