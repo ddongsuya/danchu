@@ -52,9 +52,9 @@
 .a .mq .track span::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--line)}
 @keyframes mq{to{transform:translateX(-50%)}}
 /* sections */
-.a .first{min-height:min(100dvh,1080px);display:flex;flex-direction:column}
+.a .first{min-height:min(100svh,1080px);display:flex;flex-direction:column}
 .a .first .hero{flex:1}
-.a section.scr{min-height:min(100dvh,1080px);display:flex;flex-direction:column;justify-content:center;padding:72px 0}
+.a section.scr{min-height:min(100svh,1080px);display:flex;flex-direction:column;justify-content:center;padding:72px 0}
 .a .shead{display:grid;grid-template-columns:1fr minmax(0,28em);gap:48px;align-items:end}
 .a .shead .lead{margin:0}
 .a section.last{justify-content:space-between;padding:0}
@@ -219,7 +219,7 @@
 }
 /* ===== 비교 장면: 스크롤에 따라 총액 → 항목 → 같은 시험 ===== */
 .a .cmp{position:relative}
-.a .pin{min-height:min(100dvh,1080px);display:flex;align-items:center;padding:56px 0}
+.a .pin{min-height:min(100svh,1080px);display:flex;align-items:center;padding:56px 0}
 .a .cmp-grid{width:100%;display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:72px;align-items:center}
 .a .phwrap{position:relative;margin-top:40px;padding-left:22px}
 .a .phases{list-style:none;margin:0;padding:0}
@@ -314,8 +314,8 @@
 .a .dst h3{margin:0 0 6px;font-size:20px;font-weight:500;letter-spacing:-.02em}
 .a .dst p{margin:0;color:var(--muted);font-size:15px;line-height:1.65}
 @supports (animation-timeline: view()){
- .a .cmp{height:calc(min(100dvh,1080px) * 3.2);view-timeline-name:--cmp}
- .a .pin{position:sticky;top:0;height:min(100dvh,1080px);min-height:0}
+ .a .cmp{height:calc(min(100svh,1080px) * 3.2);view-timeline-name:--cmp}
+ .a .pin{position:sticky;top:0;height:min(100svh,1080px);min-height:0}
  .a .cmp .rail i,.a .cmp .fill,.a .cmp .seg em,.a .cmp .seg.tk,.a .cmp .cover,.a .cmp .ghost,.a .cmp .brk,.a .cmp .it,.a .cmp .veil,.a .cmp .ph,.a .items tr.it1 > *::before{animation-timeline:--cmp;animation-range:contain 0% contain 100%;animation-fill-mode:both;animation-timing-function:linear}
  .a .rail i{animation-name:cRail}
  .a .fill{animation-name:cGrow}
@@ -446,8 +446,8 @@
 /* ===== v5: 고정 메뉴, 제안 모션, 견적서→단추, 마감 ===== */
 
 .a .skip{position:absolute;left:16px;top:-48px;z-index:40;background:var(--ink);color:var(--paper);padding:10px 14px;font-size:14px;text-decoration:none}
-.a nav.top{position:sticky;top:0;z-index:30;background:rgba(244,244,240,.86);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 0 0 100vmax rgba(244,244,240,.86);clip-path:inset(0 -100vmax)}
-.a .first{min-height:calc(min(100dvh,1080px) - 69px)}
+.a nav.top{position:sticky;top:0;z-index:30}
+.a .first{min-height:calc(min(100svh,1080px) - 69px)}
 .a p,.a .lead{text-wrap:pretty}
 .a .pin{padding-top:84px}
 .a .ev{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
@@ -477,7 +477,7 @@
 .a .qs::after{content:"";position:absolute;left:9px;right:9px;top:22px;bottom:10px;background:repeating-linear-gradient(#D9D9D3 0 3px,transparent 3px 10px)}
 .a .qs.h::before{background:var(--acc)}
 @supports (animation-timeline: view()){
- .a .cmp{height:calc(min(100dvh,1080px) * 2.2)}
+ .a .cmp{height:calc(min(100svh,1080px) * 2.2)}
  .a .ach,.a .srow,.a .wire2,.a .gdoc,.a .gdoc .hl,.a .srow .src{animation-timeline:--ev;animation-fill-mode:both;animation-timing-function:linear}
  .a .a1{animation-name:pop;animation-range:entry 20% entry 34%}
  .a .a2{animation-name:pop;animation-range:entry 25% entry 39%}
@@ -526,7 +526,7 @@
  .a .gdoc span{font-size:9px}
  .a .dot{display:none}
  .a .qs{width:44px;height:58px}
- .a .first{min-height:calc(100dvh - 69px)}
+ .a .first{min-height:calc(100svh - 69px)}
 }
 @media (prefers-reduced-motion: reduce){
  .a .dot{display:none}
@@ -534,12 +534,12 @@
 }
 /* v6: 첫 단추 = 로고 그대로, 고정 화면에서 천천히 */
 .a .fin{position:relative;overflow:clip}
-.a .fin-pin{min-height:min(100dvh,1080px);display:flex;flex-direction:column;padding-top:69px}
+.a .fin-pin{min-height:min(100svh,1080px);display:flex;flex-direction:column;padding-top:69px}
 .a .fin .fin-grid{flex:1}
 .a .bm .holes circle{transform-box:fill-box;transform-origin:center}
 @supports (animation-timeline: view()){
- .a .fin{height:calc(min(100dvh,1080px) * 1.6);view-timeline-name:--fin}
- .a .fin-pin{position:sticky;top:0;height:min(100dvh,1080px);min-height:0}
+ .a .fin{height:calc(min(100svh,1080px) * 1.6);view-timeline-name:--fin}
+ .a .fin-pin{position:sticky;top:0;height:min(100svh,1080px);min-height:0}
  .a .qs,.a .bm .body,.a .bm .holes circle,.a .fin .copyin{animation-timeline:--fin;animation-fill-mode:both;animation-timing-function:linear}
  .a .fin .copyin{animation-name:fRise;animation-range:entry 30% entry 75%}
  .a .qs{animation-name:gather;animation-range:entry 30% contain 30%}

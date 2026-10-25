@@ -13,7 +13,10 @@
 .a .tnum{font-variant-numeric:tabular-nums}
 .a .skip{position:absolute;left:16px;top:-48px;z-index:40;background:var(--ink);color:var(--paper);padding:10px 14px;font-size:14px;text-decoration:none}
 .a .skip:focus{top:12px}
-.a nav.top{height:68px;display:flex;align-items:center;gap:36px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;background:rgba(244,244,240,.86);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 0 0 100vmax rgba(244,244,240,.86);clip-path:inset(0 -100vmax)}
+.a nav.top{height:68px;display:flex;align-items:center;gap:36px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+/* 화면 끝까지 닿는 반투명 바탕은 가상 요소에 둔다. (nav 자체에 backdrop-filter+clip-path+100vmax 그림자를 겹치면 iOS 사파리·앱 내 브라우저에서 메뉴가 통째로 안 그려진다) */
+.a nav.top::before{content:"";position:absolute;top:0;bottom:-1px;left:-50vw;right:-50vw;z-index:-1;background:rgba(244,244,240,.86);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);pointer-events:none}
+.a{overflow-x:clip}
 .a .logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:20px;letter-spacing:-.02em;color:var(--ink);text-decoration:none}
 .a .mark{--d:22px;width:var(--d);height:var(--d);border-radius:50%;background:var(--ink);display:grid;grid-template-columns:repeat(2,calc(var(--d)*.228));grid-auto-rows:calc(var(--d)*.228);gap:calc(var(--d)*.136);place-content:center;flex:none}
 .a .mark i{border-radius:50%;background:var(--paper)}
@@ -118,7 +121,7 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 /* login orbit panel */
 .a .brand .lo{flex:1;position:relative;min-height:520px;overflow:hidden;margin:0 -56px -48px}
 .a .brand .lo .orb{transform:scale(1.08)}
-@media (min-width:861px){.a .brand{position:sticky;top:0;align-self:start;height:100dvh}}
+@media (min-width:861px){.a .brand{position:sticky;top:0;align-self:start;height:100svh}}
 @media (max-width:860px){.a .brand{padding-bottom:0}.a .brand .lo{min-height:270px;margin:8px -20px 0}.a .brand .lo .orb{transform:scale(.44)}}
 
 
@@ -177,12 +180,14 @@ svg.lw{display:block;height:.9em;width:auto;flex:none;overflow:visible}
 @media (max-width:860px){.a .burger{display:flex;margin-left:auto}}
 
 /* ---- one section per screen + snap (public pages only; the landing has pinned scenes and stays free) ---- */
-.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:68px;min-height:calc(100dvh - var(--navh));display:grid;align-content:center}
+.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:68px;min-height:calc(100svh - var(--navh));display:grid;align-content:center}
 @media (max-width:860px){.a.onescreen main > section,.a.onescreen main > div.bandw{--navh:60px}}
-@media (min-width:861px){.a.onescreen main > section .fst,.a.onescreen main > div.bandw .fst{width:min(100%,calc(100dvh - 280px));max-width:none;margin-inline:auto}}
+@media (min-width:861px){.a.onescreen main > section .fst,.a.onescreen main > div.bandw .fst{width:min(100%,calc(100svh - 280px));max-width:none;margin-inline:auto}}
 html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--navh)}
 .a.onescreen footer{scroll-snap-align:end}
 @media (prefers-reduced-motion: reduce){html:has(.a.onescreen){scroll-snap-type:y proximity}}
+/* 모바일(iOS): mandatory+stop:always는 주소창 접힘과 겹쳐 스크롤이 튄다. 가까울 때만 맞춘다 */
+@media (max-width:860px){html:has(.a.onescreen){scroll-snap-type:y proximity}.a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-stop:normal}}
 /* 설명 영상은 화면에 들어올 때까지 0초에 멈춰 둔다 (FilmPlay가 hold를 붙였다 뗀다) */
 .a .hold .fe{animation-play-state:paused}
