@@ -277,7 +277,7 @@ export default function Page() {
 <div className="fr">
 <p className="lead">무료로 참여해보세요. 그리고 단추가 마음에 든다면 협업을 결정해주세요.</p>
 <div className="act"><div><p className="actk">이것만 준비하면 됩니다.</p><div className="chk"><label><input type="checkbox" />기관명</label><label><input type="checkbox" />보유 GLP 인증</label><label><input type="checkbox" />수행 가능 분야</label><label><input type="checkbox" />담당자 연락처</label></div></div>
-<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:hello@danchu.kr">hello@danchu.kr</a></div></div>
+<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:hello@danchu.kr">hello@danchu.kr</a></div><p className="gatehint">네 가지를 모두 확인하면 신청할 수 있습니다.</p></div>
 <details className="terms"><summary>이용 조건 전체 보기</summary>
 <ol>
 <li>참여하기를 누르면 이 조건에 동의한 것으로 보고, 누른 시각, 경로(포털 또는 회신 링크), 누른 담당자 계정(링크로 누르면 링크 지문), 이 조건의 판을 참여 기록으로 남깁니다. 누른 곳의 IP 주소와 브라우저 정보도 함께 남기며, 이 두 가지는 개인정보처리방침의 접속 기록 보유기간(3개월)이 지나면 지웁니다.</li>

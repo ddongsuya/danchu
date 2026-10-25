@@ -76,7 +76,7 @@ function Signup() {
           </Field>
 
           <Field id="name" label="담당자 성명" required>
-            <TextInput id="name" value={f.name} onChange={set("name")} placeholder="홍길동" autoComplete="name" />
+            <TextInput id="name" value={f.name} onChange={set("name")} autoComplete="name" />
           </Field>
 
           <Field id="email" label="업무용 이메일" required help="견적·비교표 알림이 이 주소로 갑니다.">

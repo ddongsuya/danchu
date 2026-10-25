@@ -266,3 +266,7 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a .nextp:active{transform:scale(.99)}
 @media (hover:hover) and (pointer:fine){ .a .nextp:hover .ar{transform:translateX(8px)}.a .nextp:hover b{text-decoration:underline;text-underline-offset:8px;text-decoration-thickness:2px}}
 @media (max-width:860px){ .a .nextp{padding:48px 0 40px}}
+
+/* ---- 눌리지 않는 버튼(.gate)에는 이유를 한 줄로. 조건을 채우면 안내는 사라진다 ---- */
+.a .gatehint{margin:10px 0 0;font-size:13.5px;color:var(--ink2)}
+.a .act:has(.pick input:checked) .gatehint,.a .act:has(.chk):not(:has(.chk input:not(:checked))) .gatehint{display:none}

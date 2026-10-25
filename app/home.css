@@ -729,3 +729,25 @@
 @media (max-width:860px) and (max-height:720px){
  .a .orb{transform:scale(.42)}
 }
+
+/* ---- 모바일 한 스크롤 한 장면: 랜딩 중간 장면을 화면 한 장 안에.
+   금액 비교는 막대 그래프로 차이를 보여 주므로 아래 항목 표는 휴대폰에서 뺀다.
+   한번 요청은 진행 단계 막대를 위로(다른 영상과 같은 방식), 요청서는 제목만, 간격을 줄인다 ---- */
+@media (max-width:860px){
+ .a .gm{padding:48px 0}
+ .a .gm-cmp .gm-items,.a .gm-cmp .gm-sheet figcaption{display:none}
+ .a .gm-cmp .gm-ph{margin-top:20px}
+ .a .gm-fl{display:flex;flex-direction:column}
+ .a .gm-fl h2{order:-2}
+ .a .gm-fl .gm-steps{order:-1;margin:20px 0 0}
+ .a .gm-fl .gm-dia{gap:18px;margin-top:20px}
+ .a .gm-fl .gm-doc dl{display:none}
+ .a .gm-fl .g-org{padding:10px 14px}
+}
+@media (max-width:860px){
+ .a .gm-fl{padding:40px 0}
+ .a .gm-fl .gm-doc,.a .gm-fl .gm-card{padding:14px 16px}
+ .a .gm-fl .gm-orgs{gap:8px}
+ .a .gm-fl .gm-card .g-mrow{margin-top:10px}
+ .a .gm-fl .gm-card small{margin-top:12px;padding-top:10px}
+}
