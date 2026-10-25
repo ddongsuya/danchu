@@ -38,7 +38,10 @@
  .a .opt h2{font-size:24px;grid-column:1}
  .a .opt p{font-size:15px;line-height:1.5;grid-column:1;margin:0}
  .a .opt .q,.a .cats,.a .four{display:none}
- .a .opt .go{grid-column:2;grid-row:1 / span 2;margin:0;font-size:0;gap:0}
+ .a .opt{grid-template-columns:minmax(0,1fr) 32px}
+ .a .opt h2{word-break:keep-all;overflow-wrap:anywhere}
+ .a .opt .go{grid-column:2;grid-row:1 / span 2;margin:0;gap:0;justify-content:flex-end}
+ .a .opt .go .t{display:none}
  .a .opt .go .ar{font-size:24px;line-height:1}
  .a .guest{flex-direction:column;align-items:flex-start;margin-top:28px;padding:16px;font-size:14px}
 }
