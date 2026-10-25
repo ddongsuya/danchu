@@ -189,6 +189,11 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 @media (prefers-reduced-motion: reduce){html:has(.a.onescreen){scroll-snap-type:y proximity}}
 /* 모바일(iOS): mandatory+stop:always는 주소창 접힘과 겹쳐 스크롤이 튄다. 가까울 때만 맞춘다 */
 @media (max-width:860px){
+ /* 한 화면 섹션 높이는 px로 상한을 두고, 첫 섹션(제목)은 세로 가운데가 아니라 맨 위에 놓는다.
+    앱 내 브라우저가 svh를 크게 계산하면 제목이 화면 밖으로 밀려 첫 화면이 비어 보였다 */
+ .a.onescreen main > section,.a.onescreen main > div.bandw{min-height:min(calc(100svh - var(--navh)),720px)}
+ .a.onescreen main > :first-child{min-height:0;align-content:start}
+ .a .ph > div > *,.a .ph2 > *{animation:none}
  html:has(.a.onescreen){scroll-snap-type:none}
  .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-stop:normal;scroll-snap-align:none}
  /* 스크롤 중 블러 재계산이 iOS에서 프레임을 떨어뜨린다. 모바일은 블러 없이 거의 불투명한 바탕 */
