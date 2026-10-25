@@ -9,12 +9,12 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <Site  >
+    <Site cue={false}>
 <section className="rq" aria-labelledby="t">
 <p className="mono" style={{ marginBottom: "16px" }}>새 견적 요청</p>
 <h1 id="t">어떤 시험이 필요하신가요?</h1>
 <p className="lead">알고 있는 조건만 입력하세요. 나머지는 기관과 조율하세요.</p>
-<div className="pick">
+<div className="rqpick">
 <a className="opt" href="/request/new?start=advisor">
 <h2>필요한 시험 찾기</h2>
 <p>개발 상황을 답하면 가이드라인 근거와 함께 시험을 제안해 드려요.</p>
