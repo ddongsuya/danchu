@@ -148,7 +148,7 @@
 .a .end h2{font-size:clamp(34px,4.6vw,64px)}
 .a .end .ctas{justify-content:center;margin-top:36px}
 .a footer{border-top:1px solid var(--line);padding:48px 0 28px;view-timeline-name:--ft}
-.a .legal{display:flex;justify-content:space-between}
+.a .fine{display:flex;justify-content:space-between}
 /* scroll-linked: only where supported, final state is the default */
 @supports (animation-timeline: view()){
  .a h2{animation:inkFill linear both;animation-timeline:view();animation-range:entry 30% cover 40%}
@@ -214,7 +214,7 @@
  .a .cro{flex-direction:column;align-items:flex-start}
  .a .end{padding:64px 0}
  .a .cols{grid-template-columns:1fr 1fr}
- .a .legal{flex-direction:column;gap:6px}
+ .a .fine{flex-direction:column;gap:6px}
  .a .word{font-size:68px;margin:40px 0 12px}
 }
 /* ===== 비교 장면: 스크롤에 따라 총액 → 항목 → 같은 시험 ===== */

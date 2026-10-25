@@ -13,6 +13,7 @@ export default function PrivacyPage() {
       effectiveDate="2026년 11월 16일"
       version="v1.1"
       current="/privacy"
+      noticeSummary="개정 안내: 2026년 11월 16일부터 v1.1 시행"
       notice={
         <p>
           <strong>개정 안내 (2026년 10월 17일 공지)</strong>: v1.1은 2026년 11월 16일부터 모든 이용자에게 시행합니다. 2026년 10월

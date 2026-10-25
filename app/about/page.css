@@ -155,7 +155,7 @@
 .a .tabs2.sm label{font-size:clamp(16px,1.4vw,19px);padding:12px 0;letter-spacing:-.01em}
 .a .tabs2 label:first-of-type{border-top:1px solid var(--line)}
 .a .tabs2 label:active{transform:scale(.985)}
-.a .tabs2 .tb{color:#9C9C95}
+.a .tabs2 .tb{color:var(--muted)}
 .a .tabs2 .tt{left:0;top:16px;white-space:nowrap}
 .a .tabs2.sm .tt{top:12px}
 .a .tabs2 label i{left:0;right:0;bottom:-1px;height:2px;background:var(--acc);transform-origin:left}

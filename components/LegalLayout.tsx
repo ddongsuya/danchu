@@ -8,6 +8,7 @@ export function LegalLayout({
   version,
   current,
   notice,
+  noticeSummary,
   children,
 }: {
   title: string;
@@ -16,6 +17,8 @@ export function LegalLayout({
   current?: string;
   /** 개정 공지 (시행 전 공지 기간에 바뀌는 내용과 이전 판의 적용 기간을 알린다) */
   notice?: React.ReactNode;
+  /** 개정 안내를 접어 둘 때 늘 보이는 한 줄 요약. 없으면 안내 전체를 펼쳐 보인다 */
+  noticeSummary?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -26,7 +29,15 @@ export function LegalLayout({
           <p className="legal__meta">
             시행일 {effectiveDate} · {version}
           </p>
-          {notice && <aside className="legal__notice">{notice}</aside>}
+          {notice &&
+            (noticeSummary ? (
+              <details className="legal__notice">
+                <summary>{noticeSummary}</summary>
+                {notice}
+              </details>
+            ) : (
+              <aside className="legal__notice">{notice}</aside>
+            ))}
           {children}
           <div className="legal__back">
             <Link href="/" className="btn ghost sm">
