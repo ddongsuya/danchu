@@ -86,6 +86,8 @@ export function NewRequest({
   const router = useRouter();
   const [phase, setPhase] = useState<"start" | "advisor" | "edit">("start");
   const [step, setStep] = useState(0);
+  // 한 화면에 질문 하나: 지금 보고 있는 질문 상자
+  const [card, setCard] = useState(0);
   const [values, setValues] = useState<Values>(initial);
   const [files, setFiles] = useState<File[]>([]);
   const [missingFiles, setMissingFiles] = useState<FileMeta[]>([]);
@@ -158,7 +160,7 @@ export function NewRequest({
   }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, guest, guestContact, pendingToken]);
   useEffect(() => {
     if (phase === "edit") title.current?.focus();
-  }, [phase, step]);
+  }, [phase, step, card]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (busy || saveState.startsWith("임시 저장하지")) {
@@ -181,9 +183,17 @@ export function NewRequest({
     setError("");
     window.scrollTo(0, 0);
   };
-  const editSection = (n: number) => {
+  /** 질문 상자 i로 이동. 단계(step)는 상자가 속한 단계로 맞춘다 */
+  const goCard = (i: number, list = cards) => {
+    const next = Math.max(0, Math.min(i, list.length - 1));
+    setCard(next);
+    setStep(list[next].step);
+    setError("");
+    window.scrollTo(0, 0);
+  };
+  const editCard = (i: number) => {
     setEditingReview(true);
-    go(n);
+    goCard(i);
   };
   const applyPreset = (key: string, replace = false) => {
     const p = PRESETS.find((x) => x.key === key);
@@ -241,7 +251,7 @@ export function NewRequest({
     setPendingToken(undefined);
     setResume(null);
     setPhase("edit");
-    go(0);
+    goCard(0, buildCards(initial()));
     const key = new URLSearchParams(window.location.search).get("preset");
     if (key) {
       setPreset(key);
@@ -274,6 +284,180 @@ export function NewRequest({
   const contactOk = guest || !!(contact.company && contact.name && contact.email);
   // "지명 기관에만 안내"는 지명 기관을 고른 경우에만 보인다 (서버도 지명 기관이 없으면 무시한다)
   const hasNominees = Array.isArray(values.nominees) && values.nominees.length > 0;
+
+  /* ── 질문 상자 목록 (한 화면 한 질문). 선택한 시험 항목에 따라 상세 조건 상자가 늘어난다 ── */
+  type Card = {
+    key: string;
+    step: number;
+    title: string;
+    sub?: string;
+    group: string;
+    ids: string[];
+    optional?: boolean;
+  };
+  const wizOf = (id: string) => WIZ.find((w) => w.fields.some((f) => f.id === id))!;
+  const wizCard = (ids: string[], step: number, extra: Partial<Card> = {}): Card => {
+    const w = wizOf(ids[0]);
+    return {
+      key: ids[0],
+      step,
+      title: w.q,
+      // 질문의 보조 설명은 입력칸 아래 도움말로 한 번만 보여 준다
+      group: w.eyebrow,
+      ids,
+      optional: !w.fields.some((f) => f.required),
+      ...extra,
+    };
+  };
+  const buildCards = (v: Values): Card[] => {
+    const vc = (Array.isArray(v.categories) ? v.categories : []) as Cat[];
+    const nom = Array.isArray(v.nominees) && v.nominees.length > 0;
+    return [
+      wizCard(["categories"], 0, { title: "필요한 시험 항목을 모두 선택해 주세요", sub: "여러 개를 고를 수 있습니다. 시험 구성으로 한 번에 담을 수도 있습니다." }),
+      wizCard(["substance"], 0),
+      wizCard(["purpose"], 0),
+      wizCard(["intent"], 0),
+      wizCard(["devField"], 0),
+      wizCard(["authority"], 0),
+      ...vc
+        .filter((c) => DETAILS[c])
+        .map<Card>((c) => ({
+          key: `det:${c}`,
+          step: 0,
+          title: `${c} 상세 조건이 있나요?`,
+          sub: "선택 입력입니다. 아는 조건만 적고, 나머지는 기관과 조율하세요.",
+          group: "상세 조건",
+          ids: DETAILS[c].map((f) => `${c}.${f.id}`),
+          optional: true,
+        })),
+      ...STEP2.map<Card>((g) => ({
+        key: `grp:${g.title}`,
+        step: 0,
+        title: `${g.title}을 알려주시겠어요?`,
+        sub: "선택 입력입니다. 비워 둔 조건은 기관이 회신에서 제안합니다.",
+        group: "공통 조건",
+        ids: g.fields.filter((f) => f.type !== "file").map((f) => f.id),
+        optional: true,
+      })),
+      wizCard(["start"], 1),
+      wizCard(["replyBy"], 1),
+      wizCard(["budget"], 1),
+      wizCard(["croCount"], 1),
+      wizCard(["nominees", ...(nom ? ["nomineesOnly"] : [])], 1),
+      wizCard(["confid", ...STEP2.flatMap((g) => g.fields).filter((f) => f.type === "file").map((f) => f.id)], 2, { group: "자료와 정보 공개" }),
+      wizCard(["notes"], 2),
+      { key: "review", step: 3, title: "선택한 내용을 확인하세요", group: "확인하고 보내기", ids: [] },
+    ];
+  };
+  const firstCardOf = (q: number, list: Card[]) => {
+    const i = list.findIndex((c) => c.step === q);
+    return i < 0 ? list.length - 1 : i;
+  };
+  const cards = buildCards(values);
+  const reviewIndex = cards.length - 1;
+  const cur = cards[Math.min(card, reviewIndex)];
+  const onReview = cur.key === "review";
+  /** 상자의 필수 항목이 비었으면 그 항목 이름을 돌려준다 */
+  const missingIn = (c: Card) => {
+    for (const id of c.ids) {
+      const f = WIZ.flatMap((w) => w.fields).find((x) => x.id === id);
+      if (f?.required && !filled(values, id)) return FIELD_LABELS[id] || f.label || id;
+    }
+    return "";
+  };
+  const show = (id: string) => {
+    const v = values[id];
+    if (Array.isArray(v)) return v.join(", ");
+    if (typeof v === "boolean" || id === "nomineesOnly") return v === true ? "예" : "아니요";
+    return v ? String(v) : "";
+  };
+  const next = () => {
+    const miss = missingIn(cur);
+    if (miss) {
+      setError(`${miss}은(는) 꼭 필요합니다. 선택하거나 입력한 뒤 다음으로 가세요.`);
+      return;
+    }
+    if (editingReview) {
+      setEditingReview(false);
+      goCard(reviewIndex);
+    } else goCard(card + 1);
+  };
+  /** 상자 내용 */
+  const renderCard = (c: Card) => {
+    if (c.key === "categories")
+      return (
+        <>
+          <div className="request__section-head" style={{ marginBottom: 0 }}>
+            <span />
+            <button type="button" className="btxt" onClick={() => setPhase("advisor")}>
+              시험 선택 도움받기
+            </button>
+          </div>
+          {baseFields(["categories"])}
+          <details className="request__details">
+            <summary>시험 구성으로 한 번에 선택</summary>
+            <label className="fld">
+              <span>시험 구성</span>
+              <select className="sel" value={preset} onChange={(e) => setPreset(e.target.value)}>
+                <option value="">구성 선택</option>
+                {PRESETS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="fld__help">{PRESETS.find((p) => p.key === preset)?.desc}</p>
+            <div className="request__actions">
+              <button type="button" className="b2" disabled={!preset} onClick={() => applyPreset(preset)}>
+                현재 선택에 추가
+              </button>
+              <button type="button" className="b2" disabled={!preset} onClick={() => applyPreset(preset, true)}>
+                이 구성으로 바꾸기
+              </button>
+              {undo && (
+                <button className="btxt" type="button" onClick={() => { setValues(undo); setUndo(null); }}>
+                  구성 적용 되돌리기
+                </button>
+              )}
+            </div>
+          </details>
+        </>
+      );
+    if (c.key.startsWith("det:")) {
+      const cat = c.key.slice(4) as Cat;
+      return (
+        <>
+          {cat === "일반독성" && (
+            <DesignHints values={values} onFill={(patch) => setValues((old) => ({ ...old, ...patch }))} />
+          )}
+          {DETAILS[cat].map((f) => field(f, `${cat}.${f.id}`))}
+        </>
+      );
+    }
+    if (c.key.startsWith("grp:")) {
+      const g = STEP2.find((x) => x.title === c.key.slice(4))!;
+      return <>{g.fields.filter((f) => f.type !== "file").map((f) => field(f))}</>;
+    }
+    if (c.key === "confid")
+      return (
+        <>
+          {baseFields(["confid"])}
+          <AttachmentNotice cda={needsCda(values.confid)} />
+          {STEP2.flatMap((g) => g.fields).filter((f) => f.type === "file").map((f) => field(f))}
+        </>
+      );
+    if (c.key === "nominees")
+      return (
+        <>
+          {baseFields(c.ids)}
+          <p className="fld__help">
+            시험 분야가 맞는 승인 기관에 참여 안내가 갑니다. 참여한 기관이 고른 수보다 적으면 받는 견적도 그만큼 줄어들 수 있습니다.
+          </p>
+        </>
+      );
+    return <>{baseFields(c.ids)}</>;
+  };
   const sig = useMemo(
     () => JSON.stringify([values, files.map((f) => [f.name, f.size])]),
     [values, files],
@@ -295,16 +479,10 @@ export function NewRequest({
       const missing = WIZ.flatMap((w) => w.fields).find(
         (f) => f.required && !filled(values, f.id),
       );
-      if (missing)
-        setStep(
-          ["purpose", "intent", "categories", "substance"].includes(missing.id)
-            ? 0
-            : missing.id === "croCount"
-              ? 1
-              : missing.id === "confid"
-                ? 2
-                : 3,
-        );
+      if (missing) {
+        const i = cards.findIndex((c) => c.ids.includes(missing.id));
+        if (i >= 0) { setEditingReview(true); goCard(i); }
+      }
       setError(invalid);
       return;
     }
@@ -394,12 +572,13 @@ export function NewRequest({
         <Advisor
           onManual={() => {
             setPhase("edit");
-            go(0);
+            goCard(0);
           }}
           onApply={(patch) => {
-            setValues((old) => ({ ...old, ...patch }));
+            const next = { ...values, ...patch };
+            setValues(next);
             setPhase("edit");
-            go(0);
+            goCard(0, buildCards(next));
           }}
         />
       </div>
@@ -434,7 +613,7 @@ export function NewRequest({
                 className="b1"
                 onClick={() => {
                   setValues(resume.values);
-                  setStep(resume.q);
+                  goCard(firstCardOf(resume.q, buildCards(resume.values)), buildCards(resume.values));
                   setPendingNo(guest ? undefined : resume.pendingNo);
                   setMissingFiles(resume.files);
                   if (guest) {
@@ -492,31 +671,11 @@ export function NewRequest({
           {saveState}
         </span>
       </div>
-      <nav className="request__steps" aria-label="견적 요청 작성 단계">
-        {STEPS.map((s, i) => (
-          <button
-            type="button"
-            key={s}
-            aria-current={step === i ? "step" : undefined}
-            disabled={busy || (!!pendingNo && i !== 3)}
-            onClick={() => go(i)}
-          >
-            <span>{i + 1}</span>
-            {s}
-          </button>
-        ))}
-      </nav>
-      <h1 ref={title} tabIndex={-1}>
-        {STEPS[step]}
-      </h1>
-      <p className="request__lead">
-        {step === 0
-          ? "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
-          : step === 1
-            ? "미정인 조건은 비워 둘 수 있습니다."
-            : step === 2
-              ? "요청 내용이 공개되는 범위를 확인하세요."
-              : "입력한 내용과 첨부 상태를 확인한 뒤 요청을 보내세요."}
+      <div className="wiz__bar" aria-hidden="true">
+        <i style={{ transform: `scaleX(${(card + 1) / cards.length})` }} />
+      </div>
+      <p className="wiz__count">
+        <span>{Math.min(card, reviewIndex) + 1} / {cards.length}</span> · {cur.group}
       </p>
       {pendingNo && (
         <div className="note note--tint">
@@ -526,135 +685,14 @@ export function NewRequest({
         </div>
       )}
       <fieldset disabled={busy || !!pendingNo} className="request__fieldset">
-        {step === 0 && (
-          <>
-            <section className="request__section">
-              <div className="request__section-head">
-                <h2>시험 항목</h2>
-                <button
-                  type="button"
-                  className="btxt"
-                  onClick={() => setPhase("advisor")}
-                >
-                  시험 선택 도움받기
-                </button>
-              </div>
-              {baseFields(["categories"])}
-              <details className="request__details">
-                <summary>시험 구성으로 한 번에 선택</summary>
-                <label className="fld">
-                  <span>시험 구성</span>
-                  <select
-                    className="sel"
-                    value={preset}
-                    onChange={(e) => setPreset(e.target.value)}
-                  >
-                    <option value="">구성 선택</option>
-                    {PRESETS.map((p) => (
-                      <option key={p.key} value={p.key}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <p className="fld__help">
-                  {PRESETS.find((p) => p.key === preset)?.desc}
-                </p>
-                <div className="request__actions">
-                  <button
-                    type="button"
-                    className="b2"
-                    disabled={!preset}
-                    onClick={() => applyPreset(preset)}
-                  >
-                    현재 선택에 추가
-                  </button>
-                  <button
-                    type="button"
-                    className="b2"
-                    disabled={!preset}
-                    onClick={() => applyPreset(preset, true)}
-                  >
-                    이 구성으로 바꾸기
-                  </button>
-                  {undo && (
-                    <button
-                      className="btxt"
-                      type="button"
-                      onClick={() => {
-                        setValues(undo);
-                        setUndo(null);
-                      }}
-                    >
-                      구성 적용 되돌리기
-                    </button>
-                  )}
-                </div>
-              </details>
-            </section>
-            <section className="request__section">
-              <h2>물질과 의뢰 목적</h2>
-              <div className="request__fields">
-                {baseFields(["substance", "purpose", "intent", "devField", "authority"])}
-              </div>
-            </section>
-            {cats
-              .filter((c) => DETAILS[c])
-              .map((c) => (
-                <details className="request__details" key={c}>
-                  <summary>
-                    {c} 상세 조건 <span>선택 입력</span>
-                  </summary>
-                  <div className="request__fields">
-                    {c === "일반독성" && (
-                      <DesignHints
-                        values={values}
-                        onFill={(patch) =>
-                          setValues((old) => ({ ...old, ...patch }))
-                        }
-                      />
-                    )}
-                    {DETAILS[c].map((f) => field(f, `${c}.${f.id}`))}
-                  </div>
-                </details>
-              ))}
-            {STEP2.map((g) => (
-              <details className="request__details" key={g.title}>
-                <summary>
-                  {g.title} <span>선택 입력</span>
-                </summary>
-                <p className="fld__help">
-                  비워 둔 조건은 기관이 회신에서 제안합니다.
-                </p>
-                <div className="request__fields">
-                  {g.fields
-                    .filter((f) => f.type !== "file")
-                    .map((f) => field(f))}
-                </div>
-              </details>
-            ))}
-          </>
-        )}
-        {step === 1 && (
-          <section className="request__section request__fields">
-            {baseFields(["start", "replyBy", "budget", "croCount", "nominees", ...(hasNominees ? ["nomineesOnly"] : [])])}
-            <p className="fld__help">
-              시험 분야가 맞는 승인 기관에 참여 안내가 갑니다. 참여한 기관이
-              고른 수보다 적으면 받는 견적도 그만큼 줄어들 수 있습니다.
-            </p>
-          </section>
-        )}
-        {step === 2 && (
-          <section className="request__section request__fields">
-            {baseFields(["confid"])}
-            <AttachmentNotice cda={needsCda(values.confid)} />
-            {STEP2.flatMap((g) => g.fields)
-              .filter((f) => f.type === "file")
-              .map((f) => field(f))}
-            {baseFields(["notes"])}
-          </section>
-        )}
-        {step === 3 && (
+        <section className={onReview ? "wiz__card wiz__card--review" : "wiz__card"} key={cur.key}>
+          <h1 ref={title} tabIndex={-1}>
+            {cur.title}
+          </h1>
+          {cur.sub && <p className="request__lead">{cur.sub}</p>}
+          {!onReview && <div className="request__fields">{renderCard(cur)}</div>}
+        </section>
+        {onReview && (
           <>
             {guest ? (
               <section className="request__section">
@@ -688,70 +726,49 @@ export function NewRequest({
                 )}
               </section>
             )}
-            {[0, 1, 2].map((section) => {
-              const ids =
-                section === 0
-                  ? [
-                      "categories",
-                      "substance",
-                      "purpose",
-                      "intent",
-                      "devField",
-                      "authority",
-                    ]
-                  : section === 1
-                    ? ["start", "replyBy", "budget", "croCount", "nominees", ...(hasNominees ? ["nomineesOnly"] : [])]
-                    : ["confid", "notes"];
-              return (
-                <section className="request__section" key={section}>
-                  <div className="request__section-head">
-                    <h2>{STEPS[section]}</h2>
-                    <button
-                      className="btxt"
-                      type="button"
-                      onClick={() => editSection(section)}
-                    >
-                      수정
-                    </button>
-                  </div>
-                  <dl className="request__summary">
-                    {ids.map((id) => (
-                      <div key={id}>
-                        <dt>{FIELD_LABELS[id]}</dt>
-                        <dd>
-                          {Array.isArray(values[id])
-                            ? (values[id] as string[]).join(", ") || "미선택"
-                            : typeof values[id] === "boolean" || id === "nomineesOnly"
-                              ? values[id] === true ? "예" : "아니요"
-                              : String(values[id] || "입력하지 않음")}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
-              );
-            })}
-            <details className="request__details">
-              <summary>입력한 상세 조건 확인</summary>
-              <dl className="request__summary">
-                {Object.entries(values)
-                  .filter(
-                    ([id, v]) =>
-                      !FIELD_LABELS[id] &&
-                      !id.startsWith("agree") &&
-                      !id.startsWith("advisor") &&
-                      id !== "presetKey" &&
-                      filled(values, id) &&
-                      labels[id],
-                  )
-                  .map(([id, v]) => (
-                    <div key={id}>
-                      <dt>{labels[id]}</dt>
-                      <dd>{Array.isArray(v) ? v.join(", ") : String(v)}</dd>
+            <section className="request__section">
+              <h2>선택한 내용</h2>
+              <dl className="request__summary wiz__summary">
+                {cards.slice(0, reviewIndex).map((c, i) => {
+                  const rows = c.ids
+                    .map((id) => [FIELD_LABELS[id] || labels[id] || id, show(id)] as const)
+                    .filter(([, v]) => v);
+                  if (c.optional && rows.length === 0) return null;
+                  return (
+                    <div key={c.key}>
+                      <dt>{c.key.startsWith("det:") || c.key.startsWith("grp:") ? c.key.slice(4) : FIELD_LABELS[c.ids[0]] || c.group}</dt>
+                      <dd>
+                        {rows.length === 0
+                          ? (c.ids.some((id) => WIZ.flatMap((w) => w.fields).find((f) => f.id === id)?.required) ? "미선택" : "입력하지 않음")
+                          : rows.length === 1
+                            ? rows[0][1]
+                            : rows.map(([k, v]) => <span key={k}>{k}: {v}</span>)}
+                      </dd>
+                      <button className="btxt" type="button" onClick={() => editCard(i)}>
+                        수정
+                      </button>
                     </div>
-                  ))}
+                  );
+                })}
               </dl>
-            </details>
+              {cards.slice(0, reviewIndex).some((c) => c.optional && !c.ids.some((id) => show(id))) && (
+                <details className="request__details">
+                  <summary>건너뛴 선택 항목</summary>
+                  <ul className="wiz__skipped">
+                    {cards.slice(0, reviewIndex).map((c, i) =>
+                      c.optional && !c.ids.some((id) => show(id)) ? (
+                        <li key={c.key}>
+                          <span>{c.key.startsWith("det:") || c.key.startsWith("grp:") ? c.key.slice(4) : FIELD_LABELS[c.ids[0]] || c.title}</span>
+                          <button className="btxt" type="button" onClick={() => editCard(i)}>
+                            입력
+                          </button>
+                        </li>
+                      ) : null,
+                    )}
+                  </ul>
+                </details>
+              )}
+            </section>
             {Array.isArray(values.advisorAsk) &&
               values.advisorAsk.length > 0 && (
                 <details className="request__details">
@@ -779,7 +796,7 @@ export function NewRequest({
               <button
                 type="button"
                 className="btxt"
-                onClick={() => editSection(2)}
+                onClick={() => editCard(cards.findIndex((c) => c.key === "confid"))}
               >
                 첨부 수정
               </button>
@@ -849,7 +866,7 @@ export function NewRequest({
           </label>
         </section>
       )}
-      {step === 3 && (
+      {onReview && (
         <p className="note note--tint" role="note">
           단추의 시험 제안은 가이드라인에 따른 참고용 추천입니다. 정확한 시험
           구성은 식약처와 시험기관(CRO)과 충분히 논의해 확정하세요.
@@ -861,23 +878,24 @@ export function NewRequest({
         </p>
       )}
       <div className="request__footer">
-        {step > 0 && !pendingNo && (
-          <button className="b2" disabled={busy} onClick={() => go(step - 1)}>
+        {card > 0 && !pendingNo && !editingReview && (
+          <button className="b2" disabled={busy} onClick={() => goCard(card - 1)}>
             이전
           </button>
         )}
-        {step < 3 ? (
-          <button
-            className="b1"
-            disabled={busy}
-            onClick={() => {
-              if (editingReview) {
-                setEditingReview(false);
-                go(3);
-              } else go(step + 1);
-            }}
-          >
-            {editingReview ? "수정 완료" : `다음: ${STEPS[step + 1]}`}
+        {editingReview && !pendingNo && (
+          <button className="b2" disabled={busy} onClick={() => { setEditingReview(false); goCard(reviewIndex); }}>
+            확인으로 돌아가기
+          </button>
+        )}
+        {!onReview && cur.optional && !editingReview && (
+          <button className="b2" disabled={busy} onClick={() => goCard(card + 1)}>
+            건너뛰기
+          </button>
+        )}
+        {!onReview ? (
+          <button className="b1" disabled={busy} onClick={next}>
+            {editingReview ? "수정 완료" : card + 1 === reviewIndex ? "내용 확인하기" : "다음"}
           </button>
         ) : (
           <button
@@ -894,7 +912,7 @@ export function NewRequest({
                   : "견적 요청 보내기"}
           </button>
         )}
-        {step === 3 && pendingNo && !preview && (
+        {onReview && pendingNo && !preview && (
           <button className="b2" disabled={busy} onClick={sendWithoutFailed}>
             빠진 첨부 없이 보내기
           </button>
