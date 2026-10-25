@@ -22,7 +22,7 @@ export function LegalLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Site current={current} onescreen={false}>
+    <Site current={current} onescreen={false} cue={false}>
       <div className="legal-main">
         <article className="legal">
           <h1 className="legal__title">{title}</h1>

@@ -10,8 +10,9 @@ import "@/app/site.css";
 /**
  * 공개 페이지 골격. 루트 .a 가 B안 토큰을 켠다.
  * onescreen: 최상위 section 마다 한 화면(스크롤 스냅). 랜딩은 고정 장면이 있어 끄고, 나머지 공개 페이지는 켠다.
+ * cue: "아래로 내려 보세요" 안내. 첫 화면부터 목록·본문이 이어지는 페이지(FAQ·약관)는 안내가 내용을 가리므로 끈다.
  */
-export function Site({ children, current, next, onescreen = true }: { children: React.ReactNode; current?: string; next?: { href: string; label: string }; onescreen?: boolean }) {
+export function Site({ children, current, next, onescreen = true, cue = true }: { children: React.ReactNode; current?: string; next?: { href: string; label: string }; onescreen?: boolean; cue?: boolean }) {
   return (
     <div className={onescreen ? "a onescreen" : "a"}>
       <div className="wrap">
@@ -26,7 +27,7 @@ export function Site({ children, current, next, onescreen = true }: { children: 
         <SiteFooter current={current} />
       </div>
         <ScrollTop />
-        <ScrollCue />
+        {cue && <ScrollCue />}
         <FilmPlay />
       <Diag />
     </div>

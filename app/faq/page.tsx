@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <Site current="/faq" >
+    <Site current="/faq" onescreen={false} cue={false}>
 <section className="ph" aria-labelledby="t">
 <div><h1 id="t">자주 묻는 질문</h1></div>
 <div><p className="lead">여기 없는 질문은 hello@danchu.kr로 보내주세요.</p></div>
