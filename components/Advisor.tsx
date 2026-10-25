@@ -187,7 +187,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
             </section>
           )}
 
-          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>{ADVISOR_DISCLAIMER}</p>
+          <p className="note note--tint" role="note">{ADVISOR_DISCLAIMER}</p>
 
           <div className="cta">
             <button type="button" className="b1 blg bfull" disabled={selected.size === 0} onClick={() => onApply(toRequestValues(a, advice, selected))}>

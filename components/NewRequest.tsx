@@ -849,6 +849,12 @@ export function NewRequest({
           </label>
         </section>
       )}
+      {step === 3 && (
+        <p className="note note--tint" role="note">
+          단추의 시험 제안은 가이드라인에 따른 참고용 추천입니다. 정확한 시험
+          구성은 식약처와 시험기관(CRO)과 충분히 논의해 확정하세요.
+        </p>
+      )}
       {error && (
         <p className="note note--err" role="alert">
           {error}
