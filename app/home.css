@@ -715,6 +715,7 @@
 
 /* ---- 모바일 첫 화면은 뷰포트 높이 단위에 기대지 않는다. 앱 내 브라우저가 vh 계열을 크게 계산하면 내용이 한참 아래로 밀려 첫 화면이 비어 보인다 ---- */
 @media (max-width:860px){
- .a .first{min-height:0 !important}
+ /* 한 스크롤에 한 장면: 첫 화면은 화면 한 칸을 채우되, 내용은 위에서부터 놓아 높이 계산이 커도 글이 밀리지 않게 */
+ .a .first{min-height:calc(var(--vhpx,100svh) - 60px) !important}
  .a .first .hero{flex:none}
 }

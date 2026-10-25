@@ -5,6 +5,7 @@ import { Diag } from "@/components/site/Diag";
 import { FilmPlay } from "@/components/site/FilmPlay";
 import { ScrollTop } from "@/components/site/ScrollTop";
 import { ScrollCue } from "@/components/site/ScrollCue";
+import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "@/app/site.css";
 
 /**
@@ -26,6 +27,7 @@ export function Site({ children, current, next, onescreen = true, cue = true }: 
         )}
         <SiteFooter current={current} />
       </div>
+        <ViewportHeight />
         <ScrollTop />
         {cue && <ScrollCue />}
         <FilmPlay />
