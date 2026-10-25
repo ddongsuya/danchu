@@ -45,8 +45,7 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
   it("기관 안내·FAQ 에도 의뢰자 요청 기한 전 마감이 없고, 열린 뒤 수정이 없다고 알린다", () => {
     const forCro = flat(src("app/for-cro/page.tsx"));
     expect(forCro).not.toContain("의뢰자가 요청한 경우에만 기한 전에 회신을 마감");
-    expect(forCro).toContain("단추는 의뢰자가 요청해도 회신 기한 전에 회신을 마감하지 않습니다");
-    expect(forCro).toContain("비교표가 열린 뒤에는 회신을 다시 열거나 회신 기한을 늘리지 않으며");
+    // 2026-10-25 사용자 결정: 리디자인한 기관 참여 페이지에는 규칙 안내 문장을 두지 않는다 (규칙은 약관·FAQ). 틀린 말이 없는지만 본다
     const faq = src("lib/faq.ts");
     expect(faq).not.toContain("의뢰자가 요청하면 운영자가 기한 전에 회신을 마감");
     expect(faq).toContain("빨리 받아야 하면 요청서에서 회신 기한을 짧게 정해 주세요");
@@ -60,11 +59,13 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
     for (const f of ["app/cro/quotes/page.tsx", "components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx"]) expect(src(f), f).toMatch(/열린 뒤에는 (수정하거나|고치거나) 다시 제출할 수 없습니다/);
   });
   it("옮겨 적기 오류는 비교표가 열리기 전에만 바로잡고, 열린 뒤에는 고치지 않고 알린다 (약관 제8조·화면이 같은 말)", () => {
-    for (const f of ["app/terms/page.tsx", "app/app/r/[no]/q/[quoteId]/page.tsx", "app/for-cro/page.tsx", "lib/faq.ts", "components/CompareBoard.tsx"]) {
+    for (const f of ["app/terms/page.tsx", "app/app/r/[no]/q/[quoteId]/page.tsx", "lib/faq.ts", "components/CompareBoard.tsx"]) {
       const s = flat(src(f));
       expect(s, f).not.toMatch(/오류(가 확인되면|가 있으면) (회사는 지체 없이 |단추가 )?바로잡/);
       expect(s, f).toMatch(/열린 뒤에는 비교표를 고치지 않고/);
     }
+    // 기관 참여 페이지는 규칙 문장을 두지 않기로 했으므로(2026-10-25) 틀린 약속만 없으면 된다
+    expect(flat(src("app/for-cro/page.tsx"))).not.toMatch(/오류(가 확인되면|가 있으면) (회사는 지체 없이 |단추가 )?바로잡/);
   });
   it("열린 요청의 만료 링크는 연장 안내 대신 닫힌 이유를, 완료 화면은 닫혔으면 수정하기를 숨긴다", () => {
     const form = visible(src("components/cro/ReplyForm.tsx"));
