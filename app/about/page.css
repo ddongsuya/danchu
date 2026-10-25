@@ -306,3 +306,13 @@
 /* 2026-10-25 품질 3차: 영상 무대의 회색 상자·점 격자를 걷고 종이 위에 바로 (랜딩 아래 섹션과 같은 방식) */
 .a .fst,.a .film2 .fst,.a .fwrap .fst{background-color:transparent;box-shadow:none}
 .a .fst .grid{display:none}
+
+/* ---- 영상처럼 보는 설명(.player): 진행 막대 → 장면 → 자막을 한 덩어리로 (이용 안내와 같은 방식) ---- */
+.a .fwrap .film.player{grid-template-columns:minmax(0,1fr);gap:0;width:min(100%,760px,calc(var(--vhpx,100svh) - 260px));margin-inline:auto}
+.a .film.player .fside{display:contents}
+.a .film.player .fctl{order:-1;margin-bottom:18px}
+.a .film.player .fst{width:100%;margin:0}
+.a .film.player .cap{order:1;margin:20px 0 0;min-height:2.5em;text-align:center}
+.a .fwrap .film.player .cap{font-size:clamp(22px,2.2vw,30px)}
+.a .film.player .cap .cl > span{white-space:normal}
+@media (max-width:860px){.a .fwrap .film.player{width:100%}.a .fwrap .film.player .cap{font-size:20px;margin-top:14px}.a .film.player .fctl{margin-bottom:12px}}

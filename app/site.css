@@ -225,3 +225,21 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 @media (max-width:340px){
  .a nav.top .lockup,.a nav.top .logo{font-size:24px}
 }
+
+/* ---- 영상처럼 보는 설명(.player, 단계 이름 = 자막): 위 단계 진행 막대, 가운데 장면, 아래 자막.
+   단계 이름(.tt)은 이미 장면에 맞춰 켜지고 꺼지므로 영상 아래 한자리에 겹쳐 놓으면 자막이 된다 ---- */
+.a .film2.player:not(:has(.cap)) .s2g{grid-template-columns:minmax(0,1fr);gap:0;width:min(100%,760px,calc(var(--vhpx,100svh) - 300px));margin-inline:auto;position:relative;padding-bottom:3.4em}
+.a .film2.player:not(:has(.cap)) .s2g > div:not(.fst){display:contents}
+.a .film2.player:not(:has(.cap)) .s2g h2{order:-2;margin-bottom:24px}
+.a .film2.player:not(:has(.cap)) .tabs2{order:-1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none;gap:6px;margin:0 0 14px !important}
+.a .film2.player:not(:has(.cap)) .tabs2 label{position:static;height:20px;padding:0;border:0;font-size:0;line-height:0;background:linear-gradient(rgba(27,27,25,.16),rgba(27,27,25,.16)) top/100% 2px no-repeat}
+.a .film2.player:not(:has(.cap)) .tabs2 label i{position:relative;display:block;inset:auto;height:2px;background:var(--ink)}
+.a .film2.player:not(:has(.cap)) .tabs2 .tb{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.a .film2.player:not(:has(.cap)) .tabs2 .tt{position:absolute;left:0;right:0;top:auto;bottom:0;text-align:center;white-space:normal;font-size:clamp(22px,2.2vw,30px);font-weight:500;letter-spacing:-.03em;line-height:1.25;color:var(--ink)}
+.a .film2.player:not(:has(.cap)) .tabs2 .hint{display:none}
+.a .film2.player:not(:has(.cap)) .fst{width:100%;margin:0}
+@media (max-width:860px){
+ .a .film2.player:not(:has(.cap)) .s2g{width:100%;padding-bottom:2.8em}
+ .a .film2.player:not(:has(.cap)) .tabs2{gap:4px;margin-bottom:10px !important}
+ .a .film2.player:not(:has(.cap)) .tabs2 .tt{font-size:20px}
+}

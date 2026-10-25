@@ -15,7 +15,7 @@ export default function Page() {
 <div><p className="lead">가이드라인으로 시험 구성의 출발점을 잡아보세요.</p></div>
 </section>
 
-<section className="film2 bandw" style={{ "--T": "13.5s", "--F": "-11.5s" }} aria-labelledby="du">
+<section className="film2 bandw player" style={{ "--T": "13.5s", "--F": "-11.5s" }} aria-labelledby="du">
 <div className="s2g">
 <div className="fst" role="img" aria-label="임상 투여기간에 따라 설치류와 비설치류 반복투여독성 기간이 정해지는 과정">
 <div className="shk fe" style={{ "--n": "gd42" }}>
