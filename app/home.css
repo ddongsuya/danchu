@@ -710,14 +710,11 @@
  }
 }
 
-/* ---- 첫 화면 내려가기 안내: 글자 한 줄 + 가는 세로선 + 꺾쇠, 잉크색. 아래로 살짝 흔들린다 ---- */
-/* 첫 화면이 화면보다 길어도 안내는 늘 화면 아래쪽에 붙어 있다가(sticky bottom) 첫 화면이 끝나면 같이 올라간다 */
-.a .cue{position:sticky;bottom:0;z-index:2;align-self:stretch;display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 16px 16px;background:linear-gradient(to top,var(--paper) 62%,rgba(244,244,240,0));color:var(--muted);font-size:12px;letter-spacing:.01em;text-decoration:none}
-.a .cue i{display:block;position:relative;width:1px;height:30px;background:var(--ink);animation:cueBob 1.8s var(--eio) infinite}
-.a .cue i::after{content:"";position:absolute;left:50%;bottom:0;width:8px;height:8px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);transform:translate(-50%,-1px) rotate(45deg)}
-@keyframes cueBob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
-@media (hover:hover) and (pointer:fine){.a .cue:hover{color:var(--ink)}}
-.a .cue:active i{transform:translateY(2px)}
-@media (prefers-reduced-motion: reduce){.a .cue i{animation:none}}
 /* 첫 화면 글은 어떤 환경에서도 등장 효과에 기대지 않는다 */
-@media (max-width:860px){.a .h1l,.a .sub,.a .hero .ctas{animation:none}.a .cue{padding-bottom:16px}}
+@media (max-width:860px){.a .h1l,.a .sub,.a .hero .ctas{animation:none}}
+
+/* ---- 모바일 첫 화면은 뷰포트 높이 단위에 기대지 않는다. 앱 내 브라우저가 vh 계열을 크게 계산하면 내용이 한참 아래로 밀려 첫 화면이 비어 보인다 ---- */
+@media (max-width:860px){
+ .a .first{min-height:0 !important}
+ .a .first .hero{flex:none}
+}

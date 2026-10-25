@@ -196,3 +196,13 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 }
 /* 설명 영상은 화면에 들어올 때까지 0초에 멈춰 둔다 (FilmPlay가 hold를 붙였다 뗀다) */
 .a .hold .fe{animation-play-state:paused}
+
+/* ---- 첫 화면 내려가기 안내(ScrollCue): 모든 공개 페이지 공통. 글자 한 줄 + 잉크색 가는 세로선 + 꺾쇠, 화면 아래 고정, 첫 화면이 끝나면 사라진다 ---- */
+.a .cue{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--paper) 58%,rgba(244,244,240,0));color:var(--muted);font-size:12px;letter-spacing:.01em;text-decoration:none;transition:opacity 200ms ease}
+.a .cue.off{opacity:0;pointer-events:none}
+.a .cue i{display:block;position:relative;width:1px;height:30px;background:var(--ink);animation:cueBob 1.8s var(--eio) infinite}
+.a .cue i::after{content:"";position:absolute;left:50%;bottom:0;width:8px;height:8px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);transform:translate(-50%,-1px) rotate(45deg)}
+@keyframes cueBob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+@media (hover:hover) and (pointer:fine){.a .cue:hover{color:var(--ink)}}
+.a .cue:active i{transform:translateY(2px)}
+@media (prefers-reduced-motion: reduce){.a .cue i{animation:none}}
