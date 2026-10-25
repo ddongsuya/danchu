@@ -14,7 +14,7 @@ export default function Page() {
 <h1 id="t" style={{ fontSize: "clamp(40px,5.6vw,84px)" }}>요청부터 비교 견적까지,<br /><span>한 흐름으로 확인하세요.</span></h1>
 <p className="lead">단계마다 누가 무엇을 보는지 한눈에 보여 드립니다.</p>
 </section>
-<section className="film2 bandw" style={{ "--T": "31s", "--F": "-24.5s" }} aria-label="이용 흐름">
+<section className="film2 bandw player" style={{ "--T": "31s", "--F": "-24.5s" }} aria-label="이용 흐름">
 <div className="s2g">
 <div className="fst" role="img" aria-label="요청서 접수부터 의뢰자 전달까지 일곱 단계의 흐름">
 <div className="shk fe" style={{ "--n": "hw198" }}>

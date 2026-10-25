@@ -405,3 +405,21 @@
 /* 2026-10-25 품질 3차: 영상 무대의 회색 상자·점 격자를 걷고 종이 위에 바로 (랜딩 아래 섹션과 같은 방식) */
 .a .fst,.a .film2 .fst,.a .fwrap .fst{background-color:transparent;box-shadow:none}
 .a .fst .grid{display:none}
+
+/* ---- 영상처럼 보는 설명(.player): 단계 막대 → 장면 → 자막을 한 덩어리로. 설명 글이 영상 옆에 따로 있지 않고 영상 아래 자막으로 흐른다 ---- */
+.a .film2.player .s2g{grid-template-columns:minmax(0,1fr);gap:0;width:min(100%,760px,calc(100svh - 300px));margin-inline:auto}
+.a .film2.player .s2g > div:last-child{display:contents}
+.a .film2.player .tabs2{order:-1;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-bottom:18px}
+.a .film2.player .tabs2 label,.a .film2.player .tabs2.sm label{height:22px;padding:0;border:0;border-top:2px solid rgba(27,27,25,.16);font-size:0;line-height:0}
+.a .film2.player .tabs2 label i{top:-2px;bottom:auto;height:2px;background:var(--ink)}
+.a .film2.player .tabs2 .tb,.a .film2.player .tabs2 .tt{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.a .film2.player .tabs2 .hint{display:none}
+.a .film2.player .fst{width:100%;margin:0}
+.a .film2.player .cap{order:1;margin:20px 0 0;min-height:2.5em;text-align:center;font-size:clamp(22px,2.2vw,30px)}
+.a .film2.player .cap .cl > span{white-space:normal}
+@media (max-width:860px){
+ .a .film2.player .tabs2{gap:4px;margin-bottom:12px}
+ .a .film2.player .tabs2 label{height:18px}
+ .a .film2.player .cap{font-size:20px;margin-top:14px}
+}
+@media (max-width:860px){.a .film2.player .s2g{width:100%}}
