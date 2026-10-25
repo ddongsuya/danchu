@@ -8,7 +8,7 @@
 .a .rq{padding:72px 0 96px}
 .a .rq h1{margin-bottom:20px}
 .a .rq .lead{margin-bottom:48px}
-.a .pick{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink)}
+.a .rqpick{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink)}
 .a .opt{display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:32px 40px 32px 0;color:var(--ink);text-decoration:none;position:relative;transition:background-color 200ms ease}
 .a .opt + .opt{padding-left:40px;border-left:1px solid var(--line)}
 .a .opt h2{font-size:clamp(24px,2.4vw,32px)}
@@ -32,7 +32,7 @@
  /* 모바일은 두 선택지만: 예시 줄·분야 칩·단계 목록은 숨기고 큰 선택 줄로 */
  .a .rq{padding:32px 0 48px}
  .a .rq .lead{margin-bottom:28px}
- .a .pick{grid-template-columns:1fr;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+ .a .rqpick{grid-template-columns:1fr;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
  .a .opt{grid-template-rows:auto auto;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;row-gap:6px;align-items:center;padding:24px 0;border:0;border-radius:0;background:transparent}
  .a .opt + .opt{padding-left:0;border-left:0;border-top:1px solid var(--line)}
  .a .opt h2{font-size:24px;grid-column:1}

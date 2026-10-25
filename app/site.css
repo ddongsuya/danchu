@@ -243,3 +243,17 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
  .a .film2.player:not(:has(.cap)) .tabs2{gap:4px;margin-bottom:10px !important}
  .a .film2.player:not(:has(.cap)) .tabs2 .tt{font-size:20px}
 }
+
+/* ---- 모바일 상단 줄: 로고는 왼쪽, "견적 요청하기"와 "메뉴"는 오른쪽에 한 묶음으로. 두 버튼은 같은 높이 ---- */
+@media (max-width:860px){
+ html .a nav.top{gap:8px}
+ html .a .wrap:has(> nav.top){padding:0 20px}
+ .a nav.top .right{order:1;margin-left:auto;gap:8px}
+ .a nav.top .menu{order:2;height:40px;padding:0 14px;border-color:var(--ink)}
+ .a nav.top .right .btn{height:40px;padding:0 14px;font-size:14px}
+ .a nav.top .right .btn .ar{display:none}
+}
+@media (max-width:400px){
+ html .a .wrap:has(> nav.top){padding:0 16px}
+ .a nav.top .menu,.a nav.top .right .btn{height:38px;padding:0 11px}
+}
