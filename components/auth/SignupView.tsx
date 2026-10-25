@@ -102,7 +102,7 @@ function Signup() {
         <div className="field">
           <span className="field__label">로그인 방법</span>
           <div className="auth__tabs" role="group" aria-label="로그인 방법">
-            <button type="button" aria-pressed={!usePw} onClick={() => setUsePw(false)}>이메일 링크만 (비밀번호 없음)</button>
+            <button type="button" aria-pressed={!usePw} onClick={() => setUsePw(false)}>이메일 링크</button>
             <button type="button" aria-pressed={usePw} onClick={() => setUsePw(true)}>비밀번호도 설정</button>
           </div>
           <p className="field__help">
