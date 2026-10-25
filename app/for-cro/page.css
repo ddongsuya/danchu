@@ -715,3 +715,7 @@
 @keyframes cx41{0.0%{opacity:0;transform:translate(0.0cqw,-1.4cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}61.739%{opacity:0;transform:translate(0.0cqw,-1.4cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}65.217%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}92.174%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}94.783%{opacity:0;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}100.0%{opacity:0;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:cubic-bezier(.23,1,.32,1)}}
 @keyframes cx42{0.0%{opacity:1;transform:translate(0.0cqw,0.0cqw) rotate(0deg) scale(1,1);animation-timing-function:linear}100.0%{opacity:1;transform:translate(-8.0cqw,-4.0cqw) rotate(0deg) scale(1,1);animation-timing-function:linear}}
 @keyframes cx43{0.0%{opacity:1;transform:translate(0px,0px) rotate(0deg) scale(0,1);animation-timing-function:linear}100.0%{opacity:1;transform:translate(0px,0px) rotate(0deg) scale(1,1);animation-timing-function:linear}}
+
+/* 2026-10-25 품질 3차: 영상 무대의 회색 상자·점 격자를 걷고 종이 위에 바로 (랜딩 아래 섹션과 같은 방식) */
+.a .fst,.a .film2 .fst,.a .fwrap .fst{background-color:transparent;box-shadow:none}
+.a .fst .grid{display:none}
