@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Diag } from "@/components/site/Diag";
 import { FilmPlay } from "@/components/site/FilmPlay";
+import { ScrollTop } from "@/components/site/ScrollTop";
 import "@/app/site.css";
 
 /**
@@ -23,7 +24,8 @@ export function Site({ children, current, next, onescreen = true }: { children: 
         )}
         <SiteFooter current={current} />
       </div>
-      <FilmPlay />
+        <ScrollTop />
+        <FilmPlay />
       <Diag />
     </div>
   );

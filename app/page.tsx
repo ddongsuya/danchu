@@ -33,10 +33,11 @@ export default function Home() {
 </div>
 </div>
 </div>
+<a className="cue" href="#cmp"><span>아래로 내려 보세요</span><i aria-hidden="true"></i></a>
 
 </div>
 
-<section className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
+<section id="cmp" className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
 <div className="gm-cmp-grid">
 <div className="gm-copy">
 <h2 id="cmp-h">금액만 비교 마시고<br /><span>구성도 함께 비교하세요.</span></h2>
