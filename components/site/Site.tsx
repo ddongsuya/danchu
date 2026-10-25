@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Diag } from "@/components/site/Diag";
 import { FilmPlay } from "@/components/site/FilmPlay";
+import { HeadWatch } from "@/components/site/HeadWatch";
 import { ScrollTop } from "@/components/site/ScrollTop";
 import { ScrollCue } from "@/components/site/ScrollCue";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
@@ -32,6 +33,7 @@ export function Site({ children, current, next, onescreen = true, cue = true }: 
         {cue && <ScrollCue />}
         <FilmPlay />
       <Diag />
+      <HeadWatch />
     </div>
   );
 }
