@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 
 /**
  * 메뉴 페이지 첫 제목(main h1)이 실제 휴대폰에서 보이는지 스스로 확인해 기록한다.
- * 페이지를 열거나 옮긴 뒤 2.5초 동안 사용자가 손대지 않았으면, 제목 위치·가림 여부·화면 높이를 /api/diag 로 보낸다.
+ * 페이지를 열거나 옮긴 뒤 0.8초와 2.5초에 제목 위치·가림 여부·화면 높이를 /api/diag 로 보낸다.
+ * 사용자가 이미 스크롤을 시작했으면 touched 표시를 붙여 보낸다(바로 스크롤한 경우도 놓치지 않으려고).
  * 화면 동작에는 아무 영향이 없다. 휴대폰 폭(860px 이하)에서만 보낸다.
  */
 export function HeadWatch() {
@@ -15,8 +16,7 @@ export function HeadWatch() {
     const stop = () => { touched = true; };
     addEventListener("touchstart", stop, { passive: true, once: true });
     addEventListener("wheel", stop, { passive: true, once: true });
-    const t = window.setTimeout(() => {
-      if (touched) return;
+    const send = (at: number) => {
       try {
         const h = document.querySelector<HTMLElement>("main h1");
         const r = (el: Element | null) => { if (!el) return null; const b = el.getBoundingClientRect(); return [Math.round(b.top), Math.round(b.bottom), Math.round(b.height)]; };
@@ -32,7 +32,7 @@ export function HeadWatch() {
         const ok = !!h && !!hb && hb.top >= 0 && hb.bottom <= innerHeight && cs?.opacity === "1" && cs?.visibility === "visible" && (cover.startsWith("h1") || !!h.contains(document.elementFromPoint(Math.max(hb.left + 8, 1), Math.min(Math.max(hb.top + hb.height / 2, 1), innerHeight - 1))));
         const nav = performance.getEntriesByType?.("navigation")[0] as PerformanceNavigationTiming | undefined;
         const data = {
-          ok, path: location.pathname, nav: nav?.type, y: Math.round(scrollY), ih: innerHeight, iw: innerWidth,
+          ok, at, touched, path: location.pathname, nav: nav?.type, y: Math.round(scrollY), ih: innerHeight, iw: innerWidth,
           vv: Math.round(window.visualViewport?.height ?? 0), ch: document.documentElement.clientHeight,
           vhpx: document.documentElement.style.getPropertyValue("--vhpx"),
           h1: r(h), h1c: cs ? [cs.color, cs.opacity, cs.visibility, cs.fontSize] : null,
@@ -43,8 +43,9 @@ export function HeadWatch() {
         };
         navigator.sendBeacon("/api/diag", new Blob([JSON.stringify(data)], { type: "text/plain" }));
       } catch { /* 기록 실패는 무시 */ }
-    }, 2500);
-    return () => { clearTimeout(t); removeEventListener("touchstart", stop); removeEventListener("wheel", stop); };
+    };
+    const timers = [800, 2500].map((ms) => window.setTimeout(() => send(ms), ms));
+    return () => { timers.forEach(clearTimeout); removeEventListener("touchstart", stop); removeEventListener("wheel", stop); };
   }, [pathname]);
   return null;
 }
