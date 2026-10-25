@@ -10,8 +10,9 @@ import { usePathname } from "next/navigation";
 export function ScrollTop() {
   const pathname = usePathname();
   useEffect(() => {
-    if (window.location.hash) return;
     const html = document.documentElement;
+    html.dataset.theme = "light"; // 공개 페이지는 늘 밝은 테마 (앱에서 넘어와도)
+    if (window.location.hash) return;
     const prev = html.style.scrollSnapType;
     html.style.scrollSnapType = "none";
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
