@@ -229,7 +229,7 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 /* ---- 영상처럼 보는 설명(.player, 단계 이름 = 자막): 위 단계 진행 막대, 가운데 장면, 아래 자막.
    단계 이름(.tt)은 이미 장면에 맞춰 켜지고 꺼지므로 영상 아래 한자리에 겹쳐 놓으면 자막이 된다 ---- */
 .a .film2.player:not(:has(.cap)) .s2g{grid-template-columns:minmax(0,1fr);gap:0;width:min(100%,760px,calc(var(--vhpx,100svh) - 300px));margin-inline:auto;position:relative;padding-bottom:3.4em}
-.a .film2.player:not(:has(.cap)) .s2g > div:not(.fst){display:contents}
+.a .film2.player:not(:has(.cap)) .s2g > div:not(.fst):not(.tabs2){display:contents}
 .a .film2.player:not(:has(.cap)) .s2g h2{order:-2;margin-bottom:24px}
 .a .film2.player:not(:has(.cap)) .tabs2{order:-1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none;gap:6px;margin:0 0 14px !important}
 .a .film2.player:not(:has(.cap)) .tabs2 label{position:static;height:20px;padding:0;border:0;font-size:0;line-height:0;background:linear-gradient(rgba(27,27,25,.16),rgba(27,27,25,.16)) top/100% 2px no-repeat}
@@ -237,7 +237,7 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a .film2.player:not(:has(.cap)) .tabs2 .tb{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .a .film2.player:not(:has(.cap)) .tabs2 .tt{position:absolute;left:0;right:0;top:auto;bottom:0;text-align:center;white-space:normal;font-size:clamp(22px,2.2vw,30px);font-weight:500;letter-spacing:-.03em;line-height:1.25;color:var(--ink)}
 .a .film2.player:not(:has(.cap)) .tabs2 .hint{display:none}
-.a .film2.player:not(:has(.cap)) .fst{width:100%;margin:0}
+.a .film2.player:not(:has(.cap)) .fst{width:100%;margin:0;order:0}
 @media (max-width:860px){
  .a .film2.player:not(:has(.cap)) .s2g{width:100%;padding-bottom:2.8em}
  .a .film2.player:not(:has(.cap)) .tabs2{gap:4px;margin-bottom:10px !important}
@@ -257,3 +257,16 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
  html .a .wrap:has(> nav.top){padding:0 16px}
  .a nav.top .menu,.a nav.top .right .btn{height:38px;padding:0 11px}
 }
+
+/* ---- 다음 페이지 링크(.nextp): 모든 공개 페이지 공통. 페이지별 CSS에만 있어 협력기관 페이지에서 한 줄로 뭉개지던 것을 공통으로 ---- */
+.a .nextp{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:72px 0 64px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.a .nextp small{display:block;font-size:15px;color:var(--muted);margin-bottom:10px}
+.a .nextp b{font-size:clamp(34px,4.6vw,64px);font-weight:500;letter-spacing:-.045em;line-height:1.05}
+.a .nextp .ar{font-size:clamp(34px,4.6vw,64px);line-height:1;transition:transform 200ms var(--eo)}
+.a .nextp:active{transform:scale(.99)}
+@media (hover:hover) and (pointer:fine){ .a .nextp:hover .ar{transform:translateX(8px)}.a .nextp:hover b{text-decoration:underline;text-underline-offset:8px;text-decoration-thickness:2px}}
+@media (max-width:860px){ .a .nextp{padding:48px 0 40px}}
+
+/* ---- 눌리지 않는 버튼(.gate)에는 이유를 한 줄로. 조건을 채우면 안내는 사라진다 ---- */
+.a .gatehint{margin:10px 0 0;font-size:13.5px;color:var(--ink2)}
+.a .act:has(.pick input:checked) .gatehint,.a .act:has(.chk):not(:has(.chk input:not(:checked))) .gatehint{display:none}

@@ -116,7 +116,7 @@ export function SignupCroView() {
         <div className="auth__section">담당자 계정</div>
         <div className="auth__grid">
           <Field id="name" label="담당자 성명" required>
-            <TextInput id="name" value={f.name} onChange={set("name")} placeholder="홍길동" autoComplete="name" />
+            <TextInput id="name" value={f.name} onChange={set("name")} autoComplete="name" />
           </Field>
           <Field id="phone" label="연락처">
             <TextInput id="phone" type="tel" inputMode="tel" value={f.phone} onChange={set("phone")} placeholder="010-0000-0000" autoComplete="tel" />

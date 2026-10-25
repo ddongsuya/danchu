@@ -356,7 +356,7 @@
 .a .fst .dt.ac{background:var(--acc)}
 .a .fst .dt.ring{background:transparent;border:1.5px solid var(--muted)}
 .a .gmore{padding:0 0 72px;border-bottom:1px solid var(--line)}
-@media (max-width:860px){.a section:has(#du) .s2g > div{order:-1}.a .film.rev{grid-template-columns:1fr}.a .film.rev .fside{order:0}.a .gsec{padding:56px 0}}
+@media (max-width:860px){.a .film.rev{grid-template-columns:1fr}.a .film.rev .fside{order:0}.a .gsec{padding:56px 0}}
 .a .film2:has(#gd-k0:checked) {--jd:-0s}
 .a .film2:has(#gd-k1:checked) {--jd:-4.5s}
 .a .film2:has(#gd-k2:checked) {--jd:-9.0s}

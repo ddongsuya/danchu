@@ -76,7 +76,7 @@ function Signup() {
           </Field>
 
           <Field id="name" label="담당자 성명" required>
-            <TextInput id="name" value={f.name} onChange={set("name")} placeholder="홍길동" autoComplete="name" />
+            <TextInput id="name" value={f.name} onChange={set("name")} autoComplete="name" />
           </Field>
 
           <Field id="email" label="업무용 이메일" required help="견적·비교표 알림이 이 주소로 갑니다.">
@@ -102,7 +102,7 @@ function Signup() {
         <div className="field">
           <span className="field__label">로그인 방법</span>
           <div className="auth__tabs" role="group" aria-label="로그인 방법">
-            <button type="button" aria-pressed={!usePw} onClick={() => setUsePw(false)}>이메일 링크만 (비밀번호 없음)</button>
+            <button type="button" aria-pressed={!usePw} onClick={() => setUsePw(false)}>이메일 링크</button>
             <button type="button" aria-pressed={usePw} onClick={() => setUsePw(true)}>비밀번호도 설정</button>
           </div>
           <p className="field__help">
