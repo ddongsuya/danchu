@@ -721,3 +721,9 @@
 @media (prefers-reduced-motion: reduce){.a .cue i{animation:none}}
 /* 첫 화면 글은 어떤 환경에서도 등장 효과에 기대지 않는다 */
 @media (max-width:860px){.a .h1l,.a .sub,.a .hero .ctas{animation:none}.a .cue{padding-bottom:16px}}
+
+/* ---- 모바일 첫 화면은 뷰포트 높이 단위에 기대지 않는다. 앱 내 브라우저가 vh 계열을 크게 계산하면 내용이 한참 아래로 밀려 첫 화면이 비어 보인다 ---- */
+@media (max-width:860px){
+ .a .first{min-height:0 !important}
+ .a .first .hero{flex:none}
+}
