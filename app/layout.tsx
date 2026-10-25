@@ -17,10 +17,10 @@ export const metadata: Metadata = {
     siteName: "단추 Danchu",
     locale: "ko_KR",
     type: "website",
-    // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og-workspace-v2.png · scripts/gen-images.js로 생성)
-    images: [{ url: "/og-workspace-v2.png", width: 1200, height: 630, alt: "단추 · 비임상 시험의 시작, 단추를 채우다." }],
+    // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og-orbit.png · scripts/og-orbit.mjs로 생성)
+    images: [{ url: "/og-orbit.png", width: 1200, height: 630, alt: "단추 · 비임상 시험의 시작, 단추를 채우다." }],
   },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og-workspace-v2.png"] },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og-orbit.png"] },
   robots: { index: true, follow: true },
   other: { "color-scheme": "light dark" },
   manifest: "/manifest.webmanifest",
