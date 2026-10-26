@@ -44,3 +44,6 @@
  .a .q summary{font-size:17px;padding:20px 0}
  .a .ans p{font-size:15px}
 }
+/* 펼친 답변을 읽는 중에 스냅이 다음 장면으로 끌고 가지 않게, FAQ 페이지는 스크롤 스냅을 끈다.
+   장면 구성(제목+목록 / 견적 요청)은 그대로 두고 높이는 펼친 만큼 자연스럽게 늘어난다. */
+html:has(.a.onescreen .faqs){scroll-snap-type:none}
