@@ -5,6 +5,10 @@
 @supports (animation-timeline: view()){ @media (max-height:1200px){
  .a .sv{animation:var(--k,rise) linear both;animation-timeline:--sc;animation-range:var(--r,entry 20% entry 80%)}
 }}
+/* 첫 화면에 제목과 질문 목록을 함께 둔다(위 정렬). */
+.a.onescreen main > section.faqs{align-content:start;padding-top:56px}
+.a .faqs .ph{padding:0 0 32px}
+.a .faqs .faq{padding-top:40px}
 .a .faq{display:grid;grid-template-columns:minmax(0,14em) minmax(0,1fr);gap:64px;padding:64px 0 96px;border-bottom:1px solid var(--line)}
 .a .faq > input{position:absolute;opacity:0;pointer-events:none}
 .a .fc{position:sticky;top:108px;align-self:start;display:grid;gap:2px}
@@ -31,8 +35,12 @@
 @media (hover:hover) and (pointer:fine){ .a .fc label:hover{color:var(--ink)} .a .q summary:hover{color:var(--ink2)} }
 @media (max-width:860px){
  .a .faq{grid-template-columns:1fr;gap:24px;padding:32px 0 64px}
+ .a.onescreen main > section.faqs{padding-top:28px}
+ .a .faqs .ph{padding:0 0 24px}
+ .a .faqs .faq{padding-top:24px}
  .a .fc{position:static;display:flex;flex-wrap:wrap;gap:8px;padding-bottom:4px}
  .a .fc label{border:1px solid var(--line);border-radius:2px;padding:0 12px;height:36px;display:inline-flex;align-items:center;white-space:nowrap}
+ .a #f-all:checked ~ .fc label[for=f-all],.a #f-cost:checked ~ .fc label[for=f-cost],.a #f-plan:checked ~ .fc label[for=f-plan],.a #f-time:checked ~ .fc label[for=f-time],.a #f-conf:checked ~ .fc label[for=f-conf],.a #f-cmp:checked ~ .fc label[for=f-cmp],.a #f-deal:checked ~ .fc label[for=f-deal],.a #f-cro:checked ~ .fc label[for=f-cro]{border-color:var(--ink)}
  .a .q summary{font-size:17px;padding:20px 0}
  .a .ans p{font-size:15px}
 }

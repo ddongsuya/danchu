@@ -9,12 +9,14 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <Site current="/faq">
-<section className="ph" aria-labelledby="t">
+    <Site current="/faq" cue={false}>
+{/* 제목과 질문 목록은 한 장면. 제목만 한 화면을 차지하면 첫 화면에 질문이 하나도 안 보인다. */}
+<section className="faqs" aria-labelledby="t">
+<div className="ph">
 <div><h1 id="t">자주 묻는 질문</h1></div>
 <div><p className="lead">여기 없는 질문은 hello@danchu.kr로 보내주세요.</p></div>
-</section>
-<section className="faq" aria-label="질문 목록">
+</div>
+<div className="faq">
 <input type="radio" name="fc" id="f-all" defaultChecked /><input type="radio" name="fc" id="f-cost" /><input type="radio" name="fc" id="f-plan" /><input type="radio" name="fc" id="f-time" /><input type="radio" name="fc" id="f-conf" /><input type="radio" name="fc" id="f-cmp" /><input type="radio" name="fc" id="f-deal" /><input type="radio" name="fc" id="f-cro" />
 <div className="fc" role="radiogroup" aria-label="분류"><label htmlFor="f-all">전체</label><label htmlFor="f-cost">비용</label><label htmlFor="f-plan">시험 구성</label><label htmlFor="f-time">기한</label><label htmlFor="f-conf">기밀</label><label htmlFor="f-cmp">비교표</label><label htmlFor="f-deal">계약</label><label htmlFor="f-cro">기관</label></div>
 <div className="qs">
@@ -26,6 +28,7 @@ export default function Page() {
 <details className="q c-cmp"><summary>기관은 다른 기관의 견적을 볼 수 있나요?</summary><div className="ans"><p>볼 수 없습니다. 비교표는 의뢰자에게만 전달되며, 의뢰자도 비교표가 열리기 전에는 기관명과 금액을 보지 못합니다. 단추는 어느 기관의 금액, 순위, 참여 여부도 다른 기관에 알리지 않고, 선택되지 않은 기관에는 결과만 안내합니다.</p></div></details>
 <details className="q c-deal"><summary>견적을 받은 뒤 계약은 어떻게 하나요?</summary><div className="ans"><p>비교표에서 고른 기관과 직접 계약합니다. 선택하면 그 기관과 회사명·담당자 연락처를 서로 주고받으며, 단추는 계약 조건에 관여하지 않습니다. 선택 기록은 그 시점에 남깁니다. 기관이 체결일과 계약금액을 보고하면 요청 화면에서 내용을 확인해 주세요. 보고 뒤 7일 안에 이의가 없으면 보고한 내용대로 확정되고, 이의를 남기면 운영자가 양쪽에 확인한 뒤 정리합니다.</p></div></details>
 <details className="q c-cro"><summary>기관은 어떻게 참여하나요?</summary><div className="ans"><p>기관 참여 안내 페이지에서 가입을 신청하면 단추가 기관 정보를 확인한 뒤 승인합니다. 승인된 기관에는 수행 분야에 맞는 요청의 참여 안내가 가고, 기관이 요약을 보고 참여를 누르면 요청서 전체가 열립니다. 역량 카탈로그를 등록해 두면 회신 초안이 채워진 채 열립니다. 견적을 내지 않을 요청은 불참을 누르면 되고, 다음 안내에 영향이 없습니다. 참여 결정 기한 전이고 자리가 남아 있으면 불참을 취소하고 다시 참여할 수 있습니다. 참여한 뒤 철회한 요청에는 다시 참여할 수 없습니다.</p></div></details>
+</div>
 </div>
 </section>
 <section className="close" aria-labelledby="go">
