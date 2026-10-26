@@ -187,6 +187,8 @@ html:has(.a.onescreen){scroll-snap-type:y mandatory}
 .a.onescreen main > section,.a.onescreen main > div.bandw{scroll-snap-align:start;scroll-snap-stop:always;scroll-margin-top:var(--navh)}
 .a.onescreen footer{scroll-snap-align:end}
 @media (prefers-reduced-motion: reduce){html:has(.a.onescreen){scroll-snap-type:y proximity}}
+/* 접힌 내용(details)을 펼쳐 읽는 동안에는 스냅을 끈다. 펼친 길이만큼 장면이 길어지는데 스냅이 다음 장면으로 끌고 가거나 장면 끝에 붙잡아 두지 않게 */
+html:has(.a.onescreen main details[open]){scroll-snap-type:none}
 /* 모바일(iOS): mandatory+stop:always는 주소창 접힘과 겹쳐 스크롤이 튄다. 가까울 때만 맞춘다 */
 @media (max-width:860px){
  /* 한 스크롤에 한 장면: 섹션마다 화면 한 칸을 채워 다음 장면이 같이 보이지 않게 한다.
