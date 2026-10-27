@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listAwardsForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { ContractReport } from "@/components/cro/ContractReport";
+import { SubstanceForm } from "@/components/cro/SubstanceForm";
 import { ymd, won } from "@/lib/format";
 import { contractConfirmState } from "@/lib/status";
 
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 const NEXT = [
   ["의뢰자와 계약 협의", "단추는 조건에 관여하지 않습니다. 직접 진행하세요."],
   ["계약 체결 보고", "체결일·계약금액을 아래에 입력 (계약 진행 확인용). 보고하면 의뢰자가 내용을 확인합니다. 의뢰자가 확인하거나 7일 안에 이의가 없으면 확정되고 요청이 종료됩니다"],
-  ["시험물질 수령", "회신에 적은 필요량·시점 기준"],
+  ["시험물질 필요량 안내", "의뢰자에게 시험물질 정보를 받아 필요량과 보낼 시점을 아래에 적어 주세요."],
 ];
 
 export default async function CroAwards() {
@@ -69,6 +70,7 @@ export default async function CroAwards() {
                   <ContractReport awardId={a.id} />
                 </div>
               )}
+              <SubstanceForm awardId={a.id} qty={a.substance_qty ?? ""} when={a.substance_when ?? ""} note={a.substance_note ?? ""} updatedAt={a.substance_updated_at} />
               {a.contract_reported_at && (
                 <div className="kv" style={{ padding: 0, fontSize: 13 }}>
                   <span className="kv__k">보고</span>

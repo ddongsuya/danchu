@@ -428,10 +428,6 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 <label className="fld__lab" htmlFor="pay">결제 조건 (선급 · 중도 · 잔금 %)</label>
                 <input id="pay" className="inp" placeholder="예: 30 · 40 · 30" disabled={readOnly || busy} value={common.payTerms} onChange={(e) => updCommon({ payTerms: e.target.value.slice(0, 60) })} />
               </div>
-              <div className="fld">
-                <label className="fld__lab" htmlFor="qty">시험물질 필요량</label>
-                <input id="qty" className="inp" placeholder="예: 원료 40 g + 예비 10 g" disabled={readOnly || busy} value={common.substanceQty} onChange={(e) => updCommon({ substanceQty: e.target.value.slice(0, 120) })} />
-              </div>
             </div>
             <div className="fld">
               <span className="fld__lab">보고서 언어</span>

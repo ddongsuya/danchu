@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   WIZ,
   STEP2,
+  SUBSTANCE_TIP,
   DETAILS,
   DEFAULT_VALUES,
   filled,
@@ -618,6 +619,12 @@ export function NewRequest({
                   </div>
                 </details>
               ))}
+            <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
+              <b style={{ fontWeight: 600 }}>{SUBSTANCE_TIP.lead}</b>
+              <ul style={{ margin: 0, paddingLeft: "1.2em" }}>
+                {SUBSTANCE_TIP.items.map((t) => <li key={t}>{t}</li>)}
+              </ul>
+            </div>
             {STEP2.map((g) => (
               <details className="request__details" key={g.title}>
                 <summary>

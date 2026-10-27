@@ -116,7 +116,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
               ["결제 조건", q.pay_terms ? `${q.pay_terms} (%)` : "-"],
               ["견적 유효기간", md(q.valid_until)],
               ["보고서 언어", q.report_lang || "-"],
-              ["시험물질 필요량", q.substance_qty || "-"],
+              // 필요량은 선정 뒤 기관이 수주 화면에서 적는다 (0027). 예전 회신에 적힌 값만 보여 준다
+              ...(q.substance_qty ? [["시험물질 필요량 (회신 때 적은 값)", q.substance_qty]] : []),
             ].map(([k, v]) => (
               <div key={k} className="kv">
                 <span className="kv__k">{k}</span>
