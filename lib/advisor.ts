@@ -9,10 +9,11 @@
  *
  * 1차 범위: 합성의약품. 규칙 번호(R-…)는 기술 문서의 규칙과 같다.
  */
+import { shortCite } from "./cite";
 import { repeatDoseFor, type ClinDuration, type Stage as TableStage } from "./design-guide";
 import type { Values } from "./rfq-schema";
 
-export const ADVISOR_DISCLAIMER = "이 제안은 공개 가이드라인에 따른 참고용 추천입니다. 정확한 시험 구성은 식약처와 시험기관(CRO)과 충분히 논의해 확정하세요.";
+export const ADVISOR_DISCLAIMER = "공개 가이드라인을 정리한 참고 자료예요. 최종 설계는 규제기관, 담당 기관과 함께 논의하세요.";
 
 export type Answers = Record<string, string | string[] | undefined>;
 
@@ -502,7 +503,7 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
     .map((q) => { const x = arr(a[q.id]); return x.length ? `${q.q.replace(/\?$/, "")}: ${x.join(", ")}` : ""; })
     .filter(Boolean);
   v.advisorAsk = advice.askCro;
-  v.advisorNotes = advice.notes.map((n) => (n.basis ? `${n.text} (${n.basis})` : n.text));
+  v.advisorNotes = advice.notes.map((n) => (n.basis ? `${n.text} (근거 ${shortCite(n.basis)})` : n.text));
   v.advisorPrereq = advice.prereq;
   return v;
 }

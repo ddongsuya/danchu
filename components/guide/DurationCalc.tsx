@@ -14,7 +14,7 @@ export function DurationCalc() {
     <div className="calc">
       <div className="calc__in">
         <div className="calc__fld">
-          <span className="calc__lab">어느 단계를 준비하시나요</span>
+          <span className="calc__lab">어느 단계를 준비하세요?</span>
           <div className="seg" role="radiogroup" aria-label="단계">
             {STAGES.map((s) => (
               <button key={s} type="button" aria-pressed={stage === s} onClick={() => setStage(s)}>{s}</button>
@@ -22,7 +22,7 @@ export function DurationCalc() {
           </div>
         </div>
         <div className="calc__fld">
-          <span className="calc__lab">임상에서 얼마나 투여할 예정인가요</span>
+          <span className="calc__lab">임상에서 얼마나 투여할 예정이세요?</span>
           <div className="chips">
             {CLIN_DURATIONS.map((d) => (
               <button key={d} type="button" className="chipb" aria-pressed={clin === d} onClick={() => setClin(d)}>{d}</button>

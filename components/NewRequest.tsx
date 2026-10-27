@@ -468,14 +468,14 @@ export function NewRequest({
         {!resume && (
           <div className="request__paths">
             <button onClick={() => setPhase("advisor")}>
-              <b>필요한 시험 찾기</b>
+              <b>필요한 시험 찾아보기</b>
               <span>
-                개발 상황을 답하면 가이드라인 근거와 함께 시험을 제안합니다.
+                개발 상황을 고르면 해당하는 가이드라인 기준을 보여드려요.
               </span>
             </button>
             <button onClick={start}>
-              <b>시험 항목 직접 선택</b>
-              <span>필요한 시험을 알고 있다면 바로 요청서를 작성하세요.</span>
+              <b>시험 직접 고르기</b>
+              <span>필요한 시험을 알고 계시면 바로 요청서를 쓰세요.</span>
             </button>
           </div>
         )}
@@ -851,8 +851,8 @@ export function NewRequest({
       )}
       {step === 3 && (
         <p className="note note--tint" role="note">
-          단추의 시험 제안은 가이드라인에 따른 참고용 추천입니다. 정확한 시험
-          구성은 식약처와 시험기관(CRO)과 충분히 논의해 확정하세요.
+          가이드라인을 정리한 참고 자료예요. 최종 설계는 규제기관, 담당 기관과
+          함께 논의하세요.
         </p>
       )}
       {error && (

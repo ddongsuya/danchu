@@ -49,7 +49,7 @@ export function SignupCroView() {
           <p className="auth__note" style={{ textAlign: "left" }}>
             {done.joined
               ? "이미 등록된 기관이라 담당자 추가로 접수되었습니다. 운영자가 확인 후 연결해 드립니다."
-              : "운영자가 기관 정보를 확인한 뒤 승인합니다. 보통 영업일 1~2일 안에 결과를 메일로 알려 드립니다."}{" "}
+              : "기관 정보를 확인한 뒤 승인해드려요. 보통 영업일 1~2일 안에 메일로 알려드려요."}{" "}
             승인 전에도 로그인해서 신청 내용을 볼 수 있습니다.
           </p>
           <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email }); setDone({ ...done, mailed: true }); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했습니다."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
@@ -62,8 +62,8 @@ export function SignupCroView() {
   return (
     <div className="auth__card auth__card--wide">
       <div>
-        <h1 className="auth__title">CRO 가입 신청</h1>
-        <p className="auth__sub">참여 기관으로 등록되면 수행 분야가 맞는 요청의 참여 안내를 받고, 참여한 요청에 단추 표준 양식으로 견적을 회신할 수 있습니다.</p>
+        <h1 className="auth__title">기관 참여 신청</h1>
+        <p className="auth__sub">분야에 맞는 요청서를 받고, 같은 양식으로 견적을 회신해보세요.</p>
       </div>
 
       <form className="auth__form" onSubmit={submit}>

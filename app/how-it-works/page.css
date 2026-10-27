@@ -423,3 +423,9 @@
  .a .film2.player .cap{font-size:20px;margin-top:14px}
 }
 @media (max-width:860px){.a .film2.player .s2g{width:100%}}
+
+/* FAQ 답: 한 줄 답 + 자세히 */
+.a .ans .al{font-weight:600;color:var(--ink)}
+.a .ans ul{margin:0;padding-left:1.1em;display:grid;gap:8px}
+.a .ans li{font-size:16px;line-height:1.7;color:var(--ink2)}
+@media (max-width:860px){.a .ans li{font-size:15px}}

@@ -323,3 +323,10 @@ button:disabled { cursor: not-allowed; }
 button:active:not(:disabled) { transform: scale(.98); }
 button:focus-visible:active, a:focus-visible:active { transform: none; }
 [id] { scroll-margin-top: 94px; }
+
+/* 가이드라인 근거 표기 (components/Cite.tsx): 문서와 번호만 보이고, 누르면 원래 표기를 펼친다 */
+.cite { display: block; font-size: 12px; line-height: 1.5; color: var(--muted); }
+details.cite > summary { display: inline; cursor: pointer; list-style: none; text-decoration: underline dotted; text-underline-offset: 3px; }
+details.cite > summary::-webkit-details-marker { display: none; }
+details.cite > summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
+.cite__full { display: block; margin-top: 2px; }

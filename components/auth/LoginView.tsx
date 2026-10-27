@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/components/AuthBits";
 
 const ERRORS: Record<string, string> = {
-  link: "링크가 올바르지 않습니다. 메일의 버튼을 다시 눌러 주세요.",
-  expired: "링크가 만료되었거나 이미 사용되었습니다. 아래에서 다시 요청해 주세요.",
-  config: "로그인 기능이 아직 설정되지 않았습니다. 운영자에게 문의해 주세요.",
+  link: "링크를 확인하지 못했어요. 메일의 버튼을 다시 눌러주세요.",
+  expired: "링크가 만료됐거나 이미 쓰였어요. 아래에서 새 링크를 받아보세요.",
+  config: "지금은 로그인을 쓸 수 없어요. hello@danchu.kr로 알려주세요.",
 };
 
 const NOTICES: Record<string, string> = {
-  deleted: "탈퇴가 완료되었습니다. 이용해 주셔서 감사합니다.",
+  deleted: "탈퇴가 완료됐어요. 그동안 단추를 이용해주셔서 감사합니다.",
 };
 
 export function LoginView() {
@@ -73,7 +73,7 @@ function Login() {
     <div className="auth__card">
       <div>
         <h1 className="auth__title">로그인</h1>
-        <p className="auth__sub">{next === "/app/new" ? "로그인하면 바로 견적 요청 화면이 열립니다." : "견적 요청 진행 상황과 비교표를 확인하세요."}</p>
+        <p className="auth__sub">{next === "/app/new" ? "로그인하면 쓰던 요청서로 바로 이어져요." : "다시 오셨네요. 진행 중인 견적을 확인하세요."}</p>
       </div>
 
       <div className="auth__tabs" role="group" aria-label="로그인 방법">
@@ -90,7 +90,7 @@ function Login() {
             <PasswordInput id="pw" value={pw} onChange={setPw} placeholder="비밀번호" autoComplete="current-password" />
           </Field>
         ) : (
-          <p className="field__help" style={{ margin: 0 }}>비밀번호 없이, 이메일로 받은 링크를 눌러 로그인합니다.</p>
+          <p className="field__help" style={{ margin: 0 }}>비밀번호 없이, 메일로 받은 링크 하나로 로그인하세요.</p>
         )}
         {notice && <p className="field__help" role="status" style={{ margin: 0 }}>{notice}</p>}
         <ErrorBox>{error}</ErrorBox>
@@ -110,7 +110,7 @@ function Login() {
           처음이신가요? <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`}>의뢰자 가입</Link>
         </span>
         <span>
-          시험기관(CRO)이라면 <Link href="/signup/cro">CRO 가입 신청</Link>
+          시험기관이신가요? <Link href="/signup/cro">기관으로 참여 신청</Link>
         </span>
       </div>
     </div>

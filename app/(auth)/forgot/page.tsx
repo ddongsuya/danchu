@@ -38,7 +38,7 @@ export default function Forgot() {
         <>
           <div>
             <h1 className="auth__title">비밀번호 재설정</h1>
-            <p className="auth__sub">가입한 이메일을 입력하면 새 비밀번호를 정할 수 있는 링크를 보냅니다.</p>
+            <p className="auth__sub">가입한 이메일을 알려주시면 새 비밀번호 링크를 보내드려요.</p>
           </div>
           <form className="auth__form" onSubmit={submit}>
             <Field id="email" label="이메일" required>
