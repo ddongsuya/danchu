@@ -129,7 +129,8 @@ describe("참여 선택형 공개 문구", () => {
     expect(terms).not.toContain("그 합의 이후에 전달된");
   });
   it("기관 안내에는 참여 결정 단계가 있고 없어진 자동 제출 설명이 없다", () => {
-    const forCro = visible(src("app/for-cro/page.tsx"));
+    // 단계 이름은 기관 참여 페이지의 영상(단계 버튼)으로 옮겨 갔다
+    const forCro = visible(src("app/for-cro/page.tsx") + src("components/site/reel/films/cro.ts"));
     expect(forCro).toContain("참여 결정");
     expect(forCro).not.toContain("예비 견적 자동 제출");
     expect(forCro).not.toContain("회신하지 않음 포함");
