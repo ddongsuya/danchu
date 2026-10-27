@@ -10,3 +10,7 @@ next-env.d.ts
 motion-audits/
 # 스킬 검색 스크립트 캐시
 __pycache__/
+# hallmark 검사 결과 (.claude/skills/hallmark)
+.hallmark/
+# 가이드라인 스킬 생성기 출력 (scripts/build-guideline-skill.mjs)
+.guideline-skill/

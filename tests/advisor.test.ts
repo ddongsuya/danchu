@@ -91,3 +91,45 @@ describe("visibleQuestions — 분기", () => {
     expect(visibleQuestions({ product: "바이오의약품" }).map((q) => q.id)).not.toContain("cns");
   });
 });
+
+describe("advise — 세포·유전자치료제 (공개 근거만)", () => {
+  const cell: Answers = { product: "세포·유전자치료제", cgtType: "세포치료제 (줄기세포·면역세포 등)", stage: "1상 진입", auth: ["식약처"], route: "정맥", duration: "단회", prior: ["없음"] };
+  const gene: Answers = { ...cell, cgtType: "유전자치료제 (AAV 등 벡터)", duration: "3개월 이내" };
+
+  it("지원 대상이고, 항목이 요청서 스키마에 있고, 모든 시험에 근거가 붙는다", () => {
+    for (const x of [cell, gene]) {
+      const r = advise(x);
+      expect(r.supported).toBe(true);
+      assertItemsExist(r.tests);
+      for (const t of r.tests) expect(t.basis.length).toBeGreaterThan(0);
+    }
+  });
+  it("세포치료제는 종양원성이 기본 포함, 유전자치료제는 선택", () => {
+    expect(advise(cell).tests.find((t) => t.key === "tumor")?.on).toBe(true);
+    expect(advise(gene).tests.find((t) => t.key === "tumor")?.on).toBe(false);
+  });
+  it("유전자치료제는 ICH S12 근거로 생체분포를 임상 전에 끝내야 한다고 안내한다", () => {
+    const r = advise(gene);
+    expect(r.tests.find((t) => t.key === "bd")?.basis).toMatch(/ICH S12/);
+    expect(r.prereq.join()).toMatch(/임상시험 개시 전/);
+  });
+  it("공개 문서가 정하지 않은 값(관찰 주수, 동물종)은 채우지 않는다", () => {
+    for (const x of [cell, gene]) {
+      const r = advise(x);
+      for (const t of r.tests) {
+        expect(t.item).not.toMatch(/\d+주/);
+        expect(Object.keys(t.fill ?? {})).not.toContain("일반독성.species");
+      }
+    }
+  });
+  it("바이오의약품에서 세포·유전자치료제를 골라도 같은 결과로 간다", () => {
+    const viaBio = advise({ ...cell, product: "바이오의약품", bioType: "세포·유전자치료제" });
+    expect(viaBio.supported).toBe(true);
+    expect(viaBio.tests.map((t) => t.key)).toEqual(advise(cell).tests.map((t) => t.key));
+  });
+  it("생식·소아·CNS 질문은 묻지 않는다", () => {
+    const ids = visibleQuestions(cell).map((q) => q.id);
+    expect(ids).toContain("cgtType");
+    for (const id of ["wocbp", "ped", "cns", "indication", "freq"]) expect(ids).not.toContain(id);
+  });
+});

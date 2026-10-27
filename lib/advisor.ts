@@ -7,7 +7,7 @@
  * - 제안은 미리 채운 선택일 뿐이다. 의뢰자가 빼거나 더한다.
  * - 모든 제안과 안내에 근거 조항을 붙인다.
  *
- * 1차 범위: 합성의약품. 규칙 번호(R-…)는 기술 문서의 규칙과 같다.
+ * 1차 범위: 합성의약품. 규칙 번호(R-…)는 기술 문서의 규칙과 같다. R-CGT-… 는 기술 문서에 없는 세포·유전자치료제 번호다.
  */
 import { shortCite } from "./cite";
 import { repeatDoseFor, type ClinDuration, type Stage as TableStage } from "./design-guide";
@@ -36,6 +36,11 @@ const HF = "건강기능식품";
 /** 의약품 질문(단계, 임상 계획)은 건강기능식품에는 묻지 않는다 */
 const NON_PHARMA = [HF, "화장품", "의료기기", "화학물질·농약"];
 const pharma = (a: Answers) => !NON_PHARMA.includes(String(a.product ?? ""));
+const CGT = "세포·유전자치료제";
+/** 세포·유전자치료제: 제품 유형으로 골랐거나, 바이오의약품의 세부 유형으로 골랐거나 */
+const cgt = (a: Answers) => a.product === CGT || (a.product === "바이오의약품" && a.bioType === CGT);
+/** 세포·유전자치료제에는 공개 근거로 답할 수 없는 질문(생식, 소아, CNS, 투여 빈도, 적응증)을 묻지 않는다 */
+const pharmaNoCgt = (a: Answers) => pharma(a) && !cgt(a);
 const BIO_TYPES = ["단클론항체", "재조합 단백질·펩타이드", "항체약물접합체", "백신", "동등생물의약품", "세포·유전자치료제"];
 
 const PRIOR = [
@@ -85,17 +90,18 @@ export const QUESTIONS: Question[] = [
   { id: "product", step: 1, q: "무엇을 개발하시나요?", options: [...PRODUCTS], required: true },
   { id: "bioType", step: 1, q: "어떤 바이오의약품인가요?", options: BIO_TYPES, required: true, when: (a) => a.product === "바이오의약품" },
   { id: "bioSpecies", step: 1, q: "약리 활성이 나타나는 동물종(관련 종)을 확인했나요?", sub: "바이오의약품의 독성시험은 관련 종에서 합니다.", options: ["설치류와 비설치류 모두", "영장류만", "설치류만", "관련 종 없음", "아직 확인 안 함"], required: true, when: (a) => a.product === "바이오의약품" && a.bioType !== "백신" && a.bioType !== "세포·유전자치료제" },
+  { id: "cgtType", step: 1, q: "어떤 제품인가요?", sub: "유전자치료제는 체내 분포 평가 기준(ICH S12)이 따로 있습니다.", options: ["세포치료제 (줄기세포·면역세포 등)", "유전자치료제 (AAV 등 벡터)"], required: true, when: cgt },
   { id: "stage", step: 1, when: pharma, q: "어느 단계를 준비하시나요?", sub: "단계에 따라 필요한 시험 범위가 달라집니다.", options: ["1상 진입", "2상", "3상", "품목허가", "자체 연구"], required: true },
   { id: "auth", step: 1, q: "어디에 제출하시나요?", sub: "해당하는 곳을 모두 고르세요.", multi: true, options: ["식약처", "미국 FDA", "유럽 EMA", "일본 PMDA", "기타"], required: true, when: (a) => pharma(a) && a.stage !== "자체 연구" },
-  { id: "indication", step: 1, when: pharma, q: "적응증은 어디에 해당하나요?", options: ["진행암", "중대하거나 생명을 위협하는 질환", "그 외"], required: true },
+  { id: "indication", step: 1, when: pharmaNoCgt, q: "적응증은 어디에 해당하나요?", options: ["진행암", "중대하거나 생명을 위협하는 질환", "그 외"], required: true },
   { id: "route", step: 2, when: pharma, q: "임상 투여경로는 무엇인가요?", options: ["경구", "정맥", "피하", "근육", "국소 적용(피부·점안 등)", "흡입", "기타"], required: true },
   { id: "duration", step: 2, when: pharma, q: "임상에서 얼마나 투여할 예정인가요?", sub: "반복투여독성 기간을 정합니다.", options: ["단회", "2주 이내", "1개월 이내", "3개월 이내", "6개월 이내", "6개월 초과·만성", "미정"], required: true },
-  { id: "freq", step: 2, when: pharma, q: "임상 투여 빈도는요?", options: ["1일 1회", "1일 2회 이상", "주 1회", "간헐", "지속주입", "미정"] },
-  { id: "wocbp", step: 2, when: pharma, q: "임상에 가임 여성이 포함되나요?", options: ["예", "아니오", "미정"], required: true },
-  { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => pharma(a) && a.wocbp === "예" },
-  { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => pharma(a) && a.wocbp === "예" },
-  { id: "ped", step: 2, when: pharma, q: "소아를 임상에 포함하거나 소아 적응증을 개발하나요?", options: ["아니오", "예 · 2세 미만 포함", "예 · 2세 이상", "미정"] },
-  { id: "cns", step: 1, when: (a) => pharma(a) && a.product !== "바이오의약품", q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
+  { id: "freq", step: 2, when: pharmaNoCgt, q: "임상 투여 빈도는요?", options: ["1일 1회", "1일 2회 이상", "주 1회", "간헐", "지속주입", "미정"] },
+  { id: "wocbp", step: 2, when: pharmaNoCgt, q: "임상에 가임 여성이 포함되나요?", options: ["예", "아니오", "미정"], required: true },
+  { id: "wScale", step: 2, q: "가임 여성은 몇 명에게, 얼마 동안 투여하나요?", sub: "규모가 작고 짧으면 예비 시험으로 뒷받침할 수 있습니다.", options: ["150명 이하이고 3개월 이하", "그보다 많거나 김", "미정"], when: (a) => pharmaNoCgt(a) && a.wocbp === "예" },
+  { id: "contra", step: 2, q: "고효율 피임을 임상 조건으로 두나요?", sub: "실패율이 연 1% 미만인 피임법을 말합니다.", options: ["예", "아니오", "미정"], when: (a) => pharmaNoCgt(a) && a.wocbp === "예" },
+  { id: "ped", step: 2, when: pharmaNoCgt, q: "소아를 임상에 포함하거나 소아 적응증을 개발하나요?", options: ["아니오", "예 · 2세 미만 포함", "예 · 2세 이상", "미정"] },
+  { id: "cns", step: 1, when: (a) => pharmaNoCgt(a) && a.product !== "바이오의약품", q: "약물이 중추신경계에 작용하나요?", sub: "뇌에 들어가 작용하거나, 부작용으로 중추신경계에 영향을 주는 경우입니다.", options: ["예", "아니오", "모름"] },
   { id: "hfKind", step: 1, q: "원료는 어떤 성격인가요?", sub: "독성시험이 필요한지는 원료의 성격으로 정해집니다.", options: ["섭취 경험이 있는 원료 자체", "단순 추출물 (물·주정·이산화탄소)", "그 밖의 추출·정제·발효", "합성 원료", "섭취 경험이 없는 원료"], required: true, when: (a) => a.product === HF },
   { id: "hfAdverse", step: 1, q: "알려진 부작용이 있나요?", options: ["예", "아니오", "모름"], when: (a) => a.product === HF },
   { id: "hfIntake", step: 2, q: "제안하는 섭취량이 평소 섭취량보다 많은가요?", sub: "식품으로 먹던 원료는 평균 섭취량의 3배 또는 극단 섭취량과 비교합니다.", options: ["예", "아니오", "근거 자료 없음"], required: true, when: (a) => a.product === HF },
@@ -176,7 +182,8 @@ export function advise(a: Answers): Advice {
   if (product === "화장품") return adviseCosmetic(a);
   if (product === "의료기기") return adviseDevice(a);
   if (product === "화학물질·농약") return adviseChemical(a);
-  if (product === "바이오의약품" || product === "세포·유전자치료제") return adviseBio(product === "세포·유전자치료제" ? { ...a, bioType: "세포·유전자치료제" } : a);
+  if (cgt(a)) return adviseCgt(a);
+  if (product === "바이오의약품") return adviseBio(a);
 
   const tests: Suggest[] = [];
   const notes: Note[] = [];
@@ -479,7 +486,7 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
   const pr = String(a.product ?? "");
   if (pr === "화장품" || pr === "의료기기") v.authority = ["식약처(MFDS)"];
   if (pr === "화학물질·농약") v.authority = [String(a.chType ?? "").startsWith("농약") ? "농촌진흥청" : "기후에너지환경부·국립환경과학원"];
-  v.devField = pr === "화장품" ? "화장품" : pr === "의료기기" ? "의료기기" : pr === "화학물질·농약" ? (String(a.chType ?? "").startsWith("농약") ? "농약·작물보호제" : "일반화학물질") : hf ? "건강기능식품" : a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
+  v.devField = pr === "화장품" ? "화장품" : pr === "의료기기" ? "의료기기" : pr === "화학물질·농약" ? (String(a.chType ?? "").startsWith("농약") ? "농약·작물보호제" : "일반화학물질") : hf ? "건강기능식품" : cgt(a) ? CGT : a.product === "바이오의약품" ? (a.bioType === "백신" ? "백신" : "의약품(바이오·생물학적제제)") : "의약품(합성)";
   const auth = arr(a.auth).map((x) => AUTH_MAP[x]).filter(Boolean);
   if (auth.length) v.authority = auth;
   const route = ROUTE_MAP[String(a.route ?? "")];
@@ -510,7 +517,7 @@ export function toRequestValues(a: Answers, advice: Advice, selected: Set<string
 
 /* ── 바이오의약품 (기술문서 F1) ───────────────────────────
  * 합성의약품과 달리 정해진 시험 목록이 없다. 약리학적 관련 종에서 설계가 출발한다.
- * 세포·유전자치료제는 아직 제안하지 않는다.
+ * 세포·유전자치료제는 adviseCgt 가 따로 맡는다.
  */
 function adviseBio(a: Answers): Advice {
   const tests: Suggest[] = [];
@@ -519,13 +526,6 @@ function adviseBio(a: Answers): Advice {
   const askCro = new Set<string>();
   const prereq: string[] = [];
   const type = String(a.bioType ?? "");
-  if (type === "세포·유전자치료제") {
-    return {
-      supported: false,
-      message: "세포·유전자치료제의 제안은 준비 중입니다. 이 유형은 체내 분포와 종양원성 평가가 핵심이며, 제품 특성에 맞춰 설계합니다. 지금은 시험 항목을 직접 골라 요청해 주세요.",
-      tests: [], owned: [], later: [], notes: [], askCro: [], prereq: [],
-    };
-  }
 
   const stage = String(a.stage ?? "");
   const research = stage === "자체 연구";
@@ -650,6 +650,88 @@ function adviseBio(a: Answers): Advice {
 
   const seen = new Set<string>();
   const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.rule.startsWith("R-F1") ? "바이오의약품" : topicOf(n) }));
+  return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
+}
+
+/* ── 세포·유전자치료제 ─────────────────────────────────
+ * 근거는 원문 문장을 직접 확인한 공개 문서만 쓴다: ICH S12(2023), FDA CBER 비임상 설명 자료(2023, 가이던스 아님).
+ * 식약처 세포·유전자치료제 가이드라인은 문서가 있다는 것까지만 확인했으므로 숫자를 쓰지 않고 원문 확인으로 넘긴다.
+ * 관찰 기간, 동물종, 부검 시점처럼 공개 문서가 정하지 않은 값은 채우지 않고 기관 회신에서 확인한다.
+ * 특정 기관의 실무 기준(관찰 주수, 양성대조 세포주 등)은 넣지 않는다.
+ */
+const S12 = "ICH S12";
+const FDA_CGT = "FDA CBER 세포·유전자치료제 비임상 설명 자료(2023)";
+const MFDS_CGT = "식약처 줄기세포치료제 평가 가이드라인 · 식약처 유전자치료제 비임상시험 평가 가이드라인";
+
+function adviseCgt(a: Answers): Advice {
+  const tests: Suggest[] = [];
+  const notes: Note[] = [];
+  const later: Later[] = [];
+  const askCro = new Set<string>();
+  const prereq: string[] = [];
+  const gene = String(a.cgtType ?? "").startsWith("유전자");
+  const research = a.stage === "자체 연구";
+  const auth = arr(a.auth);
+  const mfds = auth.includes("식약처");
+  const overseas = auth.some((x) => x !== "식약처");
+  const single = a.duration === "단회";
+  const owned = arr(a.prior).filter((p) => p !== "없음");
+  const own = (s: string) => owned.some((p) => p.startsWith(s));
+  const glp = research ? "미정" : "GLP";
+
+  /* 일반독성: 표준 기간이 없다 */
+  if (!(single ? own("단회투여독성") : own("반복투여"))) {
+    tests.push({
+      key: "tox", label: single ? "단회투여독성 · 늦게 나타나는 독성까지 관찰" : "반복투여독성 · 기간은 제품에 맞춰",
+      category: "일반독성", item: single ? "단회(급성)투여독성" : "기타",
+      reason: "정해진 표준 기간이 없습니다. 급성 독성과 늦게 나타나는 독성을 함께 볼 수 있는 길이로 정합니다",
+      basis: FDA_CGT, rule: "R-CGT-01", on: true,
+      fill: { "일반독성.histopath": "포함", "일반독성.glpLevel": glp },
+    });
+    askCro.add("독성시험 관찰 기간과 부검 시점 (공개 가이드라인에 정해진 기간이 없음)");
+    askCro.add("사용 동물종과 그 근거 (면역결핍 동물 사용 여부 포함)");
+    askCro.add("최고 용량 설정 방법과 예비시험 포함 여부");
+  }
+  notes.push({ text: "동물종은 생물학적 관련성, 제품 특유의 독성을 잡아내는 민감도, 임상 투여경로를 재현할 수 있는지로 고릅니다. 면역결핍 동물을 쓸 수 있고, 영장류를 일률적으로 요구하지 않습니다.", basis: FDA_CGT, rule: "R-CGT-01" });
+
+  /* 체내 분포 */
+  {
+    tests.push({
+      key: "bd", label: gene ? "생체분포 (ICH S12)" : "체내 분포", category: "PK/TK/ADME·생체시료분석", item: "조직분포",
+      reason: gene ? "투여한 유전자치료제가 어느 조직에 얼마나 머무는지 확인. 임상시험 개시 전에 끝나야 합니다" : "투여한 세포가 어느 조직에 얼마나 머무는지 확인",
+      basis: gene ? `${S12} §3, §4.1` : FDA_CGT, rule: "R-CGT-02", on: true,
+      fill: { "PK/TK/ADME·생체시료분석.matrix": ["조직"] },
+    });
+    askCro.add("분포 시험의 검출 방법, 분석법 검증 범위, 시점별 동물 수");
+  }
+  notes.push({ text: "분포 시험의 최고 용량은 독성시험 최고 용량 이상으로 둡니다. 여러 시험의 자료를 합칠 때는 같은 평가 시점의 자료만 합칩니다.", basis: FDA_CGT, rule: "R-CGT-02" });
+  if (gene) {
+    prereq.push("생체분포 평가 (임상시험 개시 전 완료)");
+    notes.push({ text: "생체분포 시험은 GLP가 아니어도 인정됩니다. GLP 독성시험 안에서 함께 하면 동물 관찰과 시료 채취는 GLP를 따르고, 시료 분석은 GLP가 아니어도 됩니다.", basis: `${S12} §4.1`, rule: "R-CGT-03" });
+    notes.push({ text: "채취 시점의 개수는 정해져 있지 않습니다. 시간에 따른 변화를 충분히 볼 수 있게 고릅니다. 동물 수는 일반적으로 성별, 군, 시점마다 설치류 최소 5마리 또는 비설치류 최소 3마리를 권장합니다.", basis: `${S12} §4.6, Note 2`, rule: "R-CGT-03" });
+    notes.push({ text: "ICH S12는 전달한 유전물질의 발현으로 효과를 내는 제품이 대상입니다. 게놈 통합과 생식세포 통합 평가는 이 가이드라인 범위 밖이니 필요 여부를 규제기관과 따로 확인하세요.", basis: `${S12} §1.3`, rule: "R-CGT-03" });
+  }
+
+  /* 종양원성 */
+  tests.push({
+    key: "tumor", label: "종양원성 · 기간은 제품 특성에 맞춰", category: "발암성·종양원성", item: "기타",
+    reason: gene ? "제품의 생물학적 특성상 종양원성 위험이 있으면 평가합니다. 필요하면 체크하세요" : "살아 있는 세포를 투여하므로 종양원성, 이형성, 과형성 위험을 제품 특성에 따라 평가합니다",
+    basis: FDA_CGT, rule: "R-CGT-04", on: !gene,
+    fill: { "발암성·종양원성.glpLevel": glp },
+  });
+  askCro.add("종양원성 시험의 관찰 기간, 동물종, 대조군 구성");
+
+  /* 효력 */
+  notes.push({ text: "효력(개념 증명)은 질환 모델에서 임상 투여경로로 질환 관련 지표가 좋아지는지 보여 주는 것이 기본입니다. 필요하면 효력시험을 직접 골라 더하세요.", basis: FDA_CGT, rule: "R-CGT-05" });
+
+  /* 국내·해외 */
+  if (mfds) notes.push({ text: "식약처는 줄기세포치료제와 유전자치료제의 비임상 평가 가이드라인(민원인 안내서)을 따로 두고 있습니다. 관찰 기간, 동물 수, 시점 같은 숫자는 원문과 식약처 상담으로 확인하세요.", basis: MFDS_CGT, rule: "R-CGT-06" });
+  if (overseas) notes.push({ text: "해외 제출이 포함되어 있습니다. 영문 보고서가 필요한지, 미국 제출이면 SEND 자료가 필요한지 확인하세요.", basis: "", rule: "" });
+  if (research) notes.push({ text: "자체 연구용으로 보고 GLP를 지정하지 않았습니다. 나중에 허가 자료로 쓰려면 GLP로 다시 해야 합니다.", basis: "", rule: "" });
+  notes.push({ text: "세포·유전자치료제는 제품마다 설계가 크게 다릅니다. 시험 구성은 규제기관 상담과 기관 회신으로 확정하세요.", basis: FDA_CGT, rule: "R-CGT-06" });
+
+  const seen = new Set<string>();
+  const uniq = notes.filter((n) => !seen.has(n.text) && !!seen.add(n.text)).map((n) => ({ ...n, topic: n.rule.startsWith("R-CGT") ? CGT : topicOf(n) }));
   return { supported: true, tests, owned, later, notes: uniq, askCro: [...askCro], prereq };
 }
 
