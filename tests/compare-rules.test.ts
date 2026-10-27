@@ -28,13 +28,15 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
     expect(terms).toContain("요청서에서 회신 기한을 짧게 정할 수 있습니다");
   });
   it("비교표가 열린 뒤에는 다시 열기·기한 연장·견적 수정이 없다", () => {
-    expect(terms).toContain("비교표가 열린 뒤에는 회신을 다시 열거나 회신 기한을 연장하지 않으며, 참여 CRO는 제출한 견적을 수정하거나 다시 제출할 수 없습니다");
+    expect(terms).toContain("그 뒤에는 회신을 다시 열거나 회신 기한을 연장하지 않고, 기관은 제출한 견적을 수정하거나 다시 제출할 수 없습니다");
     expect(terms).toContain("회사는 비교표가 열리기 전에 한하여 필요한 경우 회신 기한과 참여 결정 기한을 연장할 수 있습니다");
   });
-  it("조·항 번호는 그대로다 (제4조는 7개 항, 제1조~제12조)", () => {
+  it("조·항 번호는 그대로다 (제4조는 7개 항, 제7항은 가~사 호, 2026-10-28 제12~14조 신설로 제1조~제15조)", () => {
     const art4 = src("app/terms/page.tsx").split("<h2>제4조")[1].split("<h2>제5조")[0];
-    expect((art4.match(/<li>/g) ?? []).length).toBe(7);
-    for (let n = 1; n <= 12; n++) expect(src("app/terms/page.tsx")).toContain(`<h2>제${n}조 (`);
+    const [head, sub = ""] = art4.split('<ol className="legal__sub">');
+    expect((head.match(/<li>/g) ?? []).length).toBe(7);
+    expect((sub.match(/<li>/g) ?? []).length).toBe(7);
+    for (let n = 1; n <= 15; n++) expect(src("app/terms/page.tsx")).toContain(`<h2>제${n}조 (`);
     expect(src("app/terms/page.tsx")).toContain('version="v1.1"');
   });
   it("약관 밖 화면·메시지에 제4조7항을 마감 근거로 인용하는 문구가 없다 (판 이력 주석은 제외)", () => {
@@ -87,30 +89,30 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
 describe("개인정보처리방침: 선정 때 연락처를 두 방향으로 제공 (결정 5)", () => {
   const privacy = flat(src("app/privacy/page.tsx"));
   it("선정된 CRO에 의뢰자 연락처, 의뢰자에게 선정된 CRO 담당자 연락처를 제공한다고 적는다", () => {
-    expect(privacy).toContain("선정된 참여 CRO에는 이용자의 회사/기관명과 담당자 성명·이메일·휴대전화를");
-    expect(privacy).toContain("이용자에게는 선정된 참여 CRO의 담당자 성명·이메일·전화번호를 제공하며, 목적은 두 당사자 사이의 계약 협의입니다");
-    expect(privacy).toContain("선정되지 않은 참여 CRO의 담당자 연락처는 이용자에게 제공하지 않습니다");
+    expect(privacy).toContain("선정된 기관에는 이용자의 회사/기관명과 담당자 성명·이메일·휴대전화를");
+    expect(privacy).toContain("이용자에게는 선정된 기관의 담당자 성명·이메일·전화번호를 제공하며, 목적은 두 당사자 사이의 계약 협의입니다");
+    expect(privacy).toContain("선정되지 않은 기관의 담당자 연락처는 이용자에게 제공하지 않습니다");
   });
   it("4항 표에 의뢰자를 제공받는 자로, 항목·목적을 적는다", () => {
-    expect(privacy).toMatch(/<td>참여 CRO를 선정한 이용자\(의뢰자\)<\/td> <td>선정된 참여 CRO의 기관명과 대표 담당자 성명·이메일·전화번호[^<]*<\/td> <td>선정한 참여 CRO와의 계약 협의<\/td>/);
+    expect(privacy).toMatch(/<td>기관을 선정한 이용자\(의뢰자\)<\/td> <td>선정된 기관의 기관명과 대표 담당자 성명·이메일·전화번호[^<]*<\/td> <td>선정한 기관과의 계약 협의<\/td>/);
     // 반대 방향(의뢰자 연락처는 선정한 CRO에만)도 그대로 남아 있다
-    expect(privacy).toContain("회사/기관명과 담당자 성명·이메일·연락처는 이용자가 선정한 CRO에만 제공");
+    expect(privacy).toContain("회사/기관명과 담당자 성명·이메일·연락처는 이용자가 선정한 기관에만 제공");
   });
   it("수집 항목과 이용 목적에 참여 CRO 담당자 정보와 계약 협의용 연락처 전달이 있다", () => {
-    expect(privacy).toContain("<td>참여 CRO 담당자</td>");
-    expect(privacy).toContain("계약 협의를 위해 이용자와 선정된 참여 CRO의 담당자 연락처를 서로 전달");
+    expect(privacy).toContain("<td>기관 담당자</td>");
+    expect(privacy).toContain("계약 협의를 위해 이용자와 선정된 기관의 담당자 연락처를 서로 전달");
   });
   it("참여 CRO 담당자 정보는 코드와 같은 출처(운영자 등록·수정, 대표 메일이 없으면 계정 메일)와 보유기간을 적는다", () => {
     expect(privacy).not.toContain("기관이 입력한 항목만");
     expect(privacy).toContain("기관이 알려 와 회사가 등록·수정한 항목");
     expect(privacy).toContain("대표 이메일이 없을 때는 기관 담당자 계정의 이메일");
-    expect(privacy).toMatch(/<td>참여 CRO 담당자 정보<\/td> <td>기관 등록을 해지하거나 담당자 정보가 바뀌거나 담당자 계정을 삭제할 때까지\. 참여 기록의 접속 IP 주소와 브라우저 정보는 3개월<\/td>/);
+    expect(privacy).toMatch(/<td>기관 담당자 정보<\/td> <td>기관 등록을 해지하거나 담당자 정보가 바뀌거나 담당자 계정을 삭제할 때까지\. 참여 기록의 접속 IP 주소와 브라우저 정보는 3개월<\/td>/);
   });
   it("방침 판(v1.1)과 시행일은 그대로, 요청마다 남는 동의 판과 기관 조건 판은 올렸다", () => {
     const raw = src("app/privacy/page.tsx");
     expect(raw).toContain('version="v1.1"');
     expect(raw).toContain('effectiveDate="2026년 11월 16일"');
-    expect(CONSENT_VERSION).toBe("2026-10-21");
+    expect(CONSENT_VERSION).toBe("2026-10-28");
     expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-21");
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
     expect(src("app/privacy/page.tsx")).not.toMatch(/[—–]/);

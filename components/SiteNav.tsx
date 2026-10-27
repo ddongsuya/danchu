@@ -93,7 +93,7 @@ export function SiteNav() {
               <a href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></a>
               <a href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</a>
               <div className="mnav__sub">
-                <a href="/privacy">개인정보처리방침</a>
+                <a href="/privacy"><strong>개인정보처리방침</strong></a>
                 <a href="/terms">이용약관</a>
                 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
               </div>

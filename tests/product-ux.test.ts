@@ -120,7 +120,7 @@ describe("참여 선택형 공개 문구", () => {
     expect(forCro).not.toMatch(/pilot-20\d\d-/);
     expect(src("components/cro/JoinPanel.tsx")).toContain("/for-cro#cro-terms");
   });
-  it("약관을 바꿨으므로 의뢰자 동의 판도 올렸다", () => expect(CONSENT_VERSION).toBe("2026-10-21"));
+  it("약관을 바꿨으므로 의뢰자 동의 판도 올렸다", () => expect(CONSENT_VERSION).toBe("2026-10-28"));
   it("약관 제4조는 참여 안내와 참여한 요청에 제출한 견적으로 설명한다", () => {
     const terms = visible(src("app/terms/page.tsx"));
     for (const s of ["참여 안내", "참여한 요청에 제출한 견적", "지명 기관에만 안내", "참여 결정 기한", "참여를 철회", "대신하여 참여를"]) expect(terms).toContain(s);

@@ -19,7 +19,10 @@ export function SiteFooter({ current }: { current?: string }) {
               href.startsWith("mailto:") ? (
                 <a key={href} href={href}>{label}</a>
               ) : (
-                <a key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</a>
+                <a key={href} href={href} aria-current={current === href ? "page" : undefined}>
+                  {/* 개인정보처리방침은 다른 고지와 구분되게 굵게 (개인정보보호위원회 처리방침 작성지침) */}
+                  {href === "/privacy" ? <strong>{label}</strong> : label}
+                </a>
               ),
             )}
           </div>

@@ -6,6 +6,13 @@ import { useSearchParams } from "next/navigation";
 import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/components/AuthBits";
 import { CONTACT } from "@/lib/rfq-schema";
 import { Chevron } from "@/components/Chevron";
+import { allConsented, ConsentChecks, type ConsentItem } from "./ConsentChecks";
+
+/** 가입 동의: 항목마다 따로 받는다 */
+const CONSENTS: ConsentItem[] = [
+  { id: "terms", label: <><a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>에 동의합니다.</> },
+  { id: "privacy", label: <><a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 수집·이용</a>에 동의합니다.</> },
+];
 
 const ORG_TYPES = CONTACT.find((f) => f.id === "orgType")?.options ?? [];
 
@@ -21,7 +28,7 @@ function Signup() {
   const sp = useSearchParams();
   const next = sp.get("next") || "";
   const [f, setF] = useState({ company: "", name: "", dept: "", email: sp.get("email") || "", phone: "", orgType: "", password: "" });
-  const [agree, setAgree] = useState(false);
+  const [agree, setAgree] = useState<Record<string, boolean>>({});
   const [usePw, setUsePw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +36,7 @@ function Signup() {
   const [done, setDone] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 
-  const ok = f.company && f.name && f.email && (!usePw || f.password.length >= 8) && agree;
+  const ok = f.company && f.name && f.email && (!usePw || f.password.length >= 8) && allConsented(CONSENTS, agree);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,14 +122,7 @@ function Signup() {
           </Field>
         )}
 
-        <label className={`chk${agree ? " chk--on" : ""}`}>
-          <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-          <span>
-            <a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>과{" "}
-            <a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보처리방침</a>에 동의합니다.
-            <span className="field__req">*</span>
-          </span>
-        </label>
+        <ConsentChecks items={CONSENTS} checked={agree} onChange={setAgree} />
 
         <ErrorBox>{error}</ErrorBox>
         <button type="submit" className="btn--next" disabled={!ok || busy}>
