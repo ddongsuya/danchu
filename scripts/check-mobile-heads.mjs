@@ -14,8 +14,15 @@ const UA = {
 };
 const SIZES = process.env.QUICK ? [[375, 548]] : [[390, 664], [375, 548], [430, 800]];
 let fail = 0;
+let n = 0;
+// 0.3초와 1.2초에 두 번 본다. 늦게라도 맨 위로 미끄러져 올라오면 1.2초만 보는 점검은 통과해 버린다(2026-10-27 놓친 원인).
 const check = async (p, tag) => {
-  await p.waitForTimeout(1200);
+  await p.waitForTimeout(300);
+  if (!(await check1(p, tag + " @0.3s"))) return false;
+  await p.waitForTimeout(900);
+  return check1(p, tag + " @1.2s");
+};
+const check1 = async (p, tag) => {
   const r = await p.evaluate(() => {
     const h = document.querySelector("main h1");
     if (!h) return { none: true, path: location.pathname };
@@ -26,8 +33,8 @@ const check = async (p, tag) => {
   if (!ok) { fail++; console.log("FAIL", tag, JSON.stringify(r)); }
   return ok;
 };
-const browser = await pw.webkit.launch();
-let n = 0;
+let browser;
+try { browser = await pw.webkit.launch(); } catch { browser = await pw.chromium.launch(); console.log("(webkit 없음, chromium으로 점검)"); }
 for (const [ua, agent] of Object.entries(UA)) for (const [w, h] of SIZES) for (const scheme of ["light", "dark"]) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: false, userAgent: agent, colorScheme: scheme, reducedMotion: scheme === "dark" ? "reduce" : "no-preference" });
   const p = await ctx.newPage();

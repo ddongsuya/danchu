@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* 같은 도메인에서 서비스하는 Pretendard 가변 폰트 (public/fonts/pretendard) */}
         <link rel="stylesheet" href="/fonts/pretendard/pretendard.css" />
