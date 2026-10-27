@@ -65,8 +65,8 @@ function Signup() {
   return (
     <div className="auth__card auth__card--wide">
       <div>
-        <h1 className="auth__title">{next === "/app/new" ? "견적 요청 전에 계정을 만들어 주세요" : "의뢰자 가입"}</h1>
-        <p className="auth__sub">업무용 이메일로 가입하고 견적 진행 상황을 확인하세요. 의뢰자 이용료는 없습니다.</p>
+        <h1 className="auth__title">{next === "/app/new" ? "요청서를 보내려면 계정이 필요해요" : "의뢰자 가입"}</h1>
+        <p className="auth__sub">업무용 이메일로 가입하고, 무료로 견적을 받아보세요.</p>
       </div>
 
       <form className="auth__form" onSubmit={submit}>
@@ -135,7 +135,7 @@ function Signup() {
           이미 계정이 있나요? <Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}>로그인</Link>
         </span>
         <span>
-          시험기관(CRO)이라면 <Link href="/signup/cro">CRO 가입 신청</Link>
+          시험기관이신가요? <Link href="/signup/cro">기관으로 참여 신청</Link>
         </span>
       </div>
     </div>

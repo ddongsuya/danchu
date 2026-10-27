@@ -22,7 +22,7 @@ export function Site({ children, current, next, onescreen = true, cue = true }: 
         <main id="main">{children}</main>
         {next && (
           <Link className="nextp" href={next.href}>
-            <span><small>다음으로 읽어보세요</small><b>{next.label}</b></span>
+            <span><small>이어서 보기</small><b>{next.label}</b></span>
             <span className="ar" aria-hidden="true">→</span>
           </Link>
         )}

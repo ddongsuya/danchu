@@ -147,13 +147,13 @@ export default function Page() {
 </div>
 </div>
 
-<div className="tabs2" role="group" aria-label="단계로 이동"><input className="tbi" type="radio" name="cs-step" id="cs-k0" /><label htmlFor="cs-k0"><span className="tb">참여 신청</span><span className="fe tt" style={{ "--n": "cs106" }}>참여 신청</span><i className="fe" style={{ "--n": "cs107" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k1" /><label htmlFor="cs-k1"><span className="tb">표준 가격 등록</span><span className="fe tt" style={{ "--n": "cs108" }}>표준 가격 등록</span><i className="fe" style={{ "--n": "cs109" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k2" /><label htmlFor="cs-k2"><span className="tb">참여 안내 수신</span><span className="fe tt" style={{ "--n": "cs110" }}>참여 안내 수신</span><i className="fe" style={{ "--n": "cs111" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k3" /><label htmlFor="cs-k3"><span className="tb">참여 결정</span><span className="fe tt" style={{ "--n": "cs112" }}>참여 결정</span><i className="fe" style={{ "--n": "cs113" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k4" /><label htmlFor="cs-k4"><span className="tb">견적서 회신</span><span className="fe tt" style={{ "--n": "cs114" }}>견적서 회신</span><i className="fe" style={{ "--n": "cs115" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k5" /><label htmlFor="cs-k5"><span className="tb">선정 및 계약</span><span className="fe tt" style={{ "--n": "cs116" }}>선정 및 계약</span><i className="fe" style={{ "--n": "cs117" }}></i></label><p className="hint">단계를 누르면 그 장면부터 보여 드립니다.</p></div>
+<div className="tabs2" role="group" aria-label="단계로 이동"><input className="tbi" type="radio" name="cs-step" id="cs-k0" /><label htmlFor="cs-k0"><span className="tb">참여 신청</span><span className="fe tt" style={{ "--n": "cs106" }}>참여 신청</span><i className="fe" style={{ "--n": "cs107" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k1" /><label htmlFor="cs-k1"><span className="tb">표준 가격 등록</span><span className="fe tt" style={{ "--n": "cs108" }}>표준 가격 등록</span><i className="fe" style={{ "--n": "cs109" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k2" /><label htmlFor="cs-k2"><span className="tb">참여 안내 수신</span><span className="fe tt" style={{ "--n": "cs110" }}>참여 안내 수신</span><i className="fe" style={{ "--n": "cs111" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k3" /><label htmlFor="cs-k3"><span className="tb">참여 결정</span><span className="fe tt" style={{ "--n": "cs112" }}>참여 결정</span><i className="fe" style={{ "--n": "cs113" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k4" /><label htmlFor="cs-k4"><span className="tb">견적서 회신</span><span className="fe tt" style={{ "--n": "cs114" }}>견적서 회신</span><i className="fe" style={{ "--n": "cs115" }}></i></label><input className="tbi" type="radio" name="cs-step" id="cs-k5" /><label htmlFor="cs-k5"><span className="tb">선정 및 계약</span><span className="fe tt" style={{ "--n": "cs116" }}>선정 및 계약</span><i className="fe" style={{ "--n": "cs117" }}></i></label><p className="hint">보고 싶은 단계를 누르면 그 장면부터 볼 수 있어요</p></div>
 </div>
 </section>
 
 <section className="film sec rev open" aria-labelledby="fm" style={{ "--T": "11.5s", "--F": "-8.6s" }} aria-label="엑셀, PDF, 메일로 온 회신에서 금액이 표시되고, 각 회신이 기관 열이 되어 같은 항목끼리 한 줄로 정리되는 과정">
 <div className="fside">
-<h2 id="fm">회신 양식은 편하게<br /><span>지금 처럼 보내주세요.</span><br />정리는 단추가 합니다.</h2>
+<h2 id="fm">단추에 견적서를<br /><span>보내주세요.</span><br />정리는 단추가 합니다.</h2>
 
 <div className="fctl"><span className="fbar" aria-hidden="true"><i className="fe" style={{ "--n": "cx43" }}></i></span></div>
 </div>
@@ -210,7 +210,7 @@ export default function Page() {
 <div className="fe tx big sum" style={{ "--n": "cx38", left: "74.8cqw", top: "60.1cqw", width: "19.2cqw", height: "10.4cqw" }}>1억 3,450만</div>
 <div className="fe ln f" style={{ "--n": "cx39", left: "6.0cqw", top: "70.5cqw", width: "88.0cqw" }}></div>
 <div className="fe rowbd" style={{ "--n": "cx40", left: "4.6cqw", top: "50.3cqw", width: "90.8cqw", height: "9.2cqw" }}></div>
-<div className="fe dfn" style={{ "--n": "cx41", left: "46.0cqw", top: "73.0cqw", width: "33.0cqw", height: "5.4cqw" }}>기관 B 회신에는 TK 분석이 없습니다</div>
+<div className="fe dfn" style={{ "--n": "cx41", left: "46.0cqw", top: "73.0cqw", width: "33.0cqw", height: "5.4cqw" }}>기관 B 회신에는 TK 분석이 빠져 있어요</div>
 </div>
 </div>
 </div>
@@ -273,11 +273,11 @@ export default function Page() {
 
 <section className="freeb" aria-labelledby="tm" id="cro-terms">
 <div className="fg">
-<h2 id="tm" className="huge">먼저 무료로<br /><span>참여해보세요.</span></h2>
+<h2 id="tm" className="huge">무료로<br /><span>참여해보세요.</span></h2>
 <div className="fr">
-<p className="lead">무료로 참여해보세요. 그리고 단추가 마음에 든다면 협업을 결정해주세요.</p>
-<div className="act"><div><p className="actk">이것만 준비하면 됩니다.</p><div className="chk"><label><input type="checkbox" />기관명</label><label><input type="checkbox" />보유 GLP 인증</label><label><input type="checkbox" />수행 가능 분야</label><label><input type="checkbox" />담당자 연락처</label></div></div>
-<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:hello@danchu.kr">hello@danchu.kr</a></div><p className="gatehint">네 가지를 모두 확인하면 신청할 수 있습니다.</p></div>
+<p className="lead">그리고 단추가 마음에 든다면 협업을 결정해주세요.</p>
+<div className="act"><div><p className="actk">이것만 있으면 시작할 수 있어요.</p><div className="chk"><label><input type="checkbox" />기관명</label><label><input type="checkbox" />보유 GLP 인증</label><label><input type="checkbox" />수행 가능 분야</label><label><input type="checkbox" />담당자 연락처</label></div></div>
+<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:hello@danchu.kr">hello@danchu.kr</a></div><p className="gatehint">네가지 모두 확인하면 신청할 수 있습니다.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
 <details className="terms"><summary>이용 조건 전체 보기</summary>
 <ol>
 <li>참여하기를 누르면 이 조건에 동의한 것으로 보고, 누른 시각, 경로(포털 또는 회신 링크), 누른 담당자 계정(링크로 누르면 링크 지문), 이 조건의 판을 참여 기록으로 남깁니다. 누른 곳의 IP 주소와 브라우저 정보도 함께 남기며, 이 두 가지는 개인정보처리방침의 접속 기록 보유기간(3개월)이 지나면 지웁니다.</li>

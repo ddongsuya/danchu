@@ -1,5 +1,5 @@
 "use client";
-
+import { Cite } from "@/components/Cite";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Caret } from "@/components/app/ui";
 import { ADVISOR_DISCLAIMER, advise, toRequestValues, visibleQuestions, type Answers, type Question } from "@/lib/advisor";
@@ -78,7 +78,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
       return (
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0 }} onClick={() => move(1)}><Caret size={14} /> 이전</button>
-          <div className="ph"><div><h1>이 유형의 제안은 준비 중입니다</h1><p>{advice.message}</p></div></div>
+          <div className="ph"><div><h1>이 유형은 준비 중이에요</h1><p>{advice.message}</p></div></div>
           <div className="cta"><button type="button" className="b1 blg bfull" onClick={onManual}>직접 고르기</button></div>
         </div>
       );
@@ -102,8 +102,8 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
         <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0 }} onClick={() => move(3)}><Caret size={14} /> 답변 수정</button>
         <div className="ph">
           <div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>제안</p>
-            <h1 ref={heading} tabIndex={-1} style={{ textWrap: "balance", scrollMarginTop: 24 }}>답하신 상황에 필요한 시험입니다</h1>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>가이드라인 찾아보기</p>
+            <h1 ref={heading} tabIndex={-1} style={{ textWrap: "balance", scrollMarginTop: 24 }}>답하신 상황에 해당하는 시험이에요</h1>
             <p>가이드라인 근거와 함께 보여드립니다. 체크를 풀어 빼거나, 다음 단계에서 더할 수 있습니다.</p>
           </div>
         </div>
@@ -123,7 +123,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
                       <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                         <b style={{ fontSize: 14.5, fontWeight: 600, color: "var(--ink)" }}>{t.label}</b>
                         <span style={{ fontSize: 13, color: "var(--body)", lineHeight: 1.5 }}>{t.reason}</span>
-                        <span style={{ fontSize: 12, color: "var(--muted)" }}>근거 · {t.basis}</span>
+                        <Cite basis={t.basis} />
                       </span>
                     </label>
                   );
@@ -134,7 +134,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.owned.length > 0 && (
             <section className="dcard">
-              {sec("이미 가진 시험", "제안에서 제외했습니다. 제출용으로 쓸 수 있는지는 GLP 여부와 시험 조건에 달려 있습니다.")}
+              {sec("이미 가진 시험", "목록에서 뺐어요. 제출용으로 쓸 수 있는지는 GLP 여부와 시험 조건에 달려 있습니다.")}
               <div className="chips">{advice.owned.map((o) => <span key={o} className="tag">{o}</span>)}</div>
             </section>
           )}
@@ -149,7 +149,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
                     <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{topic} <span style={{ fontWeight: 400, color: "var(--muted)" }}>{list.length}</span></summary>
                     <ul style={{ margin: "8px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--body)", lineHeight: 1.55 }}>
                       {list.map((n) => (
-                        <li key={n.text}>{n.text}{n.basis && <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>근거 · {n.basis}</span>}</li>
+                        <li key={n.text}>{n.text}<Cite basis={n.basis} /></li>
                       ))}
                     </ul>
                   </details>
@@ -181,7 +181,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
               {sec("나중 단계에 필요한 시험", "지금 요청서에는 넣지 않았습니다.")}
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--body)" }}>
                 {advice.later.map((l) => (
-                  <li key={l.label}><b style={{ color: "var(--ink)", fontWeight: 600 }}>{l.label}</b>: {l.when}<span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>근거 · {l.basis}</span></li>
+                  <li key={l.label}><b style={{ color: "var(--ink)", fontWeight: 600 }}>{l.label}</b>: {l.when}<Cite basis={l.basis} /></li>
                 ))}
               </ul>
             </section>
