@@ -230,6 +230,19 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               )}
             </div>
           )}
+          {d.award && (
+            <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
+              <b>시험물질 필요량</b>
+              {d.award.substance_qty ? (
+                <span>
+                  {[d.award.substance_qty, d.award.substance_when && `보낼 시점 ${d.award.substance_when}`].filter(Boolean).join(" · ")}
+                  {d.award.substance_note ? <span style={{ display: "block" }}>{d.award.substance_note}</span> : null}
+                </span>
+              ) : (
+                <span>{d.award.cro_name}에 시험물질 정보를 보내면 기관이 필요량과 보낼 시점을 여기에 적습니다.</span>
+              )}
+            </div>
+          )}
           {needsConfirm && d.award && (
             <ContractConfirm
               no={rfq.rfq_no}

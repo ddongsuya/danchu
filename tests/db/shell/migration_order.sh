@@ -89,3 +89,10 @@ V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
 [[ "$V" == "26" ]] || fail "판은 26 이어야 합니다 (실제 $V)"
 [[ "$(q -d "$DB" -c "select count(*) from pg_trigger where tgname in ('rfq_requests_compare_lock', 'cro_quotes_compare_lock', 'cro_quote_items_compare_lock', 'cro_quote_addons_compare_lock')")" == "4" ]] || fail "0026 트리거 4개가 있어야 합니다"
 echo "  0025 → 0026: 판 26, 열린 비교표 고정 트리거 4개"
+
+q -d "$DB" -f "$ROOT/supabase/migrations/0027_award_substance.sql" >"$TMPD/out" 2>&1 || { cat "$TMPD/out" >&2; fail "0027 적용 실패"; }
+V="$(q -d "$DB" -c "select public.danchu_schema_version()")"
+[[ "$V" == "27" ]] || fail "판은 27 이어야 합니다 (실제 $V)"
+[[ "$(q -d "$DB" -c "select count(*) from information_schema.columns where table_name = 'rfq_awards' and column_name in ('substance_qty', 'substance_when', 'substance_note', 'substance_updated_at')")" == "4" ]] || fail "0027 열 4개가 있어야 합니다"
+q -d "$DB" -f "$ROOT/supabase/migrations/0027_award_substance.sql" >"$TMPD/out" 2>&1 || { cat "$TMPD/out" >&2; fail "0027 두 번째 적용 실패"; }
+echo "  0026 → 0027: 판 27, 선정 뒤 시험물질 필요량 열 4개 (두 번 적용 안전)"

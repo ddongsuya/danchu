@@ -16,7 +16,7 @@ const fx = vi.hoisted(() => ({
   calls: [] as { table: string; op: string; payload?: unknown; filters: [string, string, unknown][] }[],
   /** 다음 select 에 돌려줄 오류 (표 이름 → 메시지) */
   failSelect: {} as Record<string, string>,
-  schema: { data: 26 as unknown, error: null as null | { code?: string; message: string } },
+  schema: { data: 27 as unknown, error: null as null | { code?: string; message: string } },
   sendMail: vi.fn(async (_m: unknown) => true),
   notifyUsers: vi.fn(async () => {}),
   logEvent: vi.fn(async () => {}),
@@ -117,7 +117,7 @@ beforeEach(() => {
   fx.tables = { rfq_requests: [rfqRow()], rfq_invites: [], profiles: [], cro_orgs: [], cro_catalog: [] };
   fx.calls = [];
   fx.failSelect = {};
-  fx.schema = { data: 26, error: null };
+  fx.schema = { data: 27, error: null };
   fx.sendMail.mockReset().mockResolvedValue(true);
   fx.notifyUsers.mockClear();
   fx.logEvent.mockClear();
@@ -219,8 +219,8 @@ describe("배포 대상 조회 오류는 '대상 없음'이 아니다 (#10)", ()
     expect(await readSchemaStatus()).toMatchObject({ ok: false, reason: "behind", version: 21 });
     fx.schema = { data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } };
     expect(await readSchemaStatus()).toMatchObject({ ok: false, reason: "error" });
-    fx.schema = { data: 26, error: null };
-    expect(await readSchemaStatus()).toEqual({ ok: true, version: 26, required: 26 });
+    fx.schema = { data: 27, error: null };
+    expect(await readSchemaStatus()).toEqual({ ok: true, version: 27, required: 27 });
   });
 });
 
@@ -233,7 +233,7 @@ describe("배포 순서 확인 (npm run check:schema)", () => {
   });
   it("판이 모자라면 실패, 맞으면 통과", async () => {
     expect((await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "21") })).ok).toBe(false);
-    expect(await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "26") })).toMatchObject({ ok: true, version: 26 });
+    expect(await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "27") })).toMatchObject({ ok: true, version: 27 });
   });
   it("환경변수가 없으면 실패하고, 주소·키를 출력하지 않는다", async () => {
     const r = await checkSchema({ url: "", key: "" });

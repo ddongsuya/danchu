@@ -192,6 +192,6 @@ begin
   perform pg_temp.t_eq((select count(*)::int from pg_trigger where tgname = 'cro_quotes_compare_lock' and not tgisinternal), 1, '견적 트리거 하나');
   perform pg_temp.t_eq((select count(*)::int from pg_trigger where tgname = 'cro_quote_items_compare_lock' and not tgisinternal), 1, '항목 트리거 하나');
   perform pg_temp.t_eq((select count(*)::int from pg_trigger where tgname = 'cro_quote_addons_compare_lock' and not tgisinternal), 1, '별도 옵션 트리거 하나');
-  perform pg_temp.t_eq(public.danchu_schema_version(), 26, '판 26');
+  perform pg_temp.t_eq(public.danchu_schema_version(), 27, '판 27 (0027 까지)');
   perform pg_temp.t_assert(not has_function_privilege('authenticated', 'public.rfq_requests_compare_lock()', 'execute'), '트리거 함수는 로그인 사용자가 부르지 못한다');
 end $$;

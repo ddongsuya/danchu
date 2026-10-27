@@ -304,9 +304,14 @@ export type Database = {
           dispute_resolved_by: string | null;
           dispute_resolution: "confirm" | "reject" | null;
           dispute_resolution_note: string | null;
+          /** 선정된 기관이 적는 시험물질 필요량·보낼 시점·메모 (0027) */
+          substance_qty: string | null;
+          substance_when: string | null;
+          substance_note: string | null;
+          substance_updated_at: string | null;
         };
         /** 확인·이의 열(ContractConfirmColumn)은 DB 함수만 쓴다 (0025 트리거) */
-        Insert: Ins<Omit<Database["public"]["Tables"]["rfq_awards"]["Row"], ContractConfirmColumn>, "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "contract_status" | "quote_revision">;
+        Insert: Ins<Omit<Database["public"]["Tables"]["rfq_awards"]["Row"], ContractConfirmColumn>, "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "contract_status" | "quote_revision" | "substance_qty" | "substance_when" | "substance_note" | "substance_updated_at">;
         Update: Partial<Omit<Database["public"]["Tables"]["rfq_awards"]["Row"], ContractConfirmColumn>>;
         Relationships: [
           { foreignKeyName: "rfq_awards_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: true; referencedRelation: "rfq_requests"; referencedColumns: ["id"] },

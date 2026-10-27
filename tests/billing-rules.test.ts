@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase", () => {
     return b;
   };
   // 배포 전 스키마 판 확인(lib/schema-version.ts)은 이 코드가 기대하는 판을 돌려준다
-  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 26, error: null } : { data: null, error: null }) }) };
+  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 27, error: null } : { data: null, error: null }) }) };
 });
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/mail", () => ({ mailWrap: (s: string) => s, esc: (s: string) => s, sendMail: fx.sendMail }));
