@@ -43,6 +43,13 @@ export function SiteNav() {
     };
   }, [open]);
 
+  const closeOnLink = (e: React.MouseEvent) => {
+    if ((e.target as Element).closest("a")) {
+      document.documentElement.style.overflow = "";
+      setOpen(false);
+    }
+  };
+
   const requestHref = loading ? REQUEST_HREF : !me ? GUEST_REQUEST_HREF : me.role === "requester" ? REQUEST_HREF : me.to;
   const on = (href: string) => pathname === href;
 
@@ -68,7 +75,8 @@ export function SiteNav() {
               <span className="mnav__ttl">메뉴</span>
               <button type="button" className="mnav__x" aria-label="메뉴 닫기" onClick={() => setOpen(false)}>×</button>
             </div>
-            <nav className="mnav__links" aria-label="사이트 메뉴">
+            {/* 링크를 누르면 이동 전에 먼저 닫는다. 열린 채로 이동하면 잠가 둔 스크롤이 새 페이지에서 풀리며 제목 아래로 밀린다 */}
+            <nav className="mnav__links" aria-label="사이트 메뉴" onClick={closeOnLink}>
               <Link href="/" aria-current={on("/") ? "page" : undefined}>홈</Link>
               {SITE_LINKS.map(([href, label]) => (
                 <Link key={href} href={href} aria-current={on(href) ? "page" : undefined}>
@@ -76,7 +84,7 @@ export function SiteNav() {
                 </Link>
               ))}
             </nav>
-            <div className="mnav__foot">
+            <div className="mnav__foot" onClick={closeOnLink}>
               <Link href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></Link>
               <Link href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</Link>
               <div className="mnav__sub">
