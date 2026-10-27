@@ -32,7 +32,7 @@ export function HeadWatch() {
         const ok = !!h && !!hb && hb.top >= 0 && hb.bottom <= innerHeight && cs?.opacity === "1" && cs?.visibility === "visible" && (cover.startsWith("h1") || !!h.contains(document.elementFromPoint(Math.max(hb.left + 8, 1), Math.min(Math.max(hb.top + hb.height / 2, 1), innerHeight - 1))));
         const nav = performance.getEntriesByType?.("navigation")[0] as PerformanceNavigationTiming | undefined;
         const data = {
-          ok, at, touched, path: location.pathname, nav: nav?.type, y: Math.round(scrollY), ih: innerHeight, iw: innerWidth,
+          ok, at, touched, cueTap: (window as Window & { __cueTap?: number }).__cueTap ?? null, path: location.pathname, nav: nav?.type, y: Math.round(scrollY), ih: innerHeight, iw: innerWidth,
           vv: Math.round(window.visualViewport?.height ?? 0), ch: document.documentElement.clientHeight,
           vhpx: document.documentElement.style.getPropertyValue("--vhpx"),
           h1: r(h), h1c: cs ? [cs.color, cs.opacity, cs.visibility, cs.fontSize] : null,

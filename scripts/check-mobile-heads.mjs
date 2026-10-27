@@ -1,7 +1,7 @@
 // 휴대폰에서 각 메뉴 페이지 첫 제목이 화면 안에 보이는지 점검한다.
 // 실행: npx next start -p 3100 & 후  node scripts/check-mobile-heads.mjs http://localhost:3100
 // 조건: 아이폰 사파리·카카오톡 인앱 UA, 다크 모드, 동작 줄이기, 작은 화면,
-//       바로 열기 / 스크롤 후 새로고침 / 중간에서 메뉴로 이동 / 맨 아래 "다음으로" / 뒤로 가기.
+//       바로 열기 / 화면 아래 가장자리 누르기 / 스크롤 후 새로고침 / 중간에서 메뉴로 이동 / 맨 아래 "다음으로" / 뒤로 가기.
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 let pw;
@@ -41,6 +41,12 @@ for (const [ua, agent] of Object.entries(UA)) for (const [w, h] of SIZES) for (c
   const tag = (s) => `${ua} ${w}x${h} ${scheme} ${s}`;
   for (const path of PAGES) {
     await p.goto(base + path, { waitUntil: "networkidle" }); n++; await check(p, tag(`open ${path}`));
+    // 화면 아래 가장자리를 누른다 (사파리 아래 도구 막대를 부르거나 엄지가 닿는 자리). 제목이 그대로 있어야 한다.
+    // 2026-10-27 운영 기록: "아래로 내려 보세요" 띠가 화면 폭 전체를 덮어, 이 자리를 누르면 0.9화면 내려가 제목이 사라졌다
+    for (const x of [24, w - 24]) {
+      await p.goto(base + path, { waitUntil: "networkidle" }); await p.waitForTimeout(500);
+      await p.touchscreen.tap(x, h - 24); n++; await check(p, tag(`tap bottom x=${x} ${path}`));
+    }
     await p.evaluate(() => scrollTo(0, 1200)); await p.waitForTimeout(400);
     await p.reload({ waitUntil: "networkidle" }); n++; await check(p, tag(`reload ${path}`));
   }
