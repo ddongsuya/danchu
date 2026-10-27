@@ -206,13 +206,15 @@ html:has(.a.onescreen main details[open]){scroll-snap-type:none}
 .a .hold .fe{animation-play-state:paused}
 
 /* ---- 첫 화면 내려가기 안내(ScrollCue): 모든 공개 페이지 공통. 글자 한 줄 + 잉크색 가는 세로선 + 꺾쇠, 화면 아래 고정, 첫 화면이 끝나면 사라진다 ---- */
-.a .cue{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--paper) 58%,rgba(244,244,240,0));color:var(--muted);font-size:12px;letter-spacing:.01em;text-decoration:none;transition:opacity 200ms ease}
-.a .cue.off{opacity:0;pointer-events:none}
+.a .cue{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;padding:30px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--paper) 58%,rgba(244,244,240,0));transition:opacity 200ms ease;pointer-events:none}
+.a .cue a{display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 20px 2px;color:var(--muted);font-size:12px;letter-spacing:.01em;text-decoration:none;pointer-events:auto}
+.a .cue.off{opacity:0}
+.a .cue.off a{pointer-events:none}
 .a .cue i{display:block;position:relative;width:1px;height:30px;background:var(--ink);animation:cueBob 1.8s var(--eio) infinite}
 .a .cue i::after{content:"";position:absolute;left:50%;bottom:0;width:8px;height:8px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);transform:translate(-50%,-1px) rotate(45deg)}
 @keyframes cueBob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
-@media (hover:hover) and (pointer:fine){.a .cue:hover{color:var(--ink)}}
-.a .cue:active i{transform:translateY(2px)}
+@media (hover:hover) and (pointer:fine){.a .cue a:hover{color:var(--ink)}}
+.a .cue a:active i{transform:translateY(2px)}
 @media (prefers-reduced-motion: reduce){.a .cue i{animation:none}}
 
 /* ---- 작은 휴대폰(400px 이하, 360·320 안드로이드 포함): 상단 줄이 한 줄 안에 들어오게. 버튼 화살표를 빼고 여백을 줄인다 ---- */
