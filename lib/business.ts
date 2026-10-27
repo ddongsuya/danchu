@@ -5,7 +5,7 @@
 export const BUSINESS = {
   name: "단추",
   /** 대표 성명 */
-  owner: "",
+  owner: "임정모",
   /** 사업자등록번호 */
   bizNo: "",
   /** 사업장 주소 */
