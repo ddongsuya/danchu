@@ -1,7 +1,7 @@
 // 휴대폰에서 각 메뉴 페이지 첫 제목이 화면 안에 보이는지 점검한다.
 // 실행: npx next start -p 3100 & 후  node scripts/check-mobile-heads.mjs http://localhost:3100
 // 조건: 아이폰 사파리·카카오톡 인앱 UA, 다크 모드, 동작 줄이기, 작은 화면,
-//       바로 열기 / 화면 아래 가장자리 누르기 / 스크롤 후 새로고침 / 중간에서 메뉴로 이동 / 맨 아래 "다음으로" / 뒤로 가기.
+//       바로 열기 / 랜딩에서 메뉴로 첫 진입 / 화면 아래 가장자리 누르기 / 스크롤 후 새로고침 / 중간에서 메뉴로 이동 / 맨 아래 "다음으로" / 뒤로 가기.
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 let pw;
@@ -27,7 +27,9 @@ const check1 = async (p, tag) => {
     const h = document.querySelector("main h1");
     if (!h) return { none: true, path: location.pathname };
     const b = h.getBoundingClientRect(), cs = getComputedStyle(h);
-    return { path: location.pathname, top: Math.round(b.top), bottom: Math.round(b.bottom), vh: innerHeight, y: Math.round(scrollY), op: cs.opacity, vis: cs.visibility };
+    // 제목 자신만이 아니라 감싼 요소까지 곱한 실제 불투명도. 2026-10-27: 제목은 opacity 1인데 감싼 section이 0이라 안 보였다
+    let eff = 1; for (let el = h; el && el !== document.documentElement; el = el.parentElement) eff *= Number(getComputedStyle(el).opacity);
+    return { path: location.pathname, top: Math.round(b.top), bottom: Math.round(b.bottom), vh: innerHeight, y: Math.round(scrollY), op: String(Math.round(eff * 100) / 100), vis: cs.visibility };
   });
   const ok = !r.none && r.top >= 56 && r.bottom <= r.vh - 40 && r.op === "1" && r.vis === "visible";
   if (!ok) { fail++; console.log("FAIL", tag, JSON.stringify(r)); }
@@ -40,24 +42,30 @@ for (const [ua, agent] of Object.entries(UA)) for (const [w, h] of SIZES) for (c
   const p = await ctx.newPage();
   const tag = (s) => `${ua} ${w}x${h} ${scheme} ${s}`;
   for (const path of PAGES) {
-    await p.goto(base + path, { waitUntil: "networkidle" }); n++; await check(p, tag(`open ${path}`));
+    await p.goto(base + path, { waitUntil: "load" }); n++; await check(p, tag(`open ${path}`));
     // 화면 아래 가장자리를 누른다 (사파리 아래 도구 막대를 부르거나 엄지가 닿는 자리). 제목이 그대로 있어야 한다.
     // 2026-10-27 운영 기록: "아래로 내려 보세요" 띠가 화면 폭 전체를 덮어, 이 자리를 누르면 0.9화면 내려가 제목이 사라졌다
     for (const x of [24, w - 24]) {
-      await p.goto(base + path, { waitUntil: "networkidle" }); await p.waitForTimeout(500);
+      await p.goto(base + path, { waitUntil: "load" }); await p.waitForTimeout(500);
       await p.touchscreen.tap(x, h - 24); n++; await check(p, tag(`tap bottom x=${x} ${path}`));
     }
     await p.evaluate(() => scrollTo(0, 1200)); await p.waitForTimeout(400);
-    await p.reload({ waitUntil: "networkidle" }); n++; await check(p, tag(`reload ${path}`));
+    await p.reload({ waitUntil: "load" }); n++; await check(p, tag(`reload ${path}`));
+  }
+  // 랜딩에서 메뉴로 첫 진입 (사용자가 실제로 들어오는 길). 2026-10-27: 랜딩 스타일이 남아 다음 페이지 제목 영역을 숨겼다
+  for (const to of PAGES.filter((x) => x !== "/partners")) {
+    await p.goto(base + "/", { waitUntil: "load" }); await p.waitForTimeout(400);
+    await p.click("button.menu"); await p.waitForTimeout(350);
+    await p.click(`.mnav__links a[href="${to}"]`); await p.waitForLoadState("load"); n++; await check(p, tag(`landing menu -> ${to}`));
   }
   // 중간에서 메뉴로 이동, 맨 아래 다음으로, 뒤로
-  await p.goto(base + "/about", { waitUntil: "networkidle" });
+  await p.goto(base + "/about", { waitUntil: "load" });
   for (const to of PAGES.slice(1, 5)) {
     await p.evaluate(() => scrollTo(0, 1500)); await p.waitForTimeout(400);
     await p.click("button.menu"); await p.waitForTimeout(350);
     await p.click(`.mnav__links a[href="${to}"]`); n++; await check(p, tag(`menu -> ${to}`));
   }
-  await p.goto(base + "/about", { waitUntil: "networkidle" });
+  await p.goto(base + "/about", { waitUntil: "load" });
   await p.evaluate(() => scrollTo(0, document.body.scrollHeight)); await p.waitForTimeout(600);
   if (await p.$("a.nextp")) { await p.click("a.nextp"); n++; await check(p, tag("nextp from /about")); }
   await p.goBack(); n++; await check(p, tag("back"));

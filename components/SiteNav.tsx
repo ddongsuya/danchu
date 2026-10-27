@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/lib/use-me";
@@ -15,6 +14,12 @@ export const SITE_LINKS: [string, string][] = [
 ];
 
 const PORTAL = { requester: "내 요청", cro: "기관 포털", admin: "운영" } as const;
+
+/*
+ * 공개 페이지 사이 이동은 next/link가 아니라 일반 <a>로 페이지를 새로 연다.
+ * next/link로 옮기면 앞 페이지의 CSS가 문서에 남는데, 페이지마다 같은 .a 아래 같은 클래스 이름(.ph2 등)을 쓰고 있어
+ * 랜딩 CSS가 메뉴 페이지 제목 영역을 숨기는 등 서로 덮어쓴다(2026-10-27 "처음 들어가면 제목이 없고 새로고침하면 보임"의 원인).
+ */
 
 /** 공개 사이트 메뉴. 넓은 화면은 가로 링크(.links), 좁은 화면은 "메뉴" 버튼 → 오른쪽 시트 */
 export function SiteNav() {
@@ -57,9 +62,9 @@ export function SiteNav() {
     <>
       <div className="links">
         {SITE_LINKS.map(([href, label]) => (
-          <Link key={href} href={href} aria-current={on(href) ? "page" : undefined}>
+          <a key={href} href={href} aria-current={on(href) ? "page" : undefined}>
             {label}
-          </Link>
+          </a>
         ))}
       </div>
 
@@ -77,19 +82,19 @@ export function SiteNav() {
             </div>
             {/* 링크를 누르면 이동 전에 먼저 닫는다. 열린 채로 이동하면 잠가 둔 스크롤이 새 페이지에서 풀리며 제목 아래로 밀린다 */}
             <nav className="mnav__links" aria-label="사이트 메뉴" onClick={closeOnLink}>
-              <Link href="/" aria-current={on("/") ? "page" : undefined}>홈</Link>
+              <a href="/" aria-current={on("/") ? "page" : undefined}>홈</a>
               {SITE_LINKS.map(([href, label]) => (
-                <Link key={href} href={href} aria-current={on(href) ? "page" : undefined}>
+                <a key={href} href={href} aria-current={on(href) ? "page" : undefined}>
                   {label}
-                </Link>
+                </a>
               ))}
             </nav>
             <div className="mnav__foot" onClick={closeOnLink}>
-              <Link href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></Link>
-              <Link href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</Link>
+              <a href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></a>
+              <a href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</a>
               <div className="mnav__sub">
-                <Link href="/privacy">개인정보처리방침</Link>
-                <Link href="/terms">이용약관</Link>
+                <a href="/privacy">개인정보처리방침</a>
+                <a href="/terms">이용약관</a>
                 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
               </div>
             </div>

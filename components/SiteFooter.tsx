@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { LogoMark, Wordmark } from "@/components/Logo";
 
 const COLS: [string, [string, string][]][] = [
@@ -20,7 +19,7 @@ export function SiteFooter({ current }: { current?: string }) {
               href.startsWith("mailto:") ? (
                 <a key={href} href={href}>{label}</a>
               ) : (
-                <Link key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</Link>
+                <a key={href} href={href} aria-current={current === href ? "page" : undefined}>{label}</a>
               ),
             )}
           </div>

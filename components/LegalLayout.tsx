@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Site } from "@/components/site/Site";
 
 /** 약관·개인정보처리방침 공통 레이아웃 (공개 사이트 골격, 한 화면 스냅은 쓰지 않는다) */
@@ -40,9 +39,9 @@ export function LegalLayout({
             ))}
           {children}
           <div className="legal__back">
-            <Link href="/" className="btn ghost sm">
+            <a href="/" className="btn ghost sm">
               홈으로
-            </Link>
+            </a>
           </div>
         </article>
       </div>

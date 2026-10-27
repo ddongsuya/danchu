@@ -13,9 +13,9 @@ export function GuestShell({ children, loginNext = "/app/new" }: { children: Rea
       <div className="pt__body">
         <header className="pt__top">
           <div className="pt__topin">
-            <Link href="/" className="pt__brand">
+            <a href="/" className="pt__brand">
               <Lockup size={20} />
-            </Link>
+            </a>
             <Link href={`/login?next=${encodeURIComponent(loginNext)}`} className="pt__guest-login">
               이미 계정이 있다면 로그인
             </Link>

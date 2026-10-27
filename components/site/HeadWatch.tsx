@@ -29,13 +29,15 @@ export function HeadWatch() {
           cover = at ? `${at.tagName.toLowerCase()}.${String(at.className).slice(0, 40)}` : "none";
         }
         const hb = h?.getBoundingClientRect();
-        const ok = !!h && !!hb && hb.top >= 0 && hb.bottom <= innerHeight && cs?.opacity === "1" && cs?.visibility === "visible" && (cover.startsWith("h1") || !!h.contains(document.elementFromPoint(Math.max(hb.left + 8, 1), Math.min(Math.max(hb.top + hb.height / 2, 1), innerHeight - 1))));
+        // 감싼 요소까지 곱한 실제 불투명도 (제목 자신은 1이어도 부모가 0이면 안 보인다)
+        let eff = 1; for (let el: Element | null = h; el && el !== document.documentElement; el = el.parentElement) eff *= Number(getComputedStyle(el).opacity);
+        const ok = !!h && !!hb && hb.top >= 0 && hb.bottom <= innerHeight && eff === 1 && cs?.visibility === "visible" && (cover.startsWith("h1") || !!h.contains(document.elementFromPoint(Math.max(hb.left + 8, 1), Math.min(Math.max(hb.top + hb.height / 2, 1), innerHeight - 1))));
         const nav = performance.getEntriesByType?.("navigation")[0] as PerformanceNavigationTiming | undefined;
         const data = {
           ok, at, touched, cueTap: (window as Window & { __cueTap?: number }).__cueTap ?? null, path: location.pathname, nav: nav?.type, y: Math.round(scrollY), ih: innerHeight, iw: innerWidth,
           vv: Math.round(window.visualViewport?.height ?? 0), ch: document.documentElement.clientHeight,
           vhpx: document.documentElement.style.getPropertyValue("--vhpx"),
-          h1: r(h), h1c: cs ? [cs.color, cs.opacity, cs.visibility, cs.fontSize] : null,
+          h1: r(h), h1c: cs ? [cs.color, cs.opacity, cs.visibility, cs.fontSize] : null, eff: Math.round(eff * 100) / 100,
           first: r(document.querySelector("main > :first-child")), top: r(document.querySelector("nav.top")),
           cover, theme: document.documentElement.dataset.theme, rm: matchMedia("(prefers-reduced-motion: reduce)").matches,
           dark: matchMedia("(prefers-color-scheme: dark)").matches, dpr: devicePixelRatio,
