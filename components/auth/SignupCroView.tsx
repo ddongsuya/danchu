@@ -4,6 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/components/AuthBits";
 import { CATS } from "@/lib/rfq-schema";
+import { allConsented, ConsentChecks, type ConsentItem } from "./ConsentChecks";
+
+/** 가입 동의: 항목마다 따로 받는다 */
+const CONSENTS: ConsentItem[] = [
+  { id: "terms", label: <><a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>에 동의합니다.</> },
+  { id: "privacy", label: <><a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 수집·이용</a>에 동의합니다.</> },
+  { id: "compare", label: "비교표는 의뢰자에게만 전달되고, 다른 기관의 견적은 볼 수 없다는 점을 확인합니다." },
+];
 
 const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "기후에너지환경부·국립환경과학원", "농촌진흥청", "농림축산검역본부"];
 
@@ -12,14 +20,14 @@ export function SignupCroView() {
   const [glp, setGlp] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
   const [aaalac, setAaalac] = useState<boolean | null>(null);
-  const [agree, setAgree] = useState(false);
+  const [agree, setAgree] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ joined: boolean; mailed: boolean } | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const toggle = (list: string[], setList: (v: string[]) => void, v: string) => setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
-  const ok = f.orgName && f.name && f.email && f.password.length >= 8 && cats.length > 0 && agree;
+  const ok = f.orgName && f.name && f.email && f.password.length >= 8 && cats.length > 0 && allConsented(CONSENTS, agree);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,14 +137,7 @@ export function SignupCroView() {
           </Field>
         </div>
 
-        <label className={`chk${agree ? " chk--on" : ""}`}>
-          <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-          <span>
-            <a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>과{" "}
-            <a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보처리방침</a>에 동의하며, 비교표는 의뢰자에게만 전달되고 타사 견적을 열람할 수 없음을 확인합니다.
-            <span className="field__req">*</span>
-          </span>
-        </label>
+        <ConsentChecks items={CONSENTS} checked={agree} onChange={setAgree} />
 
         <ErrorBox>{error}</ErrorBox>
         <button type="submit" className="btn--next" disabled={!ok || busy}>
