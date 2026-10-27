@@ -32,7 +32,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
         <nav className="pt__nav" aria-label="주요 메뉴">
           <NavLinks items={nav} variant="side" />
         </nav>
-        <Link href="/guide" className="pt__guide"><Question size={20} aria-hidden="true" /><span>시험 가이드</span><ArrowUpRight size={15} aria-hidden="true" /></Link>
+        <a href="/guide" className="pt__guide"><Question size={20} aria-hidden="true" /><span>시험 가이드</span><ArrowUpRight size={15} aria-hidden="true" /></a>
         <div className="pt__user">
           <div className="pt__identity"><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
             <b>{who}</b>

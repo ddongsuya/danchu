@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Diag } from "@/components/site/Diag";
@@ -21,10 +20,10 @@ export function Site({ children, current, next, onescreen = true, cue = true }: 
         <SiteHeader />
         <main id="main">{children}</main>
         {next && (
-          <Link className="nextp" href={next.href}>
+          <a className="nextp" href={next.href}>
             <span><small>이어서 보기</small><b>{next.label}</b></span>
             <span className="ar" aria-hidden="true">→</span>
-          </Link>
+          </a>
         )}
         <SiteFooter current={current} />
       </div>

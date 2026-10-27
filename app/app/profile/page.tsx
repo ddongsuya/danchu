@@ -58,10 +58,10 @@ export default async function Profile({ searchParams }: { searchParams?: Promise
               <span>비밀번호 설정·변경</span>
               <span style={{ color: "var(--dash)" }}>›</span>
             </Link>
-            <Link href="/terms" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
+            <a href="/terms" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
               <span>이용약관 · 개인정보처리방침</span>
               <span style={{ color: "var(--dash)" }}>›</span>
-            </Link>
+            </a>
             {p.role !== "admin" && (
               <Link href={`${base}/profile/delete`} className="kv" style={{ alignItems: "center", color: "var(--muted)" }}>
                 <span>회원 탈퇴</span>

@@ -72,10 +72,10 @@ export default async function CroOrgPage() {
               <span>내 계정 정보</span>
               <span style={{ color: "var(--dash)" }}>›</span>
             </Link>
-            <Link href="/terms" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
+            <a href="/terms" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
               <span>이용약관 · 개인정보처리방침</span>
               <span style={{ color: "var(--dash)" }}>›</span>
-            </Link>
+            </a>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0" }}>
             <LogoutButton className="b2" style={{ alignSelf: "center", padding: "0 24px" }} />

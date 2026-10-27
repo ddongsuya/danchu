@@ -12,10 +12,10 @@ export default function TokenLayout({ children }: { children: React.ReactNode })
       <div className="pt__body">
         <header className="pt__top" style={{ display: "block" }}>
           <div className="pt__topin" style={{ maxWidth: 1080, margin: "0 auto" }}>
-            <Link href="/" className="pt__brand">
+            <a href="/" className="pt__brand">
               <Lockup size={20} />
               <span className="pt__role">기관</span>
-            </Link>
+            </a>
             <span className="pt__tokenhint">로그인 없이 열린 참여 안내 · <Link href="/signup/cro">기관 계정 만들기</Link></span>
           </div>
         </header>
