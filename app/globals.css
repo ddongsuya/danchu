@@ -157,16 +157,15 @@ input, textarea { caret-color: var(--brand); }
   * { transition-duration: .01ms !important; }
 }
 
-/* ---------- 로고: 마크(구멍은 mask 로 벡터로 뚫는다, 지름 .228D · 간격 .136D) + 윤곽선 워드마크 ---------- */
+/* ---------- 로고: 윤곽선 워드마크 + 마침표 자리의 네 칸 마크(mask, 칸 .40D · 간격 .07D · 모서리 .15D) ---------- */
 span.mark, span.bigmark, span.bm, span.mk, span.dot {
   --d: 22px; width: var(--d); height: var(--d); flex: none; display: inline-block; background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cpath fill-rule=%22evenodd%22 d=%22M0.000 50.000a50.000 50.000 0 1 0 100.000 0a50.000 50.000 0 1 0 -100.000 0ZM20.400 31.800a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0ZM20.400 68.200a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0ZM56.800 31.800a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0ZM56.800 68.200a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0Z%22/%3E%3C/svg%3E") center/100% 100% no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cpath fill-rule=%22evenodd%22 d=%22M0.000 50.000a50.000 50.000 0 1 0 100.000 0a50.000 50.000 0 1 0 -100.000 0ZM20.400 31.800a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0ZM20.400 68.200a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0ZM56.800 31.800a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0ZM56.800 68.200a11.400 11.400 0 1 0 22.800 0a11.400 11.400 0 1 0 -22.800 0Z%22/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cpath d=%22M21.5 6.5H31.5A15 15 0 0 1 46.5 21.5V31.5A15 15 0 0 1 31.5 46.5H21.5A15 15 0 0 1 6.5 31.5V21.5A15 15 0 0 1 21.5 6.5ZM68.5 6.5H78.5A15 15 0 0 1 93.5 21.5V31.5A15 15 0 0 1 78.5 46.5H68.5A15 15 0 0 1 53.5 31.5V21.5A15 15 0 0 1 68.5 6.5ZM21.5 53.5H31.5A15 15 0 0 1 46.5 68.5V78.5A15 15 0 0 1 31.5 93.5H21.5A15 15 0 0 1 6.5 78.5V68.5A15 15 0 0 1 21.5 53.5ZM68.5 53.5H78.5A15 15 0 0 1 93.5 68.5V78.5A15 15 0 0 1 78.5 93.5H68.5A15 15 0 0 1 53.5 78.5V68.5A15 15 0 0 1 68.5 53.5Z%22/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Cpath d=%22M21.5 6.5H31.5A15 15 0 0 1 46.5 21.5V31.5A15 15 0 0 1 31.5 46.5H21.5A15 15 0 0 1 6.5 31.5V21.5A15 15 0 0 1 21.5 6.5ZM68.5 6.5H78.5A15 15 0 0 1 93.5 21.5V31.5A15 15 0 0 1 78.5 46.5H68.5A15 15 0 0 1 53.5 31.5V21.5A15 15 0 0 1 68.5 6.5ZM21.5 53.5H31.5A15 15 0 0 1 46.5 68.5V78.5A15 15 0 0 1 31.5 93.5H21.5A15 15 0 0 1 6.5 78.5V68.5A15 15 0 0 1 21.5 53.5ZM68.5 53.5H78.5A15 15 0 0 1 93.5 68.5V78.5A15 15 0 0 1 78.5 93.5H68.5A15 15 0 0 1 53.5 78.5V68.5A15 15 0 0 1 68.5 53.5Z%22/%3E%3C/svg%3E") center/100% 100% no-repeat;
 }
 span.mark > i, span.bigmark > i, span.bm > i, span.mk > i, span.dot > i { visibility: hidden; }
 svg.lw { display: block; height: .9em; width: auto; flex: none; overflow: visible; }
-.lockup { display: inline-flex; align-items: center; gap: .12em; font-size: 28px; line-height: .9; color: inherit; }
-.lockup > span { --d: .78em !important; width: .78em; height: .78em; }
+.lockup { display: inline-flex; align-items: center; font-size: 28px; line-height: .9; color: inherit; }
 .logo { display: inline-flex; align-items: center; color: var(--ink); text-decoration: none; }
 .logo:hover { color: var(--ink); }
 

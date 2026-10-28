@@ -134,20 +134,18 @@ export default function Home() {
 <div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a></div>
 </div>
 <div className="bm" aria-hidden="true">
-<div className="qs h" style={{ left: "33.6%", top: "33.6%", "--dx": "-300px", "--dy": "-190px", "--r": "-16deg", "--s": "1" }}></div>
-<div className="qs h" style={{ left: "66.4%", top: "33.6%", "--dx": "280px", "--dy": "-220px", "--r": "13deg", "--s": "1" }}></div>
-<div className="qs h" style={{ left: "33.6%", top: "66.4%", "--dx": "-320px", "--dy": "170px", "--r": "10deg", "--s": "1" }}></div>
-<div className="qs h" style={{ left: "66.4%", top: "66.4%", "--dx": "300px", "--dy": "200px", "--r": "-11deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "28.9%", top: "28.9%", "--dx": "-300px", "--dy": "-190px", "--r": "-16deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "71.1%", top: "28.9%", "--dx": "280px", "--dy": "-220px", "--r": "13deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "28.9%", top: "71.1%", "--dx": "-320px", "--dy": "170px", "--r": "10deg", "--s": "1" }}></div>
+<div className="qs h" style={{ left: "71.1%", top: "71.1%", "--dx": "300px", "--dy": "200px", "--r": "-11deg", "--s": "1" }}></div>
 <div className="qs b" style={{ left: "50%", top: "50%", "--dx": "-20px", "--dy": "-300px", "--r": "5deg", "--s": ".7" }}></div>
 <div className="qs b" style={{ left: "50%", top: "50%", "--dx": "-360px", "--dy": "-10px", "--r": "-7deg", "--s": ".7" }}></div>
 <div className="qs b" style={{ left: "50%", top: "50%", "--dx": "360px", "--dy": "-30px", "--r": "8deg", "--s": ".7" }}></div>
 <div className="qs b" style={{ left: "50%", top: "50%", "--dx": "30px", "--dy": "300px", "--r": "-4deg", "--s": ".7" }}></div>
 <svg viewBox="0 0 400 400">
 <g className="body">
-<ellipse cx="212" cy="222" rx="184" ry="182" fill="#E3E3DE" opacity=".8"></ellipse>
-<circle cx="200" cy="200" r="180" fill="#1B1B19"></circle>
+<path transform="translate(20 20) scale(3.6)" d="M21.5 6.5H31.5A15 15 0 0 1 46.5 21.5V31.5A15 15 0 0 1 31.5 46.5H21.5A15 15 0 0 1 6.5 31.5V21.5A15 15 0 0 1 21.5 6.5ZM68.5 6.5H78.5A15 15 0 0 1 93.5 21.5V31.5A15 15 0 0 1 78.5 46.5H68.5A15 15 0 0 1 53.5 31.5V21.5A15 15 0 0 1 68.5 6.5ZM21.5 53.5H31.5A15 15 0 0 1 46.5 68.5V78.5A15 15 0 0 1 31.5 93.5H21.5A15 15 0 0 1 6.5 78.5V68.5A15 15 0 0 1 21.5 53.5ZM68.5 53.5H78.5A15 15 0 0 1 93.5 68.5V78.5A15 15 0 0 1 78.5 93.5H68.5A15 15 0 0 1 53.5 78.5V68.5A15 15 0 0 1 68.5 53.5Z" fill="#1B1B19"></path>
 </g>
-<g className="holes" fill="#F4F4F0"><circle cx="134.5" cy="134.5" r="41"></circle><circle cx="265.5" cy="134.5" r="41"></circle><circle cx="134.5" cy="265.5" r="41"></circle><circle cx="265.5" cy="265.5" r="41"></circle></g>
 </svg>
 </div>
 </div>
