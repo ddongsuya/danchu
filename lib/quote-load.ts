@@ -4,7 +4,10 @@ import { quoteRowsFromPayload } from "./quote-items";
 import { EMPTY_COMMON, type ReplyCommon, type ReplyDraft, type ReplyItem, type RfqView } from "./cro-data";
 import type { Values } from "./rfq-schema";
 import type { InviteRow, RfqRow } from "./data";
-import { catalogMap } from "./catalog-db";
+import { catalogMap, loadScheduleSteps, stepKey } from "./catalog-db";
+import { orderFromKeys } from "./schedule";
+import { stepsOf } from "./quote-schedule";
+import { STEP_SEQ_BASE, MAX_STEPS, type ScheduleStep } from "./cro-data";
 import type { CatalogRow } from "./catalog";
 import { pickVariant, prefillRow, rowKey } from "./catalog";
 import { endOfDaySeoul, repliesClosed } from "./reply-window";
@@ -193,6 +196,7 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
     authorities: a("authority"),
     overview,
     rows: quoteRowsFromPayload(p),
+    translation: a("reportTrans").some((x) => x && x !== "없음"),
     common,
     situation: a("advisorAnswers").filter((x) => typeof x === "string").slice(0, 20),
     ask: a("advisorAsk").filter((x) => typeof x === "string").slice(0, 30),
@@ -209,18 +213,37 @@ async function prefillDraft(orgId: string, r: RfqRow, rfq: RfqView): Promise<Rep
   const payload = r.payload as Values;
   let touched = false;
   const used: CatalogRow[] = [];
+  const afterKeysByKey: Record<string, string[]> = {};
   const items: ReplyItem[] = rfq.rows.map((row) => {
     const picked = pickVariant(cat.get(rowKey(row)) ?? [], row, payload); // 등록하지 않은 항목은 빈 칸
     const p = prefillRow(row, picked, payload);
     if (picked) touched = true;
     if (picked?.row.available) used.push(picked.row);
-    return { seq: row.seq, avail: p.avail, amount: p.amount, weeks: p.weeks, reason: p.reason, design: p.design, source: p.source, checks: p.checks, unit: p.unit, unitPrice: p.unitPrice, sampleCount: "" };
+    if (picked?.row.after_keys?.length && !afterKeysByKey[rowKey(row)]) afterKeysByKey[rowKey(row)] = picked.row.after_keys;
+    return {
+      seq: row.seq, avail: p.avail, amount: p.amount, weeks: p.weeks, reason: p.reason, design: p.design, source: p.source, checks: p.checks, unit: p.unit, unitPrice: p.unitPrice, sampleCount: "",
+      reportWeeks: p.reportWeeks, translationWeeks: rfq.translation ? p.translationWeeks : "",
+    };
   });
   if (!touched) return null;
+  // 일정(0029): 지난 견적의 앞 단계를 이번 요청서 행 번호로 되돌린다. 이번 요청서 항목과 이어지는 일정 단계만 가져온다
+  const rowKeys = new Set(rfq.rows.map((row) => rowKey(row)));
+  const wanted = new Set(Object.values(afterKeysByKey).flat().filter((k) => k.startsWith("step::")));
+  const learnedSteps = (await loadScheduleSteps(orgId))
+    .filter((st) => wanted.has(stepKey(st.name)) || st.after_keys.some((k) => rowKeys.has(k)))
+    .slice(0, MAX_STEPS);
+  for (const st of learnedSteps) if (st.after_keys.length) afterKeysByKey[stepKey(st.name)] = st.after_keys;
+  const keyed = [
+    ...rfq.rows.map((row) => ({ seq: row.seq, key: rowKey(row) })),
+    ...learnedSteps.map((st, i) => ({ seq: STEP_SEQ_BASE + i, key: stepKey(st.name) })),
+  ];
+  const after = orderFromKeys(keyed, afterKeysByKey);
+  for (const it of items) it.afterSeqs = after[it.seq] ?? [];
+  const steps: ScheduleStep[] = learnedSteps.map((st, i) => ({ seq: STEP_SEQ_BASE + i, name: st.name, weeks: st.weeks ? String(st.weeks) : "", after: after[STEP_SEQ_BASE + i] ?? [] }));
   // 총액 포함 항목: 초안에 쓰인 조합들이 공통으로 포함하는 것
   const includes = used.length ? used[0].includes.filter((k) => used.every((c) => c.includes.includes(k))) : [];
   const valid = new Date(Date.now() + 30 * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
-  return { items, note: "", pdfName: "", status: "draft", common: { ...EMPTY_COMMON, validUntil: valid, includes }, prefilled: true };
+  return { items, note: "", pdfName: "", status: "draft", common: { ...EMPTY_COMMON, validUntil: valid, includes }, prefilled: true, steps };
 }
 
 /**
@@ -265,7 +288,7 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
   const rfq = joined ? rfqViewOf(r, inv, gone ? [] : files ?? [], awarded) : rfqSummaryOf(r, inv, (files ?? []).length, seats);
   let draft: ReplyDraft | null = null;
   if (q) {
-    type ItemRow = { seq: number; avail: string | null; amount: number | null; weeks: number | null; reason: string | null; design?: Record<string, unknown> | null; source?: string | null; unit?: string | null; unit_price?: number | null; sample_count?: number | null };
+    type ItemRow = { seq: number; avail: string | null; amount: number | null; weeks: number | null; reason: string | null; design?: Record<string, unknown> | null; source?: string | null; unit?: string | null; unit_price?: number | null; sample_count?: number | null; report_weeks?: number | null; translation_weeks?: number | null; after_seqs?: number[] | null };
     const items: ReplyItem[] = (q.cro_quote_items as ItemRow[])
       .sort((x, y) => x.seq - y.seq)
       .map((it) => ({
@@ -280,6 +303,9 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
         unit: it.unit === "per_sample" ? "per_sample" : "total",
         unitPrice: it.unit_price != null ? String(it.unit_price) : "",
         sampleCount: it.sample_count != null ? String(it.sample_count) : "",
+        reportWeeks: it.report_weeks != null ? String(it.report_weeks) : "",
+        translationWeeks: it.translation_weeks != null ? String(it.translation_weeks) : "",
+        afterSeqs: Array.isArray(it.after_seqs) ? it.after_seqs : [],
       }));
     const common: ReplyCommon = {
       ...EMPTY_COMMON,
@@ -290,7 +316,7 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
       reportLang: q.report_lang ?? "",
       includes: Array.isArray(q.includes) ? q.includes : [],
     };
-    draft = { items, note: q.note ?? "", pdfName: q.pdf_name ?? "", status: q.status === "submitted" ? "submitted" : "draft", common };
+    draft = { items, note: q.note ?? "", pdfName: q.pdf_name ?? "", status: q.status === "submitted" ? "submitted" : "draft", common, steps: stepsOf(q.schedule_steps) };
   } else if (inv.cro_org_id && joined && !gone) {
     // 저장된 회신이 없으면 기관 카탈로그로 초안을 만든다 (저장은 CRO가 손댈 때). 참여 전에는 만들지 않는다 (요청서 전체가 열리는 때와 같다)
     draft = await prefillDraft(inv.cro_org_id, r, rfq);

@@ -530,3 +530,81 @@
 /* 비교표: 기관마다 다른 부분(미포함·확인 필요)만 형광펜으로. 포함은 그대로 둔다 */
 .pt .cmp-gap { background: var(--brand-tint); color: var(--ink); padding: 0 3px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .pt .cmp-head__link .btxt { padding-left: 0; text-decoration: underline; text-underline-offset: 4px; }
+
+/* ── 전체 일정 (경로형 간트, components/ScheduleGantt.tsx) ───────────────
+ * 흑연 단색. 진한 막대 = 최종보고서 시점을 정하는 순서, 옅은 막대 = 함께 진행.
+ * 형광 노랑은 가장 빠른 기관과의 차이에만. 모서리 2px, 숫자는 Plex Mono */
+.sg { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.sg--empty p { margin: 0; font-size: 14px; color: var(--muted); }
+.sg-head { display: flex; flex-direction: column; gap: 6px; }
+.sg-big { display: flex; flex-direction: column; gap: 2px; }
+.sg-cap { font-size: 13px; color: var(--muted); }
+.sg-num { font-family: var(--font-mono); font-size: clamp(36px, 6vw, 56px); font-weight: 500; letter-spacing: -0.04em; line-height: 1.05; color: var(--ink); }
+.sg--compact .sg-num { font-size: 32px; }
+.sg-sub { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 14px; color: var(--body); }
+.sg-sub b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
+.sg-late { background: var(--acc-fill); color: #1b1b19; font-weight: 600; font-size: 13px; padding: 1px 6px; border-radius: var(--r-sm); }
+.sg-chain { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; }
+.sg-chain li { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--on-brand); background: var(--brand); padding: 4px 9px; border-radius: var(--r-sm); }
+.sg-chain li + li { margin-left: 20px; position: relative; }
+.sg-chain li + li::before { content: ""; position: absolute; left: -16px; top: 50%; width: 12px; height: 1.5px; margin-top: -0.75px; background: var(--brand); }
+.sg-grid { display: flex; flex-direction: column; border-top: 1px solid var(--ink); }
+.sg-row { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 132px; align-items: stretch; border-bottom: 1px solid var(--card-line); }
+.sg-row--axis { border-bottom-color: var(--card-line); }
+.sg-name { display: flex; align-items: center; padding: 8px 12px 8px 0; font-size: 13.5px; color: var(--muted); min-width: 0; }
+.sg-row--crit .sg-name { color: var(--ink); font-weight: 600; }
+.sg-track { position: relative; min-height: 36px; }
+.sg-row--axis .sg-track { min-height: 30px; }
+.sg-range { display: flex; align-items: center; justify-content: flex-end; padding-left: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.sg-row--crit .sg-range { color: var(--ink); }
+.sg-tick { position: absolute; top: 8px; padding-left: 4px; border-left: 1px solid var(--card-line); font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; line-height: 14px; }
+.sg-tick--year { border-left: 2px solid var(--ink); color: var(--ink); }
+.sg-band { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--acc-fill) 55%, transparent); }
+.sg-bar, .sg-rep, .sg-tr { position: absolute; top: 50%; height: 10px; margin-top: -5px; border-radius: var(--r-sm); }
+.sg-bar { background: var(--faint); }
+.sg-row--crit .sg-bar { background: var(--brand); }
+.sg-rep { box-shadow: inset 0 0 0 1px var(--faint); }
+.sg-rep.is-crit { background: var(--track); box-shadow: inset 0 0 0 1.5px var(--brand); }
+.sg-tr { border: 1px dashed var(--faint); box-sizing: border-box; }
+.sg-tr.is-crit { border: 1.5px dashed var(--brand); background: var(--track); }
+.sg-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); }
+.sg-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.sg-key { display: inline-block; width: 18px; height: 8px; border-radius: var(--r-sm); background: var(--faint); }
+.sg-key--crit { background: var(--brand); }
+.sg-key--rep { background: var(--track); box-shadow: inset 0 0 0 1.5px var(--brand); }
+.sg-key--late { background: color-mix(in srgb, var(--acc-fill) 55%, transparent); }
+.sg-note { margin: 0; font-size: 13px; color: var(--muted); }
+.sg--compact .sg-row { grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) 104px; }
+.sg--compact .sg-name { font-size: 12.5px; }
+.sg--compact .sg-track { min-height: 28px; }
+
+/* 좁은 화면: 이름·주차 한 줄, 막대는 그 아래 전체 폭 */
+@media (max-width: 640px) {
+  .sg-row, .sg--compact .sg-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name range" "track track"; padding: 8px 0; }
+  .sg-name { grid-area: name; padding: 0 8px 4px 0; }
+  .sg-range { grid-area: range; padding: 0 0 4px; }
+  .sg-track { grid-area: track; min-height: 16px; }
+  .sg--compact .sg-track { min-height: 16px; }
+  .sg-row--axis { padding: 0; }
+  .sg-row--axis .sg-name, .sg-row--axis .sg-range { display: none; }
+  .sg-row--axis .sg-track { min-height: 26px; }
+  .sg-band { top: -2px; bottom: -2px; }
+  .sg-tick--minor { color: transparent; }
+}
+
+/* 비교표 미니 막대: 최종보고서 주. 가장 빠른 기관 뒤 차이만 노랑 */
+.cmp-mini { position: relative; display: block; height: 6px; margin-top: 6px; background: var(--track); border-radius: var(--r-sm); overflow: hidden; }
+.cmp-mini > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--brand); }
+.cmp-mini > b { position: absolute; top: 0; bottom: 0; background: var(--acc-fill); }
+
+/* 회신 화면 일정 입력 (components/cro/ReplySchedule.tsx) */
+.rs-item { display: flex; flex-direction: column; gap: 8px; }
+.rs-item__nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.rs-after summary { display: flex; gap: 8px; align-items: baseline; cursor: pointer; font-size: 12.5px; color: var(--muted); list-style: none; }
+.rs-after summary::-webkit-details-marker { display: none; }
+.rs-after summary > span:first-child { flex: none; font-weight: 600; color: var(--ink); }
+.rs-after__val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs-after[open] .rs-after__val { white-space: normal; }
+.rs-step { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--card-line); }
+.rs-step__row { display: flex; gap: 8px; align-items: center; }
+.rs-step__row .inp { flex: 1; min-width: 0; }

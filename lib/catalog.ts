@@ -44,6 +44,12 @@ export type CatalogRow = {
   last_quoted_at: string | null;
   source: "manual" | "learned" | "empty";
   sort: number;
+  /** 0029: 최근 제출한 최종보고서까지 주수 */
+  report_weeks?: number | null;
+  /** 0029: 최근 제출한 번역 주수 */
+  translation_weeks?: number | null;
+  /** 0029: 최근 제출한 앞 단계 (항목 키 또는 step::단계 이름) */
+  after_keys?: string[];
 };
 
 export type CatalogItem = { key: string; category: Cat; item: string };
@@ -265,6 +271,9 @@ export type Prefill = {
   design: Record<string, unknown>;
   unit: "total" | "per_sample";
   unitPrice: string;
+  /** 0029: 지난 회신의 최종보고서까지·번역 주수 */
+  reportWeeks: string;
+  translationWeeks: string;
 };
 
 function condOf(payload: Values, cat: string, id: string): string | string[] | undefined {
@@ -322,7 +331,7 @@ export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: 
 
 /** 요청서의 행 + 고른 조합 → 초안 한 행 */
 export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatch: string[] } | undefined, payload: Values): Prefill {
-  const base: Prefill = { avail: "", amount: "", weeks: "", reason: "", source: "manual", checks: [], design: {}, unit: "total", unitPrice: "" };
+  const base: Prefill = { avail: "", amount: "", weeks: "", reason: "", source: "manual", checks: [], design: {}, unit: "total", unitPrice: "", reportWeeks: "", translationWeeks: "" };
   if (!picked) return base;
   const cat = picked.row;
   const design = {
@@ -354,6 +363,8 @@ export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatc
   return {
     avail: "가능", amount, weeks, reason: "", source, checks: [...new Set(checks)], design,
     unit: cat.unit, unitPrice: cat.unit === "per_sample" ? String(cat.price_min ?? cat.last_amount ?? "") : "",
+    reportWeeks: cat.report_weeks ? String(cat.report_weeks) : "",
+    translationWeeks: cat.translation_weeks ? String(cat.translation_weeks) : "",
   };
 }
 

@@ -12,6 +12,7 @@ import { md } from "@/lib/format";
 import { comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-window";
 import { occupiesSeat } from "@/lib/request-policy";
 import { captureError } from "@/lib/observe";
+import { hasSchedule } from "@/lib/quote-schedule";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,8 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       name: q.cro_name,
       total: q.total_amount ?? 0,
       weeks: q.total_weeks ?? 0,
+      final: hasSchedule(q) ? q.final_weeks : null,
+      finalReport: hasSchedule(q) ? (q.final_report_weeks ?? q.final_weeks) : null,
       start: q.start_date,
       valid: q.valid_until,
       pay: q.pay_terms,

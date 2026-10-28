@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { TablesInsert, TablesUpdate } from "./db-types";
+import { orderToKeys } from "./schedule";
 import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type Glp } from "./catalog";
 
 function fromDb(r: Record<string, unknown>): CatalogRow {
@@ -23,6 +24,9 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     last_amount: (r.last_amount as number | null) ?? null, last_weeks: (r.last_weeks as number | null) ?? null, last_quoted_at: (r.last_quoted_at as string | null) ?? null,
     source: (r.source as CatalogRow["source"]) || "empty",
     sort: typeof r.sort === "number" ? r.sort : 0,
+    report_weeks: (r.report_weeks as number | null) ?? null,
+    translation_weeks: (r.translation_weeks as number | null) ?? null,
+    after_keys: Array.isArray(r.after_keys) ? (r.after_keys as string[]) : [],
   };
 }
 
@@ -136,16 +140,36 @@ export async function upsertCatalog(orgId: string, rows: unknown[], removed: unk
   return { saved: updates.length + inserts.length, rows: await loadCatalog(orgId) };
 }
 
-/** 제출값을 카탈로그의 "최근 회신"으로 되돌린다. 기관이 직접 입력한 칸은 건드리지 않는다. */
-export async function learnFromSubmission(
-  orgId: string,
-  items: { category: string; name: string; avail: string | null; amount: number | null; weeks: number | null; unit?: string | null; unitPrice?: number | null; design?: Record<string, unknown> | null }[],
-): Promise<void> {
+/** 일정 단계의 학습 키. 카탈로그 항목 키(대분류::시험)와 겹치지 않는다 */
+export const stepKey = (name: string) => `step::${name}`;
+
+type LearnItem = {
+  seq?: number; category: string; name: string; avail: string | null; amount: number | null; weeks: number | null;
+  unit?: string | null; unitPrice?: number | null; design?: Record<string, unknown> | null;
+  /** 0029 일정 */
+  reportWeeks?: number | null; translationWeeks?: number | null; afterSeqs?: number[];
+};
+type LearnStep = { seq: number; name: string; weeks: number | null; after: number[] };
+
+/**
+ * 제출값을 카탈로그의 "최근 회신"으로 되돌린다. 기관이 직접 입력한 칸은 건드리지 않는다.
+ * 일정(0029): 최종보고서·번역 주수와 앞 단계는 가장 최근 제출값으로 바꾼다 (평균 아님). 앞 단계는 행 번호가 아니라 항목 키로 저장한다
+ */
+export async function learnFromSubmission(orgId: string, items: LearnItem[], steps: LearnStep[] = []): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
   const valid = new Map(catalogItems().map((it) => [it.key, it]));
   const existing = await catalogMap(orgId);
   const now = new Date().toISOString();
+  // 행 번호 → 학습 키 (항목은 항목 키, 일정 단계는 step::이름)
+  const keyed = [
+    ...items.filter((it) => typeof it.seq === "number").map((it) => ({ seq: it.seq as number, key: itemKey(it.category, it.name === it.category ? it.category : it.name) })),
+    ...steps.map((st) => ({ seq: st.seq, key: stepKey(st.name) })),
+  ];
+  const afterBySeq: Record<number, number[]> = {};
+  for (const it of items) if (typeof it.seq === "number") afterBySeq[it.seq] = it.afterSeqs ?? [];
+  for (const st of steps) afterBySeq[st.seq] = st.after;
+  const afterKeys = orderToKeys(keyed, afterBySeq);
   const updates: (TablesUpdate<"cro_catalog"> & { id: string })[] = [];
   const inserts: TablesInsert<"cro_catalog">[] = [];
   for (const it of items) {
@@ -166,7 +190,10 @@ export async function learnFromSubmission(
       rows.find((r) => same(species, r.species)) ??
       (rows.length === 1 ? rows[0] : undefined);
     if (match) {
-      const patch: TablesUpdate<"cro_catalog"> & { id: string } = { id: match.id, last_amount: learned ?? null, last_weeks: it.weeks ?? null, last_quoted_at: now };
+      const patch: TablesUpdate<"cro_catalog"> & { id: string } = {
+        id: match.id, last_amount: learned ?? null, last_weeks: it.weeks ?? null, last_quoted_at: now,
+        report_weeks: it.reportWeeks ?? null, translation_weeks: it.translationWeeks ?? null, after_keys: afterKeys[key] ?? [],
+      };
       if (match.source !== "manual") {
         patch.source = "learned";
         if (!match.weeks && it.weeks) patch.weeks = it.weeks;
@@ -184,6 +211,7 @@ export async function learnFromSubmission(
         recovery_weeks: int(d.recovery_weeks, 52), recovery_per_sex: int(d.recovery_per_sex, 100), dosing: str(d.dosing, 120),
         weeks: it.weeks ?? null, unit: it.unit === "per_sample" ? "per_sample" : "total",
         last_amount: learned ?? null, last_weeks: it.weeks ?? null, last_quoted_at: now, sort: rows.length,
+        report_weeks: it.reportWeeks ?? null, translation_weeks: it.translationWeeks ?? null, after_keys: afterKeys[key] ?? [],
       });
     }
   }
@@ -196,6 +224,19 @@ export async function learnFromSubmission(
     const { error } = await sb.from("cro_catalog").insert(inserts);
     if (error) console.error("cro_catalog learn insert", error);
   }
+  const stepRows = steps.filter((st) => st.name).map((st) => ({ org_id: orgId, name: st.name.slice(0, 60), weeks: st.weeks, after_keys: afterKeys[stepKey(st.name)] ?? [], updated_at: now }));
+  if (stepRows.length) {
+    const { error } = await sb.from("cro_schedule_steps").upsert(stepRows, { onConflict: "org_id,name" });
+    if (error) console.error("cro_schedule_steps learn", error);
+  }
+}
+
+/** 기관이 전에 쓴 일정 단계 (초안 채우기용) */
+export async function loadScheduleSteps(orgId: string): Promise<{ name: string; weeks: number | null; after_keys: string[] }[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data } = await sb.from("cro_schedule_steps").select("name, weeks, after_keys").eq("org_id", orgId).order("updated_at", { ascending: false }).limit(50);
+  return (data ?? []).map((r) => ({ name: r.name, weeks: r.weeks, after_keys: Array.isArray(r.after_keys) ? r.after_keys : [] }));
 }
 
 /* ── 패키지 프리셋 제공 여부 ─────────────────────────────── */

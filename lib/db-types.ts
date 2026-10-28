@@ -223,6 +223,12 @@ export type Database = {
           entry_source: QuoteEntrySource;
           /** 견적 판 (0022). 내용이 바뀔 때마다 트리거가 올린다. 선정 확인 화면이 본 판을 select_quote 에 넘긴다 */
           revision: number;
+          /** 0029: 견적 항목은 아니지만 일정에 넣는 단계 [{seq, name, weeks, after}] */
+          schedule_steps: Json;
+          /** 0029: 착수 주부터 최종보고서(원문)가 끝나는 주. 앱이 기관 입력으로 계산 */
+          final_report_weeks: number | null;
+          /** 0029: 번역 보고서까지 끝나는 주 (번역이 없으면 final_report_weeks 와 같다) */
+          final_weeks: number | null;
         };
         Insert: Ins<
           Database["public"]["Tables"]["cro_quotes"]["Row"],
@@ -263,6 +269,12 @@ export type Database = {
           unit: string;
           unit_price: number | null;
           sample_count: number | null;
+          /** 0029: 시험 기간(보고서 초안까지) 뒤 최종보고서까지 주수 */
+          report_weeks: number | null;
+          /** 0029: 최종보고서 뒤 번역 보고서까지 주수 */
+          translation_weeks: number | null;
+          /** 0029: 이 시험 전에 끝나야 하는 단계의 행 번호 (101 이상은 cro_quotes.schedule_steps) */
+          after_seqs: number[];
         };
         Insert: Ins<Database["public"]["Tables"]["cro_quote_items"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_quote_items"]["Row"], "quote_id" | "seq" | "category" | "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_quote_items"]["Row"]>;
@@ -433,10 +445,22 @@ export type Database = {
           updated_at: string;
           method: string | null;
           sort: number;
+          /** 0029: 최근 제출한 최종보고서까지 주수 */
+          report_weeks: number | null;
+          /** 0029: 최근 제출한 번역 주수 */
+          translation_weeks: number | null;
+          /** 0029: 최근 제출한 앞 단계 (항목 키 또는 step::단계 이름) */
+          after_keys: string[];
         };
         Insert: Ins<Database["public"]["Tables"]["cro_catalog"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_catalog"]["Row"], "org_id" | "item_key" | "category" | "item">>;
         Update: Partial<Database["public"]["Tables"]["cro_catalog"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_catalog_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_schedule_steps: {
+        Row: { id: string; org_id: string; name: string; weeks: number | null; after_keys: string[]; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_schedule_steps"]["Row"], "id" | "weeks" | "after_keys" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_schedule_steps"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_schedule_steps_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
       cro_org_presets: {
         Row: { org_id: string; preset_key: string; offered: boolean; package_price: number | null; note: string | null; updated_at: string };

@@ -36,6 +36,8 @@ export type RfqView = {
   authorities: string[];
   /** 첨부 파일 (CDA 마스킹이 아닐 때만 채움) */
   files: { id: string; name: string; size: number }[];
+  /** 요청서에 번역 보고서가 있는지 (번역 주수 칸을 보일지). 참여 전 요약에서는 false */
+  translation?: boolean;
 };
 
 export type ReplyItem = {
@@ -53,7 +55,18 @@ export type ReplyItem = {
   unit?: "total" | "per_sample";
   unitPrice?: string;
   sampleCount?: string;
+  /** 0029 일정: 이 시험 전에 끝나야 하는 단계의 행 번호 (101 이상은 일정 단계) */
+  afterSeqs?: number[];
+  /** 0029 일정: 시험 기간(보고서 초안까지) 뒤 최종보고서까지 주수 */
+  reportWeeks?: string;
+  /** 0029 일정: 최종보고서 뒤 번역 보고서까지 주수 (요청서에 번역이 있을 때) */
+  translationWeeks?: string;
 };
+
+/** 견적 항목은 아니지만 일정에 넣는 단계 (분석법 검증, 조제물 예비시험 등). seq 는 101부터 */
+export type ScheduleStep = { seq: number; name: string; weeks: string; after: number[] };
+export const STEP_SEQ_BASE = 101;
+export const MAX_STEPS = 12;
 
 /** 회신 공통 조건 (§5) — 항목 3칸 외에 CRO가 채우는 것 */
 export type ReplyCommon = {
@@ -70,4 +83,4 @@ export const REPORT_LANGS = ["국문", "영문", "국문 + 영문 번역", "일�
 
 export const EMPTY_COMMON: ReplyCommon = { validUntil: "", startDate: "", payTerms: "", substanceQty: "", reportLang: "", includes: [] };
 
-export type ReplyDraft = { items: ReplyItem[]; note: string; pdfName: string; status: "draft" | "submitted"; common: ReplyCommon; /** 저장된 회신이 없어 카탈로그로 만든 초안 */ prefilled?: boolean };
+export type ReplyDraft = { items: ReplyItem[]; note: string; pdfName: string; status: "draft" | "submitted"; common: ReplyCommon; /** 저장된 회신이 없어 카탈로그로 만든 초안 */ prefilled?: boolean; /** 0029 일정 단계 */ steps?: ScheduleStep[] };

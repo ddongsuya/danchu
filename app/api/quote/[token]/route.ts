@@ -2,7 +2,8 @@ import { clientIp } from "@/lib/rate-limit";
 import { NextResponse, after } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { QuoteLineDef } from "@/lib/quote-items";
-import { INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem } from "@/lib/cro-data";
+import { INCL_KEYS, MAX_STEPS, REPORT_LANGS, STEP_SEQ_BASE, type ReplyCommon, type ReplyItem, type ScheduleStep } from "@/lib/cro-data";
+import { planQuote } from "@/lib/schedule";
 import { closedMessage, loadQuote as load, type Loaded } from "@/lib/quote-load";
 import { sessionOrNull } from "@/lib/auth";
 import { adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
@@ -86,7 +87,7 @@ function blocked(got: Loaded): { error: string; status: number } | null {
   return null;
 }
 
-type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef };
+type Parsed = { items: ReplyItem[]; note: string; common: ReplyCommon; pdf?: PdfRef; steps: ScheduleStep[] };
 
 const DESIGN_NUM = ["groups_ctrl", "groups_test", "per_sex", "recovery_weeks", "recovery_per_sex"] as const;
 const DESIGN_STR = ["route", "dosing", "method"] as const;
@@ -117,10 +118,25 @@ function cleanDesign(d: Record<string, unknown>): Record<string, unknown> {
 
 /** 항목 3칸 + 공통 조건 + 전달 사항 파싱 · 검증 */
 function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
-  const b = (raw ?? {}) as { items?: unknown; note?: unknown; common?: unknown; pdf?: unknown };
+  const b = (raw ?? {}) as { items?: unknown; note?: unknown; common?: unknown; pdf?: unknown; steps?: unknown };
   const items = Array.isArray(b.items) ? (b.items as ReplyItem[]) : [];
   if (items.length !== rows.length) return "항목 수가 요청서와 다릅니다.";
   const seqs = new Set(rows.map((r) => r.seq));
+  // 일정 단계 (0029): 101부터, 이름·주수·앞 단계만
+  const rawSteps = Array.isArray(b.steps) ? (b.steps as unknown[]) : [];
+  if (rawSteps.length > MAX_STEPS) return `일정 단계는 ${MAX_STEPS}개까지 넣을 수 있습니다.`;
+  const steps: ScheduleStep[] = [];
+  for (const x of rawSteps) {
+    const st = (x ?? {}) as Partial<ScheduleStep>;
+    if (typeof st.seq !== "number" || !Number.isInteger(st.seq) || st.seq < STEP_SEQ_BASE || st.seq >= STEP_SEQ_BASE + 100 || steps.some((y) => y.seq === st.seq)) return "일정 단계 번호가 올바르지 않습니다.";
+    const name = typeof st.name === "string" ? st.name.trim().slice(0, 60) : "";
+    const weeks = typeof st.weeks === "string" ? st.weeks.trim() : "";
+    if (weeks && !/^\d{1,3}$/.test(weeks)) return "일정 단계 기간은 주 단위 숫자만 입력합니다.";
+    steps.push({ seq: st.seq, name, weeks, after: Array.isArray(st.after) ? st.after.filter((n): n is number => typeof n === "number") : [] });
+  }
+  const known = new Set([...seqs, ...steps.map((st) => st.seq)]);
+  const cleanAfter = (self: number, v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((n): n is number => typeof n === "number" && known.has(n) && n !== self))].slice(0, 20) : []);
+  for (const st of steps) st.after = cleanAfter(st.seq, st.after);
   for (const it of items) {
     if (!it || typeof it !== "object" || !seqs.has(it.seq)) return "항목 번호가 요청서와 다릅니다.";
     if (!["", "가능", "조건부 가능", "불가"].includes(it.avail)) return "수행 가능 여부 값이 올바르지 않습니다.";
@@ -137,6 +153,11 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
     if (it.unit === "per_sample" && it.unitPrice && it.sampleCount) it.amount = String(Number(it.unitPrice) * Number(it.sampleCount));
     it.checks = Array.isArray(it.checks) ? it.checks.filter((x): x is string => typeof x === "string").slice(0, 30).map((x) => x.slice(0, 200)) : [];
     it.design.reviewChecks = it.checks;
+    if (it.reportWeeks && !/^\d{1,3}$/.test(it.reportWeeks)) return "최종보고서까지 기간은 주 단위 숫자만 입력합니다.";
+    if (it.translationWeeks && !/^\d{1,3}$/.test(it.translationWeeks)) return "번역 기간은 주 단위 숫자만 입력합니다.";
+    it.reportWeeks = typeof it.reportWeeks === "string" ? it.reportWeeks : "";
+    it.translationWeeks = typeof it.translationWeeks === "string" ? it.translationWeeks : "";
+    it.afterSeqs = cleanAfter(it.seq, it.afterSeqs);
   }
   const c = (b.common && typeof b.common === "object" ? b.common : {}) as Partial<ReplyCommon>;
   const s = (v: unknown, max = 120) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -155,7 +176,7 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
     if (p.size > MAX_PDF) return "PDF는 20MB 이하만 첨부할 수 있습니다.";
     pdf = { path: p.path, name: p.name.slice(0, 200), size: p.size };
   }
-  return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf };
+  return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf, steps: steps.filter((st) => st.name) };
 }
 
 async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who?: { ip: string; ua: string }) {
@@ -163,9 +184,11 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
   const actorId = actor?.userId ?? null;
   // 운영자가 회신 링크로 제출하면 기관 PDF 를 보고 옮겨 적은 대리 입력이다 (비교표 표기·카탈로그 학습 제외)
   const source = entrySourceFor(actor?.role);
-  const { items, note, common, pdf } = p;
+  const { items, note, common, pdf, steps } = p;
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const weeks = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
+  // 기관이 적은 앞 단계·최종보고서·번역 주수로 계산한 최종보고서 주 (0029). 비교표 "최종보고서 빠른 순"의 기준
+  const plan = planQuote({ rows: got.rfq.rows, items, steps });
 
   const header: QuoteHeader = {
     total_amount: total || null,
@@ -181,6 +204,9 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
     note,
     // 입력 주체는 제출과 같은 트랜잭션에서 남긴다 (save_quote, 0019). 따로 갱신하다 실패하면 대리 입력이 기관 제출로 보인다
     entry_source: source,
+    schedule_steps: steps.map((st) => ({ seq: st.seq, name: st.name, weeks: st.weeks ? Number(st.weeks) : null, after: st.after })),
+    final_report_weeks: plan.finalReportWeek,
+    final_weeks: plan.finalWeek,
   };
 
   if (pdf) {
@@ -208,6 +234,9 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
       unit: it.unit ?? "total",
       unit_price: it.unit === "per_sample" && it.unitPrice ? Number(it.unitPrice) : null,
       sample_count: it.unit === "per_sample" && it.sampleCount ? Number(it.sampleCount) : null,
+      report_weeks: it.avail !== "불가" && it.reportWeeks ? Number(it.reportWeeks) : null,
+      translation_weeks: it.avail !== "불가" && it.translationWeeks ? Number(it.translationWeeks) : null,
+      after_seqs: it.avail !== "불가" ? it.afterSeqs ?? [] : [],
     };
   });
 
@@ -230,8 +259,9 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
     // 운영자가 옮겨 적은 금액은 기관이 정한 값이 아니므로 기관 카탈로그로 되돌리지 않는다
     // 제출값을 카탈로그의 "최근 회신"으로 되돌린다 (응답 뒤에 실행, 실패해도 제출은 성공)
     const orgId = got.croOrgId;
-    const learned = itemRows.map((x) => ({ category: x.category, name: x.name, avail: x.avail, amount: x.amount, weeks: x.weeks, unit: x.unit, unitPrice: x.unit_price, design: x.design }));
-    after(() => learnFromSubmission(orgId, learned).catch((e) => console.error("learn", e)));
+    const learned = itemRows.map((x) => ({ seq: x.seq, category: x.category, name: x.name, avail: x.avail, amount: x.amount, weeks: x.weeks, unit: x.unit, unitPrice: x.unit_price, design: x.design, reportWeeks: x.report_weeks, translationWeeks: x.translation_weeks, afterSeqs: x.after_seqs }));
+    const learnedSteps = steps.map((st) => ({ seq: st.seq, name: st.name, weeks: st.weeks ? Number(st.weeks) : null, after: st.after }));
+    after(() => learnFromSubmission(orgId, learned, learnedSteps).catch((e) => console.error("learn", e)));
   }
 
   if (submit) {

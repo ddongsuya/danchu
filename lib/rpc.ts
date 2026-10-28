@@ -61,6 +61,10 @@ export type QuoteHeader = {
   pdf_size?: number;
   /** 입력 주체 (0019). 제출 때만 기록하고, 없으면 기관(cro) */
   entry_source?: QuoteEntrySource;
+  /** 0029 일정 단계와 계산한 최종보고서 주 */
+  schedule_steps?: { seq: number; name: string; weeks: number | null; after: number[] }[];
+  final_report_weeks?: number | null;
+  final_weeks?: number | null;
 };
 export type QuoteItemInput = {
   seq: number;
@@ -76,6 +80,10 @@ export type QuoteItemInput = {
   unit: string;
   unit_price: number | null;
   sample_count: number | null;
+  /** 0029 일정 */
+  report_weeks?: number | null;
+  translation_weeks?: number | null;
+  after_seqs?: number[];
 };
 export type SaveQuoteResult = {
   ok: true;
