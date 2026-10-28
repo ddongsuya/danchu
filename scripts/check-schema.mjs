@@ -11,7 +11,7 @@
 import { pathToFileURL } from "node:url";
 
 /** lib/schema-version.ts REQUIRED_SCHEMA_VERSION 과 같아야 한다 (tests/selection-integrity.test.ts 가 확인) */
-export const REQUIRED = 27;
+export const REQUIRED = 28;
 
 /** @param {{ url: string; key: string; required?: number; fetchImpl?: typeof fetch }} o */
 export async function checkSchema({ url, key, required = REQUIRED, fetchImpl = fetch }) {

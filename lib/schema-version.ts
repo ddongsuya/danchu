@@ -6,7 +6,7 @@ import { getSupabaseAdmin, type Admin } from "./supabase";
  * 새 마이그레이션을 추가하면 그 파일에서 danchu_schema_version() 을 새 번호로 바꾸고 이 값도 올린다.
  * scripts/check-schema.mjs 의 REQUIRED 도 같은 값이다 (tests/selection-integrity.test.ts 가 셋이 같은지 본다).
  */
-export const REQUIRED_SCHEMA_VERSION = 27;
+export const REQUIRED_SCHEMA_VERSION = 28;
 
 export type SchemaStatus =
   | { ok: true; version: number; required: number }

@@ -80,10 +80,16 @@ export type Database = {
           join_by_extended_at: string | null;
           /** 참여 안내와 접수 메일을 시작한 시각 (0025). 첨부 업로드가 끝난 뒤 startRfq 가 한 번만 채운다. 비어 있으면 아직 안내하지 않았다 */
           started_at: string | null;
+          /** 의뢰자가 열린 비교표를 처음 연 시각 (0028). 운영자가 연 것은 세지 않는다 */
+          compare_first_viewed_at: string | null;
+          /** 의뢰자가 열린 비교표를 마지막으로 연 시각 (0028) */
+          compare_last_viewed_at: string | null;
+          /** 의뢰자가 열린 비교표를 연 횟수 (0028) */
+          compare_view_count: number;
         };
         Insert: Ins<
           Database["public"]["Tables"]["rfq_requests"]["Row"],
-          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "orphaned_at" | "join_by" | "nominees_only" | "join_by_extended_at" | "started_at"
+          "id" | "created_at" | "status" | "submitted_step" | "categories" | "phone" | "org_type" | "purpose" | "budget" | "cro_count" | "confidentiality" | "reply_by" | "user_agent" | "ip" | "user_id" | "distributed_at" | "compared_at" | "selected_quote_id" | "closed_at" | "admin_note" | "intent" | "outcome" | "outcome_note" | "outcome_at" | "anonymized_at" | "auto_distribute" | "orphaned_at" | "join_by" | "nominees_only" | "join_by_extended_at" | "started_at" | "compare_first_viewed_at" | "compare_last_viewed_at" | "compare_view_count"
         >;
         Update: Partial<Database["public"]["Tables"]["rfq_requests"]["Row"]>;
         Relationships: [];
@@ -514,6 +520,8 @@ export type Database = {
       select_quote: { Args: { p_rfq_id: string; p_quote_id: string; p_user: string; p_revision: number }; Returns: Json };
       /** 0022: 마지막으로 적용한 마이그레이션 번호 (lib/schema-version.ts) */
       danchu_schema_version: { Args: Record<string, never>; Returns: number };
+      /** 0028: 의뢰자가 열린 비교표를 연 기록. 비교표가 열리지 않은 요청에는 아무것도 하지 않는다 */
+      record_compare_view: { Args: { p_rfq: string }; Returns: undefined };
       /** 0023: 기관 참여. { ok, already?, joined_at, channel, seats } 또는 { ok: false, code }. 0025: 참여 전 불참은 참여 결정 기한 전·자리가 있으면 다시 참여(rejoined: true), 지나면 code declined */
       join_offer: { Args: { p_invite_id: string; p_token: string; p_actor: string | null; p_channel: "portal" | "token"; p_terms_version: string; p_ip: string | null; p_ua: string | null }; Returns: Json };
       /** 0023: 참여 철회 (제출 전만, 되돌릴 수 없다). { ok, already?, seats } 또는 { ok: false, code }. 0025: 남은 참여 기관이 모두 냈으면 compare_opened: true */
