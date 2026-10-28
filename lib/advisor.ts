@@ -215,10 +215,10 @@ export function advise(a: Answers): Advice {
   const species = ["랫드", "개(비글)"];
 
   if (onc) {
-    notes.push({ text: oncLate ? "진행암 의약품은 3상 개시 전에 임상 일정을 따른 3개월 반복투여독성시험을 제출하며, 대부분 이것으로 허가까지 충분합니다." : "진행암 의약품의 1상용 독성시험은 임상 투여 일정에 맞춥니다. 매일 투여를 기준으로 4주를 제안했습니다. 주 1회면 주 1회 4~5회, 3~4주 1회면 단회 투여 설계가 됩니다.", basis: oncLate ? "ICH S9 §3.4" : "ICH S9 §3.3 표 1", rule: "" });
+    notes.push({ text: oncLate ? "진행암 의약품은 3상 개시 전에 임상 일정을 따른 3개월 반복투여독성시험을 제출하며, 대부분 이것으로 허가까지 충분합니다." : "진행암 의약품의 1상용 독성시험은 임상 투여 일정에 맞춥니다. 매일 투여 기준 4주로 미리 채웠습니다. 주 1회면 주 1회 4~5회, 3~4주 1회면 단회 투여 설계가 됩니다.", basis: oncLate ? "ICH S9 §3.4" : "ICH S9 §3.3 표 1", rule: "" });
     notes.push({ text: "진행암 의약품은 회복성 평가는 필요하지만 회복군을 자동으로 넣지는 않습니다. 회복군을 뺄지 검토하세요.", basis: "ICH S9 §2.4", rule: "" });
   } else if (dur === "미정") {
-    notes.push({ text: "임상 투여기간이 정해지지 않아 1상에 흔한 4주로 제안했습니다. 1상이 2주 이내라면 2주 시험으로도 진입할 수 있지만, 이후 임상이 길어지면 시험을 다시 해야 합니다.", basis: "ICH M3(R2) 표 1", rule: "R-A1-03" });
+    notes.push({ text: "임상 투여기간이 정해지지 않아 1상에 흔한 4주로 미리 채웠습니다. 1상이 2주 이내라면 2주 시험으로도 진입할 수 있지만, 이후 임상이 길어지면 시험을 다시 해야 합니다.", basis: "ICH M3(R2) 표 1", rule: "R-A1-03" });
   }
   const split = repeatItems.length === 2; // 만성: 설치류와 비설치류의 기간이 다르다
   for (const [i, it] of repeatItems.entries()) {
@@ -233,7 +233,7 @@ export function advise(a: Answers): Advice {
       basis: onc ? (oncLate ? "ICH S9 §3.4" : "ICH S9 §3.3 표 1") : approval ? "ICH M3(R2) 표 2 · 고시 별표 2 ③" : "ICH M3(R2) 표 1 · 고시 별표 2 ③", rule: approval ? "R-A1-02" : "R-A1-01", on: true,
       fill: { "일반독성.species": split ? [species[i]] : species, "일반독성.tk": research ? "미정" : "포함", "일반독성.formulation": research ? "미정" : "포함", "일반독성.histopath": "포함", "일반독성.glpLevel": glp, "일반독성.recovery": firstGlp ? (weeks >= 13 ? "4주" : "2주") : "미정" },
     });
-    if (firstGlp) notes.push({ text: "첫 GLP 반복투여독성이므로 회복 평가를 포함해 제안했습니다. 한 번 가역성을 확인하면 이후 시험에서는 생략할 수 있습니다.", basis: "고시 별표 2 ② 4 · ICH M3(R2) 질의응답 3장", rule: "R-A1-12" });
+    if (firstGlp) notes.push({ text: "첫 GLP 반복투여독성이므로 회복 평가를 포함해 두었습니다. 한 번 가역성을 확인하면 이후 시험에서는 생략할 수 있습니다.", basis: "고시 별표 2 ② 4 · ICH M3(R2) 질의응답 3장", rule: "R-A1-12" });
     if (weeks >= 13 && !own("반복투여")) notes.push({ text: `${weeks}주 시험을 하기 전에 더 짧은 반복투여독성시험이 먼저 필요합니다. 보유 자료가 없다면 4주 시험을 함께 검토하세요.`, basis: "고시 별표 2 ② 2", rule: "R-A1-04" });
   }
   if (!own("용량결정시험") && !own("반복투여")) {
@@ -253,7 +253,7 @@ export function advise(a: Answers): Advice {
     askCro.add("조직병리 확대 판독과 특수염색의 견적 포함 여부");
     if (!research) {
       askCro.add("독성동태의 채혈 방식(위성군·미량채혈), 시점 수, 예상 검체 수");
-      notes.push({ text: "독성동태를 반복투여독성에 병행하도록 제안했습니다. 투여 첫날과 종료 무렵에 평가합니다.", basis: "고시 별표 2 ⑤ · ICH S3A §4.3", rule: "R-B1-01" });
+      notes.push({ text: "독성동태는 반복투여독성에 함께 넣어 두었습니다. 투여 첫날과 종료 무렵에 평가합니다.", basis: "고시 별표 2 ⑤ · ICH S3A §4.3", rule: "R-B1-01" });
     }
   }
   if (a.freq === "지속주입") notes.push({ text: "지속주입은 카테터 수술과 전용 장비가 필요해 수행 가능한 기관이 제한됩니다.", basis: "", rule: "R-A1-17" });
@@ -829,7 +829,7 @@ function adviseCosmetic(a: Answers): Advice {
   const functional = purpose === "기능성화장품 심사";
   const exportUse = purpose === "수출 (상대국 요구)";
 
-  notes.push({ text: "동물실험을 한 화장품이나 그런 원료를 쓴 화장품은 국내에서 유통·판매할 수 없습니다. 그래서 동물을 쓰지 않는 시험으로 제안했습니다. 사용기준 지정, 대체시험법이 없는 경우, 수출 상대국 요구 등은 예외입니다.", basis: "화장품법 제15조의2", rule: "R-F2-20", topic: "동물실험 제한" });
+  notes.push({ text: "동물실험을 한 화장품이나 그런 원료를 쓴 화장품은 국내에서 유통·판매할 수 없습니다. 그래서 동물을 쓰지 않는 시험으로 골라 두었습니다. 사용기준 지정, 대체시험법이 없는 경우, 수출 상대국 요구 등은 예외입니다.", basis: "화장품법 제15조의2", rule: "R-F2-20", topic: "동물실험 제한" });
 
   if (functional && listed) {
     notes.push({ text: "고시된 원료, 국제화장품원료집 수재 원료, 식품공전 원료로 제조하면 안전성 자료를 면제받을 수 있습니다. 시험은 해제해 두었습니다. 안전성이 우려되면 예외입니다.", basis: `${FUNC} 제6조제1항`, rule: "R-F2-21", topic: "면제" });
@@ -851,7 +851,7 @@ function adviseCosmetic(a: Answers): Advice {
   }
   if (functional || ingredient) {
     tests.push({ key: "patch", label: "인체첩포시험", category: "기타(임상병리·조직병리 등)", item: "인체첩포시험", reason: "30명 이상. 대학 또는 전문 연구기관에서 5년 이상 경력자의 지도·감독 아래 실시", basis: `${FUNC} 제4조제1호나목(6), 제5조`, rule: "R-F2-20", on: need });
-    notes.push({ text: "단회투여독성 자료도 제출 대상입니다. 동물을 쓰지 않는 방법이 제한적이어서 제안에 넣지 않았습니다. 문헌이나 기존 자료로 갈음할 수 있는지, 과학적 타당성으로 생략할 수 있는지 확인하세요.", basis: `${FUNC} 제4조제1호나목`, rule: "R-F2-20", topic: "확인할 자료" });
+    notes.push({ text: "단회투여독성 자료도 제출 대상입니다. 동물을 쓰지 않는 방법이 제한적이어서 목록에서 뺐습니다. 문헌이나 기존 자료로 갈음할 수 있는지, 과학적 타당성으로 생략할 수 있는지 확인하세요.", basis: `${FUNC} 제4조제1호나목`, rule: "R-F2-20", topic: "확인할 자료" });
   }
   if (ingredient) {
     notes.push({ text: "원료 사용기준 지정에는 안전성 자료 11종이 있습니다. 위 시험 외에 반복투여독성, 생식·발생·유전독성·발암성, 흡입독성, 피부흡수 자료가 포함됩니다. 동물대체시험법 적용이 원칙이고, 적용할 수 없으면 동물 시험법을 따릅니다. 타당한 사유가 있으면 생략할 수 있습니다.", basis: `${ING} 제4조제4호, 제5조제1항제4호`, rule: "R-F2-20", topic: "확인할 자료" });
@@ -949,7 +949,7 @@ function adviseChemical(a: Answers): Advice {
   const b1 = `${B} 제1호`;
   add("single", gas ? "급성흡입독성" : "급성경구독성", GEN, gas ? "단회 흡입독성" : "단회(급성)투여독성", gas ? "기체이거나 주 노출이 흡입이면 급성흡입독성" : "1톤 이상 구간의 인체 유해성 자료", b1);
   add("ames", "복귀돌연변이", "유전독성", "복귀돌연변이(Ames, TG 471)", "양성이면 염색체이상과 체내 유전독성 자료를 추가로 제출", b1);
-  add("skin-irr", "피부 자극성·부식성", "동물대체시험", "피부자극 인체피부모델(TG 439)", "시험법은 기관과 협의. 체외 시험으로 제안했습니다", b1);
+  add("skin-irr", "피부 자극성·부식성", "동물대체시험", "피부자극 인체피부모델(TG 439)", "체외 시험 기준. 시험법은 기관 회신에서 확인하세요", b1);
   add("sens", "피부 과민성", "항원성·면역독성", "피부감작성 LLNA", "시험법은 기관과 협의", b1);
   add("fish", "어류 급성독성", ENV, "어류 급성독성(TG 203)", "환경 유해성 자료", b1);
   add("daphnia", "물벼룩 급성독성", ENV, "물벼룩 급성 유영저해(TG 202)", "환경 유해성 자료", b1);
@@ -957,7 +957,7 @@ function adviseChemical(a: Answers): Advice {
   if (lv >= 2) {
     const b2 = `${B} 제2호`;
     if (!gas) add("dermal", "급성경피독성", GEN, "급성경피독성", "급성경피 또는 급성흡입. 노출 경로에 맞는 것을 고르세요", b2);
-    add("eye-irr", "눈 자극성·부식성", "동물대체시험", "안자극 각막모델(TG 492)", "시험법은 기관과 협의. 체외 시험으로 제안했습니다", b2);
+    add("eye-irr", "눈 자극성·부식성", "동물대체시험", "안자극 각막모델(TG 492)", "체외 시험 기준. 시험법은 기관 회신에서 확인하세요", b2);
     add("invitro-ca", "체외 염색체이상", "유전독성", "염색체이상 in vitro(TG 473)", "10톤 이상 구간", b2);
     add("invivo-mn", "체내 체세포 유전독성", "유전독성", "소핵 in vivo(마우스)", "복귀돌연변이와 염색체이상이 모두 음성이면 포유류 배양세포 유전자변이 시험으로 대신할 수 있습니다", b2);
     add("repeat-4", "반복투여독성 28일", GEN, "반복투여 4주", "10톤 이상 구간", b2);
