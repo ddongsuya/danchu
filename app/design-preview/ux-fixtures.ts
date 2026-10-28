@@ -10,6 +10,8 @@ export const UX_COLS: CompareCol[] = [
     name: "예시 기관 A",
     total: 12000000,
     weeks: 8,
+    final: 15,
+    finalReport: 12,
     start: "2026-11-01",
     valid: "2026-11-30",
     pay: "선급 30%, 잔금 70%",
@@ -39,6 +41,8 @@ export const UX_COLS: CompareCol[] = [
     name: "예시 기관 B",
     total: 9000000,
     weeks: 7,
+    final: 11,
+    finalReport: 11,
     start: null,
     valid: null,
     pay: null,
@@ -64,3 +68,23 @@ export const UX_COLS: CompareCol[] = [
     auto: true,
   },
 ];
+
+/** 전체 일정 미리보기용 임의 값. 어느 기관의 실제 기간도 아니다 */
+export const UX_SCHEDULE = {
+  rows: [
+    { seq: 1, name: "예시 시험 가", category: "일반독성" },
+    { seq: 2, name: "예시 시험 나", category: "일반독성" },
+    { seq: 3, name: "예시 시험 다", category: "유전독성" },
+    { seq: 4, name: "예시 시험 라", category: "안전성약리" },
+  ],
+  items: [
+    { seq: 1, avail: "가능", weeks: "4", afterSeqs: [101], reportWeeks: "2" },
+    { seq: 2, avail: "가능", weeks: "9", afterSeqs: [1, 102], reportWeeks: "3", translationWeeks: "3" },
+    { seq: 3, avail: "가능", weeks: "5", afterSeqs: [101], reportWeeks: "2" },
+    { seq: 4, avail: "가능", weeks: "3", afterSeqs: [], reportWeeks: "2" },
+  ],
+  steps: [
+    { seq: 101, name: "예시 단계 A", weeks: "2", after: [] },
+    { seq: 102, name: "예시 단계 B", weeks: "3", after: [101] },
+  ],
+};

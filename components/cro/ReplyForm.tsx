@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Caret, CheckMark } from "@/components/app/ui";
-import { EMPTY_COMMON, INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem, type RfqView } from "@/lib/cro-data";
+import { EMPTY_COMMON, INCL_KEYS, REPORT_LANGS, type ReplyCommon, type ReplyItem, type RfqView, type ScheduleStep, STEP_SEQ_BASE } from "@/lib/cro-data";
+import { planQuote } from "@/lib/schedule";
+import { ItemSchedule, ScheduleCard } from "@/components/cro/ReplySchedule";
 import { won } from "@/lib/format";
 import { uploadToSigned } from "@/lib/upload";
 import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
@@ -109,7 +111,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
 
 type Loaded = {
   rfq: RfqView;
-  draft: { items: ReplyItem[]; note: string; pdfName: string; status: string; common: ReplyCommon; prefilled?: boolean } | null;
+  draft: { items: ReplyItem[]; note: string; pdfName: string; status: string; common: ReplyCommon; prefilled?: boolean; steps?: ScheduleStep[] } | null;
   expired?: boolean;
   locked?: boolean;
   declined?: boolean;
@@ -132,6 +134,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const [items, setItems] = useState<ReplyItem[]>([]);
   const [common, setCommon] = useState<ReplyCommon>(EMPTY_COMMON);
   const [note, setNote] = useState("");
+  const [steps, setSteps] = useState<ScheduleStep[]>([]);
   const [pdf, setPdf] = useState<File | null>(null);
   const [pdfName, setPdfName] = useState("");
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "failed">("idle");
@@ -157,6 +160,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         setItems(d.draft?.items ?? d.rfq.rows.map((r) => ({ seq: r.seq, avail: "", amount: "", weeks: "", reason: "" })));
         setCommon(d.draft?.common ?? EMPTY_COMMON);
         setNote(d.draft?.note ?? "");
+        setSteps(d.draft?.steps ?? []);
         setPdfName(d.draft?.pdfName ?? "");
         if (d.draft && !d.draft.prefilled) setSaved("saved");
       })
@@ -177,7 +181,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const leave = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if ((dirty || pdf) && !window.confirm("아직 저장·제출하지 않은 변경사항 또는 첨부가 있습니다. 이 화면을 나갈까요?")) e.preventDefault();
   };
-  const queueSave = (nextItems: ReplyItem[], nextNote: string, nextCommon: ReplyCommon) => {
+  const queueSave = (nextItems: ReplyItem[], nextNote: string, nextCommon: ReplyCommon, nextSteps: ScheduleStep[] = steps) => {
     if (readOnly) return;
     setDirty(true);
     const current = ++revision.current;
@@ -191,7 +195,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       const ok = await fetch(`/api/quote/${token}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: nextItems, note: nextNote, common: nextCommon }),
+        body: JSON.stringify({ items: nextItems, note: nextNote, common: nextCommon, steps: nextSteps }),
         signal: ac.signal,
       })
         .then((r) => r.ok)
@@ -219,6 +223,15 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     queueSave(next, note, common);
   };
   const confirmChecks = (seq: number) => update(seq, { checks: [] });
+  const updSteps = (next: ScheduleStep[]) => {
+    if (readOnly) return;
+    // 뺀 단계를 앞 단계로 고른 항목에서도 지운다
+    const live = new Set(next.map((st) => st.seq));
+    const nextItems = items.map((it) => (it.afterSeqs?.some((a) => a >= STEP_SEQ_BASE && !live.has(a)) ? { ...it, afterSeqs: it.afterSeqs.filter((a) => a < STEP_SEQ_BASE || live.has(a)) } : it));
+    setSteps(next);
+    setItems(nextItems);
+    queueSave(nextItems, note, common, next);
+  };
   const updCommon = (patch: Partial<ReplyCommon>) => {
     if (readOnly) return;
     const next = { ...common, ...patch };
@@ -252,6 +265,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const filled = items.filter(done).length;
   const total = items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
   const maxW = Math.max(0, ...items.map((it) => (it.avail !== "불가" && it.weeks ? Number(it.weeks) : 0)));
+  const plan = planQuote({ rows: rfq.rows, items, steps: steps.filter((st) => st.name.trim()) });
+  const finalW = plan.finalReportWeek ?? maxW;
   const allNo = items.length > 0 && items.every((it) => it.avail === "불가");
   const commonOk = !!common.startDate;
   const pending = items.filter((it) => it.checks && it.checks.length).length;
@@ -288,11 +303,11 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         if (!(await uploadToSigned({ name: pdf.name, path: ud.path, signedUrl: ud.signedUrl }, pdf))) throw new Error("PDF 업로드에 실패했습니다. 네트워크를 확인하고 다시 시도해 주세요.");
         pdfRef = { path: ud.path, name: pdf.name, size: pdf.size };
       }
-      const res = await fetch(`/api/quote/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items, note, common, pdf: pdfRef }) });
+      const res = await fetch(`/api/quote/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items, note, common, steps, pdf: pdfRef }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(d.error || "제출에 실패했습니다.");
       setDirty(false); setPdf(null);
-      router.push(`${doneHref}${doneHref.includes("?") ? "&" : "?"}t=${total}&w=${maxW}`);
+      router.push(`${doneHref}${doneHref.includes("?") ? "&" : "?"}t=${total}&w=${finalW}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "제출에 실패했습니다.");
       setBusy(false);
@@ -315,7 +330,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>견적 회신 · {rfq.no} · {filled} / {items.length} 항목 완료</p>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p>요청된 시험별로 수행 가능 여부와 견적을 입력하세요. 금액은 VAT 별도입니다. 예상 소요기간은 동물 입고부터 보고서 초안 발행까지 주 단위로 적어 주세요.</p>
+          <p>요청된 시험별로 수행 가능 여부와 견적을 입력하세요. 금액은 VAT 별도입니다. 예상 소요기간은 동물 입고부터 보고서 초안 발행까지, 최종보고서는 초안 뒤 걸리는 주를 적어 주세요. 앞 단계를 고르면 전체 일정이 순서대로 그려집니다.</p>
         </div>
       </div>
 
@@ -347,6 +362,10 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         <div className="stack" style={{ gap: 12 }}>
           {rfq.rows.map((r) => {
             const it = items.find((x) => x.seq === r.seq)!;
+            const nodes = [
+              ...steps.filter((st) => st.name.trim()).map((st) => ({ seq: st.seq, name: st.name.trim() })),
+              ...rfq.rows.filter((x) => items.find((y) => y.seq === x.seq)?.avail !== "불가").map((x) => ({ seq: x.seq, name: x.name })),
+            ];
             const no = it.avail === "불가";
             const needReason = it.avail === "불가" || it.avail === "조건부 가능";
             const perSample = it.unit === "per_sample";
@@ -402,6 +421,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                     <span>주</span>
                   </div>
                 </div>
+                {!no && <ItemSchedule it={it} rfq={rfq} nodes={nodes} disabled={readOnly || busy} onChange={(patch) => update(r.seq, patch)} />}
                 {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly || busy} onChange={(d) => update(r.seq, { design: d })} />}
                 {!no && r.category === EFFICACY_CAT && <EfficacyCosts value={it.design ?? {}} disabled={readOnly || busy} onChange={(d, total) => update(r.seq, total ? { design: d, amount: total } : { design: d })} />}
                 {needReason && (
@@ -413,6 +433,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         </div>
 
         <div className="stack" style={{ gap: 12 }}>
+          <ScheduleCard rfq={rfq} items={items} steps={steps} startDate={common.startDate} disabled={readOnly || busy} learned={!!data.draft?.prefilled && (steps.length > 0 || items.some((it) => it.reportWeeks || it.afterSeqs?.length))} onSteps={updSteps} />
           <div className="card card--pad stack" style={{ gap: 14 }}>
             <h2 style={{ fontSize: 16, fontWeight: 700 }}>공통 조건</h2>
             <div className="grid2">
@@ -481,7 +502,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
           <div className="card card--pad stack reply-submit" style={{ gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {maxW ? `병렬 수행 ${maxW}주` : "기간 미입력"}</span>
+              <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {plan.finalWeek != null ? `최종보고서 ${plan.finalReportWeek ?? plan.finalWeek}주차` : maxW ? `${maxW}주` : "기간 미입력"}</span>
               <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "-"}</span>
             </div>
             {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}

@@ -46,6 +46,8 @@ export type SchedulePlan = {
   rows: ScheduleRow[];
   /** 최종보고서(번역 포함)가 끝나는 주. 그릴 행이 없으면 null */
   finalWeek: number | null;
+  /** 원문 최종보고서까지 끝나는 주 (번역 제외) */
+  finalReportWeek: number | null;
   /** 시험(보고서 제외)이 모두 끝나는 주 */
   studyEndWeek: number | null;
   /** 주수가 비어 있어 그리지 못한 단계 */
@@ -122,10 +124,11 @@ export function planSchedule(tasks: ScheduleTask[]): SchedulePlan {
       rows.push({ id: `${id}:translation`, parentId: id, kind: "translation", name: "번역 보고서", group, start: ts, end: ts + tw, weeks: tw, critical: false });
     }
   }
-  if (!rows.length) return { rows, finalWeek: null, studyEndWeek: null, incomplete, unknownAfter, cycles: [...cycles] };
+  if (!rows.length) return { rows, finalWeek: null, finalReportWeek: null, studyEndWeek: null, incomplete, unknownAfter, cycles: [...cycles] };
 
   const finalWeek = Math.max(...rows.map((r) => r.end));
   const studyEndWeek = Math.max(...rows.filter((r) => r.kind === "study").map((r) => r.end));
+  const finalReportWeek = Math.max(...rows.filter((r) => r.kind !== "translation").map((r) => r.end));
 
   // 최종보고서 주를 정하는 경로: 마지막에 끝나는 행에서 거꾸로, 시작 주를 정한 앞 단계를 따라간다
   const rowById = new Map(rows.map((r) => [r.id, r]));
@@ -147,7 +150,7 @@ export function planSchedule(tasks: ScheduleTask[]): SchedulePlan {
   };
   rows.filter((r) => r.end === finalWeek).forEach(mark);
 
-  return { rows, finalWeek, studyEndWeek, incomplete, unknownAfter, cycles: [...cycles] };
+  return { rows, finalWeek, finalReportWeek, studyEndWeek, incomplete, unknownAfter, cycles: [...cycles] };
 }
 
 /* ── 기관별 순서 학습 ──────────────────────────────────────
@@ -190,4 +193,51 @@ export function weekMonday(startDate: string, week: number): string | null {
   const dow = (d.getUTCDay() + 6) % 7; // 월=0
   d.setUTCDate(d.getUTCDate() - dow + week * 7);
   return d.toISOString().slice(0, 10);
+}
+
+/* ── 견적 회신 → 일정 ──────────────────────────────────────
+ * 회신 화면(미리보기)·제출 라우트(최종보고서 주 저장)·의뢰자 화면(간트)이 같은 함수를 쓴다
+ */
+
+export type QuoteScheduleInput = {
+  rows: { seq: number; name: string; category: string }[];
+  items: {
+    seq: number;
+    avail?: string | null;
+    weeks: string | number | null | undefined;
+    afterSeqs?: number[] | null;
+    reportWeeks?: string | number | null;
+    translationWeeks?: string | number | null;
+  }[];
+  steps?: { seq: number; name: string; weeks: string | number | null; after?: number[] | null }[];
+};
+
+const num = (v: string | number | null | undefined): number | null => {
+  const n = typeof v === "number" ? v : typeof v === "string" && /^\d{1,3}$/.test(v.trim()) ? Number(v.trim()) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
+/** 불가 항목은 일정에서 뺀다. 일정 단계는 "일정 단계" 묶음으로 */
+export function planQuote(input: QuoteScheduleInput): SchedulePlan {
+  const bySeq = new Map(input.items.map((it) => [it.seq, it]));
+  const tasks: ScheduleTask[] = [];
+  for (const st of input.steps ?? []) {
+    tasks.push({ id: String(st.seq), name: st.name, weeks: num(st.weeks), after: (st.after ?? []).map(String), group: "일정 단계" });
+  }
+  for (const r of input.rows) {
+    const it = bySeq.get(r.seq);
+    if (!it || it.avail === "불가") continue;
+    tasks.push({
+      id: String(r.seq), name: r.name, group: r.category,
+      weeks: num(it.weeks), after: (it.afterSeqs ?? []).map(String),
+      reportWeeks: num(it.reportWeeks ?? null), translationWeeks: num(it.translationWeeks ?? null),
+    });
+  }
+  return planSchedule(tasks);
+}
+
+/** 그래프에 그릴 축 길이 (주). 끝 주보다 조금 넉넉하게, 5주 단위로 올린다 */
+export function scaleWeeks(...finals: (number | null | undefined)[]): number {
+  const m = Math.max(0, ...finals.map((x) => x ?? 0));
+  return Math.max(10, Math.ceil((m + 1) / 5) * 5);
 }

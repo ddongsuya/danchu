@@ -10,7 +10,12 @@ export type CompareCol = {
   id: string;
   name: string;
   total: number;
+  /** 0029 이전 견적: 항목 기간 중 가장 긴 값 */
   weeks: number;
+  /** 0029: 모든 보고서(번역 포함)가 끝나는 주. 기관이 적은 기간·순서로 계산. 없으면 null */
+  final?: number | null;
+  /** 0029: 국문 최종보고서 주 */
+  finalReport?: number | null;
   start: string | null;
   valid: string | null;
   pay: string | null;
@@ -39,13 +44,15 @@ export type CompareCol = {
 };
 export type CompareRowDef = { seq: number; name: string; category: string };
 
-type SortKey = "default" | "total" | "weeks" | "start";
+type SortKey = "default" | "total" | "final" | "start";
 const SORTS: [SortKey, string][] = [
-  ["default", "기본 순서"],
+  ["final", "최종보고서 빠른 순"],
   ["total", "금액 낮은 순"],
-  ["weeks", "기간 짧은 순"],
   ["start", "착수 빠른 순"],
+  ["default", "기본 순서"],
 ];
+/** 최종보고서 순 정렬 값: 일정이 있으면 최종 주, 예전 견적은 가장 긴 항목 기간, 둘 다 없으면 맨 뒤 */
+const finalOf = (c: CompareCol) => c.final ?? (c.weeks || Infinity);
 
 export function CompareBoard({
   no,
@@ -58,7 +65,11 @@ export function CompareBoard({
   rows: CompareRowDef[];
   canSelect: boolean;
 }) {
-  const [sortBy, setSortBy] = useState<SortKey>("default");
+  const [sortBy, setSortBy] = useState<SortKey>("final");
+  // 차이 표시(노랑)는 일정이 있는 견적끼리만 비교한다
+  const finals = cols.map((c) => c.final).filter((x): x is number => typeof x === "number");
+  const best = finals.length > 1 ? Math.min(...finals) : null;
+  const axis = finals.length ? Math.max(...finals) : 0;
   const [shown, setShown] = useState(cols.map((c) => c.id));
   const sorted = useMemo(
     () =>
@@ -69,8 +80,8 @@ export function CompareBoard({
             ? 0
             : sortBy === "total"
               ? (a.total || Infinity) - (b.total || Infinity)
-              : sortBy === "weeks"
-                ? (a.weeks || Infinity) - (b.weeks || Infinity)
+              : sortBy === "final"
+                ? finalOf(a) - finalOf(b) || (a.total || Infinity) - (b.total || Infinity)
                 : (a.start || "9999").localeCompare(b.start || "9999"),
         ),
     [cols, shown, sortBy],
@@ -111,6 +122,30 @@ export function CompareBoard({
         ),
       },
       {
+        label: "최종보고서",
+        cell: (c) =>
+          c.final != null ? (
+            <>
+              <b className="tnum">국문 {c.finalReport ?? c.final}주차</b>
+              {c.finalReport != null && c.final > c.finalReport && <span className="tnum"> · 번역 포함 {c.final}주차</span>}
+              {best != null && c.final > best && <> <mark className="cmp-gap">+{c.final - best}주</mark></>}
+              <span className="cmp-mini" aria-hidden="true">
+                <i style={{ width: `${((Math.min(c.final, best ?? c.final) / axis) * 100).toFixed(2)}%` }} />
+                {best != null && c.final > best && <b style={{ left: `${((best / axis) * 100).toFixed(2)}%`, width: `${(((c.final - best) / axis) * 100).toFixed(2)}%` }} />}
+              </span>
+              <p className="fld__help">착수 주부터 센 주차 · 기관이 적은 기간과 순서 기준</p>
+              <Link href={`/app/r/${no}/q/${c.id}#schedule`} style={{ display: "inline-block", marginTop: 6, fontSize: 13, fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 4 }}>전체 일정 보기</Link>
+            </>
+          ) : c.weeks ? (
+            <>
+              {c.weeks}주
+              <p className="fld__help">항목 기간 중 가장 긴 값. 순서와 보고서 기간은 기관에 확인하세요.</p>
+            </>
+          ) : (
+            "미입력"
+          ),
+      },
+      {
         label: "제외·별도 비용",
         cell: (c) => (
           <span style={{ whiteSpace: "pre-wrap" }}>
@@ -141,10 +176,6 @@ export function CompareBoard({
       {
         label: "착수 가능일",
         cell: (c) => (c.start ? md(c.start) : "기관 확인 필요"),
-      },
-      {
-        label: "예상 소요기간",
-        cell: (c) => (c.weeks ? `${c.weeks}주 (병렬 수행 기준)` : "미입력"),
       },
       {
         label: "등록된 GLP 정보",

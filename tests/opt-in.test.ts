@@ -65,7 +65,7 @@ vi.mock("@/lib/supabase", () => {
     from: builder,
     rpc: async (fn: string, args: Record<string, unknown>) => {
       fx.rpcCalls.push({ fn, args });
-      if (fn === "danchu_schema_version") return { data: 28, error: null };
+      if (fn === "danchu_schema_version") return { data: 29, error: null };
       return { data: fx.rpcResult[fn] ?? null, error: null };
     },
     storage: { from: () => ({ createSignedUrl: fx.signedUrl, list: async () => ({ data: [{ name: "x" }], error: null }), createSignedUploadUrl: async () => ({ data: { signedUrl: "u", token: "t" }, error: null }) }) },
@@ -93,7 +93,7 @@ vi.mock("@/lib/mail", async (orig) => ({ ...(await orig<typeof import("@/lib/mai
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/audit", async (orig) => ({ ...(await orig<typeof import("@/lib/audit")>()), audit: fx.audit }));
 vi.mock("@/lib/rate-limit", async (orig) => ({ ...(await orig<typeof import("@/lib/rate-limit")>()), rateLimited: async () => false }));
-vi.mock("@/lib/catalog-db", () => ({ catalogMap: fx.catalogMap, learnFromSubmission: async () => {} }));
+vi.mock("@/lib/catalog-db", () => ({ catalogMap: fx.catalogMap, learnFromSubmission: async () => {}, loadScheduleSteps: async () => [], stepKey: (n: string) => `step::${n}` }));
 vi.mock("@/lib/observe", () => ({ captureError: () => {}, sentryEnabled: () => false, maskEmail: (s: string) => s }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: (fn: () => unknown) => void fn() }));
 

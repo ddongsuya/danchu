@@ -9,6 +9,9 @@ import { INCL_KEYS } from "@/lib/cro-data";
 import { Crumb } from "@/components/app/ui";
 import { comma, md, won, ymd } from "@/lib/format";
 import { comparisonOpened } from "@/lib/reply-window";
+import { hasSchedule, planOfStored } from "@/lib/quote-schedule";
+import { scaleWeeks } from "@/lib/schedule";
+import { ScheduleGantt } from "@/components/ScheduleGantt";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +31,11 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const { data: org } = q.cro_org_id ? await sb.from("cro_orgs").select("glp_certs, aaalac, website, intro").eq("id", q.cro_org_id).maybeSingle() : { data: null };
   const certs = (org?.glp_certs ?? []) as string[];
   const cov = glpCoverage(Array.isArray(rfq.payload.authority) ? (rfq.payload.authority as string[]) : [], certs);
+  // 전체 일정: 같은 요청의 제출 견적 중 가장 빠른 최종보고서 주와 비교한다 (차이만 노랑)
+  const scheduled = d.quotes.filter((x) => x.status === "submitted" && hasSchedule(x));
+  const others = scheduled.map((x) => x.final_weeks as number);
+  const best = others.length > 1 ? Math.min(...others) : null;
+  const plan = hasSchedule(q) ? planOfStored(q) : null;
   const selectable = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
 
   return (
@@ -112,7 +120,9 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
               ["제출처 대응", cov.ok ? "대응 가능 ✓" : `등록 정보 확인 필요 · ${cov.missing.join(", ")} 미보유`],
               ["AAALAC", org?.aaalac == null ? "-" : org.aaalac ? "인증" : "없음"],
               ["착수 가능일", md(q.start_date)],
-              ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (병렬 수행 기준)` : "-"],
+              hasSchedule(q)
+                ? ["최종보고서", `국문 ${q.final_report_weeks ?? q.final_weeks}주차${q.final_report_weeks != null && q.final_weeks! > q.final_report_weeks ? ` · 번역 포함 ${q.final_weeks}주차` : ""}`]
+                : ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (항목 기간 중 가장 긴 값)` : "-"],
               ["결제 조건", q.pay_terms ? `${q.pay_terms} (%)` : "-"],
               ["견적 유효기간", md(q.valid_until)],
               ["보고서 언어", q.report_lang || "-"],
@@ -137,6 +147,18 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           )}
         </div>
       </div>
+
+      <section id="schedule" className="card card--pad stack" style={{ gap: 16, marginTop: 16, scrollMarginTop: 80 }} aria-labelledby="schedule-title">
+        <div className="stack" style={{ gap: 4 }}>
+          <h2 id="schedule-title" style={{ fontSize: 18, fontWeight: 700 }}>전체 일정</h2>
+          <p className="fld__help" style={{ margin: 0 }}>기관이 회신에 적은 시험 기간, 앞 단계, 보고서 기간으로 그린 예상 일정입니다. 실제 일정은 계약 때 기관과 확인하세요.</p>
+        </div>
+        {plan ? (
+          <ScheduleGantt plan={plan} startDate={q.start_date} bestFinal={best} scale={scaleWeeks(...others, q.final_weeks)} />
+        ) : (
+          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>이 견적에는 순서와 보고서 기간이 없습니다. 항목별 기간은 위 목록에서 확인하세요.</p>
+        )}
+      </section>
 
       {selectable && (
         <div className="cta">
