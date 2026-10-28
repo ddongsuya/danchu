@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -10,6 +11,7 @@ import { CompareBoard, type CompareCol } from "@/components/CompareBoard";
 import { md } from "@/lib/format";
 import { comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-window";
 import { occupiesSeat } from "@/lib/request-policy";
+import { captureError } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,15 @@ export default async function Compare({ params }: { params: Promise<{ no: string
         </div>
       </>
     );
+  }
+
+  // 의뢰자 본인이 열린 비교표를 연 기록 (0028). 운영자가 연 것은 세지 않는다. 기록이 실패해도 화면은 그대로 보여 준다
+  if (s.profile.role !== "admin") {
+    const rfqId = rfq.id;
+    after(async () => {
+      const { error } = await getSupabaseAdmin()!.rpc("record_compare_view", { p_rfq: rfqId });
+      if (error) captureError(error, "compare.record_view", { rfq: rfq.rfq_no });
+    });
   }
 
   // 금액 오름차순, 같으면 기관명 순. 정렬이 없으면 새로 고칠 때마다 열 순서가 바뀐다
