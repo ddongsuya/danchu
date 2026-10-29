@@ -21,7 +21,7 @@ export type DistributeResult = {
    * DB 트리거가 막은 이유. request_not_open: 회신 마감(compared_at)·선정 이후 / nominees_only: "지명 기관에만 안내" 요청에 자동 매칭 안내 (0023).
    * 자리 수로는 막지 않는다. 안내는 분야가 맞는 기관 모두에게 가고, 자리는 기관이 참여할 때 join_offer 가 센다
    */
-  blocked?: "request_not_open" | "nominees_only";
+  blocked?: "request_not_open" | "nominees_only" | "reply_too_soon";
   /** 이번 호출로 요청이 바뀐 값 (처음 안내한 시각, 다시 잡은 참여 결정 기한). 같은 요청으로 이어 부를 때 넘긴다 */
   after?: { distributed_at: string | null; join_by: string | null; status: string; reply_by: string | null };
 };
@@ -130,6 +130,9 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
   const sb = getSupabaseAdmin();
   const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   if (!sb || !orgs.length) return res;
+  // 자동 안내는 회신 기한까지 2영업일이 안 남았으면 보내지 않는다. 받은 날이 마감인 안내는 기관이 회신할 수 없다 (2026-10-29 점검: 0005 안내일 = 기한).
+  // 운영자가 직접 보내는 안내는 막지 않는다. 막힌 요청은 운영자 홈 "멈춘 요청"에 기한 조정 필요로 뜬다
+  if (auto && replyBy < addBusinessDays(nowSeoul(), 2).toLocaleDateString("sv-SE")) return { ...res, blocked: "reply_too_soon", skipped: orgs.map((o) => o.name) };
   // 마이그레이션이 덜 된 DB 에 새 코드가 배포됐으면 초대를 만들기 전에 멈춘다 (README "배포 순서")
   await assertSchemaReady(sb);
   let rfq = rfqIn;
@@ -288,16 +291,15 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
 }
 
 /**
- * 배포 메일이 가지 않은 초대(mailed_at 없음, 최근 3일, 아직 열린 것)를 다시 보낸다. 매일 cron 이 부른다.
- * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다
+ * 배포 메일이 가지 않은 초대(mailed_at 없음, 회신 기한 전, 아직 열린 것)를 다시 보낸다. 매일 cron 이 부른다.
+ * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다. 예전에는 최근 3일 안내만 다시 보내서, 그 사이 실패가 이어지면 기관이 끝내 안내를 받지 못했다 (2026-10-29 점검: 16건 모두 미발송)
  */
 export async function resendUnmailedInvites(): Promise<{ tried: number; sent: number }> {
   const sb = getSupabaseAdmin();
   const out = { tried: 0, sent: 0 };
   if (!sb) return out;
-  const since = new Date(Date.now() - 3 * 864e5).toISOString();
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data: invites } = await sb.from("rfq_invites").select("*").is("mailed_at", null).in("status", ["sent", "draft"]).gte("sent_at", since).gte("reply_by", today).limit(50);
+  const { data: invites } = await sb.from("rfq_invites").select("*").is("mailed_at", null).in("status", ["sent", "draft"]).gte("reply_by", today).limit(50);
   for (const inv of invites ?? []) {
     out.tried++;
     const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();

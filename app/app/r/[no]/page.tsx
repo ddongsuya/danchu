@@ -64,6 +64,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const viaNote = via === "auto" ? " (보고 7일 뒤 자동 확정)" : via === "operator" ? " (운영자가 기관과 확인한 뒤 확정)" : "";
   // 비교표가 열린 뒤 보류한 요청만 다시 연다. 열리기 전에 보류한 요청을 다시 열면 기한 전 선정 길이 되므로 막는다 (결정 1)
   const reopenUntil = rfq.outcome === "보류" && rfq.status === "closed" && !!rfq.compared_at && rfq.outcome_at && submitted > 0 && Date.now() - new Date(rfq.outcome_at).getTime() <= REOPEN_DAYS * 864e5 ? ymd(new Date(new Date(rfq.outcome_at).getTime() + REOPEN_DAYS * 864e5).toISOString()) : "";
+  // 다음 할 일 (2026-10-29 과업 점검 2·5). 의뢰자가 지금 할 수 있는 일 하나를 제목 아래에 둔다
+  const todayKst = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  const noJoinPastDue = ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !!rfq.reply_by && rfq.reply_by < todayKst && joinedCount === 0;
+  const contractOpen = !!d.award && !reported && ["selected", "contracting"].includes(rfq.status);
   const chips = [
     ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
     rfq.cro_count ? (rfq.cro_count === "전체" ? "참여 자리 제한 없음" : `참여 자리 ${rfq.cro_count}`) : "",
@@ -100,9 +104,22 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         </div>
         <div className="ph__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b2">이 요청 문의하기</Link>
           {/* 넓은 화면은 위쪽 버튼, 좁은 화면은 바닥에 붙는 아래 버튼 하나만 보인다 */}
-          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 only-wide">견적 {submitted}건 비교</Link>}
+          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className={`${d.award ? "b2" : "b1"} only-wide`}>견적 {submitted}건 비교</Link>}
         </div>
       </div>
+
+      {noJoinPastDue && (
+        <div className="next-step" role="status">
+          <p><b>회신 기한까지 참여한 기관이 없었습니다.</b> 기한을 늘려 다시 안내받거나 요청을 마무리할 수 있습니다.</p>
+          <div className="next-step__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b1">기한 연장 요청</Link><a href="#end" className="b2">요청 마무리</a></div>
+        </div>
+      )}
+      {contractOpen && d.award && (
+        <div className="next-step" role="status">
+          <p><b>{d.award.cro_name}과 계약을 진행해 주세요.</b> 계약은 기관과 직접 맺고, 체결되면 기관이 결과를 보고합니다.</p>
+          {croContact?.email && <div className="next-step__actions"><a href={`mailto:${croContact.email}?subject=${encodeURIComponent(`[단추 ${rfq.rfq_no}] 계약 진행`)}`} className="b1">기관 담당자에게 메일</a></div>}
+        </div>
+      )}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card" style={{ padding: "20px 20px 8px" }}>
@@ -204,7 +221,6 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             )}
           </div>
 
-          {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <OutcomeForm no={rfq.rfq_no} compared={canCompare} />}
           {!d.award && rfq.outcome && (
             <div className="note" style={{ flexDirection: "column", gap: 4 }}>
               <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>
@@ -309,7 +325,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         </div>
       </div>
 
-      {canCompare && (
+      {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <div id="end" style={{ marginTop: 24 }}><OutcomeForm no={rfq.rfq_no} compared={canCompare} /></div>}
+
+      {canCompare && !d.award && (
         <div className="cta only-narrow">
           <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">견적 {submitted}건 비교하기</Link>
         </div>

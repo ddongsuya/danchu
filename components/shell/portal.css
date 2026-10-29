@@ -638,3 +638,20 @@
 .rs-step { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--card-line); }
 .rs-step__row { display: flex; gap: 8px; align-items: center; }
 .rs-step__row .inp { flex: 1; min-width: 0; }
+
+/* 다음 할 일 (2026-10-29 과업 점검 2·5): 제목 아래 한 줄. 지금 할 수 있는 일 하나만 */
+.next-step { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 20px; margin-bottom: 20px; border: 1px solid var(--ink); border-radius: var(--r-md); background: var(--wh); font-size: 14px; line-height: 1.55; color: var(--body); }
+.next-step p { margin: 0; max-width: 70ch; }
+.next-step b { color: var(--ink); }
+.next-step__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 767px) { .next-step__actions { width: 100%; } .next-step__actions > * { flex: 1; text-align: center; } }
+
+/* 멈춘 요청 (운영자 홈, 과업 점검 1·6) */
+.stuck { margin-bottom: 24px; }
+.stuck h2 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.stuck__row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--track); font-size: 14px; }
+.stuck__row:last-child { border-bottom: 1px solid var(--track); }
+.stuck__no { font-weight: 600; font-variant-numeric: tabular-nums; }
+.stuck__why { color: var(--body); min-width: 0; }
+.stuck__why small { display: block; color: var(--muted); font-size: 12px; }
+@media (max-width: 767px) { .stuck__row { grid-template-columns: minmax(0, 1fr) auto; } .stuck__why { grid-column: 1 / -1; grid-row: 2; } }

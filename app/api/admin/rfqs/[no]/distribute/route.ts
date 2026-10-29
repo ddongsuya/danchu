@@ -24,6 +24,7 @@ const BLOCKED_MSG = {
   request_not_open: "비교표가 열렸거나 선정이 끝난 요청이라 참여 안내를 더 보낼 수 없습니다. 열린 비교표는 다시 열 수 없으니, 더 받아야 하면 새 요청으로 안내해 주세요.",
   // 운영자 수동 안내(manual)는 막히지 않는다. 자동 매칭 안내만 해당 (0023)
   nominees_only: "의뢰자가 지명 기관에만 안내하도록 고른 요청입니다. 자동 매칭 안내는 보내지 않습니다.",
+  reply_too_soon: "회신 기한까지 2영업일이 남지 않아 자동 안내를 보내지 않았습니다. 회신 기한을 늘린 뒤 다시 안내해 주세요.",
 };
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull("admin");

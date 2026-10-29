@@ -3,6 +3,7 @@ import type { Tables } from "./db-types";
 import type { CroOrg } from "./auth";
 import { likeExact, orValue } from "./sql";
 import { participation } from "./request-policy";
+import { stuckReasons, type Stuck } from "./stuck";
 
 /* ── 표 행 타입 — lib/db-types.ts 의 별칭. 컬럼이 바뀌면 그쪽을 고친다 ── */
 
@@ -233,6 +234,33 @@ export async function isBillingClosed(monthFirstDay: string): Promise<boolean> {
 /** 회신 기한이 지나도 비교표가 열리지 않으면 운영자가 정리해야 하는 상태 */
 const OVERDUE_STATUSES = ["received", "distributed", "quoted"];
 const todaySeoulDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+
+/** 운영자 홈 "멈춘 요청": 열린 요청마다 lib/stuck.ts 이유를 붙여, 오래 멈춘 순으로 */
+export async function listStuckRequests(): Promise<(Pick<RfqRow, "rfq_no" | "company" | "substance"> & { reasons: Stuck[] })[]> {
+  const c = sb();
+  const { data: rows } = await c
+    .from("rfq_requests")
+    .select("id, rfq_no, company, substance, status, reply_by, compared_at, cro_count, distributed_at")
+    .in("status", ["received", "distributed", "quoted", "selected", "contracting"])
+    .limit(200);
+  const list = rows ?? [];
+  if (!list.length) return [];
+  const ids = list.map((r) => r.id);
+  const [{ data: inv }, { data: aw }] = await Promise.all([
+    c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at, mailed_at").in("rfq_id", ids),
+    c.from("rfq_awards").select("rfq_id, awarded_at, contract_reported_at, cro_name").in("rfq_id", ids),
+  ]);
+  const today = todaySeoulDate();
+  return list
+    .map((r) => ({
+      rfq_no: r.rfq_no,
+      company: r.company,
+      substance: r.substance,
+      reasons: stuckReasons(r, (inv ?? []).filter((i) => i.rfq_id === r.id), (aw ?? []).find((a) => a.rfq_id === r.id) ?? null, today),
+    }))
+    .filter((r) => r.reasons.length)
+    .sort((a, b) => Math.max(...b.reasons.map((x) => x.days)) - Math.max(...a.reasons.map((x) => x.days)));
+}
 
 export async function countBy() {
   const c = sb();
