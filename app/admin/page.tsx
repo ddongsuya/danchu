@@ -2,6 +2,7 @@ import { needsCda, confidentialAccess, participationLabel } from "@/lib/request-
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { countBy, dbReady, listAllRequests, listStuckRequests } from "@/lib/data";
+import { StuckList } from "@/components/admin/StuckList";
 import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { dday, md, ymd } from "@/lib/format";
@@ -48,16 +49,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </div>
 
       {/* 멈춘 요청이 맨 위 (2026-10-29 과업 점검 1·6). 운영자는 들어오자마자 사람 손이 필요한 요청을 본다 */}
-      <section className="stuck" aria-labelledby="stuck-h">
-        <h2 id="stuck-h">멈춘 요청 {stuck.length}</h2>
-        {stuck.length === 0 ? <p style={{ fontSize: 14, color: "var(--muted)" }}>사람 손이 필요한 요청이 없습니다.</p> : stuck.map((r) => (
-          <div key={r.rfq_no} className="stuck__row">
-            <span className="stuck__no">{r.rfq_no}</span>
-            <span className="stuck__why">{r.reasons.map((x) => x.label).join(", ")}<small>{r.company} · {r.substance}</small></span>
-            <Link href={`/admin/r/${r.rfq_no}`} className="b2">{r.reasons[0].action}</Link>
-          </div>
-        ))}
-      </section>
+      <StuckList rows={stuck} />
 
       {(missingEnv.length > 0 || noSentry || !schema.ok) && (
         <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>

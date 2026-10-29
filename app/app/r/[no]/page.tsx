@@ -1,5 +1,6 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
+import { NextStep } from "@/components/app/NextStep";
 import { ContractConfirm, ReopenRequest, StartNow } from "@/components/app/RequestActions";
 import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -108,18 +109,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         </div>
       </div>
 
-      {noJoinPastDue && (
-        <div className="next-step" role="status">
-          <p><b>회신 기한까지 참여한 기관이 없었습니다.</b> 기한을 늘려 다시 안내받거나 요청을 마무리할 수 있습니다.</p>
-          <div className="next-step__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b1">기한 연장 요청</Link><a href="#end" className="b2">요청 마무리</a></div>
-        </div>
-      )}
-      {contractOpen && d.award && (
-        <div className="next-step" role="status">
-          <p><b>{d.award.cro_name}과 계약을 진행해 주세요.</b> 계약은 기관과 직접 맺고, 체결되면 기관이 결과를 보고합니다.</p>
-          {croContact?.email && <div className="next-step__actions"><a href={`mailto:${croContact.email}?subject=${encodeURIComponent(`[단추 ${rfq.rfq_no}] 계약 진행`)}`} className="b1">기관 담당자에게 메일</a></div>}
-        </div>
-      )}
+      {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
+      {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card" style={{ padding: "20px 20px 8px" }}>
