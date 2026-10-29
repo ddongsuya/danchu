@@ -18,10 +18,10 @@ export const metadata: Metadata = { title: "단추 디자인 검토", robots: { 
 export const dynamic = "force-dynamic";
 
 const REQUESTS: RequestListItem[] = [
-  { id: "preview-1", rfq_no: "DEMO-001", status: "compared", substance: "예시 물질 A · 반복투여 독성", categories: ["일반독성", "PK/TK/ADME·생체시료분석"], invites: 3, submitted: 3, reply_by: "2026-10-08", created_at: "2026-09-29" },
-  { id: "preview-2", rfq_no: "DEMO-002", status: "distributed", substance: "예시 물질 B · 유전독성", categories: ["유전독성"], invites: 5, submitted: 2, reply_by: "2026-10-12", created_at: "2026-09-28" },
-  { id: "preview-3", rfq_no: "DEMO-003", status: "received", substance: "예시 물질 C · 안전성약리", categories: ["안전성약리"], invites: 0, submitted: 0, reply_by: "2026-10-15", created_at: "2026-09-27" },
-  { id: "preview-4", rfq_no: "DEMO-004", status: "closed", substance: "예시 물질 D · 조제물분석", categories: ["조제물분석"], invites: 3, submitted: 3, reply_by: "2026-09-20", created_at: "2026-09-16" },
+  { id: "preview-1", rfq_no: "DEMO-001", status: "compared", substance: "예시 물질 A · 반복투여 독성", categories: ["일반독성", "PK/TK/ADME·생체시료분석"], joined: 3, cap: 3, submitted: 3, reply_by: "2026-10-08", created_at: "2026-09-29" },
+  { id: "preview-2", rfq_no: "DEMO-002", status: "distributed", substance: "예시 물질 B · 유전독성", categories: ["유전독성"], joined: 5, cap: 5, submitted: 2, reply_by: "2026-10-12", created_at: "2026-09-28" },
+  { id: "preview-3", rfq_no: "DEMO-003", status: "received", substance: "예시 물질 C · 안전성약리", categories: ["안전성약리"], joined: 0, cap: 0, submitted: 0, reply_by: "2026-10-15", created_at: "2026-09-27" },
+  { id: "preview-4", rfq_no: "DEMO-004", status: "closed", substance: "예시 물질 D · 조제물분석", categories: ["조제물분석"], joined: 3, cap: 3, submitted: 3, reply_by: "2026-09-20", created_at: "2026-09-16" },
 ];
 
 /** Isolated visual fixtures. No auth bypass, DB reads, or mutations. Off by default. */

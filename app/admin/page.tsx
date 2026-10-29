@@ -1,4 +1,4 @@
-import { needsCda, confidentialAccess } from "@/lib/request-policy";
+import { needsCda, confidentialAccess, participationLabel } from "@/lib/request-policy";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { countBy, dbReady, listAllRequests } from "@/lib/data";
@@ -111,7 +111,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.categories.join(" · ")}{needsCda(r.confidentiality) ? " · CDA" : ""}</div>
                   </td>
                   <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill></td>
-                  <td className="tnum" data-label="회신">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
+                  <td className="tnum" data-label="회신">{`제출 ${r.submitted} · ${participationLabel(r)}`}</td>
                   <td className="tnum" data-label="회신 기한" style={{ whiteSpace: "nowrap" }}>
                     {r.reply_by ? md(r.reply_by) : "-"}
                     {r.reply_by && ["received", "distributed", "quoted"].includes(r.status) && dday(r.reply_by).n < 0 && <div style={{ fontSize: 12, color: "var(--err)" }}>기한 지남</div>}

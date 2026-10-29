@@ -1,7 +1,7 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
 import { ContractConfirm, ReopenRequest, StartNow } from "@/components/app/RequestActions";
-import { needsCda, occupiesSeat, seatState, REOPEN_DAYS } from "@/lib/request-policy";
+import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -27,7 +27,6 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
     : STAGES;
   const idx = Math.max(0, stages.findIndex((s) => s.key === rfq.status));
   // 운영자가 취소한 초대는 숫자에서 뺀다
-  const submitted = d.invites.filter((i) => i.status === "submitted" && !i.revoked_at && !i.withdrawn_at).length;
   // 비교표가 열리기 전 (2026-10-20 결정 1): 의뢰자에게는 진행 숫자(참여 n곳, 제출 m곳)만 보인다.
   // 일반 기관의 이름·금액·견적은 열릴 때 함께 공개한다. 의뢰자가 지명한 기관만 이름과 참여 여부(참여·불참·결정 전)를 보여 준다
   const opened = !!rfq.compared_at;
@@ -38,8 +37,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   // 비교표가 열린 뒤: 참여한 기관과 지명 기관 결과 (0023). 일반 기관의 참여 결정 전·불참·철회는 그때도 보이지 않는다
   const shown = sponsorVisibleInvites(d.invites);
   const seats = seatState(rfq.cro_count, rfq.join_by, d.invites);
-  const joinedCount = seats.used;
-  const seatLine = seats.cap == null ? `참여 ${joinedCount}곳` : `참여 ${joinedCount}/${seats.cap}곳`;
+  const counts = participation(rfq.cro_count, d.invites);
+  const { submitted, joined: joinedCount } = counts;
+  const seatLine = participationLabel(counts);
   const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
   // 선택은 비교표가 열린 뒤에만 (0025 select_quote: 열리기 전이면 not_compared). 기한 전 선정 단계는 없다
   const canCompare = opened && submitted > 0;
