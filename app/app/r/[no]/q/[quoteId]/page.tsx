@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { glpCoverage } from "@/lib/quote-items";
 import { INCL_KEYS } from "@/lib/cro-data";
 import { Crumb } from "@/components/app/ui";
-import { comma, md, won, ymd } from "@/lib/format";
+import { comma, dday, md, payTerms, won, ymd } from "@/lib/format";
 import { comparisonOpened } from "@/lib/reply-window";
 import { hasSchedule, planOfStored } from "@/lib/quote-schedule";
 import { scaleWeeks } from "@/lib/schedule";
@@ -47,7 +47,15 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <h1>{q.cro_name}</h1>
           {q.auto && <p className="note note--warn">기관 확인 전 예비 견적입니다. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
           {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려 드립니다.</p>}
-          {!quoteSelectable(q) && <Link href={`/app/support?rfq=${rfq.rfq_no}`}>정식 견적·유효기간 확인 요청</Link>}
+          {/* 아직 고를 수 있는 요청에서만 왜 선택할 수 없는지 알린다. 선정이 끝난 뒤에는 보이지 않는다 */}
+          {!quoteSelectable(q) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && (
+            <p className="note" style={{ marginTop: 10 }}>
+              <span>
+                {q.valid_until && dday(q.valid_until).n < 0 ? "견적 유효기간이 지나 바로 선택할 수 없습니다." : "정식 견적서와 착수일이 확인되면 선택할 수 있습니다."}{" "}
+                <Link href={`/app/support?rfq=${rfq.rfq_no}`} style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>정식 견적·유효기간 문의하기</Link>
+              </span>
+            </p>
+          )}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)", letterSpacing: ".04em" }}>총 견적액 · VAT 별도</div>
@@ -58,8 +66,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
         </div>
         <div className="ph__actions">
           {q.pdf_path && <a href={`/api/quotes/${q.id}/pdf`} className="b2">견적서 원본(PDF)</a>}
-          {selectable && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1">이 CRO 선택</Link>}
-          {rfq.selected_quote_id === q.id && <span className="pill pill--ok">선택한 CRO</span>}
+          {selectable && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 only-wide">이 기관 선택</Link>}
+          {rfq.selected_quote_id === q.id && <span className="pill pill--ok">선택한 기관</span>}
         </div>
       </div>
 
@@ -82,7 +90,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <span className={`pill ${it.avail === "가능" ? "pill--ok" : it.avail === "조건부 가능" ? "pill--warn" : "pill--sf"}`}>{it.avail || "-"}</span>
+                  {/* "가능"은 기본값이라 표시하지 않는다. 조건부·불가만 눈에 띄게 */}
+                  {it.avail && it.avail !== "가능" && <span className={`pill ${it.avail === "조건부 가능" ? "pill--warn" : "pill--sf"}`}>{it.avail}</span>}
                   {it.weeks ? <span className="pill pill--sf">{it.weeks}주</span> : null}
                   {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{it.reason}</span>}
                 </div>
@@ -117,21 +126,21 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <div className="card card--rows">
             {[
               ["GLP 인증", certs.join(" · ") || "-"],
-              ["제출처 대응", cov.ok ? "대응 가능 ✓" : `등록 정보 확인 필요 · ${cov.missing.join(", ")} 미보유`],
+              ["제출처 대응", cov.ok ? "등록 정보 있음" : `등록 정보 확인 필요 · ${cov.missing.join(", ")} 미보유`],
               ["AAALAC", org?.aaalac == null ? "-" : org.aaalac ? "인증" : "없음"],
               ["착수 가능일", md(q.start_date)],
               hasSchedule(q)
                 ? ["최종보고서", `국문 ${q.final_report_weeks ?? q.final_weeks}주차${q.final_report_weeks != null && q.final_weeks! > q.final_report_weeks ? ` · 번역 포함 ${q.final_weeks}주차` : ""}`]
                 : ["총 소요기간", q.total_weeks ? `${q.total_weeks}주 (항목 기간 중 가장 긴 값)` : "-"],
-              ["결제 조건", q.pay_terms ? `${q.pay_terms} (%)` : "-"],
-              ["견적 유효기간", md(q.valid_until)],
+              ["결제 조건", payTerms(q.pay_terms) || "-"],
+              ["견적 유효기간", q.valid_until ? `${md(q.valid_until)}${dday(q.valid_until).n < 0 ? " · 기한 지남" : ""}` : "-"],
               ["보고서 언어", q.report_lang || "-"],
               // 필요량은 선정 뒤 기관이 수주 화면에서 적는다 (0027). 예전 회신에 적힌 값만 보여 준다
               ...(q.substance_qty ? [["시험물질 필요량 (회신 때 적은 값)", q.substance_qty]] : []),
             ].map(([k, v]) => (
               <div key={k} className="kv">
                 <span className="kv__k">{k}</span>
-                <span className="kv__v" style={{ color: k === "제출처 대응" ? (cov.ok ? "var(--ok)" : "var(--err)") : undefined }}>{v}</span>
+                <span className="kv__v" style={{ color: k === "제출처 대응" && !cov.ok ? "var(--err)" : undefined }}>{v}</span>
               </div>
             ))}
           </div>
@@ -141,7 +150,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
               <span style={{ width: 38, height: 38, borderRadius: 9, background: "var(--tint)", color: "var(--brand)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flex: "none" }}>PDF</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{q.pdf_name}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{q.pdf_size ? `${(q.pdf_size / 1024 / 1024).toFixed(1)}MB · ` : ""}계약의 정본</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{q.pdf_size ? `${(q.pdf_size / 1024 / 1024).toFixed(1)}MB · ` : ""}견적서 원본</div>
               </div>
             </a>
           )}
@@ -161,8 +170,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
       </section>
 
       {selectable && (
-        <div className="cta">
-          <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 blg bfull">이 CRO 선택하기</Link>
+        <div className="cta only-narrow">
+          <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 blg bfull">이 기관 선택하기</Link>
         </div>
       )}
     </>

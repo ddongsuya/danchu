@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
-import { comma, dday, md, won } from "@/lib/format";
+import { comma, dday, md, payTerms, won } from "@/lib/format";
 import { quoteKindLabel } from "@/lib/concierge";
 
 export type CompareCol = {
@@ -51,6 +51,31 @@ const SORTS: [SortKey, string][] = [
   ["start", "착수 빠른 순"],
   ["default", "기본 순서"],
 ];
+/** 시험별 금액 칸 (넓은 화면의 표와 좁은 화면의 세로 목록이 같이 쓴다) */
+function itemCell(c: CompareCol, seq: number): React.ReactNode {
+  const it = c.items.find((i) => i.seq === seq);
+  if (!it) return "회신 없음";
+  if (it.avail === "불가") return <span>수행 불가{it.note ? ` · ${it.note}` : ""}</span>;
+  return (
+    <>
+      <b className="tnum">{it.amount == null ? "미입력" : comma(it.amount)}</b>
+      <p>
+        {it.weeks ? `${it.weeks}주` : "기간 미입력"}
+        {it.avail === "조건부 가능" ? " · 조건부 가능" : ""}
+      </p>
+      {it.design && <p>{it.design}</p>}
+      {it.explain?.map(([k, v]) => (
+        <p key={k}>
+          <b>{k}</b>
+          <br />
+          {v}
+        </p>
+      ))}
+      {it.note && <p style={{ whiteSpace: "pre-wrap" }}>{it.note}</p>}
+    </>
+  );
+}
+
 /** 최종보고서 순 정렬 값: 일정이 있으면 최종 주, 예전 견적은 가장 긴 항목 기간, 둘 다 없으면 맨 뒤 */
 const finalOf = (c: CompareCol) => c.final ?? (c.weeks || Infinity);
 
@@ -192,7 +217,7 @@ export function CompareBoard({
           </>
         ),
       },
-      { label: "결제 조건", cell: (c) => c.pay || "기관 기재 없음" },
+      { label: "결제 조건", cell: (c) => payTerms(c.pay) || "기관 기재 없음" },
       {
         label: "견적 유효기간",
         cell: (c) =>
@@ -220,7 +245,8 @@ export function CompareBoard({
         먼저 확인하세요. 예비 견적은 기관 확인 후 정식 견적서를 받아야 선택할 수
         있습니다.
       </p>
-      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+      {/* 기관이 두 곳 이하면 고를 것이 없어 기관 고르기를 감춘다 */}
+      {cols.length > 2 && <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
         <legend style={{ marginBottom: 10 }}>비교할 기관</legend>
         <div className="chips">
           {cols.map((c) => (
@@ -256,7 +282,7 @@ export function CompareBoard({
             전체 보기
           </button>
         </div>
-      </fieldset>
+      </fieldset>}
       <label className="fld" style={{ maxWidth: 250 }}>
         <span className="fld__lab">표시 순서</span>
         <select
@@ -271,12 +297,54 @@ export function CompareBoard({
           ))}
         </select>
       </label>
-      <p className="fld__help">
+      {/* 좁은 화면: 표 대신 항목마다 기관 값을 위아래로 쌓는다 (가로 스크롤 표는 엄지로 읽기 어렵다) */}
+      <div className="cmp-m" aria-label="기관별 견적 비교">
+        <div className="cmp-m__heads">
+          {sorted.map((c) => (
+            <Link key={c.id} href={`/app/r/${no}/q/${c.id}`} className="cmp-m__head">
+              <b>{c.name}</b>
+              {c.selected && <span className="pill pill--ok">선택한 기관</span>}
+              <span className="cmp-m__more">견적 상세 보기</span>
+            </Link>
+          ))}
+        </div>
+        {summary.map((r) => (
+          <section key={r.label} className="cmp-m__row">
+            <h3>{r.label}</h3>
+            <dl>
+              {sorted.map((c) => (
+                <div key={c.id}>
+                  <dt>{c.name}</dt>
+                  <dd>{r.cell(c)}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+        <h3 className="cmp-m__group">시험별 금액</h3>
+        {rows.map((r) => (
+          <section key={r.seq} className="cmp-m__row">
+            <h3>
+              {r.name}
+              <span>{r.category}</span>
+            </h3>
+            <dl>
+              {sorted.map((c) => (
+                <div key={c.id}>
+                  <dt>{c.name}</dt>
+                  <dd>{itemCell(c, r.seq)}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
+      <p className="fld__help cmp-wide">
         표를 좌우로 움직여 기관별 조건을 비교하세요. 위 요약과 아래 시험별
         금액은 같은 열에 표시됩니다.
       </p>
       <div
-        className="card tbl-wrap"
+        className="card tbl-wrap cmp-wide"
         tabIndex={0}
         role="region"
         aria-label="기관별 견적 비교표"
@@ -325,41 +393,9 @@ export function CompareBoard({
                   {r.name}
                   <div className="fld__help">{r.category}</div>
                 </th>
-                {sorted.map((c) => {
-                  const it = c.items.find((i) => i.seq === r.seq);
-                  return (
-                    <td key={c.id}>
-                      {!it ? (
-                        "회신 없음"
-                      ) : it.avail === "불가" ? (
-                        <span>수행 불가{it.note ? ` · ${it.note}` : ""}</span>
-                      ) : (
-                        <>
-                          <b className="tnum">
-                            {it.amount == null
-                              ? "미입력"
-                              : comma(it.amount)}
-                          </b>
-                          <p>
-                            {it.weeks ? `${it.weeks}주` : "기간 미입력"}
-                            {it.avail === "조건부 가능" ? " · 조건부 가능" : ""}
-                          </p>
-                          {it.design && <p>{it.design}</p>}
-                          {it.explain?.map(([k, v]) => (
-                            <p key={k}>
-                              <b>{k}</b>
-                              <br />
-                              {v}
-                            </p>
-                          ))}
-                          {it.note && (
-                            <p style={{ whiteSpace: "pre-wrap" }}>{it.note}</p>
-                          )}
-                        </>
-                      )}
-                    </td>
-                  );
-                })}
+                {sorted.map((c) => (
+                  <td key={c.id}>{itemCell(c, r.seq)}</td>
+                ))}
               </tr>
             ))}
           </tbody>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { uploadToSigned } from "@/lib/upload";
 import { useRouter } from "next/navigation";
 export async function retryAttachment(
@@ -27,12 +27,20 @@ export function AttachmentRetry({ no }: { no: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="stack">
-      <label className="fld">
-        <span>첨부파일 추가·다시 올리기</span>
+    <div className="stack" style={{ gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>첨부파일 추가·다시 올리기</span>
+        {/* 브라우저 기본 파일 칸 대신 같은 모양의 버튼으로 연다 */}
+        <button type="button" className="b2" disabled={busy} onClick={() => fileRef.current?.click()}>
+          {busy ? "올리는 중…" : "파일 고르기"}
+        </button>
         <input
+          ref={fileRef}
           type="file"
+          hidden
+          aria-label="첨부파일 고르기"
           disabled={busy}
           accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.hwp"
           onChange={async (e) => {
@@ -56,7 +64,7 @@ export function AttachmentRetry({ no }: { no: string }) {
             }
           }}
         />
-      </label>
+      </div>
       <p className="fld__help" role="status">
         {busy
           ? "업로드 중…"

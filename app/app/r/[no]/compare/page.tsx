@@ -118,9 +118,10 @@ export default async function Compare({ params }: { params: Promise<{ no: string
           </p>
         </div>
       </div>
-      <dl className="compare-status" aria-label="회신 현황">
+      {/* 회신이 마감되면 "아직 제출하지 않은 기관"은 의미가 없어 칸을 뺀다 (값 자리에 "마감"이 들어가던 문제) */}
+      <dl className={`compare-status${open ? "" : " compare-status--2"}`} aria-label="회신 현황">
         <div><dt>도착한 견적</dt><dd className="tnum">{quotes.length}건</dd></div>
-        <div><dt>참여했지만 아직 제출하지 않은 기관</dt><dd className="tnum">{open ? `${pending}곳` : "마감"}</dd></div>
+        {open && <div><dt>참여했지만 아직 제출하지 않은 기관</dt><dd className="tnum">{pending}곳</dd></div>}
         <div><dt>회신 기한</dt><dd className="tnum">{rfq.reply_by ? md(rfq.reply_by) : "미정"}{!open ? " · 마감" : ""}</dd></div>
       </dl>
       {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (

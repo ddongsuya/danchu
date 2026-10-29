@@ -54,6 +54,18 @@ export function dday(ymdStr: string | null | undefined): { n: number; label: str
   const n = Math.ceil((end - Date.now()) / 864e5);
   return { n, label: n < 0 ? "기한 지남" : n === 0 ? "D-day" : `D-${n}` };
 }
+/**
+ * 결제 조건 "50, 50" · "30 · 40 · 30" → "선급 50% · 잔금 50%" · "선급 30% · 중도 40% · 잔금 30%".
+ * 기관 회신 칸이 "선급 · 중도 · 잔금 %" 순서다. 숫자 2~3개가 아니면 적은 그대로 보여 준다
+ */
+export function payTerms(s: string | null | undefined): string {
+  if (!s || !s.trim()) return "";
+  const parts = s.split(/[\s,·/:%-]+/).filter(Boolean);
+  if (!parts.every((p) => /^\d{1,3}(\.\d+)?$/.test(p))) return s.trim();
+  const names = parts.length === 2 ? ["선급", "잔금"] : parts.length === 3 ? ["선급", "중도", "잔금"] : null;
+  if (!names) return s.trim();
+  return parts.map((p, i) => `${names[i]} ${p}%`).join(" · ");
+}
 /** 오늘 (서울) YYYY-MM-DD */
 export function todaySeoul(): string {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });

@@ -99,7 +99,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
           </div>
         </div>
         <div className="ph__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b2">이 요청 문의하기</Link>
-          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1">견적 {submitted}건 비교</Link>}
+          {/* 넓은 화면은 위쪽 버튼, 좁은 화면은 바닥에 붙는 아래 버튼 하나만 보인다 */}
+          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 only-wide">견적 {submitted}건 비교</Link>}
         </div>
       </div>
 
@@ -287,7 +288,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             )}
           </div>
 
-          {!["closed", "cancelled"].includes(rfq.status) && <div className="card card--pad"><AttachmentRetry no={rfq.rfq_no} /></div>}
+          {/* 첨부는 기관을 고르기 전까지만 고친다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다 */}
+          {!d.award && !["closed", "cancelled"].includes(rfq.status) && <div className="card card--pad"><AttachmentRetry no={rfq.rfq_no} /></div>}
           <details className="card" style={{ padding: "0 18px" }}>
             <summary style={{ padding: "14px 0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>입력한 전체 항목 보기</summary>
             <div className="card--rows" style={{ padding: "0 0 8px" }}>
@@ -308,8 +310,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
       </div>
 
       {canCompare && (
-        <div className="cta">
-          <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">도착한 견적 {submitted}건 비교하기</Link>
+        <div className="cta only-narrow">
+          <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">견적 {submitted}건 비교하기</Link>
         </div>
       )}
     </>
