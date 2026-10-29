@@ -1,3 +1,4 @@
+import { mailMissing } from "@/lib/stuck";
 import { needsCda, participation, participationLabel, seatState, seatsDetailLabel } from "@/lib/request-policy";
 import { CdaPanel } from "@/components/admin/CdaPanel";
 import Link from "next/link";
@@ -116,7 +117,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                         <tr key={i.id}>
                           <td>
                             <div style={{ fontWeight: 600 }}>{i.cro_name}</div>
-                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{!i.mailed_at && ["sent", "draft"].includes(i.status) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{mailMissing(i) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
                           </td>
                           <td data-label="상태">
                             <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{inviteStageLabel(i)}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}{q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf" style={{ marginLeft: 6 }}>대리 입력</span>}

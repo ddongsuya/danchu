@@ -247,7 +247,7 @@ export async function listStuckRequests(): Promise<(Pick<RfqRow, "rfq_no" | "com
   if (!list.length) return [];
   const ids = list.map((r) => r.id);
   const [{ data: inv }, { data: aw }] = await Promise.all([
-    c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at, mailed_at").in("rfq_id", ids),
+    c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at, mailed_at, sent_at").in("rfq_id", ids),
     c.from("rfq_awards").select("rfq_id, awarded_at, contract_reported_at, cro_name").in("rfq_id", ids),
   ]);
   const today = todaySeoulDate();

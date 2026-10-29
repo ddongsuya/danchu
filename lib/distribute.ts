@@ -199,7 +199,9 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
       const mailed = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, replyBy), html: inviteMailHtml(rfq, replyBy, inv.token, inv.id, mailOpts), replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
       if (mailed) {
         res.mailed++;
-        await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
+        const { error: markError } = await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
+        // 메일은 갔는데 기록을 못 남기면 운영자 화면에 "메일 미발송"으로 잘못 뜬다 (2026-10-29: 9월 초대 16건이 이 상태)
+        if (markError) captureError(new Error(`mailed_at 기록 실패: ${markError.message}`), "distribute:mailed-at", { rfq: rfq.rfq_no });
       } else console.warn("[danchu] 배포 메일 미발송", rfq.rfq_no, o.id);
     }
     // 참여 전에는 시험물질명을 알리지 않는다 (요약에 없는 정보, 0023)
@@ -291,15 +293,17 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
 }
 
 /**
- * 배포 메일이 가지 않은 초대(mailed_at 없음, 회신 기한 전, 아직 열린 것)를 다시 보낸다. 매일 cron 이 부른다.
- * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다. 예전에는 최근 3일 안내만 다시 보내서, 그 사이 실패가 이어지면 기관이 끝내 안내를 받지 못했다 (2026-10-29 점검: 16건 모두 미발송)
+ * 배포 메일이 가지 않은 초대(mailed_at 없음, 최근 3일, 아직 열린 것)를 다시 보낸다. 매일 cron 이 부른다.
+ * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다. 3일로 자르는 것은 그대로 둔다: 2026-10-29 점검에서 9월 초대 16건은 mailed_at 이 비었지만
+ * Resend 기록상 실제로 배달됐다 (기록만 못 남김). 창을 넓히면 이미 받은 기관에 같은 안내가 다시 간다
  */
 export async function resendUnmailedInvites(): Promise<{ tried: number; sent: number }> {
   const sb = getSupabaseAdmin();
   const out = { tried: 0, sent: 0 };
   if (!sb) return out;
+  const since = new Date(Date.now() - 3 * 864e5).toISOString();
   const today = nowSeoul().toLocaleDateString("sv-SE");
-  const { data: invites } = await sb.from("rfq_invites").select("*").is("mailed_at", null).in("status", ["sent", "draft"]).gte("reply_by", today).limit(50);
+  const { data: invites } = await sb.from("rfq_invites").select("*").is("mailed_at", null).in("status", ["sent", "draft"]).gte("sent_at", since).gte("reply_by", today).limit(50);
   for (const inv of invites ?? []) {
     out.tried++;
     const { data: rfq } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
