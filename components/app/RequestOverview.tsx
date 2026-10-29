@@ -5,13 +5,14 @@ import { useState } from "react";
 import { ArrowRight, ArrowUpRight, MagnifyingGlass, Plus, FileText } from "@phosphor-icons/react";
 import type { RfqSummary } from "@/lib/data";
 import { statusLabel, statusTone } from "@/lib/status";
+import { participationLabel } from "@/lib/request-policy";
 import { StatusPill } from "@/components/app/ui";
 import { dday, md } from "@/lib/format";
 
 /** 회신 기한이 지났는데 아직 비교표가 열리지 않은 요청. 상태는 운영자가 정리하므로 목록에서는 표시만 한다 */
 const waitingPastDue = (r: Pick<RfqSummary, "status" | "reply_by">) => !!r.reply_by && ["received", "distributed", "quoted"].includes(r.status) && dday(r.reply_by).n < 0;
 
-export type RequestListItem = Pick<RfqSummary, "id" | "rfq_no" | "status" | "substance" | "categories" | "invites" | "submitted" | "reply_by" | "created_at"> & { outcome?: string | null };
+export type RequestListItem = Pick<RfqSummary, "id" | "rfq_no" | "status" | "substance" | "categories" | "joined" | "cap" | "submitted" | "reply_by" | "created_at"> & { outcome?: string | null };
 const FILTERS = ["전체", "진행 중", "견적 도착", "종료"] as const;
 
 export function RequestOverview({ name, list }: { name: string; list: RequestListItem[] }) {
@@ -41,7 +42,7 @@ export function RequestOverview({ name, list }: { name: string; list: RequestLis
         <p className="sr-only" role="status">{filtered.length}건의 요청</p>
         {list.length === 0 ? <div className="request-empty"><FileText size={42} weight="light" aria-hidden="true" /><h3>첫 번째 연구의 단추를 채워보세요.</h3><p>시험 항목을 입력하면 수행 분야가 맞는 기관에 참여 안내를 보냅니다.</p><Link href="/app/new" className="b1">견적 요청하기 <ArrowUpRight size={17} aria-hidden="true" /></Link></div> : filtered.length === 0 ? <div className="request-empty"><MagnifyingGlass size={36} weight="light" aria-hidden="true" /><h3>일치하는 요청이 없습니다</h3><p>다른 검색어를 입력하거나 상태 필터를 변경해 주세요.</p><button type="button" className="b2" onClick={() => { setSearch(""); setFilter("전체"); }}>전체 요청 보기</button></div> : <>
           <div className="request-table-head" aria-hidden="true"><span>시험물질 · 요청 번호</span><span>진행 상태</span><span>기관 회신</span><span>회신 기한</span></div>
-          <div className="request-rows">{filtered.map((r) => <Link href={`/app/r/${r.rfq_no}`} key={r.id} className="request-row"><div className="request-row__title"><small>{r.rfq_no}</small><h3>{r.substance}</h3><p>{r.categories.join(" · ")}</p></div><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill><div className="request-row__replies"><b>{r.submitted}</b><span> / {r.invites}곳</span><i className="request-row__meter" aria-hidden="true" style={{ "--p": r.invites ? Math.min(1, r.submitted / r.invites) : 0 } as React.CSSProperties} /></div><div className="request-row__date"><span>{r.reply_by ? md(r.reply_by) : "미정"}{waitingPastDue(r) && <small>기한 지남</small>}</span><ArrowUpRight size={17} aria-hidden="true" /></div></Link>)}</div>
+          <div className="request-rows">{filtered.map((r) => <Link href={`/app/r/${r.rfq_no}`} key={r.id} className="request-row"><div className="request-row__title"><small>{r.rfq_no}</small><h3>{r.substance}</h3><p>{r.categories.join(" · ")}</p></div><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill><div className="request-row__replies"><b>제출 {r.submitted}</b><span> · {participationLabel(r)}</span><i className="request-row__meter" aria-hidden="true" style={{ "--p": (r.cap ?? r.joined) ? Math.min(1, r.submitted / (r.cap ?? r.joined)) : 0 } as React.CSSProperties} /></div><div className="request-row__date"><span>{r.reply_by ? md(r.reply_by) : "미정"}{waitingPastDue(r) && <small>기한 지남</small>}</span><ArrowUpRight size={17} aria-hidden="true" /></div></Link>)}</div>
         </>}
       </section>
       <div className="request-help"><span>시험 항목을 정하기 어려우신가요?</span><a href="/guide">시험 가이드 살펴보기 <ArrowUpRight size={16} aria-hidden="true" /></a></div>

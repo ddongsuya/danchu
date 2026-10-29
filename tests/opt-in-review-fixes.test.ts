@@ -156,6 +156,6 @@ describe("의뢰자 요청 목록: 제출 / 참여 기관 수", () => {
       return { data: null, error: null };
     };
     const [row] = await listRequestsForUser("sponsor-1");
-    expect(row).toMatchObject({ invites: 2, submitted: 1 });
+    expect(row).toMatchObject({ joined: 2, submitted: 1 });
   });
 });

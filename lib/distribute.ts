@@ -21,7 +21,7 @@ export type DistributeResult = {
    * DB 트리거가 막은 이유. request_not_open: 회신 마감(compared_at)·선정 이후 / nominees_only: "지명 기관에만 안내" 요청에 자동 매칭 안내 (0023).
    * 자리 수로는 막지 않는다. 안내는 분야가 맞는 기관 모두에게 가고, 자리는 기관이 참여할 때 join_offer 가 센다
    */
-  blocked?: "request_not_open" | "nominees_only";
+  blocked?: "request_not_open" | "nominees_only" | "reply_too_soon";
   /** 이번 호출로 요청이 바뀐 값 (처음 안내한 시각, 다시 잡은 참여 결정 기한). 같은 요청으로 이어 부를 때 넘긴다 */
   after?: { distributed_at: string | null; join_by: string | null; status: string; reply_by: string | null };
 };
@@ -130,6 +130,9 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
   const sb = getSupabaseAdmin();
   const res: DistributeResult = { sent: 0, mailed: 0, names: [], skipped: [] };
   if (!sb || !orgs.length) return res;
+  // 자동 안내는 회신 기한까지 2영업일이 안 남았으면 보내지 않는다. 받은 날이 마감인 안내는 기관이 회신할 수 없다 (2026-10-29 점검: 0005 안내일 = 기한).
+  // 운영자가 직접 보내는 안내는 막지 않는다. 막힌 요청은 운영자 홈 "멈춘 요청"에 기한 조정 필요로 뜬다
+  if (auto && replyBy < addBusinessDays(nowSeoul(), 2).toLocaleDateString("sv-SE")) return { ...res, blocked: "reply_too_soon", skipped: orgs.map((o) => o.name) };
   // 마이그레이션이 덜 된 DB 에 새 코드가 배포됐으면 초대를 만들기 전에 멈춘다 (README "배포 순서")
   await assertSchemaReady(sb);
   let rfq = rfqIn;
@@ -196,7 +199,9 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
       const mailed = await sendMail({ to: mailTo, subject: inviteMailSubject(rfq, replyBy), html: inviteMailHtml(rfq, replyBy, inv.token, inv.id, mailOpts), replyTo: inviteReplyTo(mailOpts) }).catch(() => false);
       if (mailed) {
         res.mailed++;
-        await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
+        const { error: markError } = await sb.from("rfq_invites").update({ mailed_at: new Date().toISOString() }).eq("id", inv.id);
+        // 메일은 갔는데 기록을 못 남기면 운영자 화면에 "메일 미발송"으로 잘못 뜬다 (2026-10-29: 9월 초대 16건이 이 상태)
+        if (markError) captureError(new Error(`mailed_at 기록 실패: ${markError.message}`), "distribute:mailed-at", { rfq: rfq.rfq_no });
       } else console.warn("[danchu] 배포 메일 미발송", rfq.rfq_no, o.id);
     }
     // 참여 전에는 시험물질명을 알리지 않는다 (요약에 없는 정보, 0023)
@@ -289,7 +294,8 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
 
 /**
  * 배포 메일이 가지 않은 초대(mailed_at 없음, 최근 3일, 아직 열린 것)를 다시 보낸다. 매일 cron 이 부른다.
- * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다
+ * 성공하면 mailed_at 을 찍어 두 번 보내지 않는다. 3일로 자르는 것은 그대로 둔다: 2026-10-29 점검에서 9월 초대 16건은 mailed_at 이 비었지만
+ * Resend 기록상 실제로 배달됐다 (기록만 못 남김). 창을 넓히면 이미 받은 기관에 같은 안내가 다시 간다
  */
 export async function resendUnmailedInvites(): Promise<{ tried: number; sent: number }> {
   const sb = getSupabaseAdmin();

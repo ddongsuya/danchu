@@ -2,7 +2,8 @@ import { getSupabaseAdmin } from "./supabase";
 import type { Tables } from "./db-types";
 import type { CroOrg } from "./auth";
 import { likeExact, orValue } from "./sql";
-import { occupiesSeat } from "./request-policy";
+import { participation } from "./request-policy";
+import { stuckReasons, type Stuck } from "./stuck";
 
 /* ── 표 행 타입 — lib/db-types.ts 의 별칭. 컬럼이 바뀌면 그쪽을 고친다 ── */
 
@@ -26,7 +27,7 @@ export function dbReady(): boolean {
 
 /* ── 의뢰자 ── */
 
-export type RfqSummary = RfqRow & { invites: number; submitted: number };
+export type RfqSummary = RfqRow & { joined: number; cap: number | null; submitted: number };
 
 export async function listRequestsForUser(userId: string): Promise<RfqSummary[]> {
   const c = sb();
@@ -41,16 +42,7 @@ export async function listRequestsForUser(userId: string): Promise<RfqSummary[]>
   if (!list.length) return [];
   const ids = list.map((r) => r.id);
   const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at").in("rfq_id", ids);
-  // 의뢰자 목록의 분모는 참여한 기관(자리를 차지한 초대)만 센다. 안내 수·불참 수는 의뢰자에게 보이지 않는다 (0023)
-  const byRfq = new Map<string, { invites: number; submitted: number }>();
-  for (const i of inv ?? []) {
-    if (!occupiesSeat(i)) continue;
-    const e = byRfq.get(i.rfq_id) ?? { invites: 0, submitted: 0 };
-    e.invites++;
-    if (i.status === "submitted") e.submitted++;
-    byRfq.set(i.rfq_id, e);
-  }
-  return list.map((r) => ({ ...r, ...(byRfq.get(r.id) ?? { invites: 0, submitted: 0 }) }));
+  return list.map((r) => ({ ...r, ...participation(r.cro_count, (inv ?? []).filter((i) => i.rfq_id === r.id)) }));
 }
 
 export type RfqDetail = {
@@ -184,15 +176,8 @@ export async function listAllRequests(status?: string, q?: string, page = 1): Pr
   const hasMore = (rows ?? []).length > ADMIN_PAGE;
   const list = (rows ?? []).slice(0, ADMIN_PAGE);
   if (!list.length) return { list: [], hasMore: false };
-  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status").in("rfq_id", list.map((r) => r.id));
-  const byRfq = new Map<string, { invites: number; submitted: number }>();
-  for (const i of inv ?? []) {
-    const e = byRfq.get(i.rfq_id) ?? { invites: 0, submitted: 0 };
-    e.invites++;
-    if (i.status === "submitted") e.submitted++;
-    byRfq.set(i.rfq_id, e);
-  }
-  return { list: list.map((r) => ({ ...r, ...(byRfq.get(r.id) ?? { invites: 0, submitted: 0 }) })), hasMore };
+  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at").in("rfq_id", list.map((r) => r.id));
+  return { list: list.map((r) => ({ ...r, ...participation(r.cro_count, (inv ?? []).filter((i) => i.rfq_id === r.id)) })), hasMore };
 }
 
 export async function listCroOrgs(status?: string, search?: string): Promise<(CroOrg & { members: number })[]> {
@@ -249,6 +234,33 @@ export async function isBillingClosed(monthFirstDay: string): Promise<boolean> {
 /** 회신 기한이 지나도 비교표가 열리지 않으면 운영자가 정리해야 하는 상태 */
 const OVERDUE_STATUSES = ["received", "distributed", "quoted"];
 const todaySeoulDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+
+/** 운영자 홈 "멈춘 요청": 열린 요청마다 lib/stuck.ts 이유를 붙여, 오래 멈춘 순으로 */
+export async function listStuckRequests(): Promise<(Pick<RfqRow, "rfq_no" | "company" | "substance"> & { reasons: Stuck[] })[]> {
+  const c = sb();
+  const { data: rows } = await c
+    .from("rfq_requests")
+    .select("id, rfq_no, company, substance, status, reply_by, compared_at, cro_count, distributed_at")
+    .in("status", ["received", "distributed", "quoted", "selected", "contracting"])
+    .limit(200);
+  const list = rows ?? [];
+  if (!list.length) return [];
+  const ids = list.map((r) => r.id);
+  const [{ data: inv }, { data: aw }] = await Promise.all([
+    c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at, mailed_at, sent_at").in("rfq_id", ids),
+    c.from("rfq_awards").select("rfq_id, awarded_at, contract_reported_at, cro_name").in("rfq_id", ids),
+  ]);
+  const today = todaySeoulDate();
+  return list
+    .map((r) => ({
+      rfq_no: r.rfq_no,
+      company: r.company,
+      substance: r.substance,
+      reasons: stuckReasons(r, (inv ?? []).filter((i) => i.rfq_id === r.id), (aw ?? []).find((a) => a.rfq_id === r.id) ?? null, today),
+    }))
+    .filter((r) => r.reasons.length)
+    .sort((a, b) => Math.max(...b.reasons.map((x) => x.days)) - Math.max(...a.reasons.map((x) => x.days)));
+}
 
 export async function countBy() {
   const c = sb();

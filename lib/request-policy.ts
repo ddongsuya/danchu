@@ -120,6 +120,18 @@ export function seatUsage(croCount: string | null | undefined, invites: JoinFiel
   return { cap, used, open: cap == null ? null : Math.max(0, cap - used) };
 }
 
+/**
+ * 참여·제출 숫자의 단 하나의 계산 (2026-10-29 과업 점검 3). 의뢰자 목록·상세, 운영자 목록·상세가 모두 이것만 쓴다.
+ * 참여 = 자리를 차지한 초대(참여·작성 중·제출, 철회·취소 제외), 제출 = 그중 제출, cap = 참여 자리 수(null 이면 제한 없음)
+ */
+export function participation(croCount: string | null | undefined, invites: JoinFields[]): { joined: number; cap: number | null; submitted: number } {
+  const { cap, used } = seatUsage(croCount, invites);
+  return { joined: used, cap, submitted: invites.filter((i) => occupiesSeat(i) && i.status === "submitted").length };
+}
+export function participationLabel(p: { joined: number; cap: number | null }): string {
+  return p.cap == null ? `참여 ${p.joined}곳` : `참여 ${p.joined}/${p.cap}곳`;
+}
+
 /** 자리 현황 (offer_seat_state 결과, lib/rpc.ts SeatState 와 같은 모양). cap·open 이 null 이면 자리 제한 없음(전체) */
 export type SeatInfo = { cap: number | null; used: number; reserved: number; open: number | null; join_by: string | null };
 

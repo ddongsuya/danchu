@@ -62,18 +62,23 @@ export function ThemeSettings() {
             로그인 메일은 계속 받을 수 있습니다.
           </p>
         </div>
-        <button
-          type="button"
-          className="tgl"
-          aria-label="진행 상황 이메일"
-          aria-pressed={mail ?? false}
-          disabled={mail === null || busy}
-          onClick={update}
-        >
-          <span />
-        </button>
+        {/* 불러오기 전·실패를 "꺼짐"처럼 보이지 않게 한다 (2026-10-29 점검 7: DB 는 켜짐인데 화면은 꺼진 스위치) */}
+        {mail === null ? (
+          <span className="fld__help" aria-live="polite">{message ? "불러오지 못함" : "불러오는 중…"}</span>
+        ) : (
+          <button
+            type="button"
+            className="tgl"
+            aria-label="진행 상황 이메일"
+            aria-pressed={mail}
+            disabled={busy}
+            onClick={update}
+          >
+            <span />
+          </button>
+        )}
       </div>
-      {mail === null && (
+      {mail === null && message && (
         <button className="b2" onClick={load}>
           알림 설정 다시 불러오기
         </button>

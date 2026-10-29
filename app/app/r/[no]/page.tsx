@@ -1,7 +1,8 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
+import { NextStep } from "@/components/app/NextStep";
 import { ContractConfirm, ReopenRequest, StartNow } from "@/components/app/RequestActions";
-import { needsCda, occupiesSeat, seatState, REOPEN_DAYS } from "@/lib/request-policy";
+import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -27,7 +28,6 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
     : STAGES;
   const idx = Math.max(0, stages.findIndex((s) => s.key === rfq.status));
   // 운영자가 취소한 초대는 숫자에서 뺀다
-  const submitted = d.invites.filter((i) => i.status === "submitted" && !i.revoked_at && !i.withdrawn_at).length;
   // 비교표가 열리기 전 (2026-10-20 결정 1): 의뢰자에게는 진행 숫자(참여 n곳, 제출 m곳)만 보인다.
   // 일반 기관의 이름·금액·견적은 열릴 때 함께 공개한다. 의뢰자가 지명한 기관만 이름과 참여 여부(참여·불참·결정 전)를 보여 준다
   const opened = !!rfq.compared_at;
@@ -38,8 +38,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   // 비교표가 열린 뒤: 참여한 기관과 지명 기관 결과 (0023). 일반 기관의 참여 결정 전·불참·철회는 그때도 보이지 않는다
   const shown = sponsorVisibleInvites(d.invites);
   const seats = seatState(rfq.cro_count, rfq.join_by, d.invites);
-  const joinedCount = seats.used;
-  const seatLine = seats.cap == null ? `참여 ${joinedCount}곳` : `참여 ${joinedCount}/${seats.cap}곳`;
+  const counts = participation(rfq.cro_count, d.invites);
+  const { submitted, joined: joinedCount } = counts;
+  const seatLine = participationLabel(counts);
   const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
   // 선택은 비교표가 열린 뒤에만 (0025 select_quote: 열리기 전이면 not_compared). 기한 전 선정 단계는 없다
   const canCompare = opened && submitted > 0;
@@ -64,6 +65,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const viaNote = via === "auto" ? " (보고 7일 뒤 자동 확정)" : via === "operator" ? " (운영자가 기관과 확인한 뒤 확정)" : "";
   // 비교표가 열린 뒤 보류한 요청만 다시 연다. 열리기 전에 보류한 요청을 다시 열면 기한 전 선정 길이 되므로 막는다 (결정 1)
   const reopenUntil = rfq.outcome === "보류" && rfq.status === "closed" && !!rfq.compared_at && rfq.outcome_at && submitted > 0 && Date.now() - new Date(rfq.outcome_at).getTime() <= REOPEN_DAYS * 864e5 ? ymd(new Date(new Date(rfq.outcome_at).getTime() + REOPEN_DAYS * 864e5).toISOString()) : "";
+  // 다음 할 일 (2026-10-29 과업 점검 2·5). 의뢰자가 지금 할 수 있는 일 하나를 제목 아래에 둔다
+  const todayKst = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  const noJoinPastDue = ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !!rfq.reply_by && rfq.reply_by < todayKst && joinedCount === 0;
+  const contractOpen = !!d.award && !reported && ["selected", "contracting"].includes(rfq.status);
   const chips = [
     ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
     rfq.cro_count ? (rfq.cro_count === "전체" ? "참여 자리 제한 없음" : `참여 자리 ${rfq.cro_count}`) : "",
@@ -100,9 +105,12 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         </div>
         <div className="ph__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b2">이 요청 문의하기</Link>
           {/* 넓은 화면은 위쪽 버튼, 좁은 화면은 바닥에 붙는 아래 버튼 하나만 보인다 */}
-          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 only-wide">견적 {submitted}건 비교</Link>}
+          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className={`${d.award ? "b2" : "b1"} only-wide`}>견적 {submitted}건 비교</Link>}
         </div>
       </div>
+
+      {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
+      {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="card" style={{ padding: "20px 20px 8px" }}>
@@ -204,7 +212,6 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             )}
           </div>
 
-          {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <OutcomeForm no={rfq.rfq_no} compared={canCompare} />}
           {!d.award && rfq.outcome && (
             <div className="note" style={{ flexDirection: "column", gap: 4 }}>
               <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>
@@ -309,7 +316,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         </div>
       </div>
 
-      {canCompare && (
+      {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <div id="end" style={{ marginTop: 24 }}><OutcomeForm no={rfq.rfq_no} compared={canCompare} /></div>}
+
+      {canCompare && !d.award && (
         <div className="cta only-narrow">
           <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">견적 {submitted}건 비교하기</Link>
         </div>

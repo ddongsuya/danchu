@@ -1,7 +1,8 @@
-import { needsCda, confidentialAccess } from "@/lib/request-policy";
+import { needsCda, confidentialAccess, participationLabel } from "@/lib/request-policy";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
-import { countBy, dbReady, listAllRequests } from "@/lib/data";
+import { countBy, dbReady, listAllRequests, listStuckRequests } from "@/lib/data";
+import { StuckList } from "@/components/admin/StuckList";
 import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { dday, md, ymd } from "@/lib/format";
@@ -26,7 +27,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const { status = "", q = "", page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr, 10) || 1);
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
-  const [{ list, hasMore }, counts, schema] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus()]);
+  const [{ list, hasMore }, counts, schema, stuck] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus(), listStuckRequests()]);
   const href = (p: number) => `/admin?${new URLSearchParams({ ...(status ? { status } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
   const transition = schema.ok ? await transitionRows() : [];
   const missingEnv = missingProdEnv();
@@ -41,6 +42,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <>
+      <div className="ph">
+        <div>
+          <h1>접수 현황</h1>
+        </div>
+      </div>
+
+      {/* 멈춘 요청이 맨 위 (2026-10-29 과업 점검 1·6). 운영자는 들어오자마자 사람 손이 필요한 요청을 본다 */}
+      <StuckList rows={stuck} />
+
       {(missingEnv.length > 0 || noSentry || !schema.ok) && (
         <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>
           <b>운영 설정 확인</b>
@@ -50,11 +60,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </div>
       )}
       {transition.length > 0 && <OptInTransition rows={transition} />}
-      <div className="ph">
-        <div>
-          <h1>접수 현황</h1>
-        </div>
-      </div>
 
       {/* 아래 숫자 칸이 곧 할 일 목록이라 같은 숫자를 위 설명 줄에 되풀이하지 않는다 */}
       <div className="tiles4" style={{ marginBottom: 20 }}>
@@ -111,7 +116,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.categories.join(" · ")}{needsCda(r.confidentiality) ? " · CDA" : ""}</div>
                   </td>
                   <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill></td>
-                  <td className="tnum" data-label="회신">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
+                  <td className="tnum" data-label="회신">{`제출 ${r.submitted} · ${participationLabel(r)}`}</td>
                   <td className="tnum" data-label="회신 기한" style={{ whiteSpace: "nowrap" }}>
                     {r.reply_by ? md(r.reply_by) : "-"}
                     {r.reply_by && ["received", "distributed", "quoted"].includes(r.status) && dday(r.reply_by).n < 0 && <div style={{ fontSize: 12, color: "var(--err)" }}>기한 지남</div>}

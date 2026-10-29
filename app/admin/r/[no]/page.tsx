@@ -1,4 +1,5 @@
-import { needsCda, seatState, seatsDetailLabel } from "@/lib/request-policy";
+import { mailMissing } from "@/lib/stuck";
+import { needsCda, participation, participationLabel, seatState, seatsDetailLabel } from "@/lib/request-policy";
 import { CdaPanel } from "@/components/admin/CdaPanel";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,6 +44,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   const done = rfq.status === "closed" || rfq.status === "cancelled";
   // 참여 자리 (0023): 참여·작성 중·제출을 세고, 참여 결정 기한 전에는 아직 결정하지 않은 지명 기관 몫을 비워 둔다
   const seats = seatState(rfq.cro_count, rfq.join_by, d.invites);
+  const counts = participation(rfq.cro_count, d.invites);
   const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
   const canExtendJoin = !!joinBy && ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !rfq.selected_quote_id;
 
@@ -87,7 +89,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
 
           <div className="card card--pad">
             <div className="sec-title" style={{ margin: "0 0 10px" }}>
-              <h2>회신 현황 <span className="tnum">참여 {seats.used}{seats.cap != null ? `/${seats.cap}` : ""} · 제출 {submitted.length} · 안내 {d.invites.length}</span></h2>
+              <h2>회신 현황 <span className="tnum">{participationLabel(counts)} · 제출 {counts.submitted} · 안내 {d.invites.length}</span></h2>
               <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 {rfq.reply_by ? <span>{`기한 ${md(rfq.reply_by)}`}{rfq.compared_at ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>회신 마감 {mdhm(rfq.compared_at)}</span> : rfq.reply_by < today ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>지남</span> : null}</span> : null}
                 {canChangeDeadline && <DeadlineForm no={rfq.rfq_no} current={rfq.reply_by} min={rfq.distributed_at && rfq.reply_by && nextDay(rfq.reply_by) > today ? nextDay(rfq.reply_by) : today} />}
@@ -115,7 +117,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                         <tr key={i.id}>
                           <td>
                             <div style={{ fontWeight: 600 }}>{i.cro_name}</div>
-                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{!i.mailed_at && ["sent", "draft"].includes(i.status) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{mailMissing(i) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
                           </td>
                           <td data-label="상태">
                             <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{inviteStageLabel(i)}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}{q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf" style={{ marginLeft: 6 }}>대리 입력</span>}
