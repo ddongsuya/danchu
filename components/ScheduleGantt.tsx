@@ -25,23 +25,35 @@ const pct = (w: number, scale: number) => `${((w / scale) * 100).toFixed(3)}%`;
 
 /** 축 눈금: 착수일이 있으면 달이 바뀌는 주, 없으면 5주마다 */
 type Tick = { week: number; label: string; strong: boolean; minor?: boolean };
-function ticksOf(scale: number, startDate?: string | null): Tick[] {
-  const out: Tick[] = [];
+/**
+ * 글자를 다는 눈금은 maxLabels 개 이하로 (좁은 칸에서 "26.10월 11월 12월"이 겹쳐 읽히지 않던 문제).
+ * 선은 달마다 긋고, 글자는 k 번째 달마다. 해가 바뀌면 그다음 글자에 연도를 붙인다.
+ * minor: 글자 단 눈금 중 하나 건너 하나. 휴대폰 폭에서는 CSS 가 이 글자를 숨긴다
+ */
+function ticksOf(scale: number, startDate: string | null | undefined, maxLabels: number): Tick[] {
   if (startDate && weekMonday(startDate, 0)) {
-    let prev = "";
+    const months: { week: number; ym: string; strong: boolean }[] = [];
     for (let w = 0; w <= scale; w++) {
       const d = weekMonday(startDate, w)!;
       const ym = d.slice(0, 7);
+      const prev = months.at(-1)?.ym;
       if (ym === prev) continue;
-      const year = prev && prev.slice(0, 4) !== d.slice(0, 4);
-      out.push({ week: w, label: w === 0 || year ? `${d.slice(2, 4)}.${Number(d.slice(5, 7))}월` : `${Number(d.slice(5, 7))}월`, strong: !!year });
-      prev = ym;
+      months.push({ week: w, ym, strong: !!prev && prev.slice(0, 4) !== ym.slice(0, 4) });
     }
-    // 달 눈금이 촘촘하면 하나 건너 하나만 글자를 단다 (좁은 화면은 CSS 가 minor 글자를 숨긴다)
-    const marked = out.map((t, i) => ({ ...t, minor: i % 2 === 1 && !t.strong }));
-    return out.length > 14 ? marked.map((t) => ({ ...t, label: t.minor ? "" : t.label })) : marked;
+    const k = Math.max(1, Math.ceil(months.length / maxLabels));
+    let lastYear = "";
+    let n = 0;
+    return months.map((m, i) => {
+      if (i % k !== 0) return { week: m.week, label: "", strong: m.strong };
+      const year = m.ym.slice(0, 4);
+      const label = year !== lastYear ? `${m.ym.slice(2, 4)}.${Number(m.ym.slice(5, 7))}월` : `${Number(m.ym.slice(5, 7))}월`;
+      lastYear = year;
+      return { week: m.week, label, strong: m.strong, minor: n++ % 2 === 1 };
+    });
   }
-  for (let w = 0; w <= scale; w += 5) out.push({ week: w, label: `${w}주`, strong: false, minor: (w / 5) % 2 === 1 });
+  const step = Math.max(5, Math.ceil(scale / maxLabels / 5) * 5);
+  const out: Tick[] = [];
+  for (let w = 0, n = 0; w <= scale; w += step, n++) out.push({ week: w, label: `${w}주`, strong: false, minor: n % 2 === 1 });
   return out;
 }
 
@@ -82,7 +94,7 @@ export function ScheduleGantt({
   const ko = plan.finalReportWeek ?? final;
   const scale = fixedScale ?? scaleWeeks(final, bestFinal);
   const late = bestFinal != null && final > bestFinal ? final - bestFinal : 0;
-  const ticks = ticksOf(scale, startDate);
+  const ticks = ticksOf(scale, startDate, compact ? 4 : 7);
   const chain = lines.filter((l) => l.study.critical).map((l) => l.study.name);
   const dateOf = (w: number) => { const d = startDate ? weekMonday(startDate, w) : null; return d ? d.replaceAll("-", ".") : null; };
   const hasTrans = final > ko;

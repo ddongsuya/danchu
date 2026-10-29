@@ -9,7 +9,8 @@ import { ArrowUpRight, Question } from "@phosphor-icons/react/dist/ssr";
 export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean };
 export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings";
 
-const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "CRO", admin: "운영자" };
+// 화면에서는 "기관"으로 통일한다 (의뢰자 화면의 "선택한 기관"과 같은 말)
+const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관", admin: "운영자" };
 
 /**
  * 포털 공통 셸 — 넓은 화면은 사이드바, 좁은 화면은 상단 바 + 하단 탭.

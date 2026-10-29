@@ -49,7 +49,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
   return (
     <div style={{ borderTop: "1px dashed var(--cline)", paddingTop: 10 }}>
       <button type="button" onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--muted)", textAlign: "left", background: "none", border: 0, padding: 0 }}>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (등록한 기본 조건를 적어 두면 비교표에 표시됩니다)"}</span>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (등록한 기본 조건을 적어 두면 비교표에 표시됩니다)"}</span>
         <span style={{ flex: "none", color: "var(--brand)", fontWeight: 600 }}>{open ? "접기" : "수정"}</span>
       </button>
       {open && (

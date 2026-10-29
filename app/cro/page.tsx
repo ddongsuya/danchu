@@ -39,11 +39,13 @@ export default async function CroInbox() {
       <InviteList items={list.map((i) => {
         // 참여 전에는 시험물질명과 의뢰 목적을 보이지 않는다 (요약에 없는 정보, 0023). 제출처는 요약에 있다
         const joined = !!i.joined_at;
+        const awarded = !!i.quote && !!i.rfq?.selected_quote_id && i.rfq.selected_quote_id === i.quote.id;
         return {
+        awarded,
         id: i.id,
         no: i.rfq_no,
         substance: joined ? i.rfq?.substance ?? "" : "",
-        client: identityVisible({ awarded: !!i.quote && !!i.rfq?.selected_quote_id && i.rfq.selected_quote_id === i.quote.id }) ? i.rfq?.company ?? "" : maskedClientLabel(i.rfq?.org_type),
+        client: identityVisible({ awarded }) ? i.rfq?.company ?? "" : maskedClientLabel(i.rfq?.org_type),
         purpose: [joined ? i.rfq?.purpose : null, Array.isArray(i.rfq?.payload?.authority) ? (i.rfq!.payload.authority as string[]).join(" · ") : ""].filter(Boolean).join(" · "),
         tags: i.rfq?.categories ?? [],
         replyBy: i.reply_by,

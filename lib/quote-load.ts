@@ -157,7 +157,7 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
     ["희망 착수", s("start") || "-"],
     ["회신 기한", `${inv.reply_by} (${dd.label.replace("회신 ", "")})`],
     ["참여 자리 수", r.cro_count || "-"],
-  ];
+  ].filter(([, v]) => v !== "-") as [string, string][];
   const common: [string, string][] = (
     [
       ["시험 투여경로", s("route")],

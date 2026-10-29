@@ -21,11 +21,19 @@ function detail(payload: Values, cat: string, id: string): string | string[] | u
   return typeof v === "boolean" ? undefined : v;
 }
 
-function condOf(payload: Values, cat: string): string {
+/**
+ * 동물을 쓰지 않는 시험 (Ames 등 세균·세포 시험). 동물종은 분야 단위로 고르므로 같은 분야의
+ * in vivo 시험에서 고른 종이 이 행에 붙지 않게 한다 (Ames 행에 "마우스"가 붙던 문제)
+ */
+export function isInVitroItem(name: string): boolean {
+  return /in vitro|ames|복귀돌연변이|TG\s?(471|473|487|490)\b|hERG|세포/i.test(name);
+}
+
+function condOf(payload: Values, cat: string, noSpecies = false): string {
   const parts: string[] = [];
   const model = detail(payload, cat, "method");
   if (typeof model === "string" && model.trim()) parts.push(model.trim().slice(0, 80));
-  const species = detail(payload, cat, "species");
+  const species = noSpecies ? undefined : detail(payload, cat, "species");
   if (Array.isArray(species) && species.length) parts.push(species.join("·"));
   const recovery = detail(payload, cat, "recovery");
   if (typeof recovery === "string" && recovery && !["없음", "미정"].includes(recovery)) parts.push(`회복 ${recovery}`);
@@ -41,9 +49,9 @@ function condOf(payload: Values, cat: string): string {
  * 참여 전 요약에 보여 주는 조건: 동물종 · 회복 기간 · GLP 여부만 (설계 규칙표 "참여 전에 보이는 것").
  * 시험법·질환 모델처럼 의뢰자가 직접 적는 칸과 TK·조제물분석 같은 세부 설계는 참여 뒤 요청서 전체에서 본다
  */
-function summaryCondOf(payload: Values, cat: string): string {
+function summaryCondOf(payload: Values, cat: string, noSpecies = false): string {
   const parts: string[] = [];
-  const species = detail(payload, cat, "species");
+  const species = noSpecies ? undefined : detail(payload, cat, "species");
   if (Array.isArray(species) && species.length) parts.push(species.join("·"));
   const recovery = detail(payload, cat, "recovery");
   if (typeof recovery === "string" && ["2주", "4주"].includes(recovery)) parts.push(`회복 ${recovery}`);
@@ -58,10 +66,11 @@ export function quoteRowsFromPayload(payload: Values, opts: { summary?: boolean 
   const rows: QuoteLineDef[] = [];
   for (const cat of cats) {
     if (!(CATS as readonly string[]).includes(cat)) continue;
-    const cond = opts.summary ? summaryCondOf(payload, cat) : condOf(payload, cat);
     const picked = detail(payload, cat, "items") ?? detail(payload, cat, "segment");
     const names = Array.isArray(picked) && picked.length ? picked : [cat];
     for (const name of names) {
+      const noSpecies = isInVitroItem(name);
+      const cond = opts.summary ? summaryCondOf(payload, cat, noSpecies) : condOf(payload, cat, noSpecies);
       rows.push({ seq: rows.length + 1, category: cat, name: name === cat ? cat : name, cond });
     }
   }

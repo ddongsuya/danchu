@@ -28,7 +28,7 @@ export default async function Profile({ searchParams }: { searchParams?: Promise
           <h1>프로필</h1>
           <p>{s.email}</p>
         </div>
-        <span className="pill pill--tint">{p.role === "admin" ? "운영자" : p.role === "cro" ? "CRO" : "의뢰자"}</span>
+        <span className="pill pill--tint">{p.role === "admin" ? "운영자" : p.role === "cro" ? "기관" : "의뢰자"}</span>
       </div>
 
       {notice && <p className={`note ${notice.ok ? "note--tint" : "note--err"}`} role="status" style={{ marginBottom: 16 }}>{notice.text}</p>}
