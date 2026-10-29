@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/auth";
 import { countBy, dbReady, listAllRequests } from "@/lib/data";
 import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
-import { md, ymd } from "@/lib/format";
+import { dday, md, ymd } from "@/lib/format";
 import { missingProdEnv } from "@/lib/env";
 import { readSchemaStatus } from "@/lib/schema-version";
 import { sentryEnabled } from "@/lib/observe";
@@ -18,7 +18,8 @@ import { captureError } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
-const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "배포"], ["quoted", "견적 도착"], ["compared", "회신 마감"], ["selected", "선택"], ["contracting", "계약"], ["closed", "종료"], ["cancelled", "취소"]];
+// 필터 이름은 진행 단계 이름(lib/status.ts STAGES)과 같게. 끝에 "기한 지남"은 운영자가 정리할 요청
+const FILTERS: [string, string][] = [["", "전체"], ["received", "접수"], ["distributed", "참여 안내"], ["quoted", "견적 도착"], ["compared", "비교표 공개"], ["selected", "기관 선택"], ["contracting", "계약 진행"], ["closed", "종료"], ["cancelled", "취소"], ["overdue", "기한 지남"]];
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; page?: string }> }) {
   await requireSession("admin");
@@ -35,6 +36,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     quoted: counts.rfq.quoted ?? 0,
     pendingOrg: counts.org.pending ?? 0,
     contracting: counts.rfq.contracting ?? 0,
+    overdue: counts.overdue,
   };
 
   return (
@@ -51,15 +53,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <div className="ph">
         <div>
           <h1>접수 현황</h1>
-          <p>배포 대기 {todo.receive} · 회신 중 {todo.quoted} · CRO 승인 대기 {todo.pendingOrg} · 계약 진행 {todo.contracting}</p>
         </div>
       </div>
 
+      {/* 아래 숫자 칸이 곧 할 일 목록이라 같은 숫자를 위 설명 줄에 되풀이하지 않는다 */}
       <div className="tiles4" style={{ marginBottom: 20 }}>
         {[
-          ["배포 대기", todo.receive, "/admin?status=received"],
-          ["회신 중 (견적 도착)", todo.quoted, "/admin?status=quoted"],
-          ["CRO 승인 대기", todo.pendingOrg, "/admin/cros?status=pending"],
+          ["안내 전 접수", todo.receive, "/admin?status=received"],
+          ["기한 지남 · 정리 필요", todo.overdue, "/admin?status=overdue"],
+          ["기관 승인 대기", todo.pendingOrg, "/admin/cros?status=pending"],
           ["계약 진행", todo.contracting, "/admin/awards"],
         ].map(([label, n, href]) => (
           <Link key={String(label)} href={String(href)} className="card tile card--link">
@@ -73,7 +75,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <div className="seg" style={{ flexWrap: "wrap", height: "auto" }}>
         {FILTERS.map(([k, label]) => (
           <Link key={k} href={k ? `/admin?status=${k}${q ? `&q=${encodeURIComponent(q)}` : ""}` : q ? `/admin?q=${encodeURIComponent(q)}` : "/admin"} role="button" aria-pressed={status === k} style={{ height: 36, display: "inline-flex", alignItems: "center", padding: "0 14px", fontSize: 14, background: status === k ? "var(--ink)" : "var(--wh)", color: status === k ? "var(--wh)" : "var(--ink)", fontWeight: status === k ? 600 : 400 }}>
-            {label}{k ? ` ${counts.rfq[k] ?? 0}` : ""}
+            {label}{k ? ` ${k === "overdue" ? counts.overdue : counts.rfq[k] ?? 0}` : ""}
           </Link>
         ))}
       </div>
@@ -99,7 +101,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             <tbody>
               {list.map((r) => (
                 <tr key={r.id}>
-                  <td><Link href={`/admin/r/${r.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{r.rfq_no}</Link></td>
+                  <td style={{ whiteSpace: "nowrap" }}><Link href={`/admin/r/${r.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{r.rfq_no}</Link></td>
                   <td data-label="의뢰자">
                     <div style={{ fontWeight: 600 }}>{r.company}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{r.contact_name} · {r.email}</div>
@@ -110,7 +112,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   </td>
                   <td data-label="상태"><StatusPill tone={statusTone(r.status)}>{statusLabel(r.status, r.outcome)}</StatusPill></td>
                   <td className="tnum" data-label="회신">{r.invites ? `${r.submitted}/${r.invites}` : "-"}</td>
-                  <td className="tnum" data-label="회신 기한">{r.reply_by ? md(r.reply_by) : "-"}</td>
+                  <td className="tnum" data-label="회신 기한" style={{ whiteSpace: "nowrap" }}>
+                    {r.reply_by ? md(r.reply_by) : "-"}
+                    {r.reply_by && ["received", "distributed", "quoted"].includes(r.status) && dday(r.reply_by).n < 0 && <div style={{ fontSize: 12, color: "var(--err)" }}>기한 지남</div>}
+                  </td>
                   <td className="tnum" data-label="접수일">{ymd(r.created_at)}</td>
                 </tr>
               ))}

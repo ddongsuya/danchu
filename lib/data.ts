@@ -173,7 +173,9 @@ export async function listAllRequests(status?: string, q?: string, page = 1): Pr
   const c = sb();
   const from = (Math.max(1, page) - 1) * ADMIN_PAGE;
   let query = c.from("rfq_requests").select("*").order("created_at", { ascending: false }).range(from, from + ADMIN_PAGE);
-  if (status) query = query.eq("status", status);
+  // "overdue": 회신 기한이 지났는데 아직 비교표가 열리지 않은 요청 (운영자가 기한 연장·마무리를 정해야 한다)
+  if (status === "overdue") query = query.in("status", OVERDUE_STATUSES).lt("reply_by", todaySeoulDate());
+  else if (status) query = query.eq("status", status);
   if (q) {
     const term = `%${likeExact(q.trim().slice(0, 60))}%`;
     query = query.or(`rfq_no.ilike.${orValue(term)},company.ilike.${orValue(term)},substance.ilike.${orValue(term)},email.ilike.${orValue(term)}`);
@@ -244,10 +246,14 @@ export async function isBillingClosed(monthFirstDay: string): Promise<boolean> {
   return !!data;
 }
 
+/** 회신 기한이 지나도 비교표가 열리지 않으면 운영자가 정리해야 하는 상태 */
+const OVERDUE_STATUSES = ["received", "distributed", "quoted"];
+const todaySeoulDate = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+
 export async function countBy() {
   const c = sb();
   const [r, o, u] = await Promise.all([
-    c.from("rfq_requests").select("status"),
+    c.from("rfq_requests").select("status, reply_by"),
     c.from("cro_orgs").select("status"),
     c.from("profiles").select("role"),
   ]);
@@ -256,5 +262,7 @@ export async function countBy() {
     for (const x of rows ?? []) m[x[k]] = (m[x[k]] ?? 0) + 1;
     return m;
   };
-  return { rfq: tally(r.data, "status"), org: tally(o.data, "status"), user: tally(u.data, "role") };
+  const today = todaySeoulDate();
+  const overdue = (r.data ?? []).filter((x) => OVERDUE_STATUSES.includes(x.status) && !!x.reply_by && String(x.reply_by).slice(0, 10) < today).length;
+  return { rfq: tally(r.data as { [k: string]: string }[] | null, "status"), org: tally(o.data, "status"), user: tally(u.data, "role"), overdue };
 }

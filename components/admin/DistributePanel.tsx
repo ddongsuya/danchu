@@ -50,7 +50,7 @@ export function DistributePanel({ no, categories, defaultReplyBy, replyByLocked 
   return (
     <div className="stack" style={{ gap: 12 }}>
       {nomineesOnly && <p className="note note--warn" style={{ fontSize: 13 }}>의뢰자가 <b>지명 기관에만 안내</b>를 고른 요청입니다. 의뢰자가 다른 기관에도 안내해 달라고 요청한 경우에만 보내고, 아래에 요청 내용을 남겨 주세요 (감사 기록).</p>}
-      {orgs.length === 0 && <p className="note note--warn">승인된 CRO 기관이 없습니다. CRO 기관 탭에서 가입 신청을 승인하세요.</p>}
+      {orgs.length === 0 && <p className="note note--warn">승인된 기관이 없습니다. 기관 탭에서 가입 신청을 승인하세요.</p>}
       <div className="stack" style={{ gap: 6 }}>
         {shown.map((o) => {
           const on = picked.includes(o.id);

@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const unread = dbReady() ? await unreadCount(session.userId) : 0;
   const nav: NavItem[] = [
     { href: "/admin", label: "접수", icon: "list", exact: true },
-    { href: "/admin/cros", label: "CRO 기관", icon: "cros" },
+    { href: "/admin/cros", label: "기관", icon: "cros" },
     { href: "/admin/awards", label: "수주·계약", icon: "award" },
     { href: "/admin/billing", label: "청구 명세", icon: "doc" },
     { href: "/admin/notifications", label: "알림", icon: "bell", badge: unread },

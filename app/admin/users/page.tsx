@@ -23,7 +23,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
       <div className="card tbl-wrap">
         <table className="tbl">
           <thead>
-            <tr><th>이름 · 이메일</th><th>회사 · 기관</th><th>역할</th><th>CRO 기관 연결</th><th /><th /></tr>
+            <tr><th>이름 · 이메일</th><th>회사 · 기관</th><th>역할</th><th>기관 연결</th><th /><th /></tr>
           </thead>
           <tbody>
             {users.map((u) => (

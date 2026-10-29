@@ -24,7 +24,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <Crumb href="/admin/cros" label="CRO 기관" />
+      <Crumb href="/admin/cros" label="기관" />
       <div className="ph">
         <div>
           <h1>{org.name}</h1>

@@ -53,7 +53,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
         <div>
           <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{rfq.rfq_no} · 접수 {ymd(rfq.created_at)}</span>
           <h1>{rfq.substance} · {rfq.company}</h1>
-          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · CRO {rfq.cro_count ?? "-"}{Array.isArray(p.nominees) && p.nominees.length ? ` · 지명 ${(p.nominees as string[]).join(", ")}` : ""}</p>
+          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · 참여 자리 {rfq.cro_count ?? "-"}{Array.isArray(p.nominees) && p.nominees.length ? ` · 지명 ${(p.nominees as string[]).join(", ")}` : ""}</p>
           <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
             {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
@@ -103,9 +103,10 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
               <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 참여 안내를 보내지 않았습니다.</p>
             ) : (
               <div className="tbl-wrap">
-                <table className="tbl" style={{ minWidth: 620 }}>
+                {/* 휴대폰 폭에서는 행을 카드처럼 세운다 (tbl--stack, 칸 이름은 data-label) */}
+                <table className="tbl tbl--stack">
                   <thead>
-                    <tr><th>CRO</th><th>상태</th><th>참여</th><th>열람</th><th>총액 · 기간</th><th>링크</th></tr>
+                    <tr><th>기관</th><th>상태</th><th>참여</th><th>열람</th><th>총액 · 기간</th><th>링크</th></tr>
                   </thead>
                   <tbody>
                     {d.invites.map((i) => {
@@ -116,14 +117,14 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
                             <div style={{ fontWeight: 600 }}>{i.cro_name}</div>
                             <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{!i.mailed_at && ["sent", "draft"].includes(i.status) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
                           </td>
-                          <td>
+                          <td data-label="상태">
                             <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{inviteStageLabel(i)}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}{q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf" style={{ marginLeft: 6 }}>대리 입력</span>}
                             {i.decline_reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{i.decline_reason}</div>}
                           </td>
-                          <td className="tnum" style={{ fontSize: 12 }} title={i.join_terms_version ? `조건 판 ${i.join_terms_version}` : undefined}>{joinCell(i)}</td>
-                          <td className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
-                          <td className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
-                          <td>
+                          <td data-label="참여" className="tnum" style={{ fontSize: 12 }} title={i.join_terms_version ? `조건 판 ${i.join_terms_version}` : undefined}>{joinCell(i)}</td>
+                          <td data-label="열람" className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
+                          <td data-label="총액 · 기간" className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
+                          <td data-label="링크">
                             {proxyEntryAllowed(i) ? (
                               <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }} title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
                             ) : i.revoked_at ? (
