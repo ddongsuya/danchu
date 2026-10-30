@@ -67,6 +67,12 @@ const FIELD_LABELS: Record<string, string> = {
 const sameFile = (a: FileMeta, b: FileMeta) =>
   a.name === b.name && a.size === b.size;
 const initial = (): Values => ({ ...DEFAULT_VALUES });
+/** 견적 요청 첫 화면(Tox·PD·PK·Other)에서 고른 종류 → 미리 고를 시험 항목. Tox는 대분류가 많아 /request/tox에서 따로 고른다 */
+const KIND_CATS: Record<string, Cat> = {
+  pd: "효력시험(약효)",
+  pk: "PK/TK/ADME·생체시료분석",
+  other: "기타(임상병리·조직병리 등)",
+};
 
 /** 로그인 전 요청서의 임시 저장 자리 */
 const GUEST = "guest";
@@ -127,6 +133,7 @@ export function NewRequest({
       setResume(draft);
       setReady(true);
       // 시작 화면(/request)에서 고른 길: 제안 받기 또는 바로 작성 (작성 중인 초안이 있으면 이어 쓰기를 먼저 보여 준다)
+      // ?kind=pd|pk|other 는 네 갈래 첫 화면에서 고른 종류. 해당 시험 항목을 미리 골라 둔다
       const sp = new URLSearchParams(window.location.search);
       const chosen = sp.get("start");
       if (chosen === "advisor" && !draft) setPhase("advisor");
@@ -243,7 +250,10 @@ export function NewRequest({
     setResume(null);
     setPhase("edit");
     go(0);
-    const key = new URLSearchParams(window.location.search).get("preset");
+    const sp = new URLSearchParams(window.location.search);
+    const kindCat = KIND_CATS[sp.get("kind") ?? ""];
+    if (kindCat) setValues({ ...initial(), categories: [kindCat] });
+    const key = sp.get("preset");
     if (key) {
       setPreset(key);
       applyPreset(key);

@@ -45,3 +45,41 @@
  .a .opt .go .ar{font-size:24px;line-height:1}
  .a .guest{flex-direction:column;align-items:flex-start;margin-top:28px;padding:16px;font-size:14px}
 }
+
+/* ── 견적 요청 첫 화면: Tox / PD / PK / Other ──
+   PC 한 줄 넷, 태블릿 2×2, 모바일 네 줄(그래픽 왼쪽·이름 오른쪽). 세 경우 모두 한 화면 안에 들어가게 그래픽 크기를 화면 높이(--vhpx)로 묶는다 */
+.a .rqf{padding:56px 0 72px}
+.a .rqf h1{margin-bottom:48px}
+.a .rqfork{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px;list-style:none;margin:0;padding:0}
+.a .rqfork > li{min-width:0}
+.a .rqk{display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--ink);text-decoration:none;transition:transform 160ms var(--eo)}
+.a .rqk:active{transform:scale(.97)}
+.a .rqk:focus-visible{outline-offset:6px}
+.a .rqk canvas{display:block;width:min(100%,340px,calc((var(--vhpx,100svh) - 340px) * 17 / 13));aspect-ratio:17/13}
+.a .rqk .t{display:flex;flex-direction:column;align-items:center;gap:8px}
+.a .rqk b{font-size:clamp(32px,3.4vw,48px);font-weight:500;letter-spacing:-.03em;line-height:1}
+.a .rqk small{font-size:15px;color:var(--muted)}
+@media (hover:hover) and (pointer:fine){ .a .rqk:hover b{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:8px} }
+/* 고른 뒤 다음 화면이 열리기 전까지 화면을 덮는 바탕. 그래픽이 퍼지는 동안 가운데에서 원으로 열린다 */
+.rqcover{position:fixed;inset:0;z-index:var(--z-overlay);background:var(--paper);clip-path:circle(0 at 50% 50%);visibility:hidden;pointer-events:none}
+.rqcover.on{visibility:visible;clip-path:circle(150% at 50% 50%);transition:clip-path 560ms var(--ease-drawer)}
+.rqfly{position:fixed;z-index:calc(var(--z-overlay) + 1);pointer-events:none;transform-origin:center;will-change:transform,opacity}
+@media (prefers-reduced-motion:reduce){ .rqcover.on{clip-path:none;transition:none} }
+/* Tox 요청 화면의 되돌아가기 */
+.a .rqback{display:inline-block;margin-bottom:24px;font-size:15px;color:var(--muted);text-underline-offset:4px}
+@media (max-width:1100px) and (min-width:761px){
+ .a .rqf{padding:32px 0 40px}
+ .a .rqf h1{margin-bottom:32px}
+ .a .rqfork{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:24px}
+ .a .rqk canvas{width:min(100%,340px,calc((var(--vhpx,100svh) - 480px) / 2 * 17 / 13))}
+}
+@media (max-width:760px){
+ .a .rqf{padding:24px 0 32px}
+ .a.onescreen main > .rqf:first-child{padding-top:24px}
+ .a .rqf h1{margin-bottom:24px}
+ .a .rqfork{grid-template-columns:minmax(0,1fr);gap:12px}
+ .a .rqk{flex-direction:row;gap:20px}
+ .a .rqk canvas{flex:none;width:auto;height:clamp(72px,calc((var(--vhpx,100svh) - 60px - 200px) / 4 - 12px),132px)}
+ .a .rqk .t{align-items:flex-start;gap:4px}
+ .a .rqk b{font-size:32px}
+}

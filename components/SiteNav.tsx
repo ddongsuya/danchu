@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/lib/use-me";
-import { GUEST_REQUEST_HREF, REQUEST_HREF } from "@/components/RfqLink";
+import { GUEST_REQUEST_HREF } from "@/components/RfqLink";
 
 export const SITE_LINKS: [string, string][] = [
   ["/about", "서비스 소개"],
@@ -55,7 +55,7 @@ export function SiteNav() {
     }
   };
 
-  const requestHref = loading ? REQUEST_HREF : !me ? GUEST_REQUEST_HREF : me.role === "requester" ? REQUEST_HREF : me.to;
+  const requestHref = loading || !me || me.role === "requester" ? GUEST_REQUEST_HREF : me.to;
   const on = (href: string) => pathname === href;
 
   return (
