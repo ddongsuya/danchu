@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { buffer, drawCard, setReduced, W, H, type Kind } from "@/components/site/study-fork-motion";
 
 /**
@@ -17,7 +16,6 @@ const OPTS: { k: Kind; name: string; sub: string; href: string }[] = [
 ];
 
 export function StudyFork() {
-  const router = useRouter();
   const root = useRef<HTMLUListElement>(null);
   const cover = useRef<HTMLDivElement>(null);
   const busy = useRef(false);
@@ -35,7 +33,6 @@ export function StudyFork() {
       cv.height = H * dpr;
       return { a, k: a.dataset.k as Kind, c: cv.getContext("2d")!, off: i * 700, A: buffer(), B: buffer(), vis: true };
     });
-    OPTS.forEach((o) => router.prefetch(o.href));
 
     let raf = 0;
     const t0 = performance.now();
@@ -69,7 +66,7 @@ export function StudyFork() {
       mq.removeEventListener("change", onMq);
       window.removeEventListener("pageshow", onShow);
     };
-  }, [router]);
+  }, []);
 
   const pick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     // 새 탭·새 창으로 여는 클릭은 브라우저에 맡긴다
@@ -79,7 +76,7 @@ export function StudyFork() {
     busy.current = true;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // 키보드(Enter)로 고른 경우와 동작 줄이기는 전환 없이 바로 이동
-    if (reduce || e.detail === 0) { router.push(href); return; }
+    if (reduce || e.detail === 0) { window.location.assign(href); return; }
     const a = e.currentTarget;
     const cv = a.querySelector("canvas")!;
     const r = cv.getBoundingClientRect();
@@ -105,7 +102,8 @@ export function StudyFork() {
     );
     anim.onfinish = () => fly.remove();
     window.setTimeout(() => cover.current?.classList.add("on"), 420);
-    window.setTimeout(() => router.push(href), 700);
+    // 공개 페이지끼리는 문서를 새로 연다 (앞 페이지 스타일이 남지 않게)
+    window.setTimeout(() => window.location.assign(href), 700);
     // 이동이 늦어져도 화면이 덮인 채 멈추지 않게
     window.setTimeout(() => { fly.remove(); }, 1400);
   };

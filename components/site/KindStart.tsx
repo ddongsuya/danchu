@@ -2,6 +2,8 @@ import { Site } from "@/components/site/Site";
 import { StudyMark } from "@/components/site/StudyMark";
 import { KINDS, type Kind } from "@/lib/study-kinds";
 
+const ORDER: Kind[] = ["tox", "pd", "pk", "other"];
+
 /**
  * 네 갈래에서 하나를 고른 뒤의 시작 화면. 네 화면이 같은 구성을 쓴다:
  * 머리(되돌아가기 · 이름 · 무엇을 확인하는 시험인지 · 상징 그래픽) → 요청서로 가는 길 → 다른 갈래가 맞는 경우
@@ -10,7 +12,13 @@ export function KindStart({ kind }: { kind: Kind }) {
   const d = KINDS[kind];
   return (
     <Site cue={false}>
-      <section className="tx" aria-labelledby="t">
+      <section className={d.paths.length > 1 ? "tx" : "tx hascta"} aria-labelledby="t">
+        {/* 휴대폰: 네 갈래를 위 탭으로 바로 오간다 (PC는 되돌아가기 링크) */}
+        <nav className="txtabs" aria-label="시험 종류">
+          {ORDER.map((k) => (
+            <a key={k} href={`/request/${k}`} aria-current={k === kind ? "page" : undefined}>{KINDS[k].tag}</a>
+          ))}
+        </nav>
         <div className="txhead">
           <div>
             <a className="rqback" href="/request"><span aria-hidden="true">←</span> 다른 시험 고르기</a>
@@ -25,7 +33,7 @@ export function KindStart({ kind }: { kind: Kind }) {
               <a href={p.href}>
                 <h2>{p.title}<span className="ar" aria-hidden="true">→</span></h2>
                 <p>{p.desc}</p>
-                <p className="ex">{p.ex}</p>
+                <p className="ex">{p.ex.split(/,\s|\s·\s/).map((x) => <span key={x}>{x}</span>)}</p>
               </a>
             </li>
           ))}
@@ -40,6 +48,9 @@ export function KindStart({ kind }: { kind: Kind }) {
             ))}
           </ul>
         </div>
+        {d.paths.length === 1 && (
+          <div className="txcta"><a className="btn solid" href={d.paths[0].href}>{d.paths[0].title}</a></div>
+        )}
         <p className="txfoot">로그인 없이 쓰고, 보내기 직전에 이메일만 확인해요. <a href="/login?next=%2Fapp%2Fnew">계정이 있다면 로그인</a></p>
       </section>
     </Site>
