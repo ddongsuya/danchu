@@ -1,4 +1,6 @@
-import { mailMissing } from "@/lib/stuck";
+import { mailMissing, stuckReasons } from "@/lib/stuck";
+import { funnel } from "@/lib/request-story";
+import { AdminStory } from "@/components/admin/AdminStory";
 import { needsCda, participation, participationLabel, seatState, seatsDetailLabel } from "@/lib/request-policy";
 import { CdaPanel } from "@/components/admin/CdaPanel";
 import Link from "next/link";
@@ -51,22 +53,36 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   return (
     <>
       <Crumb href="/admin" label="접수 현황" />
-      <div className="ph">
-        <div>
-          <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{rfq.rfq_no} · 접수 {ymd(rfq.created_at)}</span>
-          <h1>{rfq.substance} · {rfq.company}</h1>
-          <p>{rfq.categories.join(" · ")} · {rfq.purpose ?? "-"} · {rfq.confidentiality ?? "일반"} · 참여 자리 {rfq.cro_count ?? "-"}{Array.isArray(p.nominees) && p.nominees.length ? ` · 지명 ${(p.nominees as string[]).join(", ")}` : ""}</p>
-          <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <AdminStory
+        no={rfq.rfq_no}
+        substance={rfq.substance}
+        company={rfq.company}
+        categories={rfq.categories}
+        status={rfq.status}
+        createdAt={rfq.created_at}
+        distributedAt={rfq.distributed_at}
+        replyBy={rfq.reply_by}
+        comparedAt={rfq.compared_at}
+        award={d.award ? { name: d.award.cro_name, at: d.award.awarded_at, reportedAt: d.award.contract_reported_at ?? null } : null}
+        f={funnel(d.invites)}
+        stuck={stuckReasons(rfq, d.invites, d.award, today)}
+      >
+        <div className="rs-aside">
+          <div className="rs-tags">
             <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
+            <span className="tag">{rfq.purpose ?? "목적 미입력"}</span>
+            <span className="tag">{rfq.confidentiality ?? "일반"}</span>
+            <span className="tag">참여 자리 {rfq.cro_count ?? "-"}</span>
+            {Array.isArray(p.nominees) && p.nominees.length > 0 && <span className="tag">지명 {(p.nominees as string[]).join(", ")}</span>}
             {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
             {d.files.length > 0 && <span className="tag">첨부 {d.files.length}</span>}
           </div>
         </div>
-        <div className="ph__actions">
-          <Link href={`/app/r/${rfq.rfq_no}`} className="b2 bsm">의뢰자 화면으로 보기</Link>
-        </div>
-      </div>
+      </AdminStory>
 
+      <section className="rs-block" id="ops" aria-labelledby="ops-title">
+      <p className="rs-bk">운영 작업</p>
+      <h2 id="ops-title" className="rs-h2">안내, 기한, 기관별 회신</h2>
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack" style={{ gap: 16 }}>
           <div className="card card--pad">
@@ -231,6 +247,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
           </div>
         </div>
       </div>
+      </section>
     </>
   );
 }

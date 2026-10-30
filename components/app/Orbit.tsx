@@ -5,7 +5,7 @@ import type { Dot } from "@/lib/request-story";
  * 채운 점 견적 제출, 반 채운 점 참여, 빈 점 그 밖. 색은 portal.css 의 .rs-orb 클래스가 토큰으로 정한다.
  * 장식이 아니라 숫자를 그린 그림이라 aria-label 에 같은 숫자를 문장으로 적는다.
  */
-export function Orbit({ rings, label, center }: { rings: { key: string; dots: Dot[]; late?: boolean; tag?: string }[]; label: string; center?: number }) {
+export function Orbit({ rings, label, center }: { rings: { key: string; dots: Dot[]; late?: boolean; tag?: string }[]; label: string; center?: number | string }) {
   const c = 260;
   const many = rings.length > 1;
   const step = 190 / Math.max(rings.length, 1);

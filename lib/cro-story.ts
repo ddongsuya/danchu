@@ -57,3 +57,13 @@ export function croTodo(items: CroItem[], awards: PendingAward[], now = Date.now
   const aw = [...awards].sort((a, b) => b.days - a.days)[0];
   return aw ? { kind: "award", award: aw } : null;
 }
+
+/** 회신 작성 진행: 항목마다 가능 여부를 고르고, 불가가 아니면 금액까지 적었으면 작성한 것으로 센다 */
+export function replyProgress(rows: { seq: number; name: string }[], items: { seq: number; avail: string; amount: string }[] | undefined): { total: number; done: number; left: string[] } {
+  const ok = (seq: number) => {
+    const it = items?.find((x) => x.seq === seq);
+    return !!it && !!it.avail && (it.avail === "불가" || !!String(it.amount ?? "").trim());
+  };
+  const left = rows.filter((r) => !ok(r.seq)).map((r) => r.name);
+  return { total: rows.length, done: rows.length - left.length, left };
+}

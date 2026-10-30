@@ -52,3 +52,23 @@ export const ADMIN_FUNNEL: AdminFunnel = {
     { rfq_no: "DEMO-004", sent: 2, joined: 0, submitted: 0 },
   ],
 };
+
+/** 기관 요청 이야기 미리보기 (회신 6개 중 4개 작성) */
+export function croStoryFixture(now: number) {
+  const d = (n: number) => new Date(now + n * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  const rows = [
+    { seq: 1, name: "반복투여 13주 · 설치류", category: "일반독성" },
+    { seq: 2, name: "반복투여 13주 · 비설치류", category: "일반독성" },
+    { seq: 3, name: "복귀돌연변이(Ames, TG 471)", category: "유전독성" },
+    { seq: 4, name: "소핵 in vivo(랫드)", category: "유전독성" },
+    { seq: 5, name: "TK(독성동태)", category: "PK/TK/ADME·생체시료분석" },
+    { seq: 6, name: "조제물분석", category: "조제물분석" },
+  ];
+  const items = rows.map((r) => ({ seq: r.seq, avail: r.seq <= 4 ? "가능" : "", amount: r.seq <= 4 ? "10000000" : "", weeks: r.seq <= 4 ? "13" : "" }));
+  return {
+    rfq: { full: true, no: "DEMO-008", substance: "예시 물질 E", categories: ["일반독성", "유전독성"], client: "바이오 벤처 (선정 시 공개)", masked: false, identityMasked: true, ddayLabel: "D-2", urgent: true, confid: "일반", overview: [["제출처", "식약처(MFDS)"]], rows, common: [], situation: [], ask: [], attachments: "없음", replyBy: d(2), authorities: ["식약처(MFDS)"], files: [] },
+    draft: { items, note: "", pdfName: "", status: "draft", common: {} },
+    inviteId: "x", rfqId: "x", croName: "예시 기관 A", croOrgId: null, token: "preview", expired: false, locked: false, declined: false, closed: false, closedReason: null,
+    joined: true, withdrawn: false, canRejoin: false, operator: false, seats: null, joinBy: null,
+  };
+}

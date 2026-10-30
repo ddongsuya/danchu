@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { closedMessage, type Loaded } from "@/lib/quote-load";
-import { Lock, StatusPill } from "@/components/app/ui";
+import type { Loaded } from "@/lib/quote-load";
+import { Lock } from "@/components/app/ui";
 import { md, won } from "@/lib/format";
 import { seatsLabel } from "@/lib/request-policy";
 import { JoinPanel } from "./JoinPanel";
+import { CroStory } from "./CroStory";
 
 /**
  * CRO가 보는 요청서. 토큰 링크(/q)와 CRO 포털(/cro/r) 양쪽에서 쓴다.
@@ -15,45 +16,14 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
   const submitted = draft?.status === "submitted";
   const total = draft?.items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0) ?? 0;
   const summary = !rfq.full;
-  const state = got.closed
-    ? { tone: "sf" as const, label: "회신 마감" }
-    : got.withdrawn
-      ? { tone: "sf" as const, label: "철회" }
-      : got.declined
-        ? { tone: "sf" as const, label: "불참" }
-        : submitted
-          ? { tone: "ok" as const, label: "제출 완료" }
-          : got.expired
-            ? { tone: "err" as const, label: "만료" }
-            : summary
-              ? { tone: "sf" as const, label: "참여 결정 전" }
-              : { tone: rfq.urgent ? ("err" as const) : ("sf" as const), label: rfq.ddayLabel };
   // 참여 결정을 받을 수 있는 상태: 참여 전이고 닫히지 않음
   const deciding = summary && !got.closed && !got.declined && !got.expired;
   const joinByLabel = got.joinBy ? md(new Date(got.joinBy).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })) : "";
-  const title = summary ? `${rfq.categories.join(" · ") || "비임상 시험"} 견적 요청` : rfq.substance;
 
   return (
     <>
-      <div className="ph">
-        <div>
-          <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)", letterSpacing: ".04em" }}>{rfq.no}</span>
-          <h1>{title}</h1>
-          <p>
-            {rfq.client}
-            {summary ? " · 시험물질명과 상세 내용은 참여 뒤에 열립니다" : rfq.masked && " · 첨부는 CDA 체결 확인 후"}
-          </p>
-          <div style={{ marginTop: 10 }}>
-            <StatusPill tone={state.tone}>{state.label}</StatusPill>
-          </div>
-        </div>
-        <div className="ph__actions">
-          {!summary && !got.closed && !got.declined && !got.expired && (
-            <Link href={replyHref} className="b1">{submitted ? (got.locked ? "제출한 회신 보기" : "제출한 회신 수정") : draft ? "이어서 작성" : "견적 회신 작성"}</Link>
-          )}
-        </div>
-      </div>
-
+      <CroStory got={got} replyHref={replyHref}>
+        <div className="rs-next">
       {deciding && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} declineEndpoint={declineEndpoint} />}
       {/* 불참 되돌리기 (2026-10-20 결정 3): 참여 전 불참만, 참여 결정 기한 전, 자리가 남았을 때. 참여와 같은 동의·같은 길(join_offer) */}
       {got.canRejoin && !got.withdrawn && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} rejoinBy={joinByLabel} />}
@@ -75,8 +45,12 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           </span>
         </div>
       )}
-      {got.closed && <div className="note note--warn" style={{ marginBottom: 16 }}>{closedMessage(got.closedReason)}</div>}
+        </div>
+      </CroStory>
 
+      <section className="rs-block" aria-labelledby="cro-doc-title">
+      <p className="rs-bk">{summary ? "참여 전 요약" : "요청서"}</p>
+      <h2 id="cro-doc-title" className="rs-h2">{summary ? "참여하면 이 내용으로 견적해요" : "의뢰자가 보낸 요청"}</h2>
       <div className="grid2" style={{ alignItems: "start" }}>
         <div className="stack">
           <div className="card" style={{ padding: "6px 18px" }}>
@@ -171,6 +145,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           )}
         </div>
       </div>
+      </section>
     </>
   );
 }

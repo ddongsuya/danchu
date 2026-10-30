@@ -77,3 +77,30 @@ describe("시험 설명", () => {
     expect(notesFor(["반복투여 4주", "반복투여 13주", "알 수 없는 항목"]).map((n) => [n.key, n.items.length])).toEqual([["repeat", 2]]);
   });
 });
+
+import { croTodo, croTotals, replyProgress } from "@/lib/cro-story";
+
+describe("기관 홈과 회신 진행", () => {
+  const NOW = Date.parse("2026-10-30T00:00:00Z");
+  const open = "2026-11-30T00:00:00Z";
+  const it0 = { id: "a", no: "A", substance: "", tags: [], expiresAt: open, cancelled: false, quoteStatus: null };
+  const items = [
+    { ...it0, id: "u", replyBy: "2026-11-05", stage: "undecided" as const, rfqStatus: "distributed" },
+    { ...it0, id: "d", replyBy: "2026-11-01", stage: "draft" as const, rfqStatus: "quoted" },
+    { ...it0, id: "s", replyBy: "2026-10-31", stage: "submitted" as const, rfqStatus: "quoted", quoteStatus: "submitted" },
+    { ...it0, id: "x", replyBy: "2026-10-01", stage: "declined" as const, rfqStatus: "distributed" },
+  ];
+  it("진행 중과 흐름 숫자", () => {
+    const t = croTotals(items, NOW);
+    expect([t.received, t.joined, t.submitted, t.active.length, t.undecided]).toEqual([4, 2, 1, 3, 1]);
+  });
+  it("지금 할 일은 기한이 가장 가까운 움직일 안내", () => {
+    const t = croTodo(items, [{ no: "B", substance: "", days: 30 }], NOW);
+    expect(t?.kind === "invite" && t.item.id).toBe("d");
+    expect(croTodo([], [{ no: "B", substance: "", days: 30 }], NOW)?.kind).toBe("award");
+  });
+  it("불가는 금액 없이도 작성한 것으로 센다", () => {
+    const rows = [{ seq: 1, name: "a" }, { seq: 2, name: "b" }, { seq: 3, name: "c" }];
+    expect(replyProgress(rows, [{ seq: 1, avail: "가능", amount: "100" }, { seq: 2, avail: "불가", amount: "" }, { seq: 3, avail: "가능", amount: "" }])).toEqual({ total: 3, done: 2, left: ["c"] });
+  });
+});
