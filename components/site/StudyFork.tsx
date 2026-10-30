@@ -11,9 +11,9 @@ import { buffer, drawCard, setReduced, W, H, type Kind } from "@/components/site
  */
 const OPTS: { k: Kind; name: string; sub: string; href: string }[] = [
   { k: "tox", name: "Tox", sub: "독성", href: "/request/tox" },
-  { k: "pd", name: "PD", sub: "효력", href: "/request/new?start=manual&kind=pd" },
-  { k: "pk", name: "PK", sub: "약동학", href: "/request/new?start=manual&kind=pk" },
-  { k: "other", name: "Other", sub: "개별 분석", href: "/request/new?start=manual&kind=other" },
+  { k: "pd", name: "PD", sub: "효력", href: "/request/pd" },
+  { k: "pk", name: "PK", sub: "약동학", href: "/request/pk" },
+  { k: "other", name: "Other", sub: "개별 분석", href: "/request/other" },
 ];
 
 export function StudyFork() {

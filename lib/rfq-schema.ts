@@ -13,6 +13,7 @@
  */
 
 import { AREA_NAMES } from "./efficacy";
+import { OTHER_AREAS } from "./other-areas";
 
 export type FieldType =
   | "text"
@@ -707,10 +708,12 @@ export const DETAILS: Record<Cat, Field[]> = {
     {
       id: "items",
       type: "chips",
-      label: "항목",
-      options: ["임상병리", "조직병리(판독)", "조직교차반응성(인체 조직)", "인체첩포시험", "병리 피어리뷰", "다지점시험", "시험물질 특성분석(순도 등)", "위탁 보관", "기타"],
+      label: "분석 항목",
+      // 앞의 10개는 개별 분석(Other) 카테고리 (lib/study-kinds.ts OTHER_AREAS, 2026-10-30). 뒤는 가이드라인 찾기가 고르는 기존 항목
+      options: [...OTHER_AREAS, "조직교차반응성(인체 조직)", "인체첩포시험", "병리 피어리뷰", "다지점시험", "위탁 보관", "기타"],
     },
-    { id: "desc", type: "textarea", label: "상세 내용", placeholder: "필요한 시험을 자유롭게 적어 주세요." },
+    { id: "samples", type: "text", label: "시료 종류와 수", placeholder: "예: 랫드 혈청, 40개" },
+    { id: "desc", type: "textarea", label: "받고 싶은 분석", placeholder: "예: 혈장 내 염증성 마커를 측정하고 싶습니다." },
   ],
 };
 

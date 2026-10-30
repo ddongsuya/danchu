@@ -1,6 +1,8 @@
 /* ── 견적 요청 첫 화면: Tox / PD / PK / Other ──
    PC 한 줄 넷, 태블릿 2×2, 모바일 네 줄(그래픽 왼쪽·이름 오른쪽). 세 경우 모두 한 화면 안에 들어가게 그래픽 크기를 화면 높이(--vhpx)로 묶는다 */
-.a .rqf{padding:56px 0 72px}
+/* 머리글 바로 아래에서 시작한다 (가운데 정렬은 머리글과 제목 사이가 너무 벌어짐, 2026-10-30) */
+.a.onescreen main > .rqf,.a.onescreen main > .tx{align-content:start}
+.a .rqf{padding:40px 0 72px}
 .a .rqf h1{margin-bottom:48px}
 .a .rqfork{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px;list-style:none;margin:0;padding:0}
 .a .rqfork > li{min-width:0}
@@ -36,12 +38,12 @@
 
 /* ── Tox 시작 화면: 가이드라인에서 찾기 / 직접 고르기 ──
    네 갈래 화면과 같은 결: 상자·구분선 없이 큰 글씨 두 갈래. 머리 오른쪽에 Tox 그래픽을 두어 앞 화면과 잇는다 */
-.a .tx{padding:48px 0 64px}
-.a .txhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:end;margin-bottom:64px}
+.a .tx{padding:40px 0 64px}
+.a .txhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:start;margin-bottom:56px}
 .a .rqback{display:inline-flex;gap:8px;margin-bottom:24px;font-size:15px;color:var(--muted);text-decoration:none}
 .a .rqback:hover{color:var(--ink)}
 .a .tx .lead{margin:20px 0 0;color:var(--muted);font-size:18px;line-height:1.6}
-.a .txmark{display:block;width:min(280px,calc((var(--vhpx,100svh) - 520px) * 17 / 13));aspect-ratio:17/13}
+.a .txmark{display:block;width:min(240px,calc((var(--vhpx,100svh) - 560px) * 17 / 13));aspect-ratio:17/13}
 .a .txpick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:64px;list-style:none;margin:0;padding:0}
 .a .txpick > li{min-width:0}
 .a .txpick a{display:grid;gap:12px;color:var(--ink);text-decoration:none;transition:transform 160ms var(--eo)}
@@ -50,24 +52,39 @@
 .a .txpick .ar{display:inline-block;font-size:.7em;transition:transform 200ms var(--eo)}
 .a .txpick p{margin:0;color:var(--ink2);font-size:17px;line-height:1.6;max-width:34em}
 .a .txpick .ex{margin-top:8px;color:var(--muted);font-size:15px;line-height:1.75;text-wrap:pretty}
-.a .txfoot{margin:72px 0 0;color:var(--muted);font-size:15px}
+.a .txpick.one{grid-template-columns:minmax(0,1fr)}
+.a .txpick.one p{max-width:44em}
+/* 다른 갈래가 맞는 경우: 한 줄에 셋 */
+.a .txelse{margin-top:56px}
+.a .txelse .h{margin:0 0 12px;font-size:15px;font-weight:500;color:var(--ink)}
+.a .txelse ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 32px;list-style:none;margin:0;padding:0}
+.a .txelse a{display:flex;justify-content:flex-start;align-items:baseline;gap:12px;padding:12px 0;color:var(--muted);font-size:15px;text-decoration:none}
+.a .txelse a b{color:var(--ink);font-weight:500;white-space:nowrap;display:inline-flex;gap:6px}
+.a .txelse a .ar{transition:transform 200ms var(--eo)}
+.a .txfoot{margin:40px 0 0;color:var(--muted);font-size:15px}
 .a .txfoot a{color:var(--ink);text-underline-offset:4px;margin-left:8px;white-space:nowrap}
 @media (hover:hover) and (pointer:fine){
  .a .txpick a:hover h2{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:8px}
  .a .txpick a:hover .ar{transform:translateX(6px)}
+ .a .txelse a:hover{color:var(--ink)}
+ .a .txelse a:hover .ar{transform:translateX(4px)}
 }
 @media (max-width:760px){
  .a .tx{padding:24px 0 32px}
  .a.onescreen main > .tx:first-child{padding-top:24px}
- .a .txhead{grid-template-columns:minmax(0,1fr);margin-bottom:40px}
+ .a .txhead{grid-template-columns:minmax(0,1fr);margin-bottom:32px}
  .a .txmark{display:none}
  .a .rqback{margin-bottom:16px}
  .a .tx .lead{margin-top:12px;font-size:16px}
- .a .txpick{grid-template-columns:minmax(0,1fr);gap:36px}
+ .a .txpick{grid-template-columns:minmax(0,1fr);gap:28px}
  .a .txpick a{gap:8px}
  .a .txpick h2{font-size:28px;justify-content:space-between}
  .a .txpick p{font-size:15px}
  .a .txpick .ex{display:none}
- .a .txfoot{margin-top:40px;font-size:14px}
+ .a .txpick.one .ex{display:block;margin-top:4px;font-size:14px;line-height:1.6}
+ .a .txelse{margin-top:32px}
+ .a .txelse ul{grid-template-columns:minmax(0,1fr);gap:0}
+ .a .txelse a{justify-content:space-between;padding:8px 0;font-size:14px}
+ .a .txfoot{margin-top:24px;font-size:14px}
  .a .txfoot a{display:inline-block;margin:8px 0 0}
 }

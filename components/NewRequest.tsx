@@ -31,6 +31,7 @@ import { DesignHints } from "@/components/guide/DesignHints";
 import { requestChecks } from "@/lib/design-guide";
 import { needsCda } from "@/lib/request-policy";
 import { AttachmentNotice } from "@/components/AttachmentNotice";
+import { KINDS, isKind, type Kind } from "@/lib/study-kinds";
 import "./request.css";
 
 type Contact = {
@@ -67,12 +68,7 @@ const FIELD_LABELS: Record<string, string> = {
 const sameFile = (a: FileMeta, b: FileMeta) =>
   a.name === b.name && a.size === b.size;
 const initial = (): Values => ({ ...DEFAULT_VALUES });
-/** 견적 요청 첫 화면(Tox·PD·PK·Other)에서 고른 종류 → 미리 고를 시험 항목. Tox는 대분류가 많아 /request/tox에서 따로 고른다 */
-const KIND_CATS: Record<string, Cat> = {
-  pd: "효력시험(약효)",
-  pk: "PK/TK/ADME·생체시료분석",
-  other: "기타(임상병리·조직병리 등)",
-};
+
 
 /** 로그인 전 요청서의 임시 저장 자리 */
 const GUEST = "guest";
@@ -92,6 +88,8 @@ export function NewRequest({
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<"start" | "advisor" | "edit">("start");
+  /** 네 갈래 첫 화면에서 고른 갈래. 있으면 시험 항목을 그 갈래 것만 보여 준다 (이미 고른 항목은 남긴다) */
+  const [kind, setKind] = useState<Kind | null>(null);
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Values>(initial);
   const [files, setFiles] = useState<File[]>([]);
@@ -133,7 +131,7 @@ export function NewRequest({
       setResume(draft);
       setReady(true);
       // 시작 화면(/request)에서 고른 길: 제안 받기 또는 바로 작성 (작성 중인 초안이 있으면 이어 쓰기를 먼저 보여 준다)
-      // ?kind=pd|pk|other 는 네 갈래 첫 화면에서 고른 종류. 해당 시험 항목을 미리 골라 둔다
+      // ?kind=tox|pd|pk|other 는 네 갈래 첫 화면에서 고른 갈래. 시험 항목을 그 갈래 것만 보여 준다 (start() 참고)
       const sp = new URLSearchParams(window.location.search);
       const chosen = sp.get("start");
       if (chosen === "advisor" && !draft) setPhase("advisor");
@@ -251,8 +249,12 @@ export function NewRequest({
     setPhase("edit");
     go(0);
     const sp = new URLSearchParams(window.location.search);
-    const kindCat = KIND_CATS[sp.get("kind") ?? ""];
-    if (kindCat) setValues({ ...initial(), categories: [kindCat] });
+    const k = sp.get("kind");
+    if (isKind(k)) {
+      setKind(k);
+      // Tox는 대분류가 많아 미리 고르지 않는다. PD·PK·Other는 대표 항목 하나를 골라 둔다
+      if (k !== "tox") setValues({ ...initial(), categories: [KINDS[k].cats[0]] });
+    } else setKind(null);
     const key = sp.get("preset");
     if (key) {
       setPreset(key);
@@ -279,6 +281,11 @@ export function NewRequest({
     ids.map((id) => {
       const wiz = WIZ.find((w) => w.fields.some((f) => f.id === id))!;
       const f = wiz.fields.find((f) => f.id === id)!;
+      if (id === "categories" && kind) {
+        const keep = cats.filter((c) => !KINDS[kind].cats.includes(c as Cat));
+        const help = kind === "tox" ? f.help || wiz.sub : "다른 갈래의 시험은 첫 화면에서 따로 요청하세요.";
+        return field({ ...f, help, options: [...KINDS[kind].cats, ...keep] });
+      }
       return field({ ...f, help: f.help || wiz.sub });
     });
   // 로그인 전에는 담당자 정보를 보내기 직전 확인 창에서 받는다
@@ -541,16 +548,20 @@ export function NewRequest({
           <>
             <section className="request__section">
               <div className="request__section-head">
-                <h2>시험 항목</h2>
-                <button
-                  type="button"
-                  className="btxt"
-                  onClick={() => setPhase("advisor")}
-                >
-                  시험 선택 도움받기
-                </button>
+                <h2>{kind ? `시험 항목 · ${KINDS[kind].name}` : "시험 항목"}</h2>
+                {/* 가이드라인 찾기와 시험 구성은 독성시험용이라 PD·PK·Other 에서는 숨긴다 */}
+                {(!kind || kind === "tox") && (
+                  <button
+                    type="button"
+                    className="btxt"
+                    onClick={() => setPhase("advisor")}
+                  >
+                    시험 선택 도움받기
+                  </button>
+                )}
               </div>
               {baseFields(["categories"])}
+              {(!kind || kind === "tox") && (
               <details className="request__details">
                 <summary>시험 구성으로 한 번에 선택</summary>
                 <label className="fld">
@@ -602,6 +613,7 @@ export function NewRequest({
                   )}
                 </div>
               </details>
+              )}
             </section>
             <section className="request__section">
               <h2>물질과 의뢰 목적</h2>
