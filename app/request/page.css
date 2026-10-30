@@ -1,51 +1,3 @@
-@keyframes rise{from{transform:translateY(24px)}}
-@keyframes pop{from{opacity:0;transform:scale(.94)}}
-@keyframes slideL{from{opacity:0;transform:translateX(-28px)}}
-@keyframes slideR{from{opacity:0;transform:translateX(28px)}}
-@supports (animation-timeline: view()){ @media (max-height:1200px){
- .a .sv{animation:var(--k,rise) linear both;animation-timeline:--sc;animation-range:var(--r,entry 20% entry 80%)}
-}}
-.a .rq{padding:72px 0 96px}
-.a .rq h1{margin-bottom:20px}
-.a .rq .lead{margin-bottom:48px}
-.a .rqpick{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink)}
-.a .opt{display:grid;grid-template-rows:auto auto 1fr auto;gap:12px;padding:32px 40px 32px 0;color:var(--ink);text-decoration:none;position:relative;transition:background-color 200ms ease}
-.a .opt + .opt{padding-left:40px;border-left:1px solid var(--line)}
-.a .opt h2{font-size:clamp(24px,2.4vw,32px)}
-.a .opt p{color:var(--muted);font-size:16px;line-height:1.65;max-width:28em}
-.a .opt .go{display:inline-flex;align-items:center;gap:8px;font-weight:500;font-size:15px;margin-top:12px}
-.a .opt .go .ar{transition:transform 200ms var(--eo)}
-.a .opt:active{transform:scale(.99)}
-.a .opt .q{display:grid;gap:0;margin:8px 0 0;border-top:1px solid var(--line)}
-.a .opt .q span{padding:10px 0;border-bottom:1px solid var(--line);font-size:14.5px;display:flex;justify-content:space-between;color:var(--ink2)}
-.a .opt .q span i{font-style:normal;color:var(--muted);font-size:13px}
-.a .cats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.a .cats span{height:30px;display:inline-flex;align-items:center;padding:0 10px;border:1px solid var(--line);border-radius:2px;font-size:13.5px}
-.a .four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-top:64px;padding-top:24px;border-top:1px solid var(--line);list-style:none;padding-left:0}
-.a .four li{font-size:15px}
-.a .four li b{display:block;font-weight:500;margin-bottom:4px}
-.a .four li span{color:var(--muted);font-size:14px;line-height:1.6}
-.a .guest{margin-top:40px;display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 20px;background:var(--band);font-size:15px}
-.a .guest a{color:var(--ink);text-underline-offset:4px;white-space:nowrap}
-@media (hover:hover) and (pointer:fine){ .a .opt:hover .go .ar{transform:translateX(4px)} .a .opt:hover h2{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:1px} }
-@media (max-width:860px){
- /* 모바일은 두 선택지만: 예시 줄·분야 칩·단계 목록은 숨기고 큰 선택 줄로 */
- .a .rq{padding:32px 0 48px}
- .a .rq .lead{margin-bottom:28px}
- .a .rqpick{grid-template-columns:1fr;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
- .a .opt{grid-template-rows:auto auto;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;row-gap:6px;align-items:center;padding:24px 0;border:0;border-radius:0;background:transparent}
- .a .opt + .opt{padding-left:0;border-left:0;border-top:1px solid var(--line)}
- .a .opt h2{font-size:24px;grid-column:1}
- .a .opt p{font-size:15px;line-height:1.5;grid-column:1;margin:0}
- .a .opt .q,.a .cats,.a .four{display:none}
- .a .opt{grid-template-columns:minmax(0,1fr) 32px}
- .a .opt h2{word-break:keep-all;overflow-wrap:anywhere}
- .a .opt .go{grid-column:2;grid-row:1 / span 2;margin:0;gap:0;justify-content:flex-end}
- .a .opt .go .t{display:none}
- .a .opt .go .ar{font-size:24px;line-height:1}
- .a .guest{flex-direction:column;align-items:flex-start;margin-top:28px;padding:16px;font-size:14px}
-}
-
 /* ── 견적 요청 첫 화면: Tox / PD / PK / Other ──
    PC 한 줄 넷, 태블릿 2×2, 모바일 네 줄(그래픽 왼쪽·이름 오른쪽). 세 경우 모두 한 화면 안에 들어가게 그래픽 크기를 화면 높이(--vhpx)로 묶는다 */
 .a .rqf{padding:56px 0 72px}
@@ -65,8 +17,6 @@
 .rqcover.on{visibility:visible;clip-path:circle(150% at 50% 50%);transition:clip-path 560ms var(--ease-drawer)}
 .rqfly{position:fixed;z-index:calc(var(--z-overlay) + 1);pointer-events:none;transform-origin:center;will-change:transform,opacity}
 @media (prefers-reduced-motion:reduce){ .rqcover.on{clip-path:none;transition:none} }
-/* Tox 요청 화면의 되돌아가기 */
-.a .rqback{display:inline-block;margin-bottom:24px;font-size:15px;color:var(--muted);text-underline-offset:4px}
 @media (max-width:1100px) and (min-width:761px){
  .a .rqf{padding:32px 0 40px}
  .a .rqf h1{margin-bottom:32px}
@@ -82,4 +32,42 @@
  .a .rqk canvas{flex:none;width:auto;height:clamp(72px,calc((var(--vhpx,100svh) - 60px - 200px) / 4 - 12px),132px)}
  .a .rqk .t{align-items:flex-start;gap:4px}
  .a .rqk b{font-size:32px}
+}
+
+/* ── Tox 시작 화면: 가이드라인에서 찾기 / 직접 고르기 ──
+   네 갈래 화면과 같은 결: 상자·구분선 없이 큰 글씨 두 갈래. 머리 오른쪽에 Tox 그래픽을 두어 앞 화면과 잇는다 */
+.a .tx{padding:48px 0 64px}
+.a .txhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:end;margin-bottom:64px}
+.a .rqback{display:inline-flex;gap:8px;margin-bottom:24px;font-size:15px;color:var(--muted);text-decoration:none}
+.a .rqback:hover{color:var(--ink)}
+.a .tx .lead{margin:20px 0 0;color:var(--muted);font-size:18px;line-height:1.6}
+.a .txmark{display:block;width:min(280px,calc((var(--vhpx,100svh) - 520px) * 17 / 13));aspect-ratio:17/13}
+.a .txpick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:64px;list-style:none;margin:0;padding:0}
+.a .txpick > li{min-width:0}
+.a .txpick a{display:grid;gap:12px;color:var(--ink);text-decoration:none;transition:transform 160ms var(--eo)}
+.a .txpick a:active{transform:scale(.98)}
+.a .txpick h2{display:flex;align-items:baseline;gap:16px;font-size:clamp(32px,3.4vw,48px);font-weight:500;letter-spacing:-.03em;line-height:1.15;margin:0;text-wrap:balance}
+.a .txpick .ar{display:inline-block;font-size:.7em;transition:transform 200ms var(--eo)}
+.a .txpick p{margin:0;color:var(--ink2);font-size:17px;line-height:1.6;max-width:34em}
+.a .txpick .ex{margin-top:8px;color:var(--muted);font-size:15px;line-height:1.75;text-wrap:pretty}
+.a .txfoot{margin:72px 0 0;color:var(--muted);font-size:15px}
+.a .txfoot a{color:var(--ink);text-underline-offset:4px;margin-left:8px;white-space:nowrap}
+@media (hover:hover) and (pointer:fine){
+ .a .txpick a:hover h2{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:8px}
+ .a .txpick a:hover .ar{transform:translateX(6px)}
+}
+@media (max-width:760px){
+ .a .tx{padding:24px 0 32px}
+ .a.onescreen main > .tx:first-child{padding-top:24px}
+ .a .txhead{grid-template-columns:minmax(0,1fr);margin-bottom:40px}
+ .a .txmark{display:none}
+ .a .rqback{margin-bottom:16px}
+ .a .tx .lead{margin-top:12px;font-size:16px}
+ .a .txpick{grid-template-columns:minmax(0,1fr);gap:36px}
+ .a .txpick a{gap:8px}
+ .a .txpick h2{font-size:28px;justify-content:space-between}
+ .a .txpick p{font-size:15px}
+ .a .txpick .ex{display:none}
+ .a .txfoot{margin-top:40px;font-size:14px}
+ .a .txfoot a{display:inline-block;margin:8px 0 0}
 }
