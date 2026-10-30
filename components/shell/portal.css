@@ -865,3 +865,10 @@
 .skel__bar--row { height: 56px; }
 @keyframes skel-in { to { opacity: 1; } }
 @keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+/* 이름(사이드바·상단)은 프로필로 가는 링크 */
+.pt__identity { color: inherit; text-decoration: none; border-radius: 10px; }
+.pt__identity:focus-visible, .pt__who:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.pt__who { text-decoration: none; }
+@media (hover: hover) and (pointer: fine) {
+  .pt__identity:hover b, .pt__who:hover { text-decoration: underline; text-underline-offset: 3px; }
+}

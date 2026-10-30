@@ -11,7 +11,7 @@ export default async function Support({ searchParams }: { searchParams: Promise<
   const reqs = dbReady() && s.profile.role === "requester" ? await listRequestsForUser(s.userId) : [];
   return (
     <>
-      <Crumb href="/app/profile" label="프로필" />
+      <Crumb href={s.profile.role === "cro" ? "/cro/profile" : "/app/profile"} label="프로필" />
       <div className="ph">
         <div>
           <h1>무엇을 도와드릴까요?</h1>

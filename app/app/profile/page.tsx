@@ -50,10 +50,12 @@ export default async function Profile({ searchParams }: { searchParams?: Promise
         <div className="stack">
           <ThemeSettings />
           <div className="card card--rows">
-            <Link href="/app/support" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>문의하기</span>
-              <span style={{ color: "var(--dash)" }}>›</span>
-            </Link>
+            {p.role !== "admin" && (
+              <Link href={`${base}/support`} className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
+                <span>문의하기</span>
+                <span style={{ color: "var(--dash)" }}>›</span>
+              </Link>
+            )}
             <Link href="/reset-password" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
               <span>비밀번호 설정·변경</span>
               <span style={{ color: "var(--dash)" }}>›</span>

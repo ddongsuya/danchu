@@ -32,6 +32,8 @@ import { requestChecks } from "@/lib/design-guide";
 import { needsCda } from "@/lib/request-policy";
 import { AttachmentNotice } from "@/components/AttachmentNotice";
 import { KINDS, isKind, type Kind } from "@/lib/study-kinds";
+
+const KIND_ORDER: Kind[] = ["tox", "pd", "pk", "other"];
 import "./request.css";
 
 type Contact = {
@@ -90,6 +92,8 @@ export function NewRequest({
   const [phase, setPhase] = useState<"start" | "advisor" | "edit">("start");
   /** 네 갈래 첫 화면에서 고른 갈래. 있으면 시험 항목을 그 갈래 것만 보여 준다 (이미 고른 항목은 남긴다) */
   const [kind, setKind] = useState<Kind | null>(null);
+  /** 주소에 갈래 없이 들어왔을 때(앱의 "새 요청" 등) 시작 화면에서 고른 갈래. Tox는 길이 둘이라 한 번 더 고른다 */
+  const [fork, setFork] = useState<Kind | null>(null);
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Values>(initial);
   const [files, setFiles] = useState<File[]>([]);
@@ -239,7 +243,7 @@ export function NewRequest({
     setValues(next);
     setError("");
   };
-  const start = () => {
+  const start = (picked?: Kind) => {
     setValues(initial());
     setFiles([]);
     setMissingFiles([]);
@@ -249,7 +253,13 @@ export function NewRequest({
     setPhase("edit");
     go(0);
     const sp = new URLSearchParams(window.location.search);
-    const k = sp.get("kind");
+    const k = picked ?? sp.get("kind");
+    // 시작 화면에서 고른 갈래는 주소에도 남겨 새로고침·뒤로 가기 뒤에도 같은 요청서가 열리게 한다
+    if (picked) {
+      sp.set("start", "manual");
+      sp.set("kind", picked);
+      window.history.replaceState(null, "", `${window.location.pathname}?${sp}`);
+    }
     if (isKind(k)) {
       setKind(k);
       // Tox는 대분류가 많아 미리 고르지 않는다. PD·PK·Other는 대표 항목 하나를 골라 둔다
@@ -425,12 +435,18 @@ export function NewRequest({
   if (phase === "start")
     return (
       <div className="request">
-        <Link className="crumb" href="/app">
-          내 견적 요청
-        </Link>
-        <h1>새 견적 요청</h1>
+        {fork === "tox" ? (
+          <button type="button" className="crumb" style={{ background: "none", border: 0, padding: 0 }} onClick={() => setFork(null)}>
+            다른 시험 고르기
+          </button>
+        ) : (
+          <Link className="crumb" href={guest ? "/request" : "/app"}>
+            {guest ? "견적 요청" : "내 견적 요청"}
+          </Link>
+        )}
+        <h1>{fork === "tox" ? KINDS.tox.name : "새 견적 요청"}</h1>
         <p className="request__lead">
-          필요한 시험을 선택하고, 알고 있는 조건만 입력하세요.
+          {fork === "tox" ? KINDS.tox.lead : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
         </p>
         {notice && (
           <p className="note note--tint" role="status">
@@ -474,7 +490,10 @@ export function NewRequest({
                   ) {
                     clearDraft(userId);
                     if (!guest) clearDraft(GUEST);
-                    start();
+                    // 주소에 갈래나 패키지가 있으면 그 요청서로, 없으면 갈래 고르기로 돌아간다
+                    const sp = new URLSearchParams(window.location.search);
+                    if (sp.get("kind") || sp.get("preset")) start();
+                    else setResume(null);
                   }
                 }}
               >
@@ -483,7 +502,19 @@ export function NewRequest({
             </div>
           </section>
         )}
-        {!resume && (
+        {!resume && fork !== "tox" && (
+          <div className="request__paths request__kinds">
+            {KIND_ORDER.map((k) => (
+              <button key={k} type="button" onClick={() => (k === "tox" ? setFork("tox") : start(k))}>
+                <b>
+                  {KINDS[k].tag} <em>{KINDS[k].name}</em>
+                </b>
+                <span>{KINDS[k].lead}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {!resume && fork === "tox" && (
           <div className="request__paths">
             <button onClick={() => setPhase("advisor")}>
               <b>필요한 시험 찾아보기</b>
@@ -491,7 +522,7 @@ export function NewRequest({
                 개발 상황을 고르면 해당하는 가이드라인 기준을 보여드려요.
               </span>
             </button>
-            <button onClick={start}>
+            <button onClick={() => start("tox")}>
               <b>시험 직접 고르기</b>
               <span>필요한 시험을 알고 계시면 바로 요청서를 쓰세요.</span>
             </button>

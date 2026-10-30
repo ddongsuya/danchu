@@ -213,3 +213,36 @@
   .gv[open] { animation: gvFade 200ms ease; }
   @keyframes gvFade { from { opacity: 0; } to { opacity: 1; } }
 }
+
+/* 갈래 없이 들어온 시작 화면: 네 갈래(Tox·PD·PK·Other). 이름은 굵게, 우리말 이름은 한 단계 옅게 */
+.request__kinds b em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 6px;
+}
+.request__paths button {
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)), border-color 160ms ease;
+}
+.request__paths button:active {
+  transform: scale(0.97);
+}
+.request__paths button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .request__paths button:hover {
+    border-color: var(--ink);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .request__paths button:active {
+    transform: none;
+  }
+}
+/* 앱 셸(.pt p { margin: 0 })이 덮어 리드 문장이 카드에 붙던 것을 되살린다 */
+.pt .request__lead {
+  margin: 10px 0 28px;
+}

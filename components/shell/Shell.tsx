@@ -21,6 +21,8 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
   const role = session.profile.role;
   const who = session.profile.name || session.email;
   const org = role === "cro" ? session.org?.name : session.profile.company;
+  // 이름을 누르면 프로필로 (운영자는 메뉴에 프로필이 없어 여기가 유일한 길이다)
+  const profileHref = role === "admin" ? "/admin/profile" : role === "cro" ? "/cro/profile" : "/app/profile";
 
   return (
     <div className="pt">
@@ -38,10 +40,10 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
         </nav>
         <a href="/guide" className="pt__guide"><Question size={20} aria-hidden="true" /><span>시험 가이드</span><ArrowUpRight size={15} aria-hidden="true" /></a>
         <div className="pt__user">
-          <div className="pt__identity"><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
+          <Link href={profileHref} className="pt__identity" aria-label={`프로필 · ${who}`}><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
             <b>{who}</b>
             {org}
-          </div></div>
+          </div></Link>
           <LogoutButton />
         </div>
       </aside>
@@ -54,7 +56,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
               <span className="pt__role">{ROLE_LABEL[role]}</span>
             </Link>
             <span className="pt__workspace-title">{ROLE_LABEL[role]} 워크스페이스</span>
-            <span style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</span>
+            <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
           </div>
         </header>
         <main className="pt__main" id="main-content">{children}</main>
