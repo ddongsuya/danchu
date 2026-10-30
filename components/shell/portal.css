@@ -854,3 +854,14 @@
 .rs-acts { align-items: center; }
 .rs-acts__note { font-size: 15px; font-weight: 600; color: var(--ink); margin-left: 6px; }
 @media (max-width: 959px) { .rs-acts__note { flex: 0 0 auto !important; } }
+
+/* 화면 여는 중 자리 표시 (loading.tsx). 아주 빨리 열리면 깜빡이지 않게 120ms 뒤에 보인다 */
+.skel { display: grid; gap: 14px; padding-top: 8px; opacity: 0; animation: skel-in 160ms var(--ease-out, ease-out) 120ms forwards; }
+.skel__bar { background: var(--track); border-radius: 12px; animation: skel-pulse 1.4s ease-in-out 280ms infinite; }
+.skel__bar--title { height: 36px; width: min(420px, 70%); }
+.skel__bar--line { height: 16px; width: min(560px, 90%); }
+.skel__bar--hero { height: clamp(160px, 28vh, 260px); margin-top: 10px; }
+.skel__rows { display: grid; gap: 10px; margin-top: 14px; }
+.skel__bar--row { height: 56px; }
+@keyframes skel-in { to { opacity: 1; } }
+@keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
