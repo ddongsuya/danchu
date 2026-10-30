@@ -1,9 +1,12 @@
 import { Site } from "@/components/site/Site";
 import { Orbit } from "@/components/site/Orbit";
 import { HomeMotion } from "@/components/site/HomeMotion";
+import { KindStrip } from "@/components/site/KindStrip";
 import "./home.css";
 
 /** 랜딩. 첫 화면은 궤도(순수 CSS), 아래 세 장면은 GSAP(HomeMotion)이 화면에 들어올 때 재생한다. 고정 장면이 있어 스크롤 스냅은 쓰지 않는다. */
+const FL_CYCLE = [{"tag": "Tox", "t": "반복투여독성 4주", "k": "동물", "v": "설치류", "a": [1000, 8], "b": [900, 7]}, {"tag": "PD", "t": "효력시험 · 대장염 모델", "k": "동물", "v": "마우스", "a": [1500, 10], "b": [1350, 9]}, {"tag": "PK", "t": "약동학 · 단회 투여", "k": "검체", "v": "랫드 혈장", "a": [600, 5], "b": [540, 4]}, {"tag": "Other", "t": "혈액생화학 분석", "k": "시료", "v": "보유한 랫드 혈청", "a": [300, 3], "b": [270, 2]}];
+
 export default function Home() {
   return (
     <Site onescreen={false}>
@@ -24,15 +27,7 @@ export default function Home() {
 <div><span className="mono">기밀</span>CDA 체결로 안전하게</div>
 <div><span className="mono">참고</span>가이드라인 기반</div>
 </div>
-<div className="mq">
-<span className="lbl mono">이런 시험의 견적을 받아보세요</span>
-<div className="vp">
-<div className="track">
-<span>일반독성</span><span>발암성·종양원성</span><span>유전독성</span><span>생식발생독성</span><span>항원성·면역독성</span><span>국소독성</span><span>국소내성</span><span>안전성약리</span><span>동물대체시험</span><span>조제물분석</span><span>PK/TK/ADME·생체시료분석</span><span>효력시험(약효)</span><span>환경유해성</span><span>의료기기 생물학적 안전성</span><span>임상병리·조직병리</span>
-<span aria-hidden="true">일반독성</span><span aria-hidden="true">발암성·종양원성</span><span aria-hidden="true">유전독성</span><span aria-hidden="true">생식발생독성</span><span aria-hidden="true">항원성·면역독성</span><span aria-hidden="true">국소독성</span><span aria-hidden="true">국소내성</span><span aria-hidden="true">안전성약리</span><span aria-hidden="true">동물대체시험</span><span aria-hidden="true">조제물분석</span><span aria-hidden="true">PK/TK/ADME·생체시료분석</span><span aria-hidden="true">효력시험(약효)</span><span aria-hidden="true">환경유해성</span><span aria-hidden="true">의료기기 생물학적 안전성</span><span aria-hidden="true">임상병리·조직병리</span>
-</div>
-</div>
-</div>
+<KindStrip />
 
 </div>
 
@@ -79,12 +74,13 @@ export default function Home() {
 </div>
 </section>
 
-<section className="gm gm-fl" data-gm="fl" aria-labelledby="fl-h">
+{/* 요청서 예시가 Tox → PD → PK → Other 로 바뀌며 반복 재생된다 (HomeMotion). 금액은 그림용 예시 */}
+<section className="gm gm-fl" data-gm="fl" aria-labelledby="fl-h" data-cycle={JSON.stringify(FL_CYCLE)}>
 <h2 id="fl-h">한 장의 요청서가<br /><span>여러 기관을 찾아가요.</span></h2>
 <div className="gm-dia">
 <svg className="gm-wires" aria-hidden="true"><path className="w o"></path><path className="w o"></path><path className="w o"></path><path className="w i"></path><path className="w i"></path></svg>
 <div className="gm-doc">
-<span className="mono">요청서</span>
+<span className="mono">요청서 · Tox</span>
 <b>반복투여독성 4주</b>
 <dl><div><dt>동물</dt><dd>설치류</dd></div><div><dt>기밀 등급</dt><dd>CDA 필요</dd></div><div><dt>보낸 곳</dt><dd>수행 분야가 맞는 기관</dd></div></dl>
 </div>
@@ -110,7 +106,7 @@ export default function Home() {
 <div className="gm-ev-grid">
 <div>
 <h2>비교 견적 요청 전에<br /><span>가이드라인 부터 살펴보세요.</span></h2>
-<p className="lead">시험 구성에 참고할 공개 가이드라인을 정리해 두었어요.</p>
+<p className="lead">독성시험 구성에 참고할 공개 가이드라인을 정리해 두었어요.</p>
 <div className="ctas" style={{ marginTop: "32px" }}><a className="btn g-ghost" href="/request/new?start=advisor">가이드라인 찾아보기</a></div>
 </div>
 <div className="gm-adv" aria-label="가이드라인 찾아보기 예시">

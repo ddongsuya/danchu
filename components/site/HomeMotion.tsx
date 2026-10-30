@@ -159,29 +159,62 @@ export function HomeMotion() {
     const build: Record<string, (s: HTMLElement) => gsap.core.Timeline> = { cmp, fl, ev };
     const observers: IntersectionObserver[] = [];
     const timelines: gsap.core.Timeline[] = [];
+    const timers: (() => void)[] = [];
     $$("[data-gm]", document).forEach((s) => {
       const kind = s.dataset.gm || "";
       if (!build[kind]) return;
       let tl: gsap.core.Timeline | null = null, played = false;
+      // data-cycle: 재생이 끝나면 잠시 멈췄다가 다음 예시로 바꿔 다시 재생 (한 장의 요청서 장면: Tox → PD → PK → Other)
+      type Ex = { tag: string; t: string; k: string; v: string; a: [number, number]; b: [number, number] };
+      let cycle: Ex[] = [];
+      try { cycle = s.dataset.cycle ? (JSON.parse(s.dataset.cycle) as Ex[]) : []; } catch { cycle = []; }
+      let idx = 0;
+      const won = (n: number) => n.toLocaleString("ko-KR");
+      const apply = (d: Ex) => {
+        const set = (sel: string, txt: string, i = 0) => { const el = s.querySelectorAll<HTMLElement>(sel)[i]; if (el) el.textContent = txt; };
+        set(".gm-doc .mono", `요청서 · ${d.tag}`);
+        set(".gm-doc > b", d.t);
+        set(".gm-doc dt", d.k);
+        set(".gm-doc dd", d.v);
+        [d.a, d.b].forEach(([amt, wk], i) => {
+          set(".g-org small", `${won(amt)}만 원 · ${wk}주`, i);
+          set(".g-rp", won(amt), i);
+          const em = s.querySelectorAll<HTMLElement>(".g-mrow em")[i];
+          if (em) { em.dataset.to = String(amt); em.textContent = won(amt); }
+        });
+      };
       const fresh = () => {
         if (tl) tl.progress(0).kill();
         gsap.set(s.querySelectorAll("*"), { clearProps: "transform,opacity,clipPath,backgroundColor,color,borderLeftWidth" });
         tl = build[kind](s);
         tl.progress(0);
         timelines.push(tl);
+        if (cycle.length > 1) tl.eventCallback("onComplete", () => {
+          window.clearTimeout(timer);
+          timer = window.setTimeout(() => {
+            if (!played) return;
+            idx = (idx + 1) % cycle.length;
+            apply(cycle[idx]);
+            fresh();
+            tl!.play(0);
+          }, 2400);
+        });
       };
+      let timer = 0;
+      timers.push(() => window.clearTimeout(timer));
       fresh();
       const vis = s.querySelector(".gm-sheet, .gm-dia, .gm-adv");
       if (!vis) return;
       const start = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting && !played) { played = true; fresh(); tl!.play(0); } }), { rootMargin: "0px 0px -12% 0px" });
       start.observe(vis);
-      const reset = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && played) { played = false; fresh(); } }));
+      const reset = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && played) { played = false; window.clearTimeout(timer); fresh(); } }));
       reset.observe(s);
       observers.push(start, reset);
     });
     return () => {
       observers.forEach((o) => o.disconnect());
       timelines.forEach((t) => t.kill());
+      timers.forEach((c) => c());
     };
   }, []);
   return null;

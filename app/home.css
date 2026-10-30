@@ -751,3 +751,30 @@
  .a .gm-fl .gm-card .g-mrow{margin-top:10px}
  .a .gm-fl .gm-card small{margin-top:12px;padding-top:10px}
 }
+
+/* ---- 첫 화면 아래 네 갈래 (Tox·PD·PK·Other). 견적 요청 첫 화면과 같은 그래픽 ---- */
+.a .kst{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line);scroll-margin-top:80px}
+.a .kst .lbl{padding:12px 24px 12px 0;border-right:1px solid var(--line);white-space:nowrap;align-self:stretch;display:flex;align-items:center}
+.a .kst ul{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));list-style:none;margin:0;padding:0}
+.a .kst li{min-width:0}
+.a .kst li + li{border-left:1px solid var(--line)}
+.a .kst a{display:flex;align-items:center;gap:12px;padding:8px 16px;color:var(--ink);text-decoration:none;transition:background-color 160ms ease,transform 160ms var(--eo)}
+.a .kst a:active{transform:scale(.98)}
+.a .kst .kmk{flex:none;width:88px;aspect-ratio:17/13;display:block}
+.a .kst a > span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.a .kst b{font-size:22px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.a .kst small{font-size:13px;color:var(--muted)}
+@media (hover:hover) and (pointer:fine){ .a .kst a:hover{background:var(--band)} }
+@media (max-width:1100px){ .a .kst .kmk{width:64px} .a .kst a{padding:8px 10px;gap:8px} }
+@media (max-width:860px){
+ .a .kst{grid-template-columns:minmax(0,1fr)}
+ .a .kst .lbl{border-right:0;border-bottom:1px solid var(--line);padding:10px 0}
+ .a .kst ul{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .a .kst li + li{border-left:0}
+ .a .kst li:nth-child(even){border-left:1px solid var(--line)}
+ .a .kst li:nth-child(n+3){border-top:1px solid var(--line)}
+ .a .kst a{padding:10px 8px 10px 0;gap:8px}
+ .a .kst li:nth-child(even) a{padding-left:12px}
+ .a .kst .kmk{width:72px}
+ .a .kst b{font-size:20px}
+}
