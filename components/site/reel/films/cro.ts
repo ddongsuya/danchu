@@ -16,8 +16,9 @@ export function croHero(cv: HTMLDivElement, P: boolean): Tl {
   const from = box(el(cv, "rl-sm", "에서 온 요청서", { fontSize: "24px", width: "100%", textAlign: "center", color: "#61615C" }), 0, 40 + big * 1.3);
 
   // 우리 기관 받은 함
-  const inX = 150, inY = H - 170, inW = 300, inH = 120;
-  const tray = box(el(cv, "rl-node", null, { borderWidth: "2px" }), inX, inY, inW, inH);
+  const inX = 150, inY = H - 196, inW = 300, inH = 120; // 아래 "새 요청서 도착" 칩까지 무대 안에 들어오게
+  // 받은 함은 요청서보다 앞에 둔다: 요청서가 함 위 가장자리 뒤로 들어가 사라진다 (위에 걸쳐 쌓이면 글자를 가려 끊긴 듯 보였음)
+  const tray = box(el(cv, "rl-node", null, { borderWidth: "2px", zIndex: "50" }), inX, inY, inW, inH);
   box(el(tray, "rl-hd", "우리 기관", { fontSize: "26px" }), 24, 22);
   const badge = box(el(tray, "rl-pill", "0", { fontSize: "22px", borderRadius: "999px" }), inW - 76, 18, 52, 40);
   const arrive = box(el(cv, "rl-chip", "새 요청서 도착", { fontSize: "22px", fontWeight: "600", borderColor: "#1B1B19", background: "#EDEF5C" }), W / 2 - 110, inY + inH + 14, 220, 42);
@@ -41,8 +42,10 @@ export function croHero(cv: HTMLDivElement, P: boolean): Tl {
     tl.to(words[i], { y: 0, duration: 0.42, ease: "expo.out" }, t);
     if (i < CLIENTS.length - 1) tl.to(words[i], { y: -big * 1.4, duration: 0.3, ease: "power3.in" }, t + step - 0.3);
     tl.fromTo(cards[i], { autoAlpha: 0, y: -30, rotation: [-6, 4, -3, 5, -4, 3, -2][i], scale: 0.9 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.3, ease: "expo.out" }, t + 0.05);
-    // 받은 함으로 떨어져 쌓인다
-    tl.to(cards[i], { top: inY - ch * 0.55 - i * 5, rotation: [-3, 2, -1.5, 2.5, -2, 1.5, 0][i], scale: 0.86, duration: 0.42, ease: "power3.in" }, t + 0.32);
+    // 받은 함 위로 떨어진 뒤 함 안으로 들어간다
+    tl.to(cards[i], { top: inY - ch * 0.35, rotation: [-3, 2, -1.5, 2.5, -2, 1.5, 0][i] * 0.5, scale: 0.86, duration: 0.3, ease: "power3.in" }, t + 0.32)
+      .to(cards[i], { top: inY + 12, rotation: 0, scale: 0.8, duration: 0.18, ease: "power2.in" }, t + 0.62)
+      .set(cards[i], { autoAlpha: 0 }, t + 0.8);
     count(tl, badge, i + 1, t + 0.74, 0.01, i, String);
     tl.fromTo(tray, { y: 0 }, { y: 4, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, t + 0.74);
   });
