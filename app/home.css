@@ -778,3 +778,6 @@
  .a .kst .kmk{width:72px}
  .a .kst b{font-size:20px}
 }
+
+/* 장면 그림 위에 마무리 로고 엔드카드(HomeMotion)를 겹친다 */
+.a .gm-sheet,.a .gm-adv{position:relative}

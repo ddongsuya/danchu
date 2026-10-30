@@ -20,7 +20,7 @@ export function HowReel() {
 
 import { croHero, croHeroDims, croSteps, croStepsDims, CRO_STEPS, croReply, croReplyDims, croRules, croRulesDims } from "./films/cro";
 export function CroHeroReel() {
-  return <Reel build={croHero} dims={croHeroDims} loop reserve={160} className="rl-hero" label="제약사, 바이오텍, 화장품, 건강기능식품, 의료기기, 화학물질, 연구소의 요청서가 우리 기관으로 모이는 장면" />;
+  return <Reel build={croHero} dims={croHeroDims} loop reserve={160} className="rl-hero" label="제약사, 바이오텍, 화장품, 건강기능식품, 의료기기, 화학물질, 연구소가 보낸 요청이 모두 단추를 거쳐 우리 기관 요청함에 쌓이고, 우리 기관이 참여할 요청을 정해 견적서를 회신하면 그 고객이 비교해 우리 기관을 선정하는 장면" />;
 }
 export function CroStepsReel() {
   return <Reel build={croSteps} dims={croStepsDims} chapters={CRO_STEPS} hint="보고 싶은 단계를 누르면 그 장면부터 볼 수 있어요" reserve={250} label="기관이 참여를 신청하고, 표준 가격을 등록하고, 참여 안내를 받아 참여를 정하고, 견적서를 회신한 뒤 선정되어 계약하는 과정" />;

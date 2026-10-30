@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import gsap from "gsap";
+import { endCard } from "@/components/site/reel/kit";
 
 /**
  * 랜딩 아래 세 장면(금액 비교 · 한번 요청 · 근거)의 GSAP 타임라인.
@@ -183,10 +184,19 @@ export function HomeMotion() {
           if (em) { em.dataset.to = String(amt); em.textContent = won(amt); }
         });
       };
+      const host = s.querySelector<HTMLElement>(".gm-sheet, .gm-dia, .gm-adv");
+      let endEls: HTMLElement[] = [];
       const fresh = () => {
         if (tl) tl.progress(0).kill();
+        endEls.forEach((e) => e.remove());
+        endEls = [];
         gsap.set(s.querySelectorAll("*"), { clearProps: "transform,opacity,clipPath,backgroundColor,color,borderLeftWidth" });
         tl = build[kind](s);
+        // 마무리 로고 엔드카드: 그림 영역을 덮고 가운데 로고만 남긴다. 예시가 바뀌며 반복되는 장면은 한 바퀴(마지막 예시) 끝에만
+        if (host && (cycle.length < 2 || idx === cycle.length - 1)) {
+          const bg = getComputedStyle(host).backgroundColor;
+          endEls = endCard(tl, host, host.clientWidth, host.clientHeight, null, bg && bg !== "rgba(0, 0, 0, 0)" ? bg : "var(--paper,#F4F4F0)");
+        }
         tl.progress(0);
         timelines.push(tl);
         if (cycle.length > 1) tl.eventCallback("onComplete", () => {
@@ -197,7 +207,7 @@ export function HomeMotion() {
             apply(cycle[idx]);
             fresh();
             tl!.play(0);
-          }, 2400);
+          }, endEls.length ? 300 : 2400);
         });
       };
       let timer = 0;

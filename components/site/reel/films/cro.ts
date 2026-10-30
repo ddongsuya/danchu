@@ -1,61 +1,199 @@
-import { gsap, el, box, px, won, count, camera, worldIn, sheet, bars, type Tl } from "../kit";
+import { gsap, el, box, px, won, count, camera, worldIn, sheet, bars, endCard, type Tl } from "../kit";
 
 const dims = (L: [number, number], P: [number, number]) => ({ L, P });
 
 /* ================================================================
- * 기관 참여 첫 화면: 큰 글씨 리듬. 고객 종류가 바뀔 때마다 요청서가 우리 기관으로 쌓인다. 반복 재생.
+ * 기관 참여 첫 화면: 여러 업종의 고객이 보낸 요청이 모두 단추를 거쳐 우리 기관 요청함에 쌓이고(뒤로 갈수록 빨라짐),
+ * 이어서 참여 결정 → 견적서가 단추를 거쳐 그 고객에게 → 고객이 비교해 우리 기관 선정 → 단추 상자가 펼쳐져 로고로 끝난다.
+ * 업종·시험은 예시다.
  * ================================================================ */
-const CLIENTS = ["제약사", "바이오텍", "화장품", "건강기능식품", "의료기기", "화학물질", "연구소"];
+const CLIENTS: [string, string, string][] = [
+  ["제약사", "반복투여독성 4주", "Tox"],
+  ["바이오텍", "대장염 모델 효력", "PD"],
+  ["화장품", "피부자극", "Tox"],
+  ["건강기능식품", "단회투여독성", "Tox"],
+  ["의료기기", "조직병리 분석", "Other"],
+  ["화학물질", "복귀돌연변이", "Tox"],
+  ["연구소", "단회 투여 혈중농도", "PK"],
+];
+// 카드 가운데 x (3·2·2, 좌우 대칭 부채꼴)
+const CARD_CX = [100, 300, 500, 165, 435, 92, 508];
+const CARD_ROW = [0, 0, 0, 1, 1, 2, 2];
+const INK = "#1B1B19", FAINT = "#ADADA6", LINE = "#D9D9D3", DIM = "#E0E0DA";
 
 export function croHero(cv: HTMLDivElement, P: boolean): Tl {
-  const W = 600, H = P ? 600 : 640;
+  const W = 600, H = P ? 614 : 640;
+  const f = P
+    ? { nm: 25, sub: 17, hub: 30, hd: 22, row: 19, tag: 15, rh: 52, hh: 58, rowsY: [10, 100, 190], hubY: 318, hubW: 230, hubH: 66, ib: [24, 386, 552, 58 + 52 * 3 + 4] }
+    : { nm: 20, sub: 14, hub: 28, hd: 20, row: 16, tag: 13, rh: 46, hh: 52, rowsY: [14, 108, 202], hubY: 330, hubW: 200, hubH: 58, ib: [36, 412, 528, 52 + 46 * 3 + 4] };
   const tl = gsap.timeline({ paused: true });
-  const big = P ? 84 : 84;
-  const mask = box(el(cv, "rl-mask"), 0, 40, W, big * 1.25);
-  const words = CLIENTS.map((c) => box(el(mask, "rl-big", c, { fontSize: px(c.length > 4 ? big * 0.78 : big), width: "100%", textAlign: "center" }), 0, c.length > 4 ? big * 0.12 : 0));
-  const from = box(el(cv, "rl-sm", "에서 온 요청서", { fontSize: "24px", width: "100%", textAlign: "center", color: "#61615C" }), 0, 40 + big * 1.3);
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", String(W)); svg.setAttribute("height", String(H));
+  Object.assign(svg.style, { left: "0", top: "0" });
+  cv.appendChild(svg);
 
-  // 우리 기관 받은 함
-  const inX = 150, inY = H - 196, inW = 300, inH = 120; // 아래 "새 요청서 도착" 칩까지 무대 안에 들어오게
-  // 받은 함은 요청서보다 앞에 둔다: 요청서가 함 위 가장자리 뒤로 들어가 사라진다 (위에 걸쳐 쌓이면 글자를 가려 끊긴 듯 보였음)
-  const tray = box(el(cv, "rl-node", null, { borderWidth: "2px", zIndex: "50" }), inX, inY, inW, inH);
-  box(el(tray, "rl-hd", "우리 기관", { fontSize: "26px" }), 24, 22);
-  const badge = box(el(tray, "rl-pill", "0", { fontSize: "22px", borderRadius: "999px" }), inW - 76, 18, 52, 40);
-  const arrive = box(el(cv, "rl-chip", "새 요청서 도착", { fontSize: "22px", fontWeight: "600", borderColor: "#1B1B19", background: "#EDEF5C" }), W / 2 - 110, inY + inH + 14, 220, 42);
+  // 단추 상자와 요청함
+  const hubX = W / 2, hubTop = f.hubY - f.hubH / 2;
+  const hub = box(el(cv, "rl-hub", "danchu<span>단추</span>", { fontSize: px(f.hub), zIndex: "5" }), hubX - f.hubW / 2, hubTop, f.hubW, f.hubH);
+  (hub.querySelector("span") as HTMLElement).style.fontSize = px(Math.round(f.hub * 0.52));
+  const [ibX, ibY, ibW, ibH] = f.ib;
+  const down = document.createElementNS(NS, "path");
+  down.setAttribute("d", `M${hubX} ${hubTop + f.hubH} L${hubX} ${ibY}`);
+  down.setAttribute("stroke", INK); down.setAttribute("stroke-width", "2"); down.setAttribute("fill", "none");
+  svg.appendChild(down);
+  const inbox = box(el(cv, "rl-inbox", null, { zIndex: "4" }), ibX, ibY, ibW, ibH);
+  const head = (html: string) => box(el(inbox, "rl-ihd", html, { fontSize: px(f.hd), height: px(f.hh) }), 0, 0);
+  const heads = [
+    head("우리 기관 요청함"),
+    head('<span>고객 <span class="rl-hlx">7곳</span>에서 새 요청 7건</span>'),
+    head("참여할 요청을 정해요"),
+    head("참여한 요청에 견적서 회신"),
+    head('<span>연구소에서 <span class="rl-hlx">선정</span>, 계약 진행</span>'),
+  ];
+  box(el(inbox, "rl-rule"), 0, f.hh - 1, ibW);
+  const cnt = box(el(inbox, "rl-pill", "0", { fontSize: px(f.hd - 2), borderRadius: "999px" }), ibW - 18 - 52, (f.hh - 36) / 2, 52, 36);
+  const rowsWrap = box(el(inbox, "", null, { overflow: "hidden" }), 0, f.hh, ibW, ibH - f.hh);
 
-  // 요청서 카드
-  const cw = 200, ch = 130;
-  const cards = CLIENTS.map((c, i) => {
-    const d = sheet(cv, W / 2 - cw / 2, 200, cw, ch);
-    box(el(d, "rl-hd", "요청서", { fontSize: "20px" }), 18, 14);
-    box(el(d, "rl-sm", c, { fontSize: "14px" }), 18, 44);
-    bars(d, 18, [76, 96], [cw - 60, cw - 90], 8);
-    d.style.zIndex = String(10 + i);
-    return d;
+  // 고객 카드, 단추로 가는 길, 요청함의 줄
+  const cards: HTMLElement[] = [], paths: { p: SVGPathElement; L: number }[] = [], docs: HTMLElement[] = [], rows: HTMLElement[] = [];
+  const subs: HTMLElement[][] = [], tags: HTMLElement[][] = [];
+  CLIENTS.forEach(([name, sub, kind], i) => {
+    const c = el(cv, "rl-cl", `<b>${name}</b><span class="s0">${sub}</span>`, { zIndex: "3" });
+    (c.querySelector("b") as HTMLElement).style.fontSize = px(f.nm);
+    const s0 = c.querySelector(".s0") as HTMLElement;
+    s0.style.fontSize = px(f.sub);
+    const s1 = el(c, "s1", "견적 비교 중", { fontSize: px(f.sub) }, "span");
+    const s2 = el(c, "s2", "우리 기관 선정", { fontSize: px(f.sub) }, "span");
+    const w = c.offsetWidth, h = c.offsetHeight;
+    [s1, s2].forEach((x) => { x.style.left = px(s0.offsetLeft); x.style.top = px(s0.offsetTop); });
+    const mk = box(el(c, "rl-mk", null, { zIndex: "0" }), s0.offsetLeft - 2, s0.offsetTop + 2, s2.offsetWidth + 4, s0.offsetHeight - 2);
+    subs.push([s0, s1, s2, mk]);
+    const x = Math.max(12, Math.min(W - 12 - w, CARD_CX[i] - w / 2)), y = f.rowsY[CARD_ROW[i]];
+    box(c, x, y);
+    cards.push(c);
+    const sx = x + w / 2, sy = y + h;
+    const path = document.createElementNS(NS, "path");
+    const my = Math.max(sy + 30, (sy + hubTop) / 2 + 20);
+    path.setAttribute("d", `M${sx} ${sy} Q${sx + (hubX - sx) * 0.15} ${my} ${hubX} ${hubTop}`);
+    path.setAttribute("stroke", FAINT); path.setAttribute("stroke-width", "1.5"); path.setAttribute("fill", "none");
+    svg.appendChild(path);
+    const L = path.getTotalLength();
+    path.style.strokeDasharray = String(L);
+    paths.push({ p: path, L });
+    const d = box(el(cv, "rl-qd", null, { zIndex: "6" }), 0, 0, 22, 28);
+    bars(d, 4, [8, 14], [12, 9], 2);
+    docs.push(d);
+    const r = box(el(rowsWrap, "rl-row", null, { height: px(f.rh), fontSize: px(f.row), lineHeight: px(f.rh) }), 0, 0);
+    box(el(r, "", name, { fontWeight: "700" }), 18, 0);
+    box(el(r, "rl-em", sub), P ? 168 : 130, 0);
+    const tagAt = (t: string, cls: string) => {
+      const g = el(r, `rl-tag ${cls}`.trim(), t, { fontSize: px(f.tag), height: px(f.tag + 12), lineHeight: px(f.tag + 10), top: px((f.rh - f.tag - 12) / 2) });
+      g.style.right = "16px";
+      return g;
+    };
+    tags.push([tagAt(kind, ""), tagAt(i === 4 ? "불참" : "참여", i === 4 ? "no" : "go"), tagAt("선정", "win")]);
+    rows.push(r);
   });
 
-  tl.set(words, { y: big * 1.4 }, 0).set(cards, { autoAlpha: 0 }, 0).set(arrive, { autoAlpha: 0, y: 10 }, 0);
-  count(tl, badge, 0, 0, 0.01, 0, String);
-  const step = 0.78;
-  CLIENTS.forEach((c, i) => {
-    const t = 0.15 + i * step;
-    tl.to(words[i], { y: 0, duration: 0.42, ease: "expo.out" }, t);
-    if (i < CLIENTS.length - 1) tl.to(words[i], { y: -big * 1.4, duration: 0.3, ease: "power3.in" }, t + step - 0.3);
-    tl.fromTo(cards[i], { autoAlpha: 0, y: -30, rotation: [-6, 4, -3, 5, -4, 3, -2][i], scale: 0.9 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.3, ease: "expo.out" }, t + 0.05);
-    // 받은 함 위로 떨어진 뒤 함 안으로 들어간다
-    tl.to(cards[i], { top: inY - ch * 0.35, rotation: [-3, 2, -1.5, 2.5, -2, 1.5, 0][i] * 0.5, scale: 0.86, duration: 0.3, ease: "power3.in" }, t + 0.32)
-      .to(cards[i], { top: inY + 12, rotation: 0, scale: 0.8, duration: 0.18, ease: "power2.in" }, t + 0.62)
-      .set(cards[i], { autoAlpha: 0 }, t + 0.8);
-    count(tl, badge, i + 1, t + 0.74, 0.01, i, String);
-    tl.fromTo(tray, { y: 0 }, { y: 4, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out" }, t + 0.74);
+  // 처음 상태
+  tl.set(cards, { autoAlpha: 0, y: -14, scale: 0.96, borderColor: LINE }, 0)
+    .set(docs, { autoAlpha: 0, x: 0, y: 0, scale: 1 }, 0)
+    .set(rows, { autoAlpha: 0, y: -f.rh, color: INK }, 0)
+    .set(heads, { autoAlpha: 0, y: 10 }, 0).set(heads[0], { autoAlpha: 1, y: 0 }, 0)
+    .set(inbox.querySelectorAll(".rl-hlx"), { backgroundSize: "0% 75%" }, 0)
+    .set(subs.map((x) => x[0]), { autoAlpha: 1 }, 0).set(subs.map((x) => [x[1], x[2]]).flat(), { autoAlpha: 0 }, 0)
+    .set(subs.map((x) => x[3]), { scaleX: 0 }, 0)
+    .set(tags.map((x) => x[0]), { autoAlpha: 1 }, 0).set(tags.map((x) => [x[1], x[2]]).flat(), { autoAlpha: 0 }, 0)
+    .set(cnt, { textContent: "0" }, 0);
+  paths.forEach((o) => tl.set(o.p, { strokeDashoffset: o.L, stroke: FAINT }, 0));
+  const along = (d: HTMLElement, o: { p: SVGPathElement; L: number }, a: number, b: number, at: number, dur: number, ease: string) => {
+    const prog = { v: a };
+    tl.fromTo(prog, { v: a }, {
+      v: b, duration: dur, ease, immediateRender: false,
+      onUpdate() { const pt = o.p.getPointAtLength(prog.v * o.L); gsap.set(d, { x: pt.x - 11, y: pt.y - 14 }); },
+    }, at);
+  };
+
+  // 1막: 요청이 모인다
+  let t = 0.3;
+  const GAP = [1.15, 1.0, 0.8, 0.6, 0.5, 0.42, 0.38];
+  CLIENTS.forEach((_, i) => {
+    const fly = Math.min(0.62, GAP[i] * 0.62);
+    tl.to(cards[i], { autoAlpha: 1, y: 0, scale: 1, duration: 0.32, ease: "expo.out" }, t)
+      .to(cards[i], { borderColor: INK, duration: 0.2 }, t + 0.12)
+      .to(paths[i].p, { strokeDashoffset: 0, stroke: INK, duration: fly * 0.7, ease: "power2.inOut" }, t + 0.12)
+      .set(docs[i], { autoAlpha: 1 }, t + 0.12);
+    along(docs[i], paths[i], 0, 1, t + 0.12, fly, "power2.in");
+    tl.to(docs[i], { y: `+=${ibY - hubTop}`, autoAlpha: 0, duration: 0.22, ease: "power2.in" }, t + 0.16 + fly)
+      .fromTo(hub, { scale: 1 }, { scale: 1.06, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out", immediateRender: false }, t + 0.12 + fly)
+      .to(paths[i].p, { stroke: LINE, duration: 0.4, ease: "none" }, t + 0.22 + fly)
+      .to(cards[i], { borderColor: LINE, duration: 0.3 }, t + 0.22 + fly);
+    // 새 줄이 맨 위로 들어오고 앞의 줄은 한 칸씩 내려간다
+    const land = t + 0.36 + fly;
+    for (let k = 0; k <= i; k++) tl.to(rows[k], { autoAlpha: 1, y: (i - k) * f.rh, duration: 0.26, ease: "power3.out" }, land);
+    count(tl, cnt, i + 1, land, 0.01, i, String);
+    tl.fromTo(cnt, { scale: 1.25 }, { scale: 1, duration: 0.3, ease: "back.out(3)", immediateRender: false }, land);
+    t += GAP[i];
   });
-  void from;
-  const end = 0.15 + CLIENTS.length * step;
-  tl.to(arrive, { autoAlpha: 1, y: 0, duration: 0.4, ease: "back.out(2)" }, end);
-  tl.to({}, { duration: 1.6 }, end + 0.4);
+  const end = t + 0.4;
+  paths.forEach((o, i) => tl.to(o.p, { stroke: INK, duration: 0.3 }, end + i * 0.04));
+  tl.to(cards, { borderColor: INK, duration: 0.3, stagger: 0.04 }, end)
+    .to(heads[0], { autoAlpha: 0, y: -10, duration: 0.25, ease: "power2.out" }, end + 0.2)
+    .to(heads[1], { autoAlpha: 1, y: 0, duration: 0.35, ease: "expo.out" }, end + 0.3)
+    .to(heads[1].querySelector(".rl-hlx"), { backgroundSize: "100% 75%", duration: 0.45, ease: "power2.out" }, end + 0.65);
+
+  // 2막: 참여 결정 (보이는 맨 위 세 줄: 연구소·화학물질 참여, 의료기기 불참)
+  const T = end + 1.7, keep = [5, 6];
+  tl.to(heads[1], { autoAlpha: 0, y: -10, duration: 0.25, ease: "power2.out" }, T)
+    .to(heads[2], { autoAlpha: 1, y: 0, duration: 0.35, ease: "expo.out" }, T + 0.1);
+  cards.forEach((c, i) => { if (!keep.includes(i)) tl.to(c, { autoAlpha: 0.35, borderColor: LINE, duration: 0.3 }, T); });
+  paths.forEach((o, i) => { if (!keep.includes(i)) tl.to(o.p, { stroke: DIM, duration: 0.3 }, T); });
+  ([[6, 0.35], [5, 0.6], [4, 0.85]] as const).forEach(([i, d]) => {
+    tl.to(tags[i][0], { autoAlpha: 0, duration: 0.15 }, T + d)
+      .fromTo(tags[i][1], { autoAlpha: 0, scale: 1.25 }, { autoAlpha: 1, scale: 1, duration: 0.3, ease: "back.out(3)", immediateRender: false }, T + d);
+    if (i === 4) tl.to(rows[i], { color: FAINT, duration: 0.3 }, T + d);
+  });
+
+  // 3막: 견적서가 요청함에서 단추를 거쳐, 왔던 길을 거슬러 그 고객에게
+  const T2 = T + 1.5;
+  tl.to(heads[2], { autoAlpha: 0, y: -10, duration: 0.25, ease: "power2.out" }, T2)
+    .to(heads[3], { autoAlpha: 1, y: 0, duration: 0.35, ease: "expo.out" }, T2 + 0.1);
+  ([[6, 0], [5, 1]] as const).forEach(([i, slot], j) => {
+    const q = box(el(cv, "rl-qd", null, { zIndex: "7" }), 0, 0, 22, 28);
+    bars(q, 4, [8, 14], [12, 9], 2);
+    tl.set(q, { autoAlpha: 0 }, 0);
+    const s = T2 + 0.2 + j * 0.3, rowY = ibY + f.hh + f.rh * slot + f.rh / 2;
+    tl.fromTo(q, { autoAlpha: 1, x: ibX + ibW - 120, y: rowY - 14, scale: 1 }, { x: hubX - 11, y: hubTop + f.hubH - 14, duration: 0.4, ease: "power2.inOut", immediateRender: false }, s)
+      .fromTo(hub, { scale: 1 }, { scale: 1.06, duration: 0.08, yoyo: true, repeat: 1, ease: "power2.out", immediateRender: false }, s + 0.4)
+      .to(paths[i].p, { stroke: INK, duration: 0.2 }, s + 0.4);
+    along(q, paths[i], 1, 0, s + 0.4, 0.5, "power2.out");
+    tl.to(q, { autoAlpha: 0, scale: 0.6, duration: 0.15 }, s + 0.9)
+      .to(subs[i][0], { autoAlpha: 0, duration: 0.15 }, s + 0.9)
+      .to(subs[i][1], { autoAlpha: 1, duration: 0.2 }, s + 0.92)
+      .to(cards[i], { borderColor: INK, duration: 0.2 }, s + 0.9)
+      .fromTo(cards[i], { scale: 1 }, { scale: 1.04, duration: 0.12, yoyo: true, repeat: 1, ease: "power2.out", immediateRender: false }, s + 0.9);
+  });
+
+  // 4막: 연구소가 우리 기관을 선정
+  const T3 = T2 + 2.0;
+  tl.to(subs[6][1], { autoAlpha: 0, duration: 0.15 }, T3)
+    .to(subs[6][2], { autoAlpha: 1, duration: 0.2 }, T3)
+    .to(subs[6][3], { scaleX: 1, duration: 0.4, ease: "power2.out" }, T3 + 0.05)
+    .to(tags[6][1], { autoAlpha: 0, duration: 0.15 }, T3)
+    .fromTo(tags[6][2], { autoAlpha: 0, scale: 1.3 }, { autoAlpha: 1, scale: 1, duration: 0.35, ease: "back.out(3)", immediateRender: false }, T3)
+    .to(cards[5], { autoAlpha: 0.35, borderColor: LINE, duration: 0.3 }, T3)
+    .to(paths[5].p, { stroke: DIM, duration: 0.3 }, T3)
+    .to(heads[3], { autoAlpha: 0, y: -10, duration: 0.25, ease: "power2.out" }, T3 + 0.2)
+    .to(heads[4], { autoAlpha: 1, y: 0, duration: 0.35, ease: "expo.out" }, T3 + 0.3)
+    .to(heads[4].querySelector(".rl-hlx"), { backgroundSize: "100% 75%", duration: 0.45, ease: "power2.out" }, T3 + 0.6)
+    .to({}, { duration: 1.3 }, T3 + 1.0);
+
+  // 마무리: 단추 상자가 무대 전체로 펼쳐지고 로고만 남는다
+  endCard(tl, cv, W, H, { x: hubX - f.hubW / 2, y: hubTop, w: f.hubW, h: f.hubH });
   return tl;
 }
-export const croHeroDims = dims([600, 640], [600, 600]);
+export const croHeroDims = dims([600, 640], [600, 614]);
 
 /* ================================================================
  * 참여부터 계약까지: 카메라가 책상 위 여섯 장면을 옮겨 다닌다. 단계 버튼 = 장면.

@@ -59,3 +59,24 @@
 .a .rsx.side > header{display:grid;gap:16px;align-content:center}
 .a .rsx.side > header .btn{justify-self:start}
 @media (max-width:860px){.a .rsx.side{grid-template-columns:minmax(0,1fr)}}
+
+/* 기관 참여 첫 화면: 고객 카드 · 단추 상자 · 우리 기관 요청함 */
+.rl-cl{background:var(--rl-card);border:1px solid var(--rl-line);border-radius:2px;padding:10px 14px;white-space:nowrap;box-shadow:0 14px 28px -20px rgba(43,43,30,.45)}
+.rl-cv .rl-cl b,.rl-cv .rl-cl .s0{position:relative;display:block;z-index:1}
+.rl-cl b{font-weight:700;letter-spacing:-.03em;line-height:1.2}
+.rl-cl .s0{color:var(--rl-muted);margin-top:2px;line-height:1.4}
+.rl-cl .s1,.rl-cl .s2{color:var(--rl-ink);font-weight:700;line-height:1.4;z-index:1;white-space:nowrap}
+.rl-hub{background:var(--rl-ink);color:var(--rl-paper);border-radius:2px;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;letter-spacing:-.04em}
+.rl-cv .rl-hub span{position:relative;font-weight:500;letter-spacing:0;opacity:.75}
+.rl-inbox{background:var(--rl-card);border:2px solid var(--rl-ink);border-radius:2px;overflow:hidden}
+.rl-ihd{width:100%;display:flex;align-items:center;padding:0 18px;font-weight:700;letter-spacing:-.03em;white-space:nowrap}
+.rl-cv .rl-ihd span{position:relative}
+.rl-hlx{background:linear-gradient(var(--rl-hl),var(--rl-hl)) no-repeat 0 70%/0% 75%;padding:0 2px}
+.rl-row{width:100%;border-bottom:1px solid var(--rl-line);background:var(--rl-card);white-space:nowrap}
+.rl-row .rl-em{font-style:normal;opacity:.82}
+.rl-tag{border:1px solid currentColor;border-radius:2px;font-weight:700;padding:0 8px;background:var(--rl-card);color:var(--rl-ink)}
+.rl-tag.go{background:var(--rl-ink);border-color:var(--rl-ink);color:var(--rl-paper)}
+.rl-tag.no{border-color:var(--rl-faint);color:var(--rl-faint)}
+.rl-tag.win{background:var(--rl-hl);border-color:var(--rl-ink)}
+.rl-qd{background:var(--rl-card);border:1.5px solid var(--rl-ink);border-radius:1px;box-shadow:0 6px 12px -6px rgba(0,0,0,.4)}
+.rl-qd .rl-bar{background:var(--rl-ink)}

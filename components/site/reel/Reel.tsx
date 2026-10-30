@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowCounterClockwise } from "@phosphor-icons/react";
-import type { Build, Dims, Tl } from "./kit";
+import { endCard, type Build, type Dims, type Tl } from "./kit";
 import "./reel.css";
 
 /**
@@ -10,6 +10,7 @@ import "./reel.css";
  * - 고정 크기 캔버스를 화면 폭과 높이(한 화면 안)에 맞게 줄인다. 폭 860px 이하는 세로형 캔버스로 다시 그린다.
  * - 화면에 35% 이상 들어오면 처음부터 재생하고, 완전히 벗어나면 처음으로 돌린다.
  * - 동작 줄이기여도 재생한다. 영상이 곧 내용이라 멈추면 아무것도 전하지 못한다(사용자 원칙).
+ * - 모든 영상의 끝에는 로고 엔드카드(kit.endCard)가 붙는다.
  * - chapters 가 있으면 타임라인 라벨 ch0, ch1 … 로 옮겨 가는 단계 버튼을 단다.
  */
 export function Reel({ build, dims, label, chapters, hint, loop = false, reserve = 0, className = "" }: {
@@ -61,6 +62,8 @@ export function Reel({ build, dims, label, chapters, hint, loop = false, reserve
         const [W, H] = P ? dims.P : dims.L;
         cv.style.width = `${W}px`; cv.style.height = `${H}px`;
         const tl = build(cv, P);
+        // 모든 영상은 로고 엔드카드로 끝난다 (영상이 직접 자기 자리에서 펼쳐지는 엔드카드를 넣었으면 그대로 둔다)
+        if (!tl.data?.end) endCard(tl, cv, W, H);
         if (loop) tl.repeat(-1).repeatDelay(1.2);
         tl.eventCallback("onUpdate", onUpdate);
         tlRef.current = tl;
@@ -82,6 +85,9 @@ export function Reel({ build, dims, label, chapters, hint, loop = false, reserve
     window.addEventListener("resize", layout);
     layout();
     layout();
+    // 글꼴이 늦게 오면 글자 폭을 재서 놓은 영상(카드 위치 등)을 한 번 다시 그린다
+    let alive = true;
+    document.fonts?.ready.then(() => { if (alive && document.fonts.status === "loaded") { mode = null; layout(); } });
 
     const io = new IntersectionObserver((es) => es.forEach((e) => {
       const tl = tlRef.current; if (!tl) return;
@@ -90,7 +96,7 @@ export function Reel({ build, dims, label, chapters, hint, loop = false, reserve
     }), { threshold: [0, 0.35] });
     io.observe(stage);
 
-    return () => { io.disconnect(); ro.disconnect(); window.removeEventListener("resize", layout); cancelAnimationFrame(raf); tlRef.current?.kill(); tlRef.current = null; };
+    return () => { alive = false; io.disconnect(); ro.disconnect(); window.removeEventListener("resize", layout); cancelAnimationFrame(raf); tlRef.current?.kill(); tlRef.current = null; };
   }, [build, dims, loop, reserve, chapters]); // reserve 배열은 모듈 상수로 넘긴다
 
   const go = (i: number) => { const tl = tlRef.current; if (!tl) return; tl.play(`ch${i}`); setActive(i); };

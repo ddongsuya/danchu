@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import { WORDMARK, MARK_PATH } from "@/components/Logo";
 
 /**
  * 메뉴 페이지 영상(릴)을 만드는 도구 모음.
@@ -111,6 +112,47 @@ export function bars(parent: HTMLElement, x: number, ys: number[], ws: number[],
 export function marker(parent: HTMLElement, x: number, y: number, w: number, h: number) {
   const m = box(el(parent, "rl-mk"), x, y, w, h);
   return m;
+}
+
+/**
+ * 엔드카드: 모든 영상의 마무리. 장면을 걷어 내고(바탕색 막), 가운데 흑연 막대가 무대 전체로 펼쳐진 뒤
+ * 그 위에 공식 로고(danchu + 네 칸 마크) 하나만 남는다. 광고 끝 화면처럼 로고에만 눈이 가게 한다.
+ * from 을 주면 그 자리(예: 영상 속 단추 상자)에서 펼쳐진다. 모든 변화가 트윈이라 되감기·단계 이동에도 맞다.
+ */
+export function endCard(tl: Tl, cv: HTMLElement, W: number, H: number, from?: { x: number; y: number; w: number; h: number } | null, veilColor = "var(--rl-band,#E9E9E4)") {
+  const t0 = tl.duration();
+  const bw = Math.round(Math.min(W * 0.34, 220)), bh = Math.round(bw * 0.29);
+  const r = from ?? { x: (W - bw) / 2, y: (H - bh) / 2, w: bw, h: bh };
+  // 메뉴 영상(.rl-cv)과 랜딩 장면 모두에서 쓰므로 위치·색을 직접 적는다
+  const full = { position: "absolute", left: "0", top: "0", width: px(W), height: px(H), pointerEvents: "none" };
+  const veil = el(cv, "end-veil", null, { ...full, background: veilColor, zIndex: "100" });
+  const panel = el(cv, "end-panel", null, { ...full, background: "var(--ink,#1B1B19)", zIndex: "101" });
+  const LW = Math.round(Math.min(W * (W > H ? 0.42 : 0.62), 520)), LH = Math.round((LW * 900) / 3440);
+  const cells = MARK_PATH.split("Z").filter((c) => c.trim()).map((c) => `<path class="end-c" d="${c}Z"/>`).join("");
+  const lock = el(cv, "end-logo", `<svg viewBox="0 0 3440 900" fill="currentColor" aria-hidden="true" style="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible"><path class="end-w" d="${WORDMARK}"/><g transform="translate(3130 500) scale(3.1)">${cells}</g></svg>`,
+    { position: "absolute", left: px((W - LW) / 2), top: px((H - LH) / 2), width: px(LW), height: px(LH), color: "var(--paper,#F4F4F0)", zIndex: "102", pointerEvents: "none" });
+  const word = lock.querySelector(".end-w")!, cellEls = [...lock.querySelectorAll(".end-c")];
+  const ins = (a: { x: number; y: number; w: number; h: number }) => `inset(${a.y}px ${W - a.x - a.w}px ${H - a.y - a.h}px ${a.x}px)`;
+  const bar0 = ins({ x: r.x + r.w / 2, y: r.y, w: 0, h: r.h });
+
+  tl.set([veil, panel, lock], { autoAlpha: 0 }, 0)
+    .set(word, { opacity: 0, y: 140 }, 0)
+    .set(cellEls, { opacity: 0, scale: 0.5, transformOrigin: "50% 50%" }, 0);
+  tl.fromTo(veil, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3, ease: "power2.out", immediateRender: false }, t0);
+  let b = t0 + 0.25;
+  if (from) {
+    tl.fromTo(panel, { autoAlpha: 1, clipPath: ins(r) }, { autoAlpha: 1, clipPath: ins(r), duration: 0.01, immediateRender: false }, t0);
+  } else {
+    tl.fromTo(panel, { autoAlpha: 1, clipPath: bar0 }, { autoAlpha: 1, clipPath: ins(r), duration: 0.3, ease: "expo.out", immediateRender: false }, b);
+    b += 0.32;
+  }
+  tl.fromTo(panel, { clipPath: ins(r) }, { clipPath: ins({ x: 0, y: 0, w: W, h: H }), duration: 0.6, ease: "expo.inOut", immediateRender: false }, b)
+    .set(lock, { autoAlpha: 1 }, b + 0.45)
+    .to(word, { opacity: 1, y: 0, duration: 0.55, ease: "expo.out" }, b + 0.45)
+    .to(cellEls, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2.2)", stagger: 0.08 }, b + 0.7)
+    .to({}, { duration: 2.2 }, b + 1.2);
+  tl.data = { ...(tl.data || {}), end: true };
+  return [veil, panel, lock];
 }
 
 export { gsap };
