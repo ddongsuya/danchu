@@ -291,3 +291,32 @@ export async function countBy() {
   const overdue = (r.data ?? []).filter((x) => OVERDUE_STATUSES.includes(x.status) && !!x.reply_by && String(x.reply_by).slice(0, 10) < today).length;
   return { rfq: tally(r.data as { [k: string]: string }[] | null, "status"), org: tally(o.data, "status"), user: tally(u.data, "role"), overdue };
 }
+
+/**
+ * 운영자 홈 첫 장면 숫자 (2026-10-30, 세 역할 같은 틀): 진행 중인 요청 전체의 요청 → 전달 → 요약 열람 → 참여 → 견적 → 기관 선택.
+ * 목록 페이지와 상관없이 진행 중인 요청 전부를 센다. 참여·제출은 participation() 과 같은 규칙(funnel)
+ */
+export async function adminFunnel(): Promise<{ reqs: number; sent: number; opened: number; joined: number; submitted: number; selected: number; per: { rfq_no: string; sent: number; joined: number; submitted: number }[] }> {
+  const c = sb();
+  const { data: rows } = await c
+    .from("rfq_requests")
+    .select("id, rfq_no, status, created_at")
+    .in("status", ["received", "distributed", "quoted", "compared", "selected", "contracting"])
+    .order("created_at", { ascending: false })
+    .limit(500);
+  const list = rows ?? [];
+  const empty = { reqs: 0, sent: 0, opened: 0, joined: 0, submitted: 0, selected: 0, per: [] };
+  if (!list.length) return empty;
+  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, opened_at, joined_at, withdrawn_at, revoked_at").in("rfq_id", list.map((r) => r.id));
+  const per = list.map((r) => ({ rfq_no: r.rfq_no, ...funnel((inv ?? []).filter((i) => i.rfq_id === r.id)) }));
+  const sum = (k: "sent" | "opened" | "joined" | "submitted") => per.reduce((a, r) => a + r[k], 0);
+  return {
+    reqs: list.length,
+    sent: sum("sent"),
+    opened: sum("opened"),
+    joined: sum("joined"),
+    submitted: sum("submitted"),
+    selected: list.filter((r) => ["selected", "contracting"].includes(r.status)).length,
+    per: per.map(({ rfq_no, sent, joined, submitted }) => ({ rfq_no, sent, joined, submitted })),
+  };
+}

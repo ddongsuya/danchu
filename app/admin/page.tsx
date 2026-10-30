@@ -1,7 +1,8 @@
 import { needsCda, confidentialAccess, participationLabel } from "@/lib/request-policy";
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
-import { countBy, dbReady, listAllRequests, listStuckRequests } from "@/lib/data";
+import { adminFunnel, countBy, dbReady, listAllRequests, listStuckRequests } from "@/lib/data";
+import { AdminHero } from "@/components/admin/AdminHero";
 import { StuckList } from "@/components/admin/StuckList";
 import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
@@ -27,7 +28,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const { status = "", q = "", page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr, 10) || 1);
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
-  const [{ list, hasMore }, counts, schema, stuck] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus(), listStuckRequests()]);
+  const [{ list, hasMore }, counts, schema, stuck, flow] = await Promise.all([listAllRequests(status || undefined, q || undefined, page), countBy(), readSchemaStatus(), listStuckRequests(), adminFunnel()]);
   const href = (p: number) => `/admin?${new URLSearchParams({ ...(status ? { status } : {}), ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`;
   const transition = schema.ok ? await transitionRows() : [];
   const missingEnv = missingProdEnv();
@@ -42,14 +43,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <div className="ph">
-        <div>
-          <h1>접수 현황</h1>
-        </div>
-      </div>
-
-      {/* 멈춘 요청이 맨 위 (2026-10-29 과업 점검 1·6). 운영자는 들어오자마자 사람 손이 필요한 요청을 본다 */}
-      <StuckList rows={stuck} />
+      {/* 첫 장면: 진행 중인 요청 흐름 (2026-10-30, 세 역할 같은 틀). 그 바로 아래가 멈춘 요청 (2026-10-29 과업 점검 1·6) */}
+      <AdminHero f={flow} stuck={stuck.map((r) => r.rfq_no)} today={todaySeoul()} />
+      <section className="rs-block rs-block--tight" aria-label="지금 할 일">
+        <p className="rs-bk">지금 할 일</p>
+        <StuckList rows={stuck} />
+      </section>
 
       {(missingEnv.length > 0 || noSentry || !schema.ok) && (
         <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>
@@ -61,21 +60,33 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       )}
       {transition.length > 0 && <OptInTransition rows={transition} />}
 
-      {/* 아래 숫자 칸이 곧 할 일 목록이라 같은 숫자를 위 설명 줄에 되풀이하지 않는다 */}
-      <div className="tiles4" style={{ marginBottom: 20 }}>
-        {[
-          ["안내 전 접수", todo.receive, "/admin?status=received"],
-          ["기한 지남 · 정리 필요", todo.overdue, "/admin?status=overdue"],
-          ["기관 승인 대기", todo.pendingOrg, "/admin/cros?status=pending"],
-          ["계약 진행", todo.contracting, "/admin/awards"],
-        ].map(([label, n, href]) => (
-          <Link key={String(label)} href={String(href)} className="card tile card--link">
-            <span>{label}</span>
-            <span className="tnum" style={{ color: Number(n) ? "var(--brand)" : undefined }}>{n}</span>
-          </Link>
-        ))}
-      </div>
+      {/* 숫자 칸 나열 대신 할 일 줄로 (2026-10-29 "같은 크기 숫자 카드 나열 금지"). 0건인 줄은 빼고 보인다 */}
+      {[todo.receive, todo.overdue, todo.pendingOrg, todo.contracting].some(Boolean) && (
+        <section className="rs-block" aria-labelledby="ops-title">
+          <p className="rs-bk">운영 정리</p>
+          <h2 id="ops-title" className="rs-h2">이번 주 확인할 것</h2>
+          <div className="rs-list">
+            {([
+              ["안내 전 접수", "기관에 참여 안내를 보내기 전 요청", todo.receive, "/admin?status=received#all-requests"],
+              ["기한 지남", "회신 기한이 지났는데 비교표가 열리지 않은 요청", todo.overdue, "/admin?status=overdue#all-requests"],
+              ["기관 승인 대기", "가입 신청을 검토할 기관", todo.pendingOrg, "/admin/cros?status=pending"],
+              ["계약 진행", "기관 선택 뒤 계약 보고를 기다리는 요청", todo.contracting, "/admin/awards"],
+            ] as [string, string, number, string][])
+              .filter(([, , n]) => n > 0)
+              .map(([label, desc, n, to]) => (
+                <Link key={label} href={to} className="rs-row rs-row--ops">
+                  <span className="rs-row__n tnum">{n}</span>
+                  <span className="rs-row__main"><b>{label}</b><span className="rs-row__line">{desc}</span></span>
+                  <span className="rs-row__go">보기</span>
+                </Link>
+              ))}
+          </div>
+        </section>
+      )}
 
+      <section className="rs-block" id="all-requests" aria-labelledby="all-title">
+      <p className="rs-bk">요청 목록</p>
+      <h2 id="all-title" className="rs-h2">전체 요청</h2>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
       <div className="seg" style={{ flexWrap: "wrap", height: "auto" }}>
         {FILTERS.map(([k, label]) => (
@@ -130,6 +141,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       )}
       <Pager page={page} hasMore={hasMore} href={href} />
       <p style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>단계: {STAGES.map((s) => s.label).join(" → ")}</p>
+      </section>
     </>
   );
 }

@@ -1,3 +1,5 @@
+import type { InviteItem } from "@/components/cro/InviteList";
+import type { AdminFunnel } from "@/components/admin/AdminHero";
 import type { CompareCol, CompareRowDef } from "@/components/CompareBoard";
 import type { Funnel } from "@/lib/request-story";
 
@@ -24,3 +26,29 @@ export const REPORT_COLS: CompareCol[] = [
 ];
 
 export const STORY_FUNNEL: Funnel = { sent: 5, opened: 4, joined: 3, submitted: 2, rest: 2 };
+
+
+/** 기관 홈 미리보기 예시 (날짜는 오늘 기준으로 만든다) */
+export function croItems(now: number): InviteItem[] {
+  const d = (n: number) => new Date(now + n * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  const exp = (n: number) => new Date(now + n * 864e5).toISOString();
+  const base = { client: "바이오 벤처 (선정 시 공개)", purpose: "식약처(MFDS)", cancelled: false, sentAt: exp(-10) };
+  return [
+    { ...base, id: "c8", no: "DEMO-008", substance: "예시 물질 E", tags: ["일반독성", "유전독성"], replyBy: d(2), expiresAt: exp(3), stage: "draft", rfqStatus: "quoted", total: null, quoteStatus: "draft" },
+    { ...base, id: "c9", no: "DEMO-009", substance: "", tags: ["안전성약리"], replyBy: d(5), expiresAt: exp(6), stage: "undecided", rfqStatus: "distributed", total: null, quoteStatus: null },
+    { ...base, id: "c5", no: "DEMO-005", substance: "예시 물질 A", tags: ["일반독성"], replyBy: d(1), expiresAt: exp(2), stage: "submitted", rfqStatus: "quoted", total: 32460 * 10000, quoteStatus: "submitted" },
+    { ...base, id: "c6", no: "DEMO-006", substance: "예시 물질 B", tags: ["일반독성"], replyBy: d(-30), expiresAt: exp(-29), stage: "submitted", rfqStatus: "selected", total: 32460 * 10000, quoteStatus: "submitted", awarded: true, client: "예시 의뢰사" },
+    { ...base, id: "c1", no: "DEMO-001", substance: "", tags: ["유전독성"], replyBy: d(-20), expiresAt: exp(-19), stage: "declined", rfqStatus: "distributed", total: null, quoteStatus: null },
+  ];
+}
+
+export const ADMIN_FUNNEL: AdminFunnel = {
+  reqs: 8, sent: 16, opened: 6, joined: 4, submitted: 3, selected: 1,
+  per: [
+    { rfq_no: "DEMO-007", sent: 2, joined: 0, submitted: 0 },
+    { rfq_no: "DEMO-006", sent: 2, joined: 2, submitted: 2 },
+    { rfq_no: "DEMO-005", sent: 2, joined: 0, submitted: 0 },
+    { rfq_no: "DEMO-008", sent: 3, joined: 2, submitted: 1 },
+    { rfq_no: "DEMO-004", sent: 2, joined: 0, submitted: 0 },
+  ],
+};

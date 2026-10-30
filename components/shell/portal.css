@@ -648,9 +648,9 @@
 
 /* 멈춘 요청 (운영자 홈, 과업 점검 1·6) */
 .stuck { margin-bottom: 24px; }
-.stuck h2 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-.stuck__row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--track); font-size: 14px; }
-.stuck__row:last-child { border-bottom: 1px solid var(--track); }
+.pt .stuck h2 { font-size: clamp(28px, 3.4vw, 44px); line-height: 1.15; letter-spacing: -.035em; font-weight: 600; margin-bottom: 24px; }
+/* 2026-10-30: 가는 줄 대신 밝은 면 한 장씩 (보고서 흐름과 같은 결) */
+.stuck__row { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 16px 20px; margin-bottom: 8px; background: var(--wh); border-radius: var(--r-lg); font-size: 15px; }
 .stuck__no { font-weight: 600; font-variant-numeric: tabular-nums; }
 .stuck__why { color: var(--body); min-width: 0; }
 .stuck__why small { display: block; color: var(--muted); font-size: 12px; }
@@ -829,4 +829,25 @@
   .rs-an, .rs-ex { grid-template-columns: minmax(0, 1fr); }
   .rs-mx { font-size: 14px; }
   .rs-mx th, .rs-mx td { padding: 12px 10px; }
+}
+
+/* 기관·운영자 홈 (2026-10-30, 의뢰자와 같은 틀) */
+.rs-flow--6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.rs-flow--6 b { font-size: 42px; }
+.pt .rs-row--ops { grid-template-columns: 72px minmax(0, 1fr) 96px; }
+.rs-row__n { font-size: 36px; font-weight: 600; letter-spacing: -.04em; line-height: 1; }
+.rs-row__due { font-size: 14px; color: var(--body); }
+.rs-row__due--soon { color: var(--ink); font-weight: 600; }
+.rs-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; min-height: 44px; font-size: 14px; color: var(--muted); }
+.rs-fold > summary::-webkit-details-marker { display: none; }
+.rs-fold > summary::before { content: "+"; display: inline-grid; place-items: center; width: 20px; margin-right: 6px; font-weight: 600; color: var(--ink); }
+.rs-fold[open] > summary::before { content: "-"; }
+.rs-fold > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+@media (max-width: 959px) {
+  .rs-flow--6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rs-flow--6 b { font-size: 30px; }
+  .pt .rs-row--ops { grid-template-columns: 52px minmax(0, 1fr); }
+  .rs-row__n { font-size: 28px; }
+  .rs-row .rs-row__due { grid-column: 1 / -1; }
+  .pt .stuck h2 { font-size: 28px; }
 }
