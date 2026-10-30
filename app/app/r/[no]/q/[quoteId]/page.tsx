@@ -58,7 +58,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           )}
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginTop: 10 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)", letterSpacing: ".04em" }}>총 견적액 · VAT 별도</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)" }}>총 견적액 · VAT 별도</div>
               <div className="tnum" style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15 }}>{won(q.total_amount ?? 0)}</div>
             </div>
 

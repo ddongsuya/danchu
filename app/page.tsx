@@ -20,25 +20,19 @@ export default function Home() {
 
 <div className="fd fo" aria-hidden="true"><Orbit /></div>
 </div>
-
-<div className="strip">
-<div><span className="mono">비용</span>무료로 이용해보세요!</div>
-<div><span className="mono">회신</span>비교표로 나란히</div>
-<div><span className="mono">기밀</span>CDA 체결로 안전하게</div>
-<div><span className="mono">참고</span>가이드라인 기반</div>
 </div>
+
+{/* 네 갈래 소개 줄: 첫 화면(히어로) 아래, 다음 장면 앞 */}
 <KindStrip />
-
-</div>
 
 <section id="cmp" className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
 <div className="gm-cmp-grid">
 <div className="gm-copy">
 <h2 id="cmp-h">같지만 다릅니다.<br /><span>다양한 항목들을 비교하세요.</span></h2>
 <ol className="gm-ph">
-<li><span className="mono">금액으로만 확인 하면</span><p>B가 더 저렴해 보여요</p></li>
-<li><span className="mono">자세하게 비교하면</span><p>B 기관의 견적서에는 <b>TK 분석</b>이 빠져 있어요. 여기서 발생한 차이에요.</p></li>
-<li><span className="mono">같은 항목으로 보면</span><p>실제 차이는 <b>100만원</b>이에요.</p></li>
+<li><span className="mono lab">금액으로만 확인하면</span><p>B가 더 저렴해 보여요</p></li>
+<li><span className="mono lab">자세하게 비교하면</span><p>B 기관의 견적서에는 <b>TK 분석</b>이 빠져 있어요. 여기서 발생한 차이에요.</p></li>
+<li><span className="mono lab">같은 항목으로 보면</span><p>실제 차이는 <b>100만원</b>이에요.</p></li>
 </ol>
 </div>
 <figure className="gm-sheet" aria-label="예시 기관 A와 B의 견적 비교">
@@ -69,7 +63,7 @@ export default function Home() {
 <tr className="g-r4 g-total"><th scope="row">합계</th><td>1,200만 원</td><td>900만 원</td></tr>
 </tbody>
 </table>
-<figcaption className="mono">최종 견적서는 각 기관의 견적서로 확인합니다.</figcaption>
+<figcaption className="mono lab">최종 견적서는 각 기관의 견적서로 확인합니다.</figcaption>
 </figure>
 </div>
 </section>
@@ -80,7 +74,7 @@ export default function Home() {
 <div className="gm-dia">
 <svg className="gm-wires" aria-hidden="true"><path className="w o"></path><path className="w o"></path><path className="w o"></path><path className="w i"></path><path className="w i"></path></svg>
 <div className="gm-doc">
-<span className="mono">요청서 · Tox</span>
+<span className="mono lab">요청서 · Tox</span>
 <b>반복투여독성 4주</b>
 <dl><div><dt>동물</dt><dd>설치류</dd></div><div><dt>기밀 등급</dt><dd>CDA 필요</dd></div><div><dt>보낸 곳</dt><dd>수행 분야가 맞는 기관</dd></div></dl>
 </div>
@@ -90,7 +84,7 @@ export default function Home() {
 <div className="g-org"><div><b>예시 기관 C</b><small>회신 기한 전</small></div><span className="g-st g-wip"><span className="g-dots"><b></b><b></b><b></b></span>작성 중</span></div>
 </div>
 <div className="gm-card">
-<span className="mono">비교표</span>
+<span className="mono lab">비교표</span>
 <div className="g-mrow"><span>기관 A</span><span className="g-bt"><i style={{ "--w": "1" }}></i></span><em data-to="1000">1,000</em></div>
 <div className="g-mrow"><span>기관 B</span><span className="g-bt"><i style={{ "--w": ".9" }}></i></span><em data-to="900">900</em></div>
 <div className="g-mrow g-wait"><span>기관 C</span><span className="g-bt"><i style={{ "--w": "0" }}></i></span><em>대기</em></div>
@@ -110,7 +104,7 @@ export default function Home() {
 <div className="ctas" style={{ marginTop: "32px" }}><a className="btn g-ghost" href="/request/new?start=advisor">가이드라인 찾아보기</a></div>
 </div>
 <div className="gm-adv" aria-label="가이드라인 찾아보기 예시">
-<div className="gm-ans"><span className="mono">답변</span><span className="g-chip">합성의약품</span><span className="g-chip">임상 1상</span><span className="g-chip">2주 투여</span></div>
+<div className="gm-ans"><span className="mono lab">답변</span><span className="g-chip">합성의약품</span><span className="g-chip">임상 1상</span><span className="g-chip">2주 투여</span></div>
 <ul className="gm-sg">
 <li className="g-sr"><div className="g-t"><b>반복투여독성 2주</b><small>설치류 1종, 비설치류 1종</small></div><span className="g-src"><i className="g-mk"></i>ICH M3</span><span className="g-pg" aria-hidden="true"><span>ICH M3</span><i style={{ "--w": ".8" }}></i><i className="g-hl" style={{ "--w": ".64" }}></i><i style={{ "--w": ".72" }}></i><i style={{ "--w": ".5" }}></i></span></li>
 <li className="g-sr"><div className="g-t"><b>복귀돌연변이시험</b><small>임상 단회 투여 전</small></div><span className="g-src"><i className="g-mk"></i>OECD TG 471</span><span className="g-pg" aria-hidden="true"><span>OECD TG 471</span><i style={{ "--w": ".7" }}></i><i style={{ "--w": ".84" }}></i><i className="g-hl" style={{ "--w": ".58" }}></i><i style={{ "--w": ".66" }}></i></span></li>

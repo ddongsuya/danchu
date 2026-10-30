@@ -182,7 +182,7 @@
 /* scroll scene */
 .a .xsc{position:relative;height:440px}
 .a .xf{position:absolute;left:0;width:300px;padding:18px 20px;display:grid;gap:8px;font-size:16px;line-height:1.4;background:#FBFBF8;border:1px solid var(--line);box-shadow:0 18px 36px -22px rgba(27,27,25,.32);--tx:430px}
-.a .xf em{font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);border:1px solid var(--line);padding:2px 8px;justify-self:start;letter-spacing:.04em}
+.a .xf em{font-style:normal;font-family:var(--font-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);padding:2px 8px;justify-self:start;letter-spacing:.04em}
 .a .xf s{color:var(--faint)}
 .a .w{color:var(--warn)}
 .a .xf0{top:0;left:10px;transform:rotate(-5deg);--ty:150px;--r0:-14deg;--r1:-5deg}

@@ -277,3 +277,6 @@ html:has(.a.onescreen main details[open]){scroll-snap-type:none}
 /* 준비물을 다 갖추지 않아도 먼저 가입하는 길 */
 .a .act .later{display:inline-block;margin-top:10px;font-size:13.5px;color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
 @media (hover:hover) and (pointer:fine){.a .act .later:hover{color:var(--ink)}}
+
+/* 한글 라벨은 고정폭·대문자 자간을 쓰지 않는다 (띄어쓰기·자간이 벌어져 어색함) */
+.a .mono.lab,.a .lab{font-family:var(--font-sans);letter-spacing:0;text-transform:none}

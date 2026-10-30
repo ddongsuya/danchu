@@ -52,7 +52,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
                   style={{
                     flex: "none", width: 36, height: 36, borderRadius: 10,
                     background: n.read_at ? "var(--tint)" : "var(--brand)", color: n.read_at ? "var(--brand)" : "var(--onbrand)",
-                    display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, letterSpacing: ".02em",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700,
                   }}
                 >
                   {n.kind}
