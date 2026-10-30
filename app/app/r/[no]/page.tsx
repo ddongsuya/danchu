@@ -8,11 +8,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
-import { ENDED_LABEL, STAGES, statusLabel, statusTone, inviteStage, inviteStageLabel } from "@/lib/status";
-import { CheckMark, Crumb, StatusPill } from "@/components/app/ui";
-import { md, mdhm, won, ymd } from "@/lib/format";
+import { inviteStage, inviteStageLabel } from "@/lib/status";
+import { Crumb } from "@/components/app/ui";
+import { md, won, ymd } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { comparisonOpened } from "@/lib/reply-window";
+import { funnel } from "@/lib/request-story";
+import { RequestStory } from "@/components/app/RequestStory";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +24,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
-  // 기관을 고르지 않고 마친 요청은 선택·계약 단계를 건너뛰고 "마무리"로 끝난다
-  const stages = rfq.outcome && rfq.status === "closed"
-    ? STAGES.filter((s) => s.key !== "selected" && s.key !== "contracting").map((s) => (s.key === "closed" ? { ...s, label: ENDED_LABEL, desc: "기관을 고르지 않고 요청을 마쳤습니다" } : s))
-    : STAGES;
-  const idx = Math.max(0, stages.findIndex((s) => s.key === rfq.status));
   // 운영자가 취소한 초대는 숫자에서 뺀다
-  // 비교표가 열리기 전 (2026-10-20 결정 1): 의뢰자에게는 진행 숫자(참여 n곳, 제출 m곳)만 보인다.
+  // 비교표가 열리기 전 (2026-10-20 결정 1): 의뢰자에게는 합계 숫자(보낸 곳·확인한 곳·참여·제출)만 보인다.
   // 일반 기관의 이름·금액·견적은 열릴 때 함께 공개한다. 의뢰자가 지명한 기관만 이름과 참여 여부(참여·불참·결정 전)를 보여 준다
   const opened = !!rfq.compared_at;
   const ended = ["closed", "cancelled"].includes(rfq.status);
@@ -39,6 +36,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const shown = sponsorVisibleInvites(d.invites);
   const seats = seatState(rfq.cro_count, rfq.join_by, d.invites);
   const counts = participation(rfq.cro_count, d.invites);
+  // 요청 이야기 숫자 (보낸 곳·확인한 곳·참여·견적). 합계만 보이고 기관별 불참은 보이지 않는다 (lib/request-story.ts)
+  const story = funnel(d.invites);
   const { submitted, joined: joinedCount } = counts;
   const seatLine = participationLabel(counts);
   const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
@@ -76,141 +75,90 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
     needsCda(rfq.confidentiality) ? "CDA 필요" : "",
   ].filter(Boolean);
 
-  // 진행 이력: 상태 단계 + 이벤트 시각
-  const eventAt = (kind: string) => d.events.filter((e) => e.kind === kind).at(-1)?.created_at;
-  const whenOf: Record<string, string | undefined> = {
-    received: rfq.created_at,
-    distributed: rfq.distributed_at ?? eventAt("distributed"),
-    quoted: eventAt("quote_submitted"),
-    compared: rfq.compared_at ?? undefined,
-    selected: d.award?.awarded_at,
-    contracting: d.award?.contract_reported_at ?? undefined,
-    closed: rfq.closed_at ?? undefined,
-  };
+  // 요청이 기관에 전달된 시각 (예전 요청은 기록에만 남아 있다)
+  const distributedAt = rfq.distributed_at ?? d.events.filter((e) => e.kind === "distributed").at(-1)?.created_at ?? null;
 
   return (
     <>
       <Crumb href="/app" label="내 요청" />
-      <div className="ph">
-        <div>
-          <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)", letterSpacing: ".04em" }}>{rfq.rfq_no}</span>
-          <h1>{rfq.substance}</h1>
-          <p>{rfq.categories.join(" · ")}</p>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
-            {chips.map((c) => (
-              <span key={c} className="tag">{c}</span>
-            ))}
-          </div>
-        </div>
-        <div className="ph__actions"><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b2">이 요청 문의하기</Link>
-          {/* 넓은 화면은 위쪽 버튼, 좁은 화면은 바닥에 붙는 아래 버튼 하나만 보인다 */}
-          {canCompare && <Link href={`/app/r/${rfq.rfq_no}/compare`} className={`${d.award ? "b2" : "b1"} only-wide`}>견적 {submitted}건 비교</Link>}
-        </div>
-      </div>
-
-      {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
-      {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
-
-      <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="card" style={{ padding: "20px 20px 8px" }}>
-          <h2 style={{ marginBottom: 16, fontSize: 16, fontWeight: 700 }}>진행 상태</h2>
-          <div className="tl">
-            {stages.map((st, i) => {
-              const state = i < idx ? 2 : i === idx ? 1 : 0;
-              const when = whenOf[st.key];
-              return (
-                <div key={st.key} className="tl__row">
-                  <div className="tl__rail">
-                    <span className={`tl__dot${state === 2 ? " tl__dot--done" : state === 1 ? " tl__dot--now" : ""}`}>{state === 2 && <CheckMark size={12} />}</span>
-                    {i < stages.length - 1 && <span className={`tl__line${state === 2 ? " tl__line--done" : ""}`} />}
-                  </div>
-                  <div className="tl__body">
-                    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                      <span className={`tl__t${state ? "" : " tl__t--off"}`}>{st.label}</span>
-                      {state === 1 && <span className="tl__d">{st.desc}</span>}
-                      {st.key === "quoted" && state >= 1 && joinedCount > 0 && <span className="tl__d tnum">참여 {joinedCount}곳 중 {submitted}곳 제출</span>}
-                    </div>
-                    <span className="tl__when tnum">{when ? mdhm(when) : state === 1 && st.key === "quoted" && rfq.reply_by ? `기한 ${md(rfq.reply_by)}` : ""}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="stack">
-          <div className="card" style={{ padding: 18 }}>
-            <div className="sec-title" style={{ margin: "0 0 10px" }}>
-              <h2>회신 현황 <span className="tnum" style={{ fontSize: 14, fontWeight: 600, color: "var(--muted)" }}>{seatLine}</span></h2>
-              <span className="tnum">{rfq.reply_by ? `회신 기한 ${md(rfq.reply_by)}` : ""}</span>
+      <RequestStory
+        no={rfq.rfq_no}
+        substance={rfq.substance}
+        categories={rfq.categories}
+        status={rfq.status}
+        outcome={rfq.outcome}
+        started={!!rfq.started_at || rfq.status !== "received"}
+        replyBy={rfq.reply_by}
+        distributedAt={distributedAt}
+        comparedAt={rfq.compared_at}
+        award={d.award ? { name: d.award.cro_name, at: d.award.awarded_at, reportedAt: d.award.contract_reported_at ?? null } : null}
+        f={story}
+        canCompare={canCompare}
+        next={
+          (noJoinPastDue || contractOpen) && (
+            <div className="rs-next">
+              {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
+              {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
             </div>
-            {!rfq.started_at && rfq.status === "received" ? (
-              <div style={{ fontSize: 14, color: "var(--muted)" }}>
-                아직 기관에 참여 안내를 보내지 않았습니다. 첨부를 다시 올린 뒤 보내거나, 지금 있는 첨부로 바로 보낼 수 있습니다.
-                <StartNow no={rfq.rfq_no} />
-              </div>
-            ) : d.invites.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>
-                {rfq.started_at && !ended
-                  ? "요청 분야에 바로 맞는 참여 기관이 없어 운영자가 안내할 기관을 확인하고 있습니다. 보통 영업일 1~2일 안에 결과를 알려 드립니다."
-                  : "참여 안내를 보낸 기관이 없습니다."}
-              </p>
-            ) : !named ? (
-              <div className="stack" style={{ gap: 10 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                  <div style={{ padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
-                    <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>참여</span>
-                    <b className="tnum" style={{ fontSize: 18 }}>{seats.cap == null ? `${joinedCount}곳` : `${joinedCount}/${seats.cap}곳`}</b>
-                  </div>
-                  <div style={{ padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
-                    <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>제출</span>
-                    <b className="tnum" style={{ fontSize: 18 }}>{submitted}곳</b>
-                  </div>
+          )
+        }
+      >
+        <div className="rs-aside">
+          {chips.length > 0 && (
+            <div className="rs-tags">
+              {chips.map((c) => (
+                <span key={c} className="tag">{c}</span>
+              ))}
+            </div>
+          )}
+          {!rfq.started_at && rfq.status === "received" ? (
+            <div className="rs-aside__p">
+              아직 기관에 참여 안내를 보내지 않았어요. 첨부를 다시 올린 뒤 보내거나, 지금 있는 첨부로 바로 보낼 수 있어요.
+              <StartNow no={rfq.rfq_no} />
+            </div>
+          ) : d.invites.length === 0 ? (
+            <p className="rs-aside__p">{rfq.started_at && !ended ? "운영자가 안내할 기관을 확인하면 여기에 숫자가 채워져요." : "참여 안내를 보낸 기관이 없어요."}</p>
+          ) : !named ? (
+            <>
+              {nominees.length > 0 && (
+                <div className="rs-names" aria-label="지명한 기관">
+                  <span className="rs-names__k">지명한 기관</span>
+                  {nominees.map((i) => (
+                    <span key={i.id} className="rs-name">
+                      <b>{i.cro_name}</b>
+                      <span>{nomineeLabel(i)}</span>
+                    </span>
+                  ))}
                 </div>
-                {nominees.length > 0 && (
-                  <div className="stack" style={{ gap: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>지명한 기관</span>
-                    {nominees.map((i) => (
-                      <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>{i.cro_name}</span>
-                        <span style={{ fontSize: 13, color: "var(--muted)" }}>{nomineeLabel(i)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {ended ? (
-                  <p style={{ fontSize: 13, color: "var(--muted)" }}>비교표가 열리기 전에 마무리한 요청이라 기관 이름과 견적은 공개되지 않습니다.</p>
-                ) : (
-                  <p style={{ fontSize: 13, color: "var(--muted)" }}>
-                    {rfq.reply_by ? `비교표는 회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열립니다. ` : ""}
-                    참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 더 빨리 열립니다. 그 전에는 숫자만 보이고, 기관 이름과 견적은 비교표에서 함께 공개됩니다.
-                    {seats.reserved > 0 && joinBy ? ` 지명 기관 몫 ${seats.reserved}곳은 참여 결정 기한(${md(joinBy)})까지 비워 둡니다.` : joinBy ? ` 참여 결정 기한은 ${md(joinBy)}입니다.` : ""}
-                  </p>
-                )}
-              </div>
-            ) : shown.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>참여한 기관이 없습니다.</p>
-            ) : (
-              <div className="stack" style={{ gap: 8 }}>
+              )}
+              <p className="rs-aside__p">
+                {ended
+                  ? "비교표가 열리기 전에 마무리한 요청이라 기관 이름과 견적은 공개되지 않아요."
+                  : `${rfq.reply_by ? `비교 보고서는 회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열려요. ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 내면 더 빨리 열려요. 그 전에는 숫자만 보이고, 기관 이름과 견적은 보고서에서 함께 공개돼요.${seats.reserved > 0 && joinBy ? ` 지명 기관 몫 ${seats.reserved}곳은 참여 결정 기한(${md(joinBy)})까지 비워 둬요.` : joinBy ? ` 참여 결정 기한은 ${md(joinBy)}이에요.` : ""}`}
+              </p>
+            </>
+          ) : shown.length === 0 ? (
+            <p className="rs-aside__p">참여한 기관이 없어요.</p>
+          ) : (
+            <>
+              <div className="rs-names" aria-label="참여한 기관">
+                <span className="rs-names__k">참여한 기관 · {seatLine}</span>
                 {shown.map((i) => (
-                  <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 12px", background: "var(--sf)", borderRadius: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: i.status === "submitted" ? "var(--brand)" : "var(--dash)" }} />
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{i.cro_name}</span>
-                      {i.source === "nominated" && <span className="pill pill--tint">지명</span>}
-                    </div>
-                    <span style={{ fontSize: 13, color: i.status === "submitted" ? "var(--ink)" : "var(--muted)" }}>{inviteStageLabel(i)}</span>
-                  </div>
+                  <span key={i.id} className="rs-name">
+                    <b>{i.cro_name}{i.source === "nominated" && <span className="pill pill--tint">지명</span>}</b>
+                    <span>{inviteStageLabel(i)}</span>
+                  </span>
                 ))}
               </div>
-            )}
-            {opened && !d.award && !ended && (
-              <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
-                {submitted > 0 ? "비교표가 열렸습니다. 도착한 견적은 더 바뀌지 않습니다. 비교표에서 기관을 선택해 주세요." : "비교표가 열렸지만 도착한 견적이 없습니다."}
-              </p>
-            )}
-          </div>
+              {opened && !d.award && !ended && (
+                <p className="rs-aside__p">{submitted > 0 ? "비교 보고서가 열렸어요. 도착한 견적은 더 바뀌지 않아요. 보고서에서 진행할 기관을 선택해 주세요." : "비교 보고서가 열렸지만 도착한 견적이 없어요."}</p>
+              )}
+            </>
+          )}
+        </div>
+      </RequestStory>
+
+      {(rfq.outcome || d.award) && <div className="stack rs-status">
 
           {!d.award && rfq.outcome && (
             <div className="note" style={{ flexDirection: "column", gap: 4 }}>
@@ -260,7 +208,12 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               autoOn={autoOn}
             />
           )}
+      </div>}
 
+      <section className="rs-block" aria-labelledby="detail-title">
+        <p className="rs-bk">요청 내용</p>
+        <h2 id="detail-title" className="rs-h2">보낸 요청서</h2>
+        <div className="stack">
           <div className="card card--rows">
             <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>요청 내용</div>
             {[
@@ -314,13 +267,13 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             </div>
           </details>
         </div>
-      </div>
+      </section>
 
       {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <div id="end" style={{ marginTop: 24 }}><OutcomeForm no={rfq.rfq_no} compared={canCompare} /></div>}
 
       {canCompare && !d.award && (
         <div className="cta only-narrow">
-          <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">견적 {submitted}건 비교하기</Link>
+          <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">비교 보고서 받아보기</Link>
         </div>
       )}
     </>

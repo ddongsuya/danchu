@@ -38,7 +38,8 @@ describe("네 화면이 같은 계산만 쓴다", () => {
     const data = src("lib/data.ts");
     expect(data.match(/participation\(r\.cro_count/g)?.length).toBe(2);
   });
-  for (const f of ["components/app/RequestOverview.tsx", "app/admin/page.tsx", "app/app/r/[no]/page.tsx", "app/admin/r/[no]/page.tsx"]) {
+  // 의뢰자 목록 줄은 2026-10-30부터 lib/request-story.ts 의 rowLine 이 만든다
+  for (const f of ["lib/request-story.ts", "app/admin/page.tsx", "app/app/r/[no]/page.tsx", "app/admin/r/[no]/page.tsx"]) {
     it(`${f} 는 participationLabel 로 표시한다`, () => {
       expect(src(f)).toContain("participationLabel(");
     });

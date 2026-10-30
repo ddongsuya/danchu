@@ -3,6 +3,7 @@ import type { Tables } from "./db-types";
 import type { CroOrg } from "./auth";
 import { likeExact, orValue } from "./sql";
 import { participation } from "./request-policy";
+import { funnel } from "./request-story";
 import { stuckReasons, type Stuck } from "./stuck";
 
 /* ── 표 행 타입 — lib/db-types.ts 의 별칭. 컬럼이 바뀌면 그쪽을 고친다 ── */
@@ -27,7 +28,7 @@ export function dbReady(): boolean {
 
 /* ── 의뢰자 ── */
 
-export type RfqSummary = RfqRow & { joined: number; cap: number | null; submitted: number };
+export type RfqSummary = RfqRow & { joined: number; cap: number | null; submitted: number; sent: number; opened: number };
 
 export async function listRequestsForUser(userId: string): Promise<RfqSummary[]> {
   const c = sb();
@@ -41,8 +42,13 @@ export async function listRequestsForUser(userId: string): Promise<RfqSummary[]>
   const list = rows ?? [];
   if (!list.length) return [];
   const ids = list.map((r) => r.id);
-  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at").in("rfq_id", ids);
-  return list.map((r) => ({ ...r, ...participation(r.cro_count, (inv ?? []).filter((i) => i.rfq_id === r.id)) }));
+  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, opened_at, joined_at, withdrawn_at, revoked_at").in("rfq_id", ids);
+  return list.map((r) => {
+    const mine = (inv ?? []).filter((i) => i.rfq_id === r.id);
+    // 보낸 곳·확인한 곳은 합계만 쓴다 (기관 이름·기관별 불참은 비교표가 열려도 의뢰자에게 보이지 않는다, lib/request-story.ts)
+    const { sent, opened } = funnel(mine);
+    return { ...r, ...participation(r.cro_count, mine), sent, opened };
+  });
 }
 
 export type RfqDetail = {
@@ -176,8 +182,15 @@ export async function listAllRequests(status?: string, q?: string, page = 1): Pr
   const hasMore = (rows ?? []).length > ADMIN_PAGE;
   const list = (rows ?? []).slice(0, ADMIN_PAGE);
   if (!list.length) return { list: [], hasMore: false };
-  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, joined_at, withdrawn_at, revoked_at").in("rfq_id", list.map((r) => r.id));
-  return { list: list.map((r) => ({ ...r, ...participation(r.cro_count, (inv ?? []).filter((i) => i.rfq_id === r.id)) })), hasMore };
+  const { data: inv } = await c.from("rfq_invites").select("rfq_id, status, opened_at, joined_at, withdrawn_at, revoked_at").in("rfq_id", list.map((r) => r.id));
+  return {
+    list: list.map((r) => {
+      const mine = (inv ?? []).filter((i) => i.rfq_id === r.id);
+      const { sent, opened } = funnel(mine);
+      return { ...r, ...participation(r.cro_count, mine), sent, opened };
+    }),
+    hasMore,
+  };
 }
 
 export async function listCroOrgs(status?: string, search?: string): Promise<(CroOrg & { members: number })[]> {

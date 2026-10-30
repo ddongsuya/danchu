@@ -3,6 +3,7 @@ import type { Role, Session } from "@/lib/auth";
 import { Lockup } from "@/components/Logo";
 import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
+import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "./portal.css";
 import { ArrowUpRight, Question } from "@phosphor-icons/react/dist/ssr";
 
@@ -23,6 +24,8 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
 
   return (
     <div className="pt">
+      {/* 첫 장면 높이 기준 (--vhpx). 인앱 브라우저가 svh 를 크게 잡는 문제를 랜딩과 같은 방법으로 피한다 */}
+      <ViewportHeight />
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
       <aside className="pt__side">
         <Link href={nav[0]?.href ?? "/"} className="pt__sbrand">

@@ -44,8 +44,11 @@ describe("계약 확인", () => {
 
 describe("의뢰자 목록", () => {
   it("비교표가 열린 요청만 강조하고, 마무리 상태를 위해 outcome 을 넘긴다", () => {
+    // 2026-10-30 홈 개편: 강조 판정은 lib/request-story.ts 로 옮겼다 (열렸고 견적이 있고, 선택·종료 전)
+    const story = src("lib/request-story.ts");
+    expect(story).toMatch(/!!r\.compared_at && r\.submitted > 0/);
+    expect(story).toMatch(/!r\.selected_quote_id && reportReady\(r\)/);
     const ov = src("components/app/RequestOverview.tsx");
-    expect(ov).toMatch(/r\.status === "compared" && r\.submitted > 0/);
     expect(ov).not.toMatch(/회신 기한까지는 수정될 수 있습니다/);
     expect(src("app/app/page.tsx")).toMatch(/outcome, substance/);
   });
