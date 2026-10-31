@@ -255,7 +255,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
 /** 운영자 화면 "참여" 칸 (0023): 참여 시각과 경로(포털·링크·도입 전), 철회 시각. 참여 기록은 기관이 직접 누른 것만 있다 */
 function joinCell(i: { joined_at: string | null; join_channel: string | null; withdrawn_at: string | null }): string {
   if (!i.joined_at) return "-";
-  const via = i.join_channel === "portal" ? "포털" : i.join_channel === "token" ? "링크" : i.join_channel === "legacy" ? "도입 전" : "";
+  const via = i.join_channel === "portal" ? "기관 계정" : i.join_channel === "token" ? "링크" : i.join_channel === "legacy" ? "도입 전" : "";
   return `${mdhm(i.joined_at)}${via ? ` · ${via}` : ""}${i.withdrawn_at ? ` · 철회 ${mdhm(i.withdrawn_at)}` : ""}`;
 }
 

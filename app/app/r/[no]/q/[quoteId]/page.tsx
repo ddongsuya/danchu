@@ -171,7 +171,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
 
       {selectable && (
         <div className="cta only-narrow">
-          <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 blg bfull">이 기관 선택하기</Link>
+          <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 blg bfull">이 기관 선택</Link>
         </div>
       )}
     </>

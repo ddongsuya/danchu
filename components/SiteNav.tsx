@@ -13,7 +13,7 @@ export const SITE_LINKS: [string, string][] = [
   ["/faq", "자주 묻는 질문"],
 ];
 
-const PORTAL = { requester: "내 요청", cro: "기관 포털", admin: "운영" } as const;
+const PORTAL = { requester: "내 요청", cro: "받은 요청", admin: "운영" } as const;
 
 /*
  * 공개 페이지 사이 이동은 next/link가 아니라 일반 <a>로 페이지를 새로 연다.

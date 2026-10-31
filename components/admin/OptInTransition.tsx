@@ -34,7 +34,7 @@ export function OptInTransition({ rows }: { rows: TransitionRow[] }) {
     <section className="note note--tint optin-tr" aria-labelledby="optin-tr-title">
       <h2 id="optin-tr-title" className="optin-tr__title">참여 선택형 전환</h2>
       <p className="optin-tr__body tnum">
-        예전 방식으로 안내가 나간 열린 요청이 {rows.length}건 있습니다. 실행하면 요청마다 참여 결정 기한을 오늘부터 다시 잡고, 아직 참여를 정하지 않은 관리 기관 {offers}곳에 참여 안내 메일을 다시 보냅니다. 계정이 있는 기관은 포털과 기존 링크에서 참여 화면을 바로 보므로 메일을 다시 보내지 않습니다.
+        예전 방식으로 안내가 나간 열린 요청이 {rows.length}건 있습니다. 실행하면 요청마다 참여 결정 기한을 오늘부터 다시 잡고, 아직 참여를 정하지 않은 관리 기관 {offers}곳에 참여 안내 메일을 다시 보냅니다. 계정이 있는 기관은 기관 화면과 기존 링크에서 참여 화면을 바로 보므로 메일을 다시 보내지 않습니다.
       </p>
       <details className="optin-tr__list">
         <summary>대상 보기</summary>

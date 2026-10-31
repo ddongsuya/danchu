@@ -24,7 +24,8 @@ export type StoryProps = {
   children?: ReactNode;
 };
 
-type Step = { n: string; t: string; s: string; dots?: boolean; state: "done" | "now" | "next" };
+/** n 은 단계 번호가 아니라 그 단계의 수(곳·건)다. u 로 단위를 붙여 단계 번호로 읽히지 않게 한다 */
+type Step = { n: string; u?: string; t: string; s: string; dots?: boolean; state: "done" | "now" | "next" };
 
 /**
  * 요청 이야기 (2026-10-29 대표 지시): "몇 곳에 요청 → 몇 곳이 확인 → 참여 → 견적 → 비교 보고서".
@@ -36,11 +37,12 @@ export function RequestStory(p: StoryProps) {
   const pending = Math.max(0, f.joined - f.submitted);
   const steps: Step[] = [];
   if (f.sent > 0) {
-    steps.push({ n: String(f.sent), t: `기관 ${f.sent}곳에 요청이 전달됐어요`, s: `${p.distributedAt ? `${md(p.distributedAt)} · ` : ""}분야가 맞는 기관에게`, dots: true, state: "done" });
-    steps.push({ n: String(f.opened), t: f.opened ? `${f.opened}곳이 요청 요약을 확인했어요` : "아직 요약을 연 기관이 없어요", s: f.sent > f.opened ? `${f.sent - f.opened}곳은 아직 열어 보지 않았어요` : "보낸 곳 모두 확인했어요", state: "done" });
-    steps.push({ n: String(f.joined), t: f.joined ? `${f.joined}곳이 참여했어요` : "아직 참여한 기관이 없어요", s: f.rest ? `${f.rest}곳은 참여하지 않았거나 아직 정하지 않았어요` : "보낸 곳 모두 참여했어요", state: "done" });
+    steps.push({ n: String(f.sent), u: "곳", t: `기관 ${f.sent}곳에 요청이 전달됐어요`, s: `${p.distributedAt ? `${md(p.distributedAt)} · ` : ""}분야가 맞는 기관에게`, dots: true, state: "done" });
+    steps.push({ n: String(f.opened), u: "곳", t: f.opened ? `${f.opened}곳이 요청 요약을 확인했어요` : "아직 요약을 연 기관이 없어요", s: f.sent > f.opened ? `${f.sent - f.opened}곳은 아직 열어 보지 않았어요` : "보낸 곳 모두 확인했어요", state: "done" });
+    steps.push({ n: String(f.joined), u: "곳", t: f.joined ? `${f.joined}곳이 참여했어요` : "아직 참여한 기관이 없어요", s: f.rest ? `${f.rest}곳은 참여하지 않았거나 아직 정하지 않았어요` : "보낸 곳 모두 참여했어요", state: "done" });
     steps.push({
       n: String(f.submitted),
+      u: "건",
       t: f.submitted ? `${f.submitted}곳이 견적을 보냈어요` : "아직 도착한 견적이 없어요",
       s: p.comparedAt ? "회신이 마감됐어요. 도착한 견적은 더 바뀌지 않아요" : pending ? `남은 ${pending}곳은 작성 중이에요${p.replyBy ? ` · 회신 기한 ${md(p.replyBy)}` : ""}` : p.replyBy ? `회신 기한 ${md(p.replyBy)}` : "",
       state: "done",
@@ -108,7 +110,7 @@ export function RequestStory(p: StoryProps) {
           <ol className="rs-steps">
             {steps.map((s, i) => (
               <li key={i} className={`rs-step rs-step--${s.state}`} aria-current={s.state === "now" ? "step" : undefined}>
-                <span className="rs-step__n tnum">{s.n}</span>
+                <span className="rs-step__n tnum">{s.n}{s.n && s.u && <small>{s.u}</small>}</span>
                 <span className="rs-step__t">
                   <b>{s.t}</b>
                   {s.s && <span>{s.s}</span>}

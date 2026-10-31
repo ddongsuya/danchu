@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import { adminFunnel, countBy, dbReady, listAllRequests, listStuckRequests } from "@/lib/data";
 import { AdminHero } from "@/components/admin/AdminHero";
 import { StuckList } from "@/components/admin/StuckList";
+import { HowItWorks } from "@/components/app/HowItWorks";
 import { STAGES, statusLabel, statusTone } from "@/lib/status";
 import { StatusPill } from "@/components/app/ui";
 import { dday, md, ymd } from "@/lib/format";
@@ -45,6 +46,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     <>
       {/* 첫 장면: 진행 중인 요청 흐름 (2026-10-30, 세 역할 같은 틀). 그 바로 아래가 멈춘 요청 (2026-10-29 과업 점검 1·6) */}
       <AdminHero f={flow} stuck={stuck.map((r) => r.rfq_no)} today={todaySeoul()} />
+      <HowItWorks role="admin" />
       <section className="rs-block rs-block--tight" aria-label="지금 할 일">
         <p className="rs-bk">지금 할 일</p>
         <StuckList rows={stuck} />
@@ -88,7 +90,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <p className="rs-bk">요청 목록</p>
       <h2 id="all-title" className="rs-h2">전체 요청</h2>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
-      <div className="seg" style={{ flexWrap: "wrap", height: "auto" }}>
+      <div className="seg seg--scroll" style={{ height: "auto" }}>
         {FILTERS.map(([k, label]) => (
           <Link key={k} href={k ? `/admin?status=${k}${q ? `&q=${encodeURIComponent(q)}` : ""}` : q ? `/admin?q=${encodeURIComponent(q)}` : "/admin"} role="button" aria-pressed={status === k} style={{ height: 36, display: "inline-flex", alignItems: "center", padding: "0 14px", fontSize: 14, background: status === k ? "var(--ink)" : "var(--wh)", color: status === k ? "var(--wh)" : "var(--ink)", fontWeight: status === k ? 600 : 400 }}>
             {label}{k ? ` ${k === "overdue" ? counts.overdue : counts.rfq[k] ?? 0}` : ""}

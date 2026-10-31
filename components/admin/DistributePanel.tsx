@@ -101,7 +101,7 @@ export function DistributePanel({ no, categories, defaultReplyBy, replyByLocked 
       {past && <p className="note note--warn" style={{ fontSize: 13 }}>회신 기한이 이미 지났습니다. 회신 현황의 "회신 기한 변경"으로 먼저 늘린 뒤 안내하세요.</p>}
       <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13 }}>
         <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} style={{ marginTop: 2 }} />
-        <span>이후 자동 보충 안 함 <span style={{ display: "block", color: "var(--muted)" }}>켜 두면 새로 승인되는 기관이나 매일 보충 안내가 이 요청에 기관을 더하지 않습니다. 운영자가 고른 기관만 안내를 받습니다.</span></span>
+        <span>고른 기관에만 보내기 <span style={{ display: "block", color: "var(--muted)" }}>켜 두면 나중에 승인되는 기관이나 매일 한 번 하는 빈자리 채우기가 이 요청에 기관을 더하지 않습니다. 운영자가 고른 기관만 안내를 받습니다.</span></span>
       </label>
       <p className="fld__help">안내 링크는 회신 기한 +7일까지 열립니다. 기관 대표 이메일과 담당자 계정 모두에 메일이 갑니다. 운영자는 기관 대신 참여할 수 없고, 기관이 참여한 뒤에만 견적서 PDF를 옮겨 적을 수 있습니다.</p>
       {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status">{msg.text}</p>}

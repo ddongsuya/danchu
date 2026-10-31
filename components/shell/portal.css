@@ -872,3 +872,92 @@
 @media (hover: hover) and (pointer: fine) {
   .pt__identity:hover b, .pt__who:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
+
+/* ───────────── 휴대폰 화면 다듬기 (2026-10-31) ─────────────
+   세 역할 화면을 390px에서 실제 데이터로 찍어 본 뒤 고친 것.
+   1) 표를 세운 카드(tbl--stack)가 데스크톱 칸 여백(17px 16px)을 그대로 받아 행 하나가 화면 반을 차지하던 것
+   2) 첫 장면이 화면 가운데 정렬이라 제목 위가 비고, 큰 원 그림이 첫 화면을 다 쓰던 것
+   3) 필터가 여러 줄로 접혀 목록이 밀리던 것 → 한 줄 가로 밀기
+   4) 넓은 명세 표의 첫 칸이 좁아져 기관 이름이 세로로 쪼개지던 것 */
+@media (max-width: 639px) {
+  .pt .tbl.tbl--stack tr { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 16px; padding: 14px 16px; }
+  .pt .tbl.tbl--stack td { padding: 0; font-size: 14px; line-height: 1.45; }
+  .pt .tbl.tbl--stack td:first-child { font-size: 15px; }
+  .pt .tbl.tbl--stack td[data-label]::before { font-size: 11.5px; margin-bottom: 1px; }
+  .pt .tbl.tbl--stack td .pill { padding: 3px 8px; font-size: 12px; }
+  .pt .tbl.tbl--stack td.tbl__act .b2, .pt .tbl.tbl--stack td.tbl__act .b1 { height: 40px; }
+  .pt .tbl--sticky td:first-child, .pt .tbl--sticky th:first-child { min-width: 9.5rem; }
+  .pt .tbl--sticky td, .pt .tbl--sticky th { white-space: nowrap; }
+  .pt .tbl--sticky td:first-child { white-space: normal; }
+  .pt .tbl-wrap { scroll-snap-type: none; }
+
+  /* 필터 줄: 접지 않고 한 줄로 밀어 본다 */
+  .pt .rs-chips, .pt .seg--scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -16px; padding-right: 16px; -webkit-overflow-scrolling: touch; }
+  .pt .rs-chips::-webkit-scrollbar, .pt .seg--scroll::-webkit-scrollbar { display: none; }
+  .pt .rs-chips button, .pt .seg--scroll > * { flex: none; white-space: nowrap; }
+  .pt .seg--scroll { height: auto; max-width: calc(100% + 16px); }
+
+  /* 첫 장면: 위에서부터 읽게 하고, 원 그림은 제목 옆 작은 표시로 */
+  .pt .rs-scene { align-content: start; padding-top: 4px; }
+  .pt .rs-hero { gap: 0; }
+  .pt .rs-orb { max-width: 132px; justify-self: start; margin: 0 0 4px -6px; }
+  .pt .rs-h1 { font-size: 32px; margin: 8px 0 12px; }
+  .pt .rs-lead { font-size: 15px; line-height: 1.6; }
+  .pt .rs-acts { margin-top: 18px; gap: 8px; }
+  .pt .rs-flow { margin-top: 20px; }
+  .pt .rs-flow b { font-size: 30px; }
+  .pt { --rs-gap: 56px; }
+  .pt .rs-h2 { font-size: 24px; margin-bottom: 16px; }
+
+  /* 지나온 길: 단계 상자를 낮추고 숫자는 단위와 함께 작게 */
+  .pt .rs-step { grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 14px 16px; }
+  .pt .rs-step__n { font-size: 24px; }
+  .pt .rs-step__n small { font-size: 12px; font-weight: 500; margin-left: 1px; color: var(--body); letter-spacing: 0; }
+  .pt .rs-step__t b { font-size: 16px; }
+  .pt .rs-step__t span { font-size: 13px; }
+
+  /* 목록 행 */
+  .pt .rs-row { padding: 16px; }
+  .rs-row__main b { font-size: 16px; }
+  .pt .rs-todo { padding: 18px; }
+}
+/* 숫자 옆 단위 (지나온 길: 3곳 · 2건) */
+.rs-step__n small { font-size: .45em; font-weight: 500; margin-left: 2px; color: var(--body); letter-spacing: 0; }
+/* 바닥 버튼(DockAfter): 첫 장면 버튼이 보이는 동안 아래로 내려가 숨는다. 숨김 클래스는 스크립트가 붙이므로 스크립트가 없으면 늘 보인다 */
+.dock { transition: transform 200ms var(--ease-out), visibility 0s; }
+.dock[data-js-away] { transform: translateY(calc(100% + 24px)); pointer-events: none; visibility: hidden; transition: transform 160ms var(--ease-out), visibility 0s 160ms; }
+@media (prefers-reduced-motion: reduce) { .dock, .dock[data-js-away] { transition: none; } }
+
+/* 진행 순서 안내 (2026-10-31): 홈 첫 장면 아래, 접힌 한 줄. 처음 쓰는 사람에게만 펼쳐서 보인다 */
+.pt .rs-how { margin-top: 24px; background: var(--wh); border-radius: var(--r-lg); }
+.pt .rs-how summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 0 24px; font-size: 16px; font-weight: 600; }
+.pt .rs-how summary::-webkit-details-marker { display: none; }
+.pt .rs-how summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: var(--r-lg); }
+.rs-how__hint { margin-left: auto; font-size: 14px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.rs-how__less, .rs-how[open] .rs-how__more { display: none; }
+.rs-how[open] .rs-how__less { display: inline; }
+.pt .rs-how ol { margin: 0; padding: 4px 24px 24px; list-style: none; counter-reset: how; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px; }
+.pt .rs-how li { counter-increment: how; display: grid; align-content: start; gap: 6px; font-size: 14px; line-height: 1.6; color: var(--body); }
+.pt .rs-how li::before { content: counter(how); font: 600 13px var(--font-mono); color: var(--muted); }
+.pt .rs-how li b { font-size: 15px; color: var(--ink); font-weight: 600; }
+.pt .rs-how li a { justify-self: start; font-weight: 600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 1023px) { .pt .rs-how ol { grid-template-columns: minmax(0, 1fr); gap: 16px; } .pt .rs-how li { grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; } .pt .rs-how li > * { grid-column: 2; } .pt .rs-how li::before { grid-column: 1; grid-row: 1; padding-top: 2px; } }
+@media (max-width: 639px) { .pt .rs-how summary { padding: 0 16px; font-size: 15px; } .pt .rs-how ol { padding: 0 16px 18px; } }
+/* 홈 첫 장면 버튼 아래: 버튼이 가리키는 요청이 무엇인지 한 줄 (기관 홈, 2026-10-31 "지금 할 일" 중복 정리) */
+.pt .rs-acts__why { margin: 12px 0 0; font-size: 14px; color: var(--body); }
+.pt .rs-acts__why .tnum { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+/* 점 범례: 목록 바로 위, 점과 같은 모양으로 (예전엔 목록 맨 아래 긴 문장) */
+.rs-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+.rs-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rs-legend .rs-dot { width: 12px; height: 12px; }
+/* 회신 제출 칸: 휴대폰에서는 총액 한 줄 + 버튼만 남겨 화면 아래를 적게 덮는다 */
+@media (max-width: 639px) {
+  .reply-submit { padding: 12px 16px !important; gap: 8px !important; border-radius: var(--r-lg) var(--r-lg) 0 0; margin: 0 -16px; }
+  .reply-submit .b2 { height: 40px; font-size: 14px; }
+}
+/* 휴대폰 표에서 없어도 되는 칸 (제출일 등). 넓은 화면에서는 그대로 */
+@media (max-width: 639px) { .pt .tbl--stack td.tbl__opt { display: none; } }
+/* 카탈로그: 수행 분야 밖 분류 묶음 */
+.pt .cat-more > summary { cursor: pointer; list-style: none; min-height: 48px; display: flex; align-items: center; padding: 0 4px; font-size: 14px; font-weight: 600; color: var(--body); text-decoration: underline; text-underline-offset: 3px; }
+.pt .cat-more > summary::-webkit-details-marker { display: none; }
+.pt .cat-more > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: var(--r-md); }

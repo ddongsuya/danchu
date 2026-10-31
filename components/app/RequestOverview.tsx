@@ -6,6 +6,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { RfqSummary } from "@/lib/data";
 import { dotsOf, homeTotals, noJoinPastDue, reportReady, rowLine } from "@/lib/request-story";
 import { Orbit } from "@/components/app/Orbit";
+import { HowItWorks } from "@/components/app/HowItWorks";
 import { md } from "@/lib/format";
 
 export type RequestListItem = Pick<RfqSummary, "id" | "rfq_no" | "status" | "substance" | "categories" | "joined" | "cap" | "submitted" | "sent" | "opened" | "reply_by" | "created_at" | "compared_at" | "selected_quote_id" | "started_at"> & { outcome?: string | null };
@@ -75,6 +76,8 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
         )}
       </section>
 
+      <HowItWorks role="requester" open={list.length === 0} />
+
       {late.length > 0 && (
         <section className="rs-block rs-block--tight" aria-labelledby="todo-title">
           <h2 id="todo-title" className="rs-bk">지금 할 일</h2>
@@ -106,6 +109,12 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
               <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명 검색" />
             </label>
           </div>
+          <p className="rs-legend" aria-hidden="true">
+            <span><i className="rs-dot rs-dot--f" />견적 보냄</span>
+            <span><i className="rs-dot rs-dot--h" />참여</span>
+            <span><i className="rs-dot rs-dot--w" />아직 참여 전</span>
+            <span>점 하나가 기관 하나</span>
+          </p>
           <p className="sr-only" role="status">{filtered.length}건의 요청</p>
           {filtered.length === 0 ? (
             <div className="rs-empty">
@@ -136,7 +145,6 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
               })}
             </div>
           )}
-          <p className="rs-note">점 하나가 기관 하나예요. 채운 점은 견적을 낸 곳, 반 채운 점은 참여한 곳, 빈 점은 아직 참여하지 않은 곳이에요.</p>
         </section>
       )}
 

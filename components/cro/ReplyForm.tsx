@@ -330,14 +330,14 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>견적 회신 · {rfq.no} · {filled} / {items.length} 항목 완료</p>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p>요청된 시험별로 수행 가능 여부와 견적을 입력하세요. 금액은 VAT 별도입니다. 예상 소요기간은 동물 입고부터 보고서 초안 발행까지, 최종보고서는 초안 뒤 걸리는 주를 적어 주세요. 앞 단계를 고르면 전체 일정이 순서대로 그려집니다.</p>
+          <p>시험마다 수행 가능 여부와 금액·기간을 적으세요. 금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수입니다. 앞 단계를 고르면 전체 일정이 순서대로 그려집니다.</p>
         </div>
       </div>
 
       {data.draft?.prefilled && !readOnly && (
         <div className="note" style={{ marginBottom: 16 }}>
           <b>카탈로그로 초안을 채웠습니다.</b>{" "}
-          {pending ? `요청 조건이 등록한 기본 조건와 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
+          {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
           <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
         </div>
       )}
@@ -376,7 +376,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.name}</span>
-                    <span style={{ fontSize: 12, color: "var(--muted)" }}>{r.cond || r.category}</span>
+                    {(r.cond || (r.category !== r.name ? r.category : "")) && <span style={{ fontSize: 12, color: "var(--muted)" }}>{r.cond || r.category}</span>}
                     {(src || checks.length > 0) && (
                       <span style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
                         {src && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--surface2, #F1EEE8)", color: "var(--muted)" }}>{src}</span>}
@@ -390,7 +390,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 </div>
                 {checks.length > 0 && !readOnly && (
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
-                    <span>요청 조건이 등록한 기본 조건와 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
+                    <span>요청 조건이 등록한 기본 조건과 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
                     <button type="button" className="b2 bsm" style={{ flex: "none" }} disabled={busy} onClick={() => confirmChecks(r.seq)}>현재 금액과 기간으로 회신</button>
                   </div>
                 )}
@@ -417,7 +417,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                     <span>원</span>
                   </div>
                   <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder="예상 소요기간" disabled={no || readOnly || busy} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 예상 소요기간`} />
+                    <input type="text" inputMode="numeric" placeholder="기간" disabled={no || readOnly || busy} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 예상 소요기간`} />
                     <span>주</span>
                   </div>
                 </div>
@@ -498,6 +498,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             <p className="fld__help" style={{ marginTop: 6 }}>비교표와 PDF가 다르면 PDF가 우선합니다. 단추가 불일치를 발견하면 확인을 요청합니다.</p>
           </div>
 
+          {/* 제출 전 알아 둘 것: 휴대폰에서 아래에 붙는 제출 칸이 화면을 덮지 않게 칸 밖으로 뺐다 (2026-10-31) */}
+          {!readOnly && <p className="fld__help" style={{ margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
+
           {error && <p className="note note--err" role="alert">{error}</p>}
 
           <div className="card card--pad stack reply-submit" style={{ gap: 12 }}>
@@ -507,7 +510,6 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             </div>
             {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
             {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
-            {!readOnly && <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
             <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
               {busy ? "제출 중…" : blockedLabel}
             </button>

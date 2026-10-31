@@ -42,7 +42,7 @@ export function normalizeBusinessNo(v: string | null | undefined): string | null
 
 /** 선정 전 기관에 보여 줄 의뢰자 표시명 */
 export function maskedClientLabel(orgType: string | null | undefined): string {
-  return `${orgType || "의뢰기관"} (선정 시 공개)`;
+  return `${orgType || "의뢰기관"} · 이름은 선정 뒤 공개`;
 }
 
 /** 의뢰자가 고르는 참여 자리 수·기밀 등급 (rfq-schema 의 선택지와 같아야 한다) */

@@ -48,7 +48,7 @@ export function JoinPanel({ token, seats, afterDeclineHref, operator = false, de
         <p className="join__consent">{JOIN_CONSENT}</p>
       )}
       <p className="join__meta tnum">
-        {seats} · <a href="/for-cro#cro-terms" target="_blank" rel="noopener">기관 이용 조건 {CRO_TERMS_VERSION}</a>
+        {seats} · <a href="/for-cro#cro-terms" target="_blank" rel="noopener" title={`조건 판 ${CRO_TERMS_VERSION}`}>기관 이용 조건 보기</a>
       </p>
       {error && <p className="note note--err join__err" role="alert">{error}</p>}
       {!declining && (

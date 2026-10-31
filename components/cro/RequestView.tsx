@@ -9,7 +9,7 @@ import { CroStory } from "./CroStory";
 /**
  * CRO가 보는 요청서. 토큰 링크(/q)와 CRO 포털(/cro/r) 양쪽에서 쓴다.
  * 참여 전(got.joined false, 0023): 요약(설계 규칙표 "참여 전에 보이는 것")과 참여 결정(JoinPanel)만 보인다.
- * 참여 뒤: 의뢰 개요 · 요청 시험 항목(회신 표의 행) · 공통 조건 · 첨부와 회신 작성, 제출 전 참여 철회.
+ * 참여 뒤: 의뢰 개요 · 요청 시험 항목(항목마다 회신) · 공통 조건 · 첨부와 회신 작성, 제출 전 참여 철회.
  */
 export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDeclineHref, declineEndpoint }: { got: Loaded; replyHref: string; withdrawHref?: string; fileToken?: string; afterDeclineHref: string; declineEndpoint?: string }) {
   const { rfq, draft } = got;
@@ -110,7 +110,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           <div className="card" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <h2 style={{ fontSize: 16, fontWeight: 700 }}>요청 시험 항목 {rfq.rows.length}</h2>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>{summary ? "종 · 회복 기간 · GLP 여부" : "회신 표의 행이 됩니다"}</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>{summary ? "종 · 회복 기간 · GLP 여부" : "항목마다 견적을 적습니다"}</span>
             </div>
             {rfq.rows.map((r) => {
               const it = draft?.items.find((x) => x.seq === r.seq);
@@ -118,7 +118,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
                 <div key={r.seq} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px 14px", background: "var(--sf)", borderRadius: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                     <span style={{ fontSize: 15, fontWeight: 600 }}>{r.name}</span>
-                    <span style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, whiteSpace: "nowrap" }}>{r.category}</span>
+                    {r.category !== r.name && <span style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, whiteSpace: "nowrap" }}>{r.category}</span>}
                   </div>
                   {r.cond && <span style={{ fontSize: 13, color: "var(--body)", lineHeight: 1.5 }}>{r.cond}</span>}
                   {it?.avail && (

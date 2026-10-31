@@ -304,7 +304,7 @@ export function CompareBoard({
             <Link key={c.id} href={`/app/r/${no}/q/${c.id}`} className="cmp-m__head">
               <b>{c.name}</b>
               {c.selected && <span className="pill pill--ok">선택한 기관</span>}
-              <span className="cmp-m__more">견적 상세 보기</span>
+              <span className="cmp-m__more">{canSelect ? "견적 보고 선택" : "견적 상세 보기"}</span>
             </Link>
           ))}
         </div>
@@ -365,7 +365,7 @@ export function CompareBoard({
                   {c.selected && <span>선택한 기관</span>}
                   <div className="cmp-head__link">
                     <Link href={`/app/r/${no}/q/${c.id}`} className="btxt">
-                      견적 상세 보기
+                      {canSelect ? "견적 보고 선택" : "견적 상세 보기"}
                     </Link>
                   </div>
                 </th>
@@ -404,7 +404,7 @@ export function CompareBoard({
       <p className="fld__help">
         견적서 원본과 표의 내용이 다르면 기관에 확인해 주세요.
         {canSelect
-          ? " 기관 선정은 견적 상세에서 진행합니다."
+          ? " 진행할 기관을 정했다면 위에서 그 기관의 \"견적 보고 선택\"을 눌러 정식 견적서를 확인하고 \"이 기관 선택\"을 누르세요."
           : " 선정 후에도 상세 내용을 열람할 수 있습니다."}
       </p>
       <Link

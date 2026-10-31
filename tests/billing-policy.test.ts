@@ -6,8 +6,8 @@ describe("선정 전 익명: 회사명·연락처 공개 조건", () => {
   it("일반 요청도 선정 전에는 회사명을 가린다", () => {
     expect(needsCda("일반")).toBe(false);
     expect(identityVisible({ awarded: false })).toBe(false);
-    expect(maskedClientLabel("바이오벤처")).toBe("바이오벤처 (선정 시 공개)");
-    expect(maskedClientLabel(null)).toBe("의뢰기관 (선정 시 공개)");
+    expect(maskedClientLabel("바이오벤처")).toBe("바이오벤처 · 이름은 선정 뒤 공개");
+    expect(maskedClientLabel(null)).toBe("의뢰기관 · 이름은 선정 뒤 공개");
   });
   it("선정되면 공개된다", () => expect(identityVisible({ awarded: true })).toBe(true));
   it("CDA 체결이 확인돼도 선정 전에는 회사명을 가린다 (첨부만 열린다)", () => {
@@ -98,7 +98,7 @@ describe("기관 요청 화면: CDA 체결은 첨부만 연다", () => {
     const view = rfqViewOf(r, inv, files, false);
     expect(view.masked).toBe(false);
     expect(view.identityMasked).toBe(true);
-    expect(view.client).toBe("바이오벤처 (선정 시 공개)");
+    expect(view.client).toBe("바이오벤처 · 이름은 선정 뒤 공개");
     expect(view.files).toEqual([{ id: "f1", name: "첨부 1 (PDF, 2.0MB)", size: files[0].size_bytes }]);
     const picked = rfqViewOf(r, inv, files, true);
     expect(picked.client).toBe("㈜바이오벤처");

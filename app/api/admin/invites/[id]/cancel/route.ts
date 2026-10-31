@@ -42,5 +42,5 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const { data: members } = await sb.from("profiles").select("id").eq("cro_org_id", inv.cro_org_id);
     await notifyUsers((members ?? []).map((m) => m.id as string), { kind: "시스템", title: `${inv.rfq_no} 전달이 취소되었습니다`, body: reason || "운영자가 이 요청의 전달을 거두었습니다. 회신 링크는 더 쓸 수 없습니다.", href: "/cro" });
   }
-  return NextResponse.json({ ok: true, message: "초대를 취소했습니다. 빈 자리는 배포 패널에서 채우거나 다음 자동 보충 때 채워집니다." });
+  return NextResponse.json({ ok: true, message: "초대를 취소했습니다. 빈 자리는 배포 패널에서 채우거나 다음 빈자리 채우기 때 채워집니다." });
 }

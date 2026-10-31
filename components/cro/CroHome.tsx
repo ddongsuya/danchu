@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Orbit } from "@/components/app/Orbit";
+import { HowItWorks } from "@/components/app/HowItWorks";
 import { InviteList, type InviteItem } from "@/components/cro/InviteList";
 import { actionLabel, croTodo, croTotals, needsAction, type PendingAward } from "@/lib/cro-story";
 import { dday, md } from "@/lib/format";
 
 /**
  * 기관 홈 (2026-10-29 대표 지시, 의뢰자 홈과 같은 틀). 첫 장면은 "진행 중인 요청 n건" 한 문장과 궤도 그림,
- * 흐름 숫자(받은 요청 → 참여 → 제출 → 선정), 지금 할 일 하나, 그 아래 요청마다 내 차례인지.
+ * 흐름 숫자(받은 요청 → 참여 → 제출 → 선정), 진행 순서 안내, 그 아래 요청마다 내 차례인지.
+ * 지금 할 일은 첫 장면 버튼과 그 아래 한 줄로만 보인다 (2026-10-31, 같은 곳을 가리키는 띠가 두 번 나오던 것 정리).
  */
 export function CroHome({ orgName, items, awards, now }: { orgName: string; items: InviteItem[]; awards: PendingAward[]; now: number }) {
   const t = croTotals(items, now);
@@ -36,6 +38,14 @@ export function CroHome({ orgName, items, awards, now }: { orgName: string; item
               {todo && <Link href={todoHref} className="b1 blg">{todoLabel}</Link>}
               <Link href="/cro/catalog" className={todo ? "b2 blg" : "b1 blg"}>카탈로그 보기</Link>
             </div>
+            {/* 버튼이 가리키는 요청 한 줄. 예전에는 아래 "지금 할 일" 띠가 같은 곳을 한 번 더 가리켰다 */}
+            {todo && (
+              <p className="rs-acts__why">
+                {todo.kind === "invite"
+                  ? <><span className="tnum">{todo.item.no}</span> {todo.item.stage === "undecided" ? "참여 여부를 정해 주세요" : "회신을 마무리해 주세요"} <span style={{ whiteSpace: "nowrap" }}>· 회신 기한 {md(todo.item.replyBy)} {dday(todo.item.replyBy).label}</span></>
+                  : <><span className="tnum">{todo.award.no}</span> 선정된 지 {todo.award.days}일이에요. 계약 결과를 알려 주세요</>}
+              </p>
+            )}
           </div>
           {n > 0 && <Orbit rings={rings} label={`진행 중인 요청 ${n}건. 고리 하나가 요청 하나예요. 채운 점은 제출, 반 채운 점은 참여·작성 중, 빈 점은 참여 결정 전이에요.`} />}
         </div>
@@ -49,25 +59,7 @@ export function CroHome({ orgName, items, awards, now }: { orgName: string; item
         )}
       </section>
 
-      {todo && (
-        <section className="rs-block rs-block--tight" aria-labelledby="cro-todo-title">
-          <h2 id="cro-todo-title" className="rs-bk">지금 할 일</h2>
-          <Link href={todoHref} className="rs-todo">
-            {todo.kind === "invite" ? (
-              <span>
-                <b>{todo.item.no} {todo.item.stage === "undecided" ? "참여 여부를 정해 주세요" : "회신을 마무리해 주세요"}</b>
-                <span>회신 기한 {md(todo.item.replyBy)} · {dday(todo.item.replyBy).label}</span>
-              </span>
-            ) : (
-              <span>
-                <b>{todo.award.no} 계약 결과를 보고해 주세요</b>
-                <span>선정된 지 {todo.award.days}일이에요. 계약했거나 진행하지 않기로 했다면 알려 주세요</span>
-              </span>
-            )}
-            <span className="rs-todo__go">{todo.kind === "invite" ? actionLabel(todo.item) : "결과 보고"}</span>
-          </Link>
-        </section>
-      )}
+      <HowItWorks role="cro" open={items.length === 0} />
 
       <section className="rs-block" aria-labelledby="cro-list-title">
         <p className="rs-bk">받은 요청 {items.length}건</p>

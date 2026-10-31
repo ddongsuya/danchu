@@ -123,7 +123,20 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
 
       <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>조합 {totalVariants}개 · 항목 {filledItems} / {items.length}. 항목 하나에 동물종·투여경로·시험법이 다른 조합을 여러 개 둘 수 있습니다.</p>
 
-      {cats.map((cat) => {
+      {/* 수행 분야 밖 분류는 한 줄 아래로 접는다 (2026-10-31, 휴대폰에서 분류 열 개가 다 펼쳐져 보이던 것) */}
+      {(orgCategories.length ? cats.filter((c) => orgCategories.includes(c) || rows.some((r) => r.category === c)) : cats).map((cat) => renderCat(cat))}
+      {orgCategories.length > 0 && cats.some((c) => !orgCategories.includes(c) && !rows.some((r) => r.category === c)) && (
+        <details className="cat-more">
+          <summary>수행 분야에 없는 분류 {cats.filter((c) => !orgCategories.includes(c) && !rows.some((r) => r.category === c)).length}개 보기</summary>
+          <div className="stack" style={{ gap: 14, marginTop: 12 }}>
+            {cats.filter((c) => !orgCategories.includes(c) && !rows.some((r) => r.category === c)).map((cat) => renderCat(cat))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+
+  function renderCat(cat: string) {
         const list = byCat.get(cat) ?? [];
         const inScope = orgCategories.includes(cat);
         const catRows = rows.filter((r) => r.category === cat);
@@ -143,6 +156,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
               </span>
             </summary>
             <div style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>조합이 없는 항목은 회신할 때 직접 적습니다. 자주 하는 항목만 추가해 두세요.</p>
               {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 참여 안내가 오지 않습니다. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
               {list.map((it) => (
                 <ItemBlock key={it.key} item={it} rows={rowsOf(it.key)} cat={cat as Cat} onAdd={() => addVariant(it)} onPatch={patch} onDuplicate={duplicate} onRemove={remove} />
@@ -154,9 +168,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
             </div>
           </details>
         );
-      })}
-    </div>
-  );
+  }
 }
 
 /* ── 프리셋 ─────────────────────────────────────────────── */
@@ -247,16 +259,17 @@ function PresetPanel({ orgPresets, rows, onApply, note }: { orgPresets: OrgPrese
 
 function ItemBlock({ item, rows, cat, onAdd, onPatch, onDuplicate, onRemove }: { item: CatalogItem; rows: CatalogRow[]; cat: Cat; onAdd: () => void; onPatch: (id: string, p: Partial<CatalogRow>) => void; onDuplicate: (r: CatalogRow) => void; onRemove: (r: CatalogRow) => void }) {
   return (
-    <div style={{ border: "1px solid var(--cline)", borderRadius: 12, background: "var(--wh)" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 14px", flexWrap: "wrap" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+    // 항목은 상자로 감싸지 않는다 (분류 상자 안의 상자 안의 조합 상자, 세 겹이던 것을 2026-10-31 한 겹 줄임)
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", minWidth: 0 }}>
           <b style={{ fontSize: 15 }}>{item.item}</b>
-          {rows.length ? <span className="pill pill--sf">조합 {rows.length}</span> : <span className="pill pill--sf">조합 없음 · 회신 때 직접 입력</span>}
+          {rows.length > 0 && <span className="pill pill--sf">조합 {rows.length}</span>}
         </span>
-        <button type="button" className="b2 bsm" onClick={onAdd}>+ 조합 추가</button>
+        <button type="button" className="b2 bsm" style={{ flex: "none" }} onClick={onAdd} aria-label={`${item.item} 조합 추가`}>+ 추가</button>
       </div>
       {rows.length > 0 && (
-        <div style={{ padding: "0 10px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {rows.map((r) => (
             <VariantEditor key={r.id} row={r} cat={cat} onChange={(p) => onPatch(r.id, p)} onDuplicate={() => onDuplicate(r)} onRemove={() => onRemove(r)} />
           ))}

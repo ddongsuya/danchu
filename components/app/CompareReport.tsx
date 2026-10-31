@@ -5,7 +5,7 @@ import { notesFor } from "@/lib/test-notes";
 import { md, won } from "@/lib/format";
 
 /**
- * 비교 보고서 (2026-10-29 대표 지시: "우리의 견적서는 그런 견적서"). 표지 요약 → 1 비교견적표 → 2 금액·기간 분석 → 3 항목 분석 → 4 시험 설명과 근거.
+ * 비교 보고서 (2026-10-29 대표 지시: "우리의 견적서는 그런 견적서"). 표지 요약 → 비교견적표 → 금액·기간 분석 → 항목 분석 → 시험 설명과 근거.
  * 숫자는 기관이 낸 값만 쓰고, 단추는 순위나 적정가를 말하지 않는다.
  */
 export function CompareReport({ no, substance, comparedAt, cols, rows, vat, board }: { no: string; substance: string; comparedAt: string | null; cols: ReportCol[]; rows: ReportRow[]; vat: string; board: ReactNode }) {
@@ -47,20 +47,20 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
           <div><dt>기관끼리 다르게 답한 항목</dt><dd className="tnum">{many ? `${diff.length}개` : "-"}</dd></div>
         </dl>
         <nav className="rs-toc" aria-label="보고서 차례">
-          {sections.map((s, i) => (
-            <a key={s.id} href={`#${s.id}`}>{i + 1} {s.label}</a>
+          {sections.map((s) => (
+            <a key={s.id} href={`#${s.id}`}>{s.label}</a>
           ))}
         </nav>
       </section>
 
       <section className="rs-block" id="r1" aria-labelledby="r1-title">
-        <p className="rs-bk">1 · 비교견적표</p>
+        <p className="rs-bk">비교견적표</p>
         <h2 id="r1-title" className="rs-h2">항목마다 금액과 기간</h2>
         {board}
       </section>
 
       <section className="rs-block" id="r2" aria-labelledby="r2-title">
-        <p className="rs-bk">2 · 금액·기간 분석</p>
+        <p className="rs-bk">금액·기간 분석</p>
         <h2 id="r2-title" className="rs-h2">
           {many && totals && spans ? `총액 차이 ${won(totals.max - totals.min)}, 기간 차이 ${spans.max - spans.min}주` : many && totals ? `총액 차이 ${won(totals.max - totals.min)}` : "견적 1건의 금액과 기간"}
         </h2>
@@ -94,7 +94,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
       </section>
 
       <section className="rs-block" id="r3" aria-labelledby="r3-title">
-        <p className="rs-bk">3 · 항목 분석</p>
+        <p className="rs-bk">항목 분석</p>
         <h2 id="r3-title" className="rs-h2">
           {!many ? "항목마다 수행 여부" : diff.length ? `기관끼리 다르게 답한 항목 ${diff.length}개` : "모든 항목에 같은 답을 했어요"}
         </h2>
@@ -136,7 +136,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
 
       {notes.length > 0 && (
         <section className="rs-block" id="r4" aria-labelledby="r4-title">
-          <p className="rs-bk">4 · 시험 설명과 근거</p>
+          <p className="rs-bk">시험 설명과 근거</p>
           <h2 id="r4-title" className="rs-h2">견적에 들어간 시험, 무엇을 보나요</h2>
           <p className="rs-lead">참고용 설명이에요. 실제 설계는 기관의 견적서와 시험계획서로 확인하세요.</p>
           <div className="rs-ex">

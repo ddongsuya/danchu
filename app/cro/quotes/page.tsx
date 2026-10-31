@@ -57,10 +57,10 @@ export default async function CroQuotes() {
                     </td>
                     <td className="tnum" data-label="총액" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
                     <td className="tnum" data-label="기간">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
-                    <td className="tnum" data-label="제출일">{ymd(q.submitted_at)}</td>
-                    <td className="tnum" data-label="회신 기한">{i.reply_by}{dd.n >= 0 ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>{dd.label}</span> : null}</td>
+                    <td className="tnum tbl__opt" data-label="제출일">{ymd(q.submitted_at)}</td>
+                    <td className="tnum" data-label="회신 기한">{i.reply_by}<span className="pill pill--sf" style={{ marginLeft: 6 }}>{dd.n >= 0 ? dd.label : "마감"}</span></td>
                     <td data-label="진행"><span className="pill pill--tint">{result}</span></td>
-                    <td className="tbl__act"><Link href={`/cro/r/${i.id}`} className="b2 bsm">보기</Link></td>
+                    <td className="tbl__act"><Link href={`/cro/r/${i.id}`} className="b2 bsm">견적 보기</Link></td>
                   </tr>
                 );
               })}

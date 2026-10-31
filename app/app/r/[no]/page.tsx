@@ -5,6 +5,7 @@ import { ContractConfirm, ReopenRequest, StartNow } from "@/components/app/Reque
 import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import Link from "next/link";
+import { DockAfter } from "@/components/app/DockAfter";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
@@ -272,9 +273,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
       {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <div id="end" style={{ marginTop: 24 }}><OutcomeForm no={rfq.rfq_no} compared={canCompare} /></div>}
 
       {canCompare && !d.award && (
-        <div className="cta only-narrow">
+        <DockAfter>
           <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">비교 보고서 받아보기</Link>
-        </div>
+        </DockAfter>
       )}
     </>
   );
