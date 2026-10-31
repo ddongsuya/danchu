@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
+import { DEMO_COOKIE, DEMO_READONLY, demoEnabled, isDemoRole } from "@/lib/demo";
 
 /**
  * 세션 갱신 + 보호 영역 접근 제어.
@@ -23,6 +24,14 @@ export async function proxy(req: NextRequest) {
 
   // 세션 쿠키가 없는 공개 페이지·API 요청은 Auth 서버를 부르지 않는다 (랜딩 LCP, Auth 호출 한도)
   const hasSession = req.cookies.getAll().some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+
+  // 개발 단계 미리보기 (lib/demo.ts): 로그인 없이 보호 영역을 열되, 쓰기 API 는 막는다 (로그아웃은 미리보기를 끝내므로 둔다)
+  if (!hasSession && demoEnabled() && isDemoRole(req.cookies.get(DEMO_COOKIE)?.value)) {
+    if (pathname.startsWith("/api/") && req.method !== "GET" && pathname !== "/api/auth/logout") {
+      return NextResponse.json({ error: DEMO_READONLY }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
   if (!hasSession && !needsAuth) return NextResponse.next();
   // 세션 쿠키가 없는 보호 영역은 Auth 서버를 부를 필요도 없다
   if (!hasSession) return redirectGuest(req);

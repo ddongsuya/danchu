@@ -961,3 +961,15 @@
 .pt .cat-more > summary { cursor: pointer; list-style: none; min-height: 48px; display: flex; align-items: center; padding: 0 4px; font-size: 14px; font-weight: 600; color: var(--body); text-decoration: underline; text-underline-offset: 3px; }
 .pt .cat-more > summary::-webkit-details-marker { display: none; }
 .pt .cat-more > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: var(--r-md); }
+
+/* 개발 단계 미리보기 띠 (lib/demo.ts). 출시 전에 지운다 */
+.pt__demo {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  padding: 8px 16px; font-size: 13px; line-height: 1.4;
+  background: var(--brand-tint); color: var(--ink); border-bottom: 1px solid var(--brand-line);
+}
+.pt__demo b { font-weight: 700; }
+.pt__demo nav { display: flex; gap: 10px; margin-left: auto; }
+.pt__demo nav a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.pt__demo nav a[aria-current="page"] { font-weight: 700; text-decoration: none; }

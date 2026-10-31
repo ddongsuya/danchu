@@ -49,6 +49,18 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
       </aside>
 
       <div className="pt__body">
+        {session.demo && (
+          <div className="pt__demo" role="status">
+            <b>미리보기</b>
+            <span>{ROLE_LABEL[role]} 화면을 기존 계정으로 보는 중이에요. 저장은 되지 않아요.</span>
+            <nav aria-label="미리보기 역할">
+              {(["requester", "cro", "admin"] as Role[]).map((r) => (
+                <a key={r} href={`/demo?as=${r}`} aria-current={r === role ? "page" : undefined}>{ROLE_LABEL[r]}</a>
+              ))}
+              <a href="/demo?off=1">끝내기</a>
+            </nav>
+          </div>
+        )}
         <header className="pt__top">
           <div className="pt__topin">
             <Link href={nav[0]?.href ?? "/"} className="pt__brand">
