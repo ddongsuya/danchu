@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { defaultReplyBy } from "@/lib/distribute";
+import { mdhm } from "@/lib/format";
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { StartNow } from "@/components/app/RequestActions";
 import { needsCda } from "@/lib/request-policy";
@@ -54,7 +55,11 @@ export default async function Done({
               오늘 · 시험 분야가 맞는 기관에 참여 안내를 보냈습니다. 참여할
               기관이 직접 참여를 정합니다.
             </li>
-            {rfq.join_by && <li>{md(rfq.join_by)} · 참여 결정 기한</li>}
+            {rfq.join_by && (
+              <li>
+                <time dateTime={rfq.join_by}>{mdhm(rfq.join_by)} (한국시간)</time> · 참여 결정 기한
+              </li>
+            )}
             <li>{md(due)} · 회신 기한</li>
             <li>
               {md(nextDay(due))} 오전 9시 · 비교표 공개. 참여한 기관이 모두

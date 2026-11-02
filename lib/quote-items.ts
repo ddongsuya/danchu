@@ -1,11 +1,18 @@
-import { CATS, type Values } from "./rfq-schema";
+import { CATS, DETAILS, type Cat, type Values } from "./rfq-schema";
 
 /**
  * RFQ payload → CRO 회신 표의 행.
  * CRO는 항목을 정의하지 않는다. 의뢰자가 고른 대분류와 세부 시험 종류에서 행이 자동 생성된다.
  */
 /** 회신 표의 한 행 정의 (요청서에서 파생). DB 의 cro_quotes 행(lib/data.ts QuoteRow)과는 다른 것이다 */
-export type QuoteLineDef = { seq: number; category: string; name: string; cond: string };
+export type QuoteLineDef = {
+  seq: number;
+  category: string;
+  name: string;
+  cond: string;
+  /** 참여한 기관의 요청서와 회신 화면에만 제공하는 시험별 입력값 */
+  conditions?: [string, string][];
+};
 
 const YN_LABEL: Record<string, string> = {
   tk: "TK 병행",
@@ -60,18 +67,34 @@ function summaryCondOf(payload: Values, cat: string, noSpecies = false): string 
   return parts.join(" · ");
 }
 
-/** summary: 참여 전 요약용 행 (조건 칸을 동물종·회복 기간·GLP 여부로 줄인다). 행 번호·이름·분야는 같다 */
-export function quoteRowsFromPayload(payload: Values, opts: { summary?: boolean } = {}): QuoteLineDef[] {
+function studyConditions(payload: Values, cat: Cat, noSpecies: boolean): [string, string][] {
+  const conditions: [string, string][] = [];
+  for (const field of DETAILS[cat]) {
+    // items와 segment는 행 이름이고, 체외시험 행에는 다른 시험의 동물종이 붙지 않는다.
+    if (field.id === "items" || field.id === "segment" || (field.id === "species" && noSpecies)) continue;
+    const value = detail(payload, cat, field.id);
+    const display = Array.isArray(value)
+      ? value.filter((v) => typeof v === "string" && v.trim()).join(", ")
+      : typeof value === "string" ? value.trim() : "";
+    if (display && field.label) conditions.push([field.label, display]);
+  }
+  return conditions;
+}
+
+/** summary는 참여 전 공개 요약, full은 참여 기관의 견적 작성용 상세. 기본값은 매칭·견적 기록용 행이다. */
+export function quoteRowsFromPayload(payload: Values, opts: { summary?: boolean; full?: boolean } = {}): QuoteLineDef[] {
   const cats = Array.isArray(payload.categories) ? payload.categories : [];
   const rows: QuoteLineDef[] = [];
   for (const cat of cats) {
-    if (!(CATS as readonly string[]).includes(cat)) continue;
+    if (!CATS.includes(cat as Cat)) continue;
     const picked = detail(payload, cat, "items") ?? detail(payload, cat, "segment");
     const names = Array.isArray(picked) && picked.length ? picked : [cat];
     for (const name of names) {
       const noSpecies = isInVitroItem(name);
       const cond = opts.summary ? summaryCondOf(payload, cat, noSpecies) : condOf(payload, cat, noSpecies);
-      rows.push({ seq: rows.length + 1, category: cat, name: name === cat ? cat : name, cond });
+      const row: QuoteLineDef = { seq: rows.length + 1, category: cat, name, cond };
+      if (!opts.summary && opts.full) row.conditions = studyConditions(payload, cat as Cat, noSpecies);
+      rows.push(row);
     }
   }
   return rows;

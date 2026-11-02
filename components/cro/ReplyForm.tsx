@@ -12,6 +12,7 @@ import { uploadToSigned } from "@/lib/upload";
 import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
 import type { Cat } from "@/lib/rfq-schema";
 import { EfficacyCosts } from "@/components/cro/EfficacyCosts";
+import { StudyConditions } from "./StudyConditions";
 import { EFFICACY_CAT } from "@/lib/efficacy";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
@@ -376,7 +377,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                     <span style={{ fontSize: 15, fontWeight: 700 }}>{r.name}</span>
-                    {(r.cond || (r.category !== r.name ? r.category : "")) && <span style={{ fontSize: 12, color: "var(--muted)" }}>{r.cond || r.category}</span>}
+                    {r.category !== r.name && <span style={{ fontSize: 12, color: "var(--muted)" }}>{r.category}</span>}
                     {(src || checks.length > 0) && (
                       <span style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
                         {src && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--surface2, #F1EEE8)", color: "var(--muted)" }}>{src}</span>}
@@ -388,6 +389,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                     <CheckMark size={12} />
                   </span>
                 </div>
+                <StudyConditions row={r} />
                 {checks.length > 0 && !readOnly && (
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
                     <span>요청 조건이 등록한 기본 조건과 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>

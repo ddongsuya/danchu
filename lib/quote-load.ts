@@ -195,7 +195,7 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
     replyBy: inv.reply_by,
     authorities: a("authority"),
     overview,
-    rows: quoteRowsFromPayload(p),
+    rows: quoteRowsFromPayload(p, { full: true }),
     translation: a("reportTrans").some((x) => x && x !== "없음"),
     common,
     situation: a("advisorAnswers").filter((x) => typeof x === "string").slice(0, 20),

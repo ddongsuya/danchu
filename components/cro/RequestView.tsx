@@ -5,6 +5,7 @@ import { md, won } from "@/lib/format";
 import { seatsLabel } from "@/lib/request-policy";
 import { JoinPanel } from "./JoinPanel";
 import { CroStory } from "./CroStory";
+import { StudyConditions } from "./StudyConditions";
 
 /**
  * CRO가 보는 요청서. 토큰 링크(/q)와 CRO 포털(/cro/r) 양쪽에서 쓴다.
@@ -87,7 +88,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           {!summary && (
           <div className="card" style={{ padding: "6px 18px" }}>
             <div style={{ padding: "12px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>공통 조건</div>
-            {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>의뢰자가 상세 조건을 입력하지 않았습니다. 기관의 설계로 견적하고 회신에 설명해 주세요.</p>}
+            {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>모든 시험에 공통으로 적용할 조건은 입력하지 않았습니다.</p>}
             {rfq.common.map(([k, v]) => (
               <div key={k} className="kv" style={{ borderTop: "1px solid var(--track)" }}>
                 <span className="kv__k">{k}</span>
@@ -120,7 +121,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
                     <span style={{ fontSize: 15, fontWeight: 600 }}>{r.name}</span>
                     {r.category !== r.name && <span style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, whiteSpace: "nowrap" }}>{r.category}</span>}
                   </div>
-                  {r.cond && <span style={{ fontSize: 13, color: "var(--body)", lineHeight: 1.5 }}>{r.cond}</span>}
+                  <StudyConditions row={r} />
                   {it?.avail && (
                     <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>
                       내 회신 · {it.avail}{it.amount ? ` · ${Number(it.amount).toLocaleString("ko-KR")}원` : ""}{it.weeks ? ` · ${it.weeks}주` : ""}
