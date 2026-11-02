@@ -60,7 +60,7 @@ export async function sendBlockedNotice(email: string): Promise<boolean> {
       <h2 style="margin:0 0 12px;font-size:20px">이 이메일로는 견적 요청서를 보낼 수 없습니다</h2>
       <p>방금 단추에서 이 주소로 견적 요청서를 보내려는 시도가 있었습니다. 이 주소는 기관 또는 운영자 계정으로 가입되어 있어 의뢰자 요청서를 받을 수 없습니다.</p>
       <p>직접 보내신 것이라면 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요. 쓰신 요청서는 같은 브라우저에 임시 저장되어 있습니다.</p>
-      <p style="font-size:13px;color:#6F6A63">요청하지 않았다면 이 메일은 무시하세요. 계정과 요청서에는 아무 변화가 없습니다. 문의: ${esc("hello@danchu.kr")}</p>`),
+      <p style="font-size:13px;color:#6F6A63">요청하지 않았다면 이 메일은 무시하세요. 계정과 요청서에는 아무 변화가 없습니다. 문의: ${esc("limjm900202@gmail.com")}</p>`),
   });
 }
 

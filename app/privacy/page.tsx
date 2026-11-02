@@ -274,7 +274,7 @@ export default function PrivacyPage() {
         종료된 뒤 탈퇴할 수 있습니다.
       </p>
       <p>
-        그 밖의 열람·정정·처리 정지 요구는 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>로 요청하실 수 있으며, 회사는 지체
+        그 밖의 열람·정정·처리 정지 요구는 <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>로 요청하실 수 있으며, 회사는 지체
         없이 조치합니다. 다만 이미 기관에 제공된 정보에 대해서는 해당 기관에 별도로 요청하셔야 할 수 있으며, 회사는 이를
         안내합니다.
       </p>
@@ -307,7 +307,7 @@ export default function PrivacyPage() {
       <ul>
         <li>개인정보 보호책임자: {privacyOfficerName() ? `${privacyOfficerName()}, 대표` : "대표"}</li>
         <li>
-          연락처: <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
+          연락처: <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
         </li>
       </ul>
       <p>

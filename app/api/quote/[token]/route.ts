@@ -57,10 +57,10 @@ const LINK_GONE = "유효하지 않거나 만료된 링크입니다.";
 
 /** save_quote 가 잠금 뒤 재검사에서 거절한 이유 (0021, 0023, 0025). closed 는 지금 닫힌 이유로 따로 안내한다 */
 const SAVE_DENIED: Record<string, { error: string; status: number }> = {
-  revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(hello@danchu.kr)에서 새 링크를 받아 주세요.`, status: 403 },
-  expired: { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 },
+  revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(limjm900202@gmail.com)에서 새 링크를 받아 주세요.`, status: 403 },
+  expired: { error: "링크가 만료되었습니다. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 },
   declined: { error: "불참으로 처리한 요청이라 저장할 수 없습니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다.", status: 403 },
-  org_inactive: { error: "기관 참여가 중지되어 저장할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
+  org_inactive: { error: "기관 참여가 중지되어 저장할 수 없습니다. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 403 },
   not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관 견적을 저장할 수 없습니다. 이 기관의 견적이라면 로그아웃한 뒤 메일의 링크로 다시 열어 회신해 주세요.", status: 403 },
   // 0023: 기관 본인이 참여하기를 누르기 전에는 기관도 운영자(대리 입력)도 저장할 수 없다
   not_joined: { error: "기관이 이 요청에 참여한 뒤에 견적을 저장할 수 있습니다. 요청 화면에서 참여하기를 먼저 눌러 주세요.", status: 409 },
@@ -74,7 +74,7 @@ const SAVE_DENIED: Record<string, { error: string; status: number }> = {
  * DB(save_quote)도 같은 규칙으로 다시 거절한다. 여기서는 화면 검사와 문구를 맡는다
  */
 function blocked(got: Loaded): { error: string; status: number } | null {
-  if (got.expired) return { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 };
+  if (got.expired) return { error: "링크가 만료되었습니다. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 };
   if (got.locked) return { error: "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.", status: 403 };
   if (got.closed) return { error: closedMessage(got.closedReason), status: 403 };
   if (got.withdrawn) return SAVE_DENIED.withdrawn;

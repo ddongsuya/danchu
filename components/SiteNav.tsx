@@ -95,7 +95,7 @@ export function SiteNav() {
               <div className="mnav__sub">
                 <a href="/privacy"><strong>개인정보처리방침</strong></a>
                 <a href="/terms">이용약관</a>
-                <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
+                <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
               </div>
             </div>
           </div>

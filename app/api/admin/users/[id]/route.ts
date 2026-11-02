@@ -53,7 +53,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       console.error("sync invites", e);
     }
   } else if (!linkOrg && before?.pending_org_id) {
-    await notifyUsers([id], { kind: "기관", title: "기관 합류 신청이 처리되지 않았습니다", body: "신청한 기관에 연결되지 않았습니다. 문의는 hello@danchu.kr로 보내주세요.", href: "/cro" });
+    await notifyUsers([id], { kind: "기관", title: "기관 합류 신청이 처리되지 않았습니다", body: "신청한 기관에 연결되지 않았습니다. 문의는 limjm900202@gmail.com로 보내주세요.", href: "/cro" });
   }
   return NextResponse.json({ ok: true });
 }

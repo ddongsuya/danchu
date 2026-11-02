@@ -8,7 +8,7 @@ import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/com
 const ERRORS: Record<string, string> = {
   link: "링크를 확인하지 못했어요. 메일의 버튼을 다시 눌러주세요.",
   expired: "링크가 만료됐거나 이미 쓰였어요. 아래에서 새 링크를 받아보세요.",
-  config: "지금은 로그인을 쓸 수 없어요. hello@danchu.kr로 알려주세요.",
+  config: "지금은 로그인을 쓸 수 없어요. limjm900202@gmail.com로 알려주세요.",
 };
 
 const NOTICES: Record<string, string> = {

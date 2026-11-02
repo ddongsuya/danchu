@@ -70,5 +70,5 @@ export function adminEmails(): string[] {
  * ADMIN_EMAIL 은 운영자 알림을 받을 사람 목록이라 여기에 쓰지 않는다.
  */
 export function operatorReplyTo(): string {
-  return (process.env.OPERATOR_REPLY_TO || "").trim() || "hello@danchu.kr";
+  return (process.env.OPERATOR_REPLY_TO || "").trim() || "limjm900202@gmail.com";
 }

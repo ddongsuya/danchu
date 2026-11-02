@@ -94,7 +94,7 @@ function fmt(v: unknown): string {
 
 export const mailWrap = (body: string) =>
   `<div style="font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1815;line-height:1.6;max-width:640px">${body}
-   <p style="margin-top:32px;font-size:13px;color:#9A948B">단추 Danchu · hello@danchu.kr</p></div>`;
+   <p style="margin-top:32px;font-size:13px;color:#9A948B">단추 Danchu · limjm900202@gmail.com</p></div>`;
 const wrap = mailWrap;
 
 /** 입력값 전체를 라벨 순으로 표 형태 HTML로 */

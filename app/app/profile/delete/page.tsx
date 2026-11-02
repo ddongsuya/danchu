@@ -45,7 +45,7 @@ export default async function DeleteAccountPage() {
           {open > 0 && <p className="note note--warn" style={{ fontSize: 14 }}>진행 중인 요청 {open}건이 취소되고 회신 중인 기관에 안내됩니다.</p>}
           {contracting.length > 0 && (
             <p className="note note--warn" style={{ fontSize: 14 }}>
-              기관을 선정한 요청({contracting.join(", ")})이 진행 중이라 지금은 탈퇴할 수 없습니다. 계약이 끝나거나 운영자가 종료 처리한 뒤 다시 시도해 주세요. 문의: <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
+              기관을 선정한 요청({contracting.join(", ")})이 진행 중이라 지금은 탈퇴할 수 없습니다. 계약이 끝나거나 운영자가 종료 처리한 뒤 다시 시도해 주세요. 문의: <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
             </p>
           )}
           {isAdmin && <p className="note note--warn" style={{ fontSize: 14 }}>운영자 계정은 탈퇴할 수 없습니다. 먼저 다른 운영자에게 역할 변경을 요청해 주세요.</p>}

@@ -177,7 +177,7 @@ export function reportContract(awardId: string, date: string, amount: number, no
 }
 export const REPORT_CONTRACT_ERRORS: Record<string, { message: string; status: number }> = {
   not_found: { message: "수주 기록이 없습니다.", status: 404 },
-  already: { message: "이미 보고한 계약입니다. 정정이 필요하면 단추(hello@danchu.kr)에 알려 주세요.", status: 409 },
+  already: { message: "이미 보고한 계약입니다. 정정이 필요하면 단추(limjm900202@gmail.com)에 알려 주세요.", status: 409 },
   amount: { message: "계약금액은 1원 이상이어야 합니다.", status: 400 },
   date: { message: "체결일이 선정일보다 앞설 수 없습니다.", status: 400 },
   future: { message: "체결일은 오늘 이전 날짜여야 합니다.", status: 400 },
@@ -216,7 +216,7 @@ export const CONTRACT_CONFIRM_ERRORS: Record<string, { message: string; status: 
   forbidden: { message: "이 요청의 의뢰자만 확인할 수 있습니다.", status: 403 },
   not_reported: { message: "기관이 아직 계약 체결을 보고하지 않았습니다.", status: 409 },
   disputed: { message: "이의를 낸 계약입니다. 운영자가 기관과 확인한 뒤 정리합니다.", status: 409 },
-  confirmed: { message: "이미 확정된 계약입니다. 바로잡을 내용이 있으면 단추(hello@danchu.kr)에 알려 주세요.", status: 409 },
+  confirmed: { message: "이미 확정된 계약입니다. 바로잡을 내용이 있으면 단추(limjm900202@gmail.com)에 알려 주세요.", status: 409 },
   note: { message: "실제와 다른 부분을 500자 안에서 적어 주세요.", status: 400 },
   no_dispute: { message: "정리할 이의가 없습니다. 화면을 새로 고쳐 주세요.", status: 409 },
   bad_resolution: { message: "정리 방법을 선택해 주세요.", status: 400 },

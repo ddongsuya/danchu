@@ -273,7 +273,7 @@ export async function GET(req: Request) {
         // 앱에 자주 들어오지 않는 기관도 있어 담당자·대표 메일로도 보낸다 (14일, 30일 두 번. 흐름 재설계 디자인 2d783db).
         // 받는 사람은 지금의 대표 메일 + 지금 소속 담당자. 메일 수신을 끈 사람은 notifyUsers 가 뺀다
         const mails = [...new Set([org?.contact_email, ...(members ?? []).map((m) => m.email)].filter((x): x is string => !!x && !!x.trim()))];
-        await notifyUsers(ids, { kind: "계약", title: `${rfq.rfq_no} 계약 체결을 보고해 주세요`, body: `${rfq.substance} · 선정 ${days}일 경과. 계약을 맺었다면 체결일과 금액을, 진행하지 않게 되었다면 단추(hello@danchu.kr)에 알려 주세요.`, href: "/cro/awards" }, mails.length ? { to: mails, replyTo: operatorReplyTo() } : undefined);
+        await notifyUsers(ids, { kind: "계약", title: `${rfq.rfq_no} 계약 체결을 보고해 주세요`, body: `${rfq.substance} · 선정 ${days}일 경과. 계약을 맺었다면 체결일과 금액을, 진행하지 않게 되었다면 단추(limjm900202@gmail.com)에 알려 주세요.`, href: "/cro/awards" }, mails.length ? { to: mails, replyTo: operatorReplyTo() } : undefined);
         await logEvent(a.rfq_id, stage, "계약 보고 리마인더", `선정 ${days}일 경과`, null);
       }
       out.contractReminded++;

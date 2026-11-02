@@ -354,7 +354,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 hello@danchu.kr로 알려주세요." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 limjm900202@gmail.com로 알려주세요." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
         </div>
       )}
 

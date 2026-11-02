@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const org = s.org;
   const bizNo = v("businessNo", 40);
   if (org?.status === "approved" && (name.trim().toLowerCase() !== org.name.trim().toLowerCase() || (bizNo ?? "").replace(/[^0-9]/g, "") !== (org.business_no ?? "").replace(/[^0-9]/g, ""))) {
-    return NextResponse.json({ error: "승인된 기관의 기관명·사업자등록번호 변경은 운영자(hello@danchu.kr)에게 요청해 주세요." }, { status: 400 });
+    return NextResponse.json({ error: "승인된 기관의 기관명·사업자등록번호 변경은 운영자(limjm900202@gmail.com)에게 요청해 주세요." }, { status: 400 });
   }
 
   const { error } = await getSupabaseAdmin()!

@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     const r = await deleteAccount(admin, s.userId, { actorId: s.userId, reason: "self" });
     if (!r.ok) {
       if (r.code === "admin") return NextResponse.json({ error: "운영자 계정은 탈퇴할 수 없습니다. 먼저 다른 운영자에게 역할 변경을 요청해 주세요." }, { status: 400 });
-      if (r.code === "contracting") return NextResponse.json({ error: `기관을 선정한 요청(${r.contracting?.join(", ")})이 진행 중입니다. 계약이 끝나거나 운영자가 종료 처리한 뒤 탈퇴할 수 있습니다. hello@danchu.kr로 문의해 주세요.` }, { status: 409 });
+      if (r.code === "contracting") return NextResponse.json({ error: `기관을 선정한 요청(${r.contracting?.join(", ")})이 진행 중입니다. 계약이 끝나거나 운영자가 종료 처리한 뒤 탈퇴할 수 있습니다. limjm900202@gmail.com로 문의해 주세요.` }, { status: 409 });
       return NextResponse.json({ error: "계정을 찾을 수 없습니다." }, { status: 404 });
     }
     const session = await createSessionClient();
@@ -46,6 +46,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, cancelled: r.cancelled });
   } catch (e) {
     captureError(e, "account:delete", { user: s.userId });
-    return NextResponse.json({ error: "탈퇴 처리 중 오류가 났습니다. 잠시 후 다시 시도하거나 hello@danchu.kr로 알려 주세요." }, { status: 500 });
+    return NextResponse.json({ error: "탈퇴 처리 중 오류가 났습니다. 잠시 후 다시 시도하거나 limjm900202@gmail.com로 알려 주세요." }, { status: 500 });
   }
 }

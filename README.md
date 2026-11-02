@@ -88,7 +88,7 @@ CI(GitHub Actions)는 push·PR마다 typecheck → test → build를 돌린다.
 ```sql
 update public.profiles set role = 'admin' where lower(email) = 'ops@example.com';
 ```
-`ADMIN_EMAIL`은 운영자 알림 메일 수신 주소일 뿐 권한과 무관하다. 운영자 관리 기관(계정 없음)에 보내는 메일의 회신 주소는 `OPERATOR_REPLY_TO`(비우면 hello@danchu.kr)이며, 견적서 PDF와 계약 결과가 이 주소로 오므로 개인 메일함이 아닌 역할 주소를 쓴다.
+`ADMIN_EMAIL`은 운영자 알림 메일 수신 주소일 뿐 권한과 무관하다. 운영자 관리 기관(계정 없음)에 보내는 메일의 회신 주소는 `OPERATOR_REPLY_TO`(비우면 lib/business.ts 의 연락 주소)이며, 견적서 PDF와 계약 결과가 이 주소로 오므로 개인 메일함이 아닌 역할 주소를 쓴다.
 
 ### CRO 담당자 합류
 같은 이름의 기관으로 CRO 가입 신청이 오면 계정은 만들되 기관에 연결하지 않는다 (`profiles.pending_org_id`).
