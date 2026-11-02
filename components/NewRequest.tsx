@@ -94,6 +94,8 @@ export function NewRequest({
   const [kind, setKind] = useState<Kind | null>(null);
   /** 주소에 갈래 없이 들어왔을 때(앱의 "새 요청" 등) 시작 화면에서 고른 갈래. Tox는 길이 둘이라 한 번 더 고른다 */
   const [fork, setFork] = useState<Kind | null>(null);
+  /** 주소(?kind=)로 들어온 갈래. 쓰던 초안의 갈래와 다르면 "그 갈래로 새로 쓰기"를 보여 준다 */
+  const [askKind, setAskKind] = useState<Kind | null>(null);
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Values>(initial);
   const [files, setFiles] = useState<File[]>([]);
@@ -138,6 +140,8 @@ export function NewRequest({
       // ?kind=tox|pd|pk|other 는 네 갈래 첫 화면에서 고른 갈래. 시험 항목을 그 갈래 것만 보여 준다 (start() 참고)
       const sp = new URLSearchParams(window.location.search);
       const chosen = sp.get("start");
+      const ak = sp.get("kind");
+      setAskKind(isKind(ak) ? ak : null);
       if (chosen === "advisor" && !draft) setPhase("advisor");
       else if ((chosen === "manual" || sp.get("preset")) && !draft) start();
     })();
@@ -157,6 +161,7 @@ export function NewRequest({
         ...files.map(({ name, size }) => ({ name, size })),
       ],
       pendingNo,
+      ...(kind ? { kind } : {}),
       ...(guest ? { contact: guestContact, pendingToken } : {}),
       updatedAt: new Date().toISOString(),
     });
@@ -165,7 +170,7 @@ export function NewRequest({
         ? "이 브라우저에 임시 저장됨"
         : "임시 저장하지 못했습니다. 이 화면을 닫지 말고 다시 시도해 주세요.",
     );
-  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, guest, guestContact, pendingToken]);
+  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, kind, guest, guestContact, pendingToken]);
   useEffect(() => {
     if (phase === "edit") title.current?.focus();
   }, [phase, step]);
@@ -263,7 +268,10 @@ export function NewRequest({
     if (isKind(k)) {
       setKind(k);
       // Tox는 대분류가 많아 미리 고르지 않는다. PD·PK·Other는 대표 항목 하나를 골라 둔다
-      if (k !== "tox") setValues({ ...initial(), categories: [KINDS[k].cats[0]] });
+      // ?cat= 은 소개 페이지에서 고른 시험 하나. 그 갈래의 항목일 때만 미리 체크한다
+      const cat = sp.get("cat");
+      const pre = cat && KINDS[k].cats.includes(cat as Cat) ? cat : k !== "tox" ? KINDS[k].cats[0] : null;
+      if (pre) setValues({ ...initial(), categories: [pre] });
     } else setKind(null);
     const key = sp.get("preset");
     if (key) {
@@ -446,7 +454,7 @@ export function NewRequest({
         )}
         <h1>{fork === "tox" ? KINDS.tox.name : "새 견적 요청"}</h1>
         <p className="request__lead">
-          {fork === "tox" ? KINDS.tox.lead : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
+          {fork === "tox" ? KINDS.tox.lead : resume ? "쓰던 요청서를 이어서 쓰거나 새로 시작하세요." : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
         </p>
         {notice && (
           <p className="note note--tint" role="status">
@@ -455,13 +463,14 @@ export function NewRequest({
         )}
         {resume && (
           <section className="request__resume">
-            <h2>작성 중인 요청이 있습니다</h2>
+            <h2>쓰던 요청서가 있어요</h2>
             <p>
+              {resume.kind ? `${KINDS[resume.kind].name} · ` : ""}
               {String(resume.values.substance || "시험물질명 미입력")} ·{" "}
               {STEPS[resume.q]}
             </p>
             <p className="fld__help">
-              이 브라우저에 저장된 내용입니다. 첨부파일은 다시 선택해야 합니다.
+              이 브라우저에 저장된 내용이에요. 첨부파일은 다시 골라 주세요.
             </p>
             <div className="request__actions">
               <button
@@ -471,6 +480,7 @@ export function NewRequest({
                   setStep(resume.q);
                   setPendingNo(guest ? undefined : resume.pendingNo);
                   setMissingFiles(resume.files);
+                  setKind(resume.kind ?? null);
                   if (guest) {
                     setGuestContact(resume.contact ?? EMPTY_CONTACT);
                     setPendingToken(resume.pendingToken);
@@ -478,7 +488,7 @@ export function NewRequest({
                   setPhase("edit");
                 }}
               >
-                이어서 작성
+                이어서 쓰기
               </button>
               <button
                 className="b2"
@@ -497,7 +507,7 @@ export function NewRequest({
                   }
                 }}
               >
-                새로 작성
+                {askKind && askKind !== resume.kind ? `${KINDS[askKind].name}으로 새로 쓰기` : "새로 쓰기"}
               </button>
             </div>
           </section>
