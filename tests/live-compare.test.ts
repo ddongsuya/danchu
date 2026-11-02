@@ -153,7 +153,7 @@ describe("견적 제출 알림: 비교표가 열리기 전에는 진행 현황�
     fx.saveQuote.mockResolvedValueOnce({ ok: false, code: "closed" });
     const r = await submitQuote(json(body), ctx);
     expect(r.status).toBe(409);
-    expect((await r.json()).error).toContain("회신이 닫혔습니다");
+    expect((await r.json()).error).toContain("회신이 닫혔어요");
     expect(sponsorCall()).toBeUndefined();
   });
 });

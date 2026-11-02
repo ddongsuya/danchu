@@ -45,7 +45,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
     locked: got.locked,
     declined: got.declined,
     closed: got.closed,
-    closedMessage: got.closed ? closedMessage(got.closedReason) : "",
+    closedMessage: got.closed ? closedMessage(got.closedReason, { submitted: got.draft?.status === "submitted" }) : "",
     joined: got.joined,
     withdrawn: got.withdrawn,
     canRejoin: got.canRejoin,

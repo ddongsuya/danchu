@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { EMAIL_RE, authErrorKo, sendLoginLink } from "@/lib/auth-links";
 import { adminEmails, adminUserIds, notifyUsers } from "@/lib/notify";
 import { CATS } from "@/lib/rfq-schema";
-import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
+import { clientIp, rateLimited, TOO_MANY_HOUR } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "�
  */
 export async function POST(req: Request) {
   const ip = clientIp(req);
-  if (await rateLimited("signup-cro:ip", ip, 5, 60 * 60)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
+  if (await rateLimited("signup-cro:ip", ip, 5, 60 * 60)) return NextResponse.json({ error: TOO_MANY_HOUR }, { status: 429 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const o = (b.org && typeof b.org === "object" ? b.org : {}) as Record<string, unknown>;
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "이메일 형식을 확인해 주세요." }, { status: 400 });
   if (password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
   if (!name || !orgName) return NextResponse.json({ error: "담당자 성명과 기관명을 입력해 주세요." }, { status: 400 });
-  if (await rateLimited("signup-cro:email", email, 3, 60 * 60)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
+  if (await rateLimited("signup-cro:email", email, 3, 60 * 60)) return NextResponse.json({ error: TOO_MANY_HOUR }, { status: 429 });
 
   const admin = getSupabaseAdmin();
   if (!admin) return NextResponse.json({ error: "서버 설정이 완료되지 않았습니다." }, { status: 503 });

@@ -32,28 +32,28 @@ export function ContractConfirm({ no, cro, date, amount, autoOn }: { no: string;
     }
   };
   return (
-    <div className="card" style={{ padding: 18 }}>
+    <div id="contract-confirm" className="card" style={{ padding: 18, scrollMarginTop: 88 }}>
       <div className="sec-title" style={{ margin: "0 0 6px" }}>
         <h2>계약 내용이 맞나요?</h2>
       </div>
       <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>
         <b style={{ fontWeight: 600, color: "var(--ink)" }}>{cro} 보고 · 체결일 {date} · 계약금액 {amount}</b>
         <br />
-        {autoOn}까지 답이 없으면 보고 내용대로 마무리합니다.
+        {autoOn}까지 답이 없으면 보고 내용대로 마무리해요.
       </p>
       {mode === "dispute" && (
         <div className="fld" style={{ marginBottom: 12 }}>
           <label className="fld__lab" htmlFor="dispute-note">실제와 다른 부분</label>
           <textarea id="dispute-note" className="ta" rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
-          <span className="fld__help">운영자가 기관과 확인한 뒤 알려 드립니다.</span>
+          <span className="fld__help">운영자가 기관과 확인한 뒤 알려 드려요.</span>
         </div>
       )}
       {err && <p className="note note--err" role="alert" style={{ marginBottom: 12 }}>{err}</p>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {mode === "ask" ? (
           <>
-            <button type="button" className="b1" disabled={busy} onClick={() => run("confirm")}>{busy ? "처리 중…" : "맞습니다"}</button>
-            <button type="button" className="b2" disabled={busy} onClick={() => setMode("dispute")}>다릅니다</button>
+            <button type="button" className="b1" disabled={busy} onClick={() => run("confirm")}>{busy ? "처리 중…" : "맞아요"}</button>
+            <button type="button" className="b2" disabled={busy} onClick={() => setMode("dispute")}>달라요</button>
           </>
         ) : (
           <>

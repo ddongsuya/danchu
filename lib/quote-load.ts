@@ -51,20 +51,22 @@ export type Loaded = {
 export type ClosedReason = "selected" | "ended" | "compared" | "invite_cancelled" | "org_suspended";
 
 /** 닫힌 회신 화면과 저장 거부 응답에 쓰는 문구 */
-export function closedMessage(reason: ClosedReason | null): string {
+export function closedMessage(reason: ClosedReason | null, opts: { submitted?: boolean } = {}): string {
+  // 견적을 낸 적 없는 기관에게 "제출한 견적"을 말하지 않는다 (2026-11-02 가상 35명 테스트 3번)
+  const sent = opts.submitted ?? true;
   switch (reason) {
     case "selected":
-      return "의뢰자가 기관을 선정해 이 요청의 회신이 닫혔습니다.";
+      return sent ? "의뢰자가 기관을 골라 이 요청의 회신이 닫혔어요." : "의뢰자가 기관을 골라 이 요청은 닫혔어요. 더 참여할 수 없어요.";
     case "ended":
-      return "의뢰자가 요청을 마무리해 회신이 닫혔습니다.";
+      return "의뢰자가 요청을 마무리해 회신이 닫혔어요.";
     case "compared":
-      return "비교표가 열려 이 요청의 회신이 닫혔습니다. 제출한 견적은 의뢰자가 보고 있으며, 수정하거나 다시 제출할 수 없습니다.";
+      return sent ? "비교표가 열려 이 요청의 회신이 닫혔어요. 제출한 견적은 의뢰자가 보고 있고, 고치거나 다시 제출할 수 없어요." : "참여 자리가 다 찼거나 회신 기한이 지나 비교표가 열렸어요. 이 요청에는 더 참여할 수 없어요.";
     case "invite_cancelled":
-      return "운영자가 이 기관에 보낸 요청을 취소했습니다. 저장하거나 제출할 수 없습니다.";
+      return "운영자가 이 기관에 보낸 요청을 취소했어요. 저장하거나 제출할 수 없어요.";
     case "org_suspended":
-      return "기관의 참여가 중지되어 회신할 수 없습니다. limjm900202@gmail.com로 문의해 주세요.";
+      return "기관의 참여가 중지되어 회신할 수 없어요. limjm900202@gmail.com로 문의해 주세요.";
     default:
-      return "이 요청의 회신이 닫혔습니다.";
+      return "이 요청의 회신이 닫혔어요.";
   }
 }
 

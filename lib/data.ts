@@ -109,7 +109,7 @@ export async function unreadCount(userId: string): Promise<number> {
 
 /* ── CRO ── */
 
-export type InviteWithQuote = InviteRow & { quote: QuoteRow | null; rfq: Pick<RfqRow, "substance" | "categories" | "purpose" | "confidentiality" | "org_type" | "company" | "status" | "payload" | "selected_quote_id"> | null };
+export type InviteWithQuote = InviteRow & { quote: QuoteRow | null; rfq: Pick<RfqRow, "substance" | "categories" | "purpose" | "confidentiality" | "org_type" | "company" | "status" | "payload" | "selected_quote_id" | "compared_at"> | null };
 
 export async function listInvitesForOrg(orgId: string): Promise<InviteWithQuote[]> {
   const c = sb();
@@ -120,7 +120,7 @@ export async function listInvitesForOrg(orgId: string): Promise<InviteWithQuote[
   const rfqIds = [...new Set(invites.map((i) => i.rfq_id))];
   const [{ data: qs }, { data: rs }] = await Promise.all([
     c.from("cro_quotes").select("*").in("invite_id", ids),
-    c.from("rfq_requests").select("id, substance, categories, purpose, confidentiality, org_type, company, status, payload, selected_quote_id").in("id", rfqIds),
+    c.from("rfq_requests").select("id, substance, categories, purpose, confidentiality, org_type, company, status, payload, selected_quote_id, compared_at").in("id", rfqIds),
   ]);
   const qBy = new Map((qs ?? []).map((q) => [q.invite_id, q]));
   const rBy = new Map((rs ?? []).map((r) => [r.id, r]));
