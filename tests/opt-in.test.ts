@@ -221,6 +221,24 @@ describe("참여 전 요약은 설계 규칙표의 항목만", () => {
     const v = rfqSummaryOf(rfqRow({ confidentiality: "CDA 필요 (단추 표준 CDA)" }), invite(), 1, SEATS);
     expect(Object.fromEntries(v.overview)["CDA"]).toContain("필요");
   });
+  it("효력시험에 입력한 규모·일정·평가 지표는 참여 뒤에만 기관 요청서와 회신 폼으로 전달한다", () => {
+    const cat = "효력시험(약효)";
+    const request = rfqRow({ categories: [cat], payload: {
+      categories: [cat], [`${cat}.items`]: ["항암"], [`${cat}.species`]: ["마우스"],
+      [`${cat}.groups`]: "5군, 군당 8마리", [`${cat}.duration`]: "2주, 1일 1회",
+      [`${cat}.endpoints`]: "체중", [`${cat}.pilot`]: "불필요",
+      [`${cat}.managerEmail`]: "private@example.test", "국소내성.site": "선택 해제한 분야",
+    } });
+    const summary = rfqSummaryOf(request, invite(), 0, null);
+    expect(summary.rows).toEqual([{ seq: 1, category: cat, name: "항암", cond: "마우스" }]);
+    const full = rfqViewOf(request, invite({ joined_at: "2026-11-02T00:00:00Z" }), []);
+    expect(full.rows[0].conditions).toEqual([
+      ["동물종", "마우스"], ["희망 군 수와 군당 마릿수", "5군, 군당 8마리"],
+      ["투여 기간", "2주, 1일 1회"], ["꼭 필요한 평가 지표", "체중"], ["예비시험", "불필요"],
+    ]);
+    expect(JSON.stringify(full)).not.toContain("private@example.test");
+    expect(JSON.stringify(full)).not.toContain("선택 해제한 분야");
+  });
   it("전체 보기: 시험물질명·목적·자유 기술·의뢰자 설명·첨부가 열리고 회사명은 선정 전까지 가린다", () => {
     const v = rfqViewOf(rfqRow(), invite({ joined_at: "2026-10-02T00:00:00Z" }), [{ id: FILE, file_name: "의뢰사_계획서.pdf", size_bytes: 2048 }]);
     expect(v.full).toBe(true);

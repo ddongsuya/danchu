@@ -23,6 +23,14 @@ describe("quoteRowsFromPayload — 요청서 → 회신 표 행", () => {
   it("스키마에 없는 대분류는 무시", () => {
     expect(quoteRowsFromPayload({ categories: ["없는분류"] })).toEqual([]);
   });
+  it("한 분야에서 체외·동물시험을 함께 고르면 상세 동물종은 동물시험 행에서만 보인다", () => {
+    const rows = quoteRowsFromPayload({
+      categories: ["유전독성"], "유전독성.items": ["복귀돌연변이(Ames, TG 471)", "소핵 in vivo(마우스)"],
+      "유전독성.species": ["마우스", "랫드"], "유전독성.formulation": "미포함",
+    }, { full: true });
+    expect(rows[0].conditions).toEqual([["조제물분석 포함", "미포함"]]);
+    expect(rows[1].conditions).toEqual([["동물종 (in vivo)", "마우스, 랫드"], ["조제물분석 포함", "미포함"]]);
+  });
   it("행 키는 카탈로그 항목 키와 같은 형식", () => {
     const rows = quoteRowsFromPayload({ categories: ["일반독성"], "일반독성.items": ["반복투여 26주"] });
     expect(rowKey(rows[0])).toBe(itemKey("일반독성", "반복투여 26주"));
