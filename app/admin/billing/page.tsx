@@ -97,7 +97,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </details>
       {closed && (
         <div className="note note--ok" style={{ marginBottom: 12 }}>
-          {snap ? `이 달은 마감되었습니다. ${ymd(snap.taken_at)} 마감 때 저장한 명세를 보여 줍니다.` : "이 달은 마감되었습니다."} {CLOSED_MONTH_NOTE}
+          {snap ? `이 달은 마감되었습니다. ${ymd(snap.taken_at)} 마감 때 저장한 명세를 보여 줍니다.` : "이 달은 마감되었습니다."} {CLOSED_MONTH_NOTE} <Link href={`/admin/invoices?month=${r.from.slice(0, 7)}`}>이 달 청구서 보기</Link>
         </div>
       )}
       {drifted && <div className="note note--warn" style={{ marginBottom: 12 }}>마감 뒤 바뀐 값이 있습니다(단가, 견적 금액, 체결 정정 등). 마감한 명세는 바꾸지 않습니다. 바로잡을 금액은 다음 달 명세에 조정 항목으로 넣습니다.</div>}

@@ -368,6 +368,8 @@ export type Database = {
           managed: boolean;
           /** 생성 컬럼: 사업자번호 숫자만. insert/update 에 넣지 않는다 */
           business_no_norm: string | null;
+          /** 청구서 받을 이메일 (0032). 비어 있으면 contact_email */
+          billing_email?: string | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_orgs"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_orgs"]["Row"], "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_orgs"]["Row"]>;
@@ -536,6 +538,13 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["early_signups"]["Row"]>;
         Relationships: [];
       };
+      /** 월 청구서 (0032). 서버만 읽고 쓴다. 금액·내역은 발행 뒤 바꿀 수 없다(트리거) */
+      billing_invoices: {
+        Row: BillingInvoiceRow;
+        Insert: Partial<BillingInvoiceRow>;
+        Update: Partial<Pick<BillingInvoiceRow, "status">>;
+        Relationships: [];
+      };
       admin_audit: {
         Row: {
           id: string;
@@ -609,6 +618,16 @@ export type Database = {
       /** 0024: 시범 기간 참고 수치. 합계에 넣지 않는다 */
       billing_reference: { Args: { p_from: string; p_to: string }; Returns: BillingReferenceRow[] };
       billing_tier: { Args: { p_amount: number | null }; Returns: string };
+      /** 0032: 마감한 달의 청구서 발행. { ok, month, issued, skipped } 또는 { ok: false, code: bad_month·not_closed } */
+      issue_billing_invoices: { Args: { p_month: string; p_actor: string | null }; Returns: Json };
+      /** 0032: 보낸 기록. { ok, sent_count } */
+      mark_invoice_sent: { Args: { p_id: string }; Returns: Json };
+      /** 0032: 입금 확인. { ok, invoice_no, org_id } · { ok, already } · { ok: false, code: not_found·void·paid_on } */
+      mark_invoice_paid: { Args: { p_id: string; p_actor: string | null; p_paid_on: string; p_note: string }; Returns: Json };
+      /** 0032: 취소. { ok, invoice_no, org_id } · { ok, already } · { ok: false, code: not_found·paid·reason } */
+      void_invoice: { Args: { p_id: string; p_actor: string | null; p_reason: string }; Returns: Json };
+      /** 0032: 독촉 단계 올리기. 올렸으면 true */
+      mark_invoice_reminded: { Args: { p_id: string; p_stage: number }; Returns: boolean };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -771,4 +790,35 @@ export type BillingSnapshot = {
   awards: BillingAwardRow[];
   adjustments?: BillingAdjustmentRow[];
   reference?: BillingReferenceRow[];
+};
+
+/** billing_invoices 한 행 (0032) */
+export type BillingInvoiceRow = {
+  id: string;
+  invoice_no: string;
+  org_id: string;
+  org_name: string;
+  /** 청구 달 (그 달 1일) */
+  month: string;
+  /** 공급가액 = 그 달 마감 명세 합계 */
+  supply_amount: number;
+  vat: number;
+  total: number;
+  /** 마감 저장본 중 그 기관 몫 */
+  detail: { summary?: BillingSummaryRow; lines?: BillingLineRow[]; awards?: BillingAwardRow[]; adjustments?: BillingAdjustmentRow[] };
+  issued_at: string;
+  issued_by: string | null;
+  due_date: string;
+  status: "issued" | "paid" | "void";
+  sent_at: string | null;
+  last_sent_at: string | null;
+  sent_count: number;
+  reminder_stage: number;
+  paid_at: string | null;
+  paid_on: string | null;
+  paid_by: string | null;
+  paid_note: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
 };

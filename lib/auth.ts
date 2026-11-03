@@ -34,6 +34,8 @@ export type CroOrg = {
   address: string | null;
   contact_name: string | null;
   contact_email: string | null;
+  /** 청구서 받을 이메일 (0032). 비어 있으면 contact_email */
+  billing_email?: string | null;
   contact_phone: string | null;
   glp_certs: string[];
   aaalac: boolean | null;

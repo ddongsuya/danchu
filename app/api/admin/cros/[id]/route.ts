@@ -69,7 +69,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 /**
- * PATCH { name?, perRequestFee?, feeRate?, monthlyFee?, monthlyFeeFrom?, contactEmail?, contactPhone?, categories?, autoReply? } — 약정·운영 설정.
+ * PATCH { name?, perRequestFee?, feeRate?, monthlyFee?, monthlyFeeFrom?, contactEmail?, billingEmail?, contactPhone?, categories?, autoReply? } — 약정·운영 설정.
  * monthlyFeeFrom 은 구독 시작 월 'YYYY-MM' (비우면 구독료를 처음 저장한 달. 구독료를 지우면 함께 지워진다, 0020 트리거).
  * 청구 기준(0031 요금표): 5,000만 원 미만 견적은 월 구독료(monthlyFee), 5,000만 원 이상은 송부 비용(perRequestFee),
  * 그 견적이 체결되면 성사 수수료(feeRate). 송부 비용·요율은 특별 조건일 때만 적고, 비우면 요금표를 쓴다. 운영자만 적는다. 승인된 기관의 이름도 여기서만 바꾼다.
@@ -112,6 +112,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const e = b.contactEmail.trim().toLowerCase().slice(0, 200);
     if (e && !EMAIL_RE.test(e)) return NextResponse.json({ error: "대표 이메일 형식을 확인해 주세요." }, { status: 400 });
     patch.contact_email = e || null;
+  }
+  if (typeof b.billingEmail === "string") {
+    const e = b.billingEmail.trim().toLowerCase().slice(0, 200);
+    if (e && !EMAIL_RE.test(e)) return NextResponse.json({ error: "청구서 이메일 형식을 확인해 주세요." }, { status: 400 });
+    patch.billing_email = e || null;
   }
   if (typeof b.contactPhone === "string") patch.contact_phone = b.contactPhone.trim().slice(0, 40) || null;
   if (Array.isArray(b.categories)) {

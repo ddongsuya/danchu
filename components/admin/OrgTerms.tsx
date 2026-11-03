@@ -19,6 +19,7 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
     monthlyFeeFrom: org.monthly_fee_from ? org.monthly_fee_from.slice(0, 7) : "",
     feeRate: org.fee_rate == null ? "" : String(Math.round(org.fee_rate * 10000) / 100),
     contactEmail: org.contact_email ?? "",
+    billingEmail: org.billing_email ?? "",
     contactPhone: org.contact_phone ?? "",
   });
   const [cats, setCats] = useState<string[]>(org.categories ?? []);
@@ -36,7 +37,7 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
       const r = await fetch(`/api/admin/cros/${org.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: f.name, perRequestFee: f.perRequestFee === "" ? null : Number(f.perRequestFee), monthlyFee: f.monthlyFee === "" ? null : Number(f.monthlyFee), monthlyFeeFrom: f.monthlyFee === "" ? null : f.monthlyFeeFrom || null, feeRate: f.feeRate === "" ? null : Number(f.feeRate) / 100, contactEmail: f.contactEmail, contactPhone: f.contactPhone, categories: cats, autoReply }),
+        body: JSON.stringify({ name: f.name, perRequestFee: f.perRequestFee === "" ? null : Number(f.perRequestFee), monthlyFee: f.monthlyFee === "" ? null : Number(f.monthlyFee), monthlyFeeFrom: f.monthlyFee === "" ? null : f.monthlyFeeFrom || null, feeRate: f.feeRate === "" ? null : Number(f.feeRate) / 100, contactEmail: f.contactEmail, billingEmail: f.billingEmail, contactPhone: f.contactPhone, categories: cats, autoReply }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!r.ok) throw new Error(d.error || "저장하지 못했습니다.");
@@ -58,6 +59,7 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
         <div className="fld"><label className="fld__lab" htmlFor="t-fee">송부 비용 (원)</label><input id="t-fee" className="inp tnum" inputMode="numeric" value={f.perRequestFee} onChange={set("perRequestFee")} placeholder="비우면 요금표 (3만 · 5만)" aria-describedby="t-fee-help" /><span id="t-fee-help" className="fld__help">5,000만 원 이상 견적 1건마다. 요금표는 1억 원 미만 30,000원, 1억 원 이상 50,000원입니다. 재제출은 다시 받지 않습니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-rate">성사 수수료율 (%)</label><input id="t-rate" className="inp tnum" inputMode="decimal" value={f.feeRate} onChange={set("feeRate")} placeholder="비우면 요금표 (2 · 5 · 7)" aria-describedby="t-rate-help" /><span id="t-rate-help" className="fld__help">5,000만 원 이상 견적이 체결되면 계약 금액에 곱합니다. 요금표는 1억 원 미만 2%, 5억 원 미만 5%, 5억 원 이상 7%입니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-mail">대표 이메일 (배포 메일 수신)</label><input id="t-mail" className="inp" type="email" value={f.contactEmail} onChange={set("contactEmail")} /></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-bill">청구서 이메일</label><input id="t-bill" className="inp" type="email" value={f.billingEmail} onChange={set("billingEmail")} placeholder="비우면 대표 이메일" aria-describedby="t-bill-help" /><span id="t-bill-help" className="fld__help">월 청구서와 납부 안내를 받습니다. 기관 담당자 계정에도 함께 갑니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-phone">대표 연락처</label><input id="t-phone" className="inp" type="tel" value={f.contactPhone} onChange={set("contactPhone")} /></div>
       </div>
       <div className="fld">

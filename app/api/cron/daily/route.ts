@@ -17,6 +17,8 @@ import { occupiesSeat } from "@/lib/request-policy";
 import { runOptInSteps } from "@/lib/opt-in-cron";
 import { startRfq } from "@/lib/rfq-create";
 import { cleanupPending } from "@/lib/rfq-pending";
+import { deliverInvoice, reminderStageFor } from "@/lib/invoices";
+import type { BillingInvoiceRow } from "@/lib/db-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,6 +85,7 @@ export async function GET(req: Request) {
     resent: 0,
     contractReminded: 0,
     contractConfirmed: 0,
+    invoiceReminded: 0,
     joinDeadlines: 0,
     lowParticipation: 0,
     extendAsked: 0,
@@ -294,6 +297,24 @@ export async function GET(req: Request) {
         await notifyUsers((ms ?? []).map((m) => m.id as string), { kind: "계약", title: `${a.rfq_no} 계약 내용이 확정됐어요`, body: `${summary} · 요청을 마쳤어요.`, href: "/cro/awards" });
       }
       out.contractConfirmed++;
+    }
+  });
+
+  // 4-3) 청구서 납부 안내 (0032): 보낸 청구서 중 미납만. 기한 3일 전, 다음 날, 7일 뒤, 30일 뒤에 한 번씩.
+  //      30일 뒤에는 운영자에게도 알린다 (이용 제한은 운영자가 정한다). 단계를 먼저 올려 두 번 보내지 않는다
+  await step("invoice-remind", out.errors, async () => {
+    const { data: rows, error } = await sb.from("billing_invoices").select("*").eq("status", "issued").not("sent_at", "is", null);
+    if (error) throw new Error(error.message);
+    for (const inv of (rows ?? []) as BillingInvoiceRow[]) {
+      const stage = reminderStageFor(inv.due_date, today, inv.reminder_stage);
+      if (!stage) continue;
+      const { data: claimed } = await sb.rpc("mark_invoice_reminded", { p_id: inv.id, p_stage: stage });
+      if (!claimed) continue;
+      await deliverInvoice(inv, stage === 1 ? "reminder_before" : "overdue");
+      if (stage === 4) {
+        await notifyUsers(await adminUserIds(), { kind: "기관", title: `${inv.org_name} 청구서 ${inv.invoice_no}가 30일 넘게 미납이에요`, body: `합계 ${inv.total.toLocaleString("ko-KR")}원 · 기한 ${inv.due_date}`, href: `/admin/invoices?month=${inv.month.slice(0, 7)}` });
+      }
+      out.invoiceReminded++;
     }
   });
 
