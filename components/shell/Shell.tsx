@@ -5,7 +5,7 @@ import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "./portal.css";
-import { ArrowUpRight, Question } from "@phosphor-icons/react/dist/ssr";
+import { ArrowUpRight, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
 export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean };
 export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt";
@@ -38,7 +38,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
         <nav className="pt__nav" aria-label="주요 메뉴">
           <NavLinks items={nav} variant="side" />
         </nav>
-        <a href="/guide" className="pt__guide"><Question size={20} aria-hidden="true" /><span>시험 가이드</span><ArrowUpRight size={15} aria-hidden="true" /></a>
+        <a href="/guide/library" className="pt__guide"><BookOpenText size={20} aria-hidden="true" /><span>가이드라인 자료실</span><ArrowUpRight size={15} aria-hidden="true" /></a>
         <div className="pt__user">
           <Link href={profileHref} className="pt__identity" aria-label={`프로필 · ${who}`}><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
             <b>{who}</b>

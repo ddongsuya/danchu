@@ -149,7 +149,7 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
       )}
 
       <p className="rs-help">
-        시험 항목을 정하기 어려우면 <a href="/guide">시험 가이드</a>를 참고하세요.
+        시험 항목을 정하기 어려우면 <a href="/guide">시험 가이드</a>와 <a href="/guide/library">가이드라인 자료실</a>을 참고하세요.
       </p>
     </div>
   );
