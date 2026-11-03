@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { adminEmails, adminUserIds, logEvent, notifyUsers } from "@/lib/notify";
+import { adminEmails, adminUserIds, logEvent, notifyUsers, siteUrl } from "@/lib/notify";
 import { won } from "@/lib/format";
 import { REPORT_CONTRACT_ERRORS, reportContract } from "@/lib/rpc";
 import { audit } from "@/lib/audit";
@@ -67,6 +67,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 단추가 기관에 확인해 기록했어요. ${tail}`, href: `/app/r/${r.rfq_no}` }
         : { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. ${tail}`, href: `/app/r/${r.rfq_no}` },
       rq?.email ? { to: [rq.email] } : undefined,
+      { kind: "contract", text: `${r.rfq_no} ${award.cro_name}에서 계약 체결(${won(amount)})을 알렸어요. 내용이 맞는지 확인해 주세요. ${siteUrl()}/app/r/${r.rfq_no}`, dedupeKey: `contract:${award.id}:${date}:${amount}` },
     );
   }
   // 의뢰자 계정이 없는 요청(계정 삭제 등)은 의뢰자가 확인·이의를 할 수 없다. 자동 확정 전에 운영자가 의뢰자 연락처로 확인하도록 알린다

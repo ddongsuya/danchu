@@ -205,7 +205,12 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
       } else console.warn("[danchu] 배포 메일 미발송", rfq.rfq_no, o.id);
     }
     // 참여 전에는 시험물질명을 알리지 않는다 (요약에 없는 정보, 0023)
-    await notifyUsers(memberIds, { kind: "배포", title: `새 참여 안내 · ${rfq.rfq_no}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy} · 요약을 보고 참여를 결정해 주세요.`, href: `/cro/r/${inv.id}` });
+    await notifyUsers(
+      memberIds,
+      { kind: "배포", title: `새 참여 안내 · ${rfq.rfq_no}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy} · 요약을 보고 참여를 결정해 주세요.`, href: `/cro/r/${inv.id}` },
+      undefined,
+      { kind: "invite", text: `새 참여 안내 ${rfq.rfq_no} (${rfq.categories.join(", ")}). 요약을 보고 참여를 정해 주세요. ${siteUrl()}/cro/r/${inv.id}`, dedupeKey: `invite:${inv.id}` },
+    );
   }
 
   if (res.sent) {

@@ -390,6 +390,8 @@ export type Database = {
           updated_at: string;
           pending_org_id: string | null;
           email_notifications: boolean;
+          /** 문자 알림 받기 (0033). 0033 전 DB 에는 없다 */
+          sms_notifications?: boolean;
           org_role: string;
           pending_email: string | null;
           pending_email_hash: string | null;
@@ -536,6 +538,13 @@ export type Database = {
         };
         Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at">;
         Update: Partial<Database["public"]["Tables"]["early_signups"]["Row"]>;
+        Relationships: [];
+      };
+      /** 문자 알림 기록 (0033). 번호는 가려서. 서버만 */
+      sms_log: {
+        Row: { id: string; user_id: string | null; phone_masked: string; kind: string; dedupe_key: string | null; status: "sent" | "failed" | "skipped"; reason: string | null; provider_id: string | null; created_at: string };
+        Insert: { user_id?: string | null; phone_masked: string; kind: string; dedupe_key?: string | null; status: "sent" | "failed" | "skipped"; reason?: string | null; provider_id?: string | null };
+        Update: Partial<{ status: "sent" | "failed" | "skipped"; reason: string | null }>;
         Relationships: [];
       };
       /** 월 청구서 (0032). 서버만 읽고 쓴다. 금액·내역은 발행 뒤 바꿀 수 없다(트리거) */

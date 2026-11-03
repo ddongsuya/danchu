@@ -22,9 +22,10 @@ function daysAgo(n: number): string {
  * 2) 3년 지난 요청서 익명화 + 미선정 첨부 삭제 (한 번에 최대 200건)
  * 3) 180일 지난 읽은 알림 삭제
  * 4) 정식 오픈 6개월 뒤(2027-07-01)부터 사전예약 삭제 (0030)
+ * 5) 90일 지난 문자 알림 기록 삭제 (0033)
  */
-export async function runRetention(sb: Admin, now = new Date()): Promise<{ accessLogs: number; requests: number; files: number; notifications: number; early: number }> {
-  const out = { accessLogs: 0, requests: 0, files: 0, notifications: 0, early: 0 };
+export async function runRetention(sb: Admin, now = new Date()): Promise<{ accessLogs: number; requests: number; files: number; notifications: number; early: number; sms: number }> {
+  const out = { accessLogs: 0, requests: 0, files: 0, notifications: 0, early: 0, sms: 0 };
 
   const { data: logs } = await sb
     .from("rfq_requests")
@@ -74,5 +75,9 @@ export async function runRetention(sb: Admin, now = new Date()): Promise<{ acces
     if (!error) out.early = early?.length ?? 0;
     else console.error("retention early", error.message);
   }
+
+  const { data: sms, error: smsError } = await sb.from("sms_log").delete().lt("created_at", daysAgo(RETENTION.accessLogDays)).select("id");
+  if (!smsError) out.sms = sms?.length ?? 0;
+  else console.error("retention sms", smsError.message);
   return out;
 }
