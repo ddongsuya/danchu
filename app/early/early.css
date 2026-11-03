@@ -1,16 +1,6 @@
-/* 사전예약 (/early). 시안 A(두 문)·B(한 화면). 토큰은 site.css 의 .a 변수만 쓴다 */
+/* 사전예약 (/early). 한 화면 + 두 단계 양식. 토큰은 site.css 의 .a 변수만 쓴다 */
 
-/* A: 첫 화면의 두 문 */
-.a .ea-hero .lead{margin-top:24px}
-.a .ea-doors{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:40px;border-top:1px solid var(--ink)}
-.a .ea-doors a{display:grid;grid-template-columns:1fr;align-items:end;gap:4px 16px;padding:20px 4px 22px;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--ink);transition:background-color 160ms ease,transform 160ms var(--eo)}
-.a .ea-doors a + a{border-left:1px solid var(--line);padding-left:20px}
-.a .ea-doors small{grid-column:1/-1;font-size:13px;color:var(--muted)}
-.a .ea-doors b{font-size:clamp(20px,1.9vw,26px);font-weight:500;letter-spacing:-.02em}
-.a .ea-doors a:active{transform:scale(.98)}
-
-/* A·B 공통: 예약 장면 (세 줄 + 양식) */
-.a .ea-book{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,30rem);gap:72px;align-items:center;padding:72px 0;border-bottom:1px solid var(--line)}
+/* 세 줄 */
 .a .ea-pts{list-style:none;margin:32px 0 0;padding:0;display:grid;gap:0;max-width:30em}
 .a .ea-pts li{padding:14px 0;border-top:1px solid var(--line);font-size:17px;line-height:1.55;color:var(--ink2)}
 .a .ea-pts li:last-child{border-bottom:1px solid var(--line)}
@@ -43,6 +33,17 @@
 .a .ef-agree input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--ink);flex:none}
 .a .ef-err{margin:0;font-size:14px;color:var(--warn)}
 .a .ef-go{width:100%;height:48px;font-size:16px}
+.a .ef-s{display:grid;gap:16px}
+.a .ef-s[hidden]{display:none}
+.a .ef-step{display:flex;align-items:center;gap:10px;margin:0;font-size:12.5px;color:var(--muted)}
+.a .ef-step span{display:inline-flex;gap:4px}
+.a .ef-step b{width:20px;height:3px;background:var(--line)}
+.a .ef-step b[data-on]{background:var(--ink)}
+.a .ef-row{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.a .ef-back{height:48px;padding:0 18px}
+.a .ef-go:disabled,.a .ef-back:disabled{opacity:.55;cursor:default}
+.a .ef-agree a{color:var(--ink);text-underline-offset:3px}
+.a .ef-f > legend small{font-weight:400;color:var(--muted);margin-left:4px}
 .a .ef-done{padding:32px 28px;background:var(--white);border:1px solid var(--line);border-radius:2px}
 .a .ef-done b{display:block;font-size:22px;font-weight:500;letter-spacing:-.02em}
 .a .ef-done p{margin:10px 0 0;color:var(--muted);font-size:15px;line-height:1.6}
@@ -60,16 +61,12 @@
 .a .eb .ea-pts{margin-top:28px}
 
 @media (hover:hover) and (pointer:fine){
- .a .ea-doors a:hover{background:var(--accsoft)}
- .a .ea-doors a:hover b{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:2px}
  .a .ef-chips label:hover span{border-color:var(--ink)}
  .a .eb-seg a:not([aria-current]):hover{background:var(--band)}
 }
 
 @media (max-width:860px){
- .a .ea-book,.a .eb{grid-template-columns:1fr;gap:28px;padding:40px 0}
- .a .ea-doors{grid-template-columns:1fr;margin-top:28px}
- .a .ea-doors a + a{border-left:0;padding-left:4px}
+ .a .eb{grid-template-columns:1fr;gap:28px;padding:40px 0}
  .a .ea-pts{margin-top:20px}
  .a .ea-pts li{font-size:16px;padding:11px 0}
  .a .ef{padding:20px;gap:16px}
@@ -80,5 +77,5 @@
 }
 
 @media (prefers-reduced-motion:reduce){
- .a .ea-doors a,.a .ef-chips span,.a .ea-doors .ar{transition:background-color 160ms ease}
+ .a .ef-chips span{transition:background-color 160ms ease}
 }

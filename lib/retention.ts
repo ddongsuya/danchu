@@ -1,5 +1,6 @@
 import type { Admin } from "./supabase";
 import { anonymizeRequests } from "./account";
+import { EARLY_DELETE_AFTER } from "./early";
 
 /** 개인정보처리방침 3항과 같은 값. 바꾸면 app/privacy 도 같이 고친다 */
 export const RETENTION = {
@@ -20,9 +21,10 @@ function daysAgo(n: number): string {
  * 1) 90일 지난 접속 기록 비우기 (요청 접수 IP·브라우저, 기관 참여 기록의 IP·브라우저)
  * 2) 3년 지난 요청서 익명화 + 미선정 첨부 삭제 (한 번에 최대 200건)
  * 3) 180일 지난 읽은 알림 삭제
+ * 4) 정식 오픈 6개월 뒤(2027-07-01)부터 사전예약 삭제 (0030)
  */
-export async function runRetention(sb: Admin): Promise<{ accessLogs: number; requests: number; files: number; notifications: number }> {
-  const out = { accessLogs: 0, requests: 0, files: 0, notifications: 0 };
+export async function runRetention(sb: Admin, now = new Date()): Promise<{ accessLogs: number; requests: number; files: number; notifications: number; early: number }> {
+  const out = { accessLogs: 0, requests: 0, files: 0, notifications: 0, early: 0 };
 
   const { data: logs } = await sb
     .from("rfq_requests")
@@ -65,6 +67,12 @@ export async function runRetention(sb: Admin): Promise<{ accessLogs: number; req
   if (read?.length) {
     const { error } = await sb.from("notifications").delete().in("id", read.map((n) => n.id));
     if (!error) out.notifications = read.length;
+  }
+
+  if (now.toISOString().slice(0, 10) >= EARLY_DELETE_AFTER) {
+    const { data: early, error } = await sb.from("early_signups").delete().not("id", "is", null).select("id");
+    if (!error) out.early = early?.length ?? 0;
+    else console.error("retention early", error.message);
   }
   return out;
 }

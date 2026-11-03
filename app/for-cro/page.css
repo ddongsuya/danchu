@@ -72,6 +72,12 @@
 .a details.terms summary::after{content:"+";font-size:22px;font-weight:400;transition:transform 200ms var(--eo)}
 .a details.terms[open] summary::after{transform:rotate(45deg)}
 .a details.terms ol{margin:0 0 20px;padding-left:1.2em;display:grid;gap:12px;font-size:14.5px;line-height:1.7;color:var(--ink2)}
+.a details.terms .tm-sum{margin:0 0 20px;font-size:16px;font-weight:500;line-height:1.6;color:var(--ink);max-width:36em}
+.a details.terms .tm{display:grid;gap:18px;margin:0 0 24px}
+.a details.terms .tm section{border-top:1px solid var(--line);padding-top:14px}
+.a details.terms .tm h3{margin:0 0 8px;font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.a details.terms .tm ul{margin:0;padding:0 0 0 1.1em;display:grid;gap:4px;font-size:14.5px;line-height:1.6;color:var(--ink2)}
+
 @media (max-width:860px){
  .a .ph.vis{grid-template-columns:1fr;padding:40px 0 48px}
  .a .free{grid-template-columns:1fr;gap:24px}

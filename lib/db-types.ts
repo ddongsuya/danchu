@@ -514,6 +514,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rfq_pending"]["Row"]>;
         Relationships: [];
       };
+      /** 사전예약 (0030). 서비스 키로만 읽고 쓴다. 같은 갈래·이메일은 한 행. 2027-07-01 뒤 정리 작업이 지운다 */
+      early_signups: {
+        Row: {
+          id: string;
+          role: "req" | "cro";
+          email: string;
+          org: string | null;
+          org_type: string | null;
+          kinds: string[];
+          timing: string | null;
+          glp: string[];
+          intent: string | null;
+          ask: string | null;
+          source: string | null;
+          agreed_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["early_signups"]["Row"]>;
+        Relationships: [];
+      };
       admin_audit: {
         Row: {
           id: string;
