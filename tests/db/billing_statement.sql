@@ -8,7 +8,7 @@ declare
 begin
   update public.cro_orgs set status = 'suspended' where id = stopped;
   perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ST-1'), o), 3000000);
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ST-2'), o), 12000000);
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ST-2'), o), 52000000);
 
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.monthly_fee, 990000, '월 구독료');
@@ -34,7 +34,7 @@ declare
   snap jsonb;
   snap0 jsonb;
 begin
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-CL'), o, pg_temp.t_mid(-1)), 20000000, pg_temp.t_mid(-1));
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-CL'), o, pg_temp.t_mid(-1)), 52500000, pg_temp.t_mid(-1));
   res := public.close_billing_month(pg_temp.t_month(-1), null, '시험 마감');
   perform pg_temp.t_eq(res->>'ok', 'true', '마감');
   select snapshot into snap0 from public.billing_periods where month = pg_temp.t_month(-1);

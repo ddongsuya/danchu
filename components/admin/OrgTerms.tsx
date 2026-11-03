@@ -6,7 +6,8 @@ import { CATS } from "@/lib/rfq-schema";
 
 /**
  * 기관 약정과 운영 설정. 청구는 기관이 제출한 견적 1건 단위다 (lib/billing.ts):
- * 1,000만 원 미만은 월 구독료, 1,000만 원 이상은 건당 이용료, 5,000만 원 이상이 체결되면 성사수수료.
+ * 5,000만 원 미만은 월 구독료, 5,000만 원 이상은 금액 구간별 송부 비용, 그 견적이 체결되면 성사 수수료 (0031 요금표).
+ * 송부 비용·수수료율 칸은 특별 조건이 있을 때만 적는다. 비우면 요금표를 쓴다.
  * 약정 값은 서면 합의 뒤 운영자만 적는다. 승인 뒤 기관명 변경도 여기서만 한다 (같은 이름의 다른 기관과 합류 매칭이 섞이지 않게).
  */
 export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; autoReplyAvailable?: boolean }) {
@@ -52,10 +53,10 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
     <form className="stack" style={{ gap: 12 }} onSubmit={save}>
       <div className="grid2">
         <div className="fld"><label className="fld__lab" htmlFor="t-name">기관명</label><input id="t-name" className="inp" value={f.name} onChange={set("name")} /></div>
-        <div className="fld"><label className="fld__lab" htmlFor="t-monthly">월 구독료 (원)</label><input id="t-monthly" className="inp tnum" inputMode="numeric" value={f.monthlyFee} onChange={set("monthlyFee")} placeholder="구독하지 않으면 비워 둠" aria-describedby="t-monthly-help" /><span id="t-monthly-help" className="fld__help">1,000만 원 미만 견적이 여기에 포함됩니다. 바꾸거나 지우기 전에 지난달 명세를 마감해 두세요. 마감하지 않은 달에는 바뀐 값이 들어갑니다.</span></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-monthly">월 구독료 (원)</label><input id="t-monthly" className="inp tnum" inputMode="numeric" value={f.monthlyFee} onChange={set("monthlyFee")} placeholder="요금표 1,000,000 · 구독하지 않으면 비워 둠" aria-describedby="t-monthly-help" /><span id="t-monthly-help" className="fld__help">5,000만 원 미만 견적이 여기에 포함됩니다. 바꾸거나 지우기 전에 지난달 명세를 마감해 두세요. 마감하지 않은 달에는 바뀐 값이 들어갑니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-monthly-from">구독 시작 월</label><input id="t-monthly-from" className="inp tnum" type="month" value={f.monthlyFeeFrom} onChange={set("monthlyFeeFrom")} disabled={f.monthlyFee === ""} aria-describedby="t-monthly-from-help" /><span id="t-monthly-from-help" className="fld__help">이 달부터 명세에 월 구독료가 나옵니다. 비워 두면 구독료를 저장한 달부터입니다.</span></div>
-        <div className="fld"><label className="fld__lab" htmlFor="t-fee">건당 이용료 (원)</label><input id="t-fee" className="inp tnum" inputMode="numeric" value={f.perRequestFee} onChange={set("perRequestFee")} placeholder="미정이면 비워 둠" aria-describedby="t-fee-help" /><span id="t-fee-help" className="fld__help">1,000만 원 이상 견적 1건마다. 재제출은 다시 받지 않습니다.</span></div>
-        <div className="fld"><label className="fld__lab" htmlFor="t-rate">성사수수료율 (%)</label><input id="t-rate" className="inp tnum" inputMode="decimal" value={f.feeRate} onChange={set("feeRate")} placeholder="예: 3 · 미정이면 비워 둠" aria-describedby="t-rate-help" /><span id="t-rate-help" className="fld__help">5,000만 원 이상 견적이 체결되면 계약 금액에 곱합니다.</span></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-fee">송부 비용 (원)</label><input id="t-fee" className="inp tnum" inputMode="numeric" value={f.perRequestFee} onChange={set("perRequestFee")} placeholder="비우면 요금표 (3만 · 5만)" aria-describedby="t-fee-help" /><span id="t-fee-help" className="fld__help">5,000만 원 이상 견적 1건마다. 요금표는 1억 원 미만 30,000원, 1억 원 이상 50,000원입니다. 재제출은 다시 받지 않습니다.</span></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-rate">성사 수수료율 (%)</label><input id="t-rate" className="inp tnum" inputMode="decimal" value={f.feeRate} onChange={set("feeRate")} placeholder="비우면 요금표 (2 · 5 · 7)" aria-describedby="t-rate-help" /><span id="t-rate-help" className="fld__help">5,000만 원 이상 견적이 체결되면 계약 금액에 곱합니다. 요금표는 1억 원 미만 2%, 5억 원 미만 5%, 5억 원 이상 7%입니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-mail">대표 이메일 (배포 메일 수신)</label><input id="t-mail" className="inp" type="email" value={f.contactEmail} onChange={set("contactEmail")} /></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-phone">대표 연락처</label><input id="t-phone" className="inp" type="tel" value={f.contactPhone} onChange={set("contactPhone")} /></div>
       </div>

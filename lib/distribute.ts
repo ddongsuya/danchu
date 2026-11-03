@@ -278,7 +278,7 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
     ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 안내를 받았어요.<br>참여는 귀 기관이 위 링크에서 직접 눌러 주셔야 해요. 단추가 대신 참여할 수 없어요. 참여하신 뒤에는 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시해요. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선해요. 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 회신 기한 전에도 비교표가 열려 회신이 닫히니 견적서는 되도록 일찍 보내 주십시오.<br>다른 기관은 귀 기관의 견적을 볼 수 없어요. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 안내를 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했어요. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있어요.`
     : `${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보여요.` : "로그인 없이 위 링크로 바로 열려요."}<br>제출한 견적은 비교표가 열리기 전까지 회신 기한 안에서 수정할 수 있어요. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열리고, 그때 회신이 닫혀요. 의뢰자는 비교표가 열린 뒤에 기관을 선택해요. 다른 기관은 귀 기관의 견적을 볼 수 없어요. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
   const transition = opts.transition
-    ? `<p style="font-size:14px;padding:12px 14px;background:#F5F5F4;border-radius:6px">앞서 견적 요청으로 안내드린 요청이에요. 단추는 이제 기관이 요약을 보고 직접 참여한 요청에서만 견적을 받아요. 견적을 보내시려면 아래 링크에서 참여하기를 먼저 눌러 주세요. 링크는 이전과 같아요.</p>`
+    ? `<p style="font-size:14px;padding:12px 14px;background:#f4f4f0;border-radius:2px">앞서 견적 요청으로 안내드린 요청이에요. 단추는 이제 기관이 요약을 보고 직접 참여한 요청에서만 견적을 받아요. 견적을 보내시려면 아래 링크에서 참여하기를 먼저 눌러 주세요. 링크는 이전과 같아요.</p>`
     : "";
   return mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청 참여 안내 · ${esc(rfq.rfq_no)}</h2>${transition}
@@ -286,10 +286,10 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
       시험 분야: ${esc(rfq.categories.join(", "))}${items ? ` · 시험 항목 ${items}건` : ""}<br>
       요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${cda ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
       <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b>${joinBy ? ` · 참여 결정 기한 ${esc(joinBy)}` : ""} · 링크는 회신 기한 +7일까지 열려요.</p>
-      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">${INVITE_MAIL_ACTION}</a></p>
+      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#1b1b19;color:#f4f4f0;text-decoration:none;padding:13px 22px;border-radius:2px;font-weight:600">${INVITE_MAIL_ACTION}</a></p>
       <p style="font-size:14px">${how}</p>
-      <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개돼요.</p>
-      <p style="font-size:13px;color:#6F6A63">${guide}</p>`);
+      <p style="font-size:13px;color:#61615c">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개돼요.</p>
+      <p style="font-size:13px;color:#61615c">${guide}</p>`);
 }
 
 /**

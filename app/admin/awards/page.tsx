@@ -15,7 +15,7 @@ export default async function AdminAwards() {
   await requireSession("admin");
   const list = dbReady() ? await listAllAwards() : [];
   const total = list.reduce((a, x) => a + (x.contract_amount ?? 0), 0);
-  // 성사수수료: 선정 견적 5,000만 원 이상만. 예상 = 선정 견적 × 요율(안내), 정산 = 확정된 계약 금액 × 요율 (의뢰자 확인 또는 7일 뒤 자동 확정, 0025)
+  // 성사 수수료: 선정 견적 5,000만 원 이상만. 예상 = 선정 견적 × 요율(안내), 정산 = 확정된 계약 금액 × 요율 (의뢰자 확인 또는 7일 뒤 자동 확정, 0025)
   const orgIds = [...new Set(list.map((a) => a.cro_org_id).filter((x): x is string => !!x))];
   const { data: rates } = orgIds.length ? await getSupabaseAdmin()!.from("cro_orgs").select("id, fee_rate").in("id", orgIds) : { data: [] as { id: string; fee_rate: number | null }[] };
   const rateOf = new Map((rates ?? []).map((o) => [o.id, o.fee_rate]));
@@ -34,7 +34,7 @@ export default async function AdminAwards() {
         <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
             <thead>
-              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th>선정일</th><th>계약 상태</th><th>계약 보고</th><th className="tnum">성사수수료</th><th>요청 상태</th></tr>
+              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th>선정일</th><th>계약 상태</th><th>계약 보고</th><th className="tnum">성사 수수료</th><th>요청 상태</th></tr>
             </thead>
             <tbody>
               {list.map((a) => (
@@ -52,7 +52,7 @@ export default async function AdminAwards() {
                       {a.requester_disputed_at && !a.dispute_resolved_at && !a.contract_confirmed_at ? <DisputeResolve awardId={a.id} /> : null}
                     </>
                   ) : <span style={{ color: "var(--muted)" }}>-</span>}</td>
-                  <td className="tnum" data-label="성사수수료">{(() => {
+                  <td className="tnum" data-label="성사 수수료">{(() => {
                     const confirmed = !!a.contract_confirmed_at;
                     const f = successFeeView({ quoteAmount: a.fee_basis_amount, contractAmount: a.contract_amount, contractStatus: a.contract_status, feeRate: a.cro_org_id ? rateOf.get(a.cro_org_id) : null, confirmed });
                     if (!f.eligible) return <span style={{ fontSize: 12, color: "var(--muted)" }}>대상 아님 (선정 견적 5,000만 원 미만)</span>;

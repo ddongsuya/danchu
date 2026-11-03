@@ -94,6 +94,8 @@ fi
 echo "== DB 테스트"
 for f in "$ROOT"/tests/db/*.sql; do
   name="$(basename "$f")"
+  # DB_TEST_ONLY='billing_*' 처럼 주면 이름이 맞는 테스트만 돈다 (고치는 중 빠르게 확인할 때)
+  if [[ -n "${DB_TEST_ONLY:-}" && "$name" != ${DB_TEST_ONLY} ]]; then continue; fi
   # 테스트마다 트랜잭션 안에서 공용 도우미(tests/db/support/fixtures.sql)와 함께 돌리고 되돌린다. 테스트끼리 데이터가 섞이지 않는다
   if { echo "begin;"; cat "$ROOT/tests/db/support/fixtures.sql"; echo; cat "$f"; echo; echo "rollback;"; } | q >"$TMP/out" 2>&1; then
     ok "$name"

@@ -46,7 +46,7 @@ export async function sendMail(m: { to: string | string[]; subject: string; html
 }
 
 const BTN = (href: string, label: string) =>
-  `<a href="${esc(href)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600;font-size:15px">${esc(label)}</a>`;
+  `<a href="${esc(href)}" style="display:inline-block;background:#1b1b19;color:#f4f4f0;text-decoration:none;padding:13px 22px;border-radius:2px;font-weight:600;font-size:15px">${esc(label)}</a>`;
 
 /** 인증 메일 - 가입 확인·로그인 링크·비밀번호 재설정 */
 export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: string, link: string): Promise<boolean> {
@@ -62,7 +62,7 @@ export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: st
       <h2 style="margin:0 0 12px;font-size:20px">${t.h}</h2>
       <p>${t.p}</p>
       <p style="margin:24px 0">${BTN(link, t.b)}</p>
-      <p style="font-size:13px;color:#6F6A63">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣으세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`),
+      <p style="font-size:13px;color:#61615c">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣으세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`),
   });
 }
 
@@ -78,10 +78,10 @@ export async function sendCodeMail(to: string, code: string, link: string): Prom
     html: mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">요청서를 보내기 전에 이메일을 확인해요</h2>
       <p>요청서 화면에 아래 번호를 입력해 주세요. 확인이 끝나면 쓰신 요청서가 바로 접수돼요.</p>
-      <div style="display:inline-block;background:#f3f5f2;border-radius:12px;padding:14px 26px;margin:8px 0 20px;font-size:30px;font-weight:700;letter-spacing:.18em">${esc(code)}</div>
+      <div style="display:inline-block;background:#f4f4f0;border-radius:4px;padding:14px 26px;margin:8px 0 20px;font-size:30px;font-weight:700;letter-spacing:.18em">${esc(code)}</div>
       <p>화면을 닫았다면 아래 버튼을 눌러 쓰신 요청서를 확인하고 보낼 수 있어요.</p>
       <p style="margin:24px 0">${BTN(link, "인증하고 요청서 확인하기")}</p>
-      <p style="font-size:13px;color:#6F6A63">번호와 버튼은 1시간 동안 유효하고, 한 번만 쓸 수 있어요. 요청하지 않았다면 이 메일은 무시하세요. 확인하지 않으면 요청서는 접수되지 않고, 입력한 내용은 7일 뒤 지워져요.</p>`),
+      <p style="font-size:13px;color:#61615c">번호와 버튼은 1시간 동안 유효하고, 한 번만 쓸 수 있어요. 요청하지 않았다면 이 메일은 무시하세요. 확인하지 않으면 요청서는 접수되지 않고, 입력한 내용은 7일 뒤 지워져요.</p>`),
   });
 }
 
@@ -93,8 +93,8 @@ function fmt(v: unknown): string {
 }
 
 export const mailWrap = (body: string) =>
-  `<div style="font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1A1815;line-height:1.6;max-width:640px">${body}
-   <p style="margin-top:32px;font-size:13px;color:#9A948B">단추 Danchu · limjm900202@gmail.com</p></div>`;
+  `<div style="font-family:Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1b1b19;line-height:1.6;max-width:640px">${body}
+   <p style="margin-top:32px;font-size:13px;color:#61615c">단추 Danchu · limjm900202@gmail.com</p></div>`;
 const wrap = mailWrap;
 
 /** 입력값 전체를 라벨 순으로 표 형태 HTML로 */
@@ -104,7 +104,7 @@ export function renderValuesTable(values: Values): string {
   for (const [id, label] of Object.entries(labels)) {
     const v = fmt(values[id]);
     if (!v) continue;
-    rows.push(`<tr><td style="padding:6px 10px;color:#6F6A63;border-bottom:1px solid #F0EDE7;white-space:nowrap">${esc(label)}</td><td style="padding:6px 10px;border-bottom:1px solid #F0EDE7">${esc(v)}</td></tr>`);
+    rows.push(`<tr><td style="padding:6px 10px;color:#61615c;border-bottom:1px solid #e9e9e4;white-space:nowrap">${esc(label)}</td><td style="padding:6px 10px;border-bottom:1px solid #e9e9e4">${esc(v)}</td></tr>`);
   }
   return `<table style="border-collapse:collapse;font-size:14px;width:100%">${rows.join("")}</table>`;
 }
@@ -161,15 +161,15 @@ export async function sendRfqMails({ rfqNo, values, fileNames, fileCount, sent, 
   const requesterHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">${delivered ? "요청서를 접수했고, 기관에 참여 안내를 보냈어요" : "요청서를 접수했어요"}</h2>
     <p>${esc(company)} ${esc(name)} 님, 보내 주신 내용 그대로 접수했어요.${files ? ` 첨부 ${files}개도 함께 올라갔어요.` : ""}</p>
-    <div style="display:inline-block;background:#f3f5f2;border-radius:12px;padding:12px 24px;margin:8px 0 20px">
-      <div style="font-size:12px;font-weight:600;color:#6E6E73">접수 번호</div>
+    <div style="display:inline-block;background:#f4f4f0;border-radius:4px;padding:12px 24px;margin:8px 0 20px">
+      <div style="font-size:12px;font-weight:600;color:#61615c">접수 번호</div>
       <div style="font-size:22px;font-weight:700">${esc(rfqNo)}</div>
     </div>
     <h3 style="font-size:16px;margin:0 0 8px">다음 일정</h3>
     <ol style="padding-left:20px;margin:0 0 20px">${steps}</ol>
-    <p style="font-size:14px;color:#6F6A63">그 사이에 하실 일은 없어요. 비교표가 열리기 전에는 참여한 기관 수와 제출 수만 앱에서 볼 수 있고, 기관 이름과 금액은 비교표가 열릴 때 함께 보여요. 비교표가 열리면 메일로 알려요.</p>
-    <p style="font-size:14px;color:#6F6A63">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
-    <p style="font-size:14px;color:#6F6A63">의뢰자는 비용이 들지 않아요. ${shareNote}</p>`);
+    <p style="font-size:14px;color:#61615c">그 사이에 하실 일은 없어요. 비교표가 열리기 전에는 참여한 기관 수와 제출 수만 앱에서 볼 수 있고, 기관 이름과 금액은 비교표가 열릴 때 함께 보여요. 비교표가 열리면 메일로 알려요.</p>
+    <p style="font-size:14px;color:#61615c">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
+    <p style="font-size:14px;color:#61615c">의뢰자는 비용이 들지 않아요. ${shareNote}</p>`);
 
   const adminHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">[단추] 새 RFQ 접수 ${esc(rfqNo)}</h2>
@@ -216,7 +216,7 @@ export async function sendSupportMail(a: { email: string; type: string; rfqNo: s
     html: wrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 앱 문의</h2>
       <p>보낸 사람: <a href="mailto:${esc(a.email)}">${esc(a.email)}</a><br>유형: ${esc(a.type)}${a.rfqNo ? `<br>관련 요청: ${esc(a.rfqNo)}` : ""}</p>
-      <pre style="white-space:pre-wrap;font:inherit;padding:14px 16px;background:#F5F5F4;border-radius:6px">${esc(a.text)}</pre>`),
+      <pre style="white-space:pre-wrap;font:inherit;padding:14px 16px;background:#f4f4f0;border-radius:2px">${esc(a.text)}</pre>`),
   });
   if (r.error) console.error("resend support", r.error);
   return !r.error;
@@ -239,6 +239,6 @@ export function contractFollowupMail(a: { rfqNo: string; substance: string; croN
         <li>아직 협의 중이라면: 협의 중이라는 사실과 예상 시점</li>
         <li>진행하지 않게 되었다면: 그 사실 (사유는 적지 않으셔도 돼요)</li>
       </ul>
-      <p style="font-size:13px;color:#6F6A63">회신 내용은 단추 운영자가 수주 기록에 남겨요. 계약 조건은 귀 기관과 의뢰자가 직접 정하며 단추는 관여하지 않아요.</p>`),
+      <p style="font-size:13px;color:#61615c">회신 내용은 단추 운영자가 수주 기록에 남겨요. 계약 조건은 귀 기관과 의뢰자가 직접 정하며 단추는 관여하지 않아요.</p>`),
   };
 }

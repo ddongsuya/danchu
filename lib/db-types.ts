@@ -356,9 +356,9 @@ export type Database = {
           approved_at: string | null;
           updated_at: string;
           auto_reply: boolean;
-          /** 건당 이용료 (원). 1,000만 원 이상 견적 1건마다. null 이면 미정 (0020) */
+          /** 송부 비용 특별 조건 (원). 5,000만 원 이상 견적 1건마다. null 이면 요금표 (0031) */
           per_request_fee: number | null;
-          /** 성사수수료율 (0.03 = 3%). null 이면 미정 */
+          /** 성사 수수료율 특별 조건 (0.03 = 3%). null 이면 요금표 (0031) */
           fee_rate: number | null;
           /** 월 구독료 (원). null 이면 구독하지 않음 (0020) */
           monthly_fee: number | null;
@@ -644,13 +644,13 @@ export type BillingSummaryRow = {
   excluded: number;
   /** 금액 미입력 견적 (아직 청구하지 않음) */
   no_amount: number;
-  /** 1,000만 원 미만 (구독) */
+  /** 5,000만 원 미만 (구독) */
   subscription: number;
-  /** 건당 이용료 대상 (1,000만 원 이상) */
+  /** 송부 비용 대상 (5,000만 원 이상) */
   per_quote: number;
   /** 그중 5,000만 원 이상 */
   success_eligible: number;
-  /** 건당 이용료 합계. 대상이 있는데 단가 미정이면 null */
+  /** 송부 비용 합계 (0031부터 미정 없음) */
   per_quote_fee: number | null;
   /** 이 달 제출 견적 중 선정된 수 */
   selected: number;
@@ -689,7 +689,7 @@ export type BillingLineRow = {
   /** 건당 이용료를 청구하는 행 */
   chargeable: boolean;
   per_request_fee: number | null;
-  /** 청구할 건당 이용료. 대상 아니면 0, 단가 미정이면 null */
+  /** 청구할 송부 비용. 대상 아니면 0 */
   fee_due: number | null;
   /** 참여 기록 (0023). joined 만 청구한다. 0023 전 저장본에는 없다 */
   join_status?: JoinStatus;
@@ -739,19 +739,20 @@ export type BillingAdjustmentRow = {
 };
 
 /** 참고 단가 출처: org 기관 약정 값 · reference 참고 단가(예시, 시장 검증 전) */
-export type ReferenceSource = "org" | "reference";
+/** org 기관 특별 조건 · schedule 요금표(0031) · reference 0031 전 참고 단가(마감 저장본에만) */
+export type ReferenceSource = "org" | "schedule" | "reference";
 
 /** billing_reference() 한 행: 시범 기간이라 청구하지 않은 견적·체결의 "유료였다면" 수치 (0024). 합계·청구에 넣지 않는다 */
 export type BillingReferenceRow = {
   org_id: string;
   org_name: string;
-  /** 1,000만 원 미만 견적 수 (구독 구간, 구독료 미정이라 금액 없음) */
+  /** 5,000만 원 미만 견적 수 (구독 구간) */
   subscription_count: number;
-  /** 1,000만 원 이상 견적 수 */
+  /** 5,000만 원 이상 견적 수 */
   per_quote_count: number;
   per_quote_unit: number;
   per_quote_unit_source: ReferenceSource;
-  /** 참고 건당 이용료 = 건수 × 단가 */
+  /** 참고 송부 비용 합계 (요금표 또는 기관 특별 조건) */
   per_quote_fee: number;
   /** 체결 확인된 수주 (선정 견적 5,000만 원 이상, signed) */
   success_count: number;

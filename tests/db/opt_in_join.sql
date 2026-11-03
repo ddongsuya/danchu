@@ -190,7 +190,7 @@ declare
 begin
   perform pg_temp.t_eq(pg_temp.t_save(i, pg_temp.tok(i)), 'not_joined', '기관: 참여 전 초안 저장 거절');
   perform pg_temp.t_eq(pg_temp.t_save(i, pg_temp.tok(i), true), 'not_joined', '기관: 참여 전 제출 거절');
-  res := public.save_quote(i, jsonb_build_object('total_amount', 20000000, 'entry_source', 'operator', 'pdf_path', 'x/q.pdf'), '[]'::jsonb, true, op, pg_temp.tok(i));
+  res := public.save_quote(i, jsonb_build_object('total_amount', 52500000, 'entry_source', 'operator', 'pdf_path', 'x/q.pdf'), '[]'::jsonb, true, op, pg_temp.tok(i));
   perform pg_temp.t_eq(res->>'code', 'not_joined', '운영자 대리 입력도 참여 전 거절');
   perform pg_temp.t_eq((select count(*)::int from public.cro_quotes where invite_id = i), 0, '견적 행 없음');
   perform pg_temp.t_eq((select status from public.rfq_invites where id = i), 'sent', '상태 그대로');
@@ -202,7 +202,7 @@ begin
   perform pg_temp.t_assert(blocked, '견적 표에 직접 넣는 것도 참여 전에는 막힌다');
 
   perform pg_temp.t_eq(pg_temp.j(i), 'ok', '관리 기관이 회신 링크에서 참여');
-  res := public.save_quote(i, jsonb_build_object('total_amount', 20000000, 'entry_source', 'operator', 'pdf_path', 'x/q.pdf'), '[]'::jsonb, true, op, pg_temp.tok(i));
+  res := public.save_quote(i, jsonb_build_object('total_amount', 52500000, 'entry_source', 'operator', 'pdf_path', 'x/q.pdf'), '[]'::jsonb, true, op, pg_temp.tok(i));
   perform pg_temp.t_eq((res->>'ok')::boolean, true, '참여 뒤 운영자 대리 입력 제출');
   perform pg_temp.t_eq((select entry_source from public.cro_quotes where invite_id = i), 'operator', '입력 주체 운영자');
 end $$;
@@ -328,7 +328,7 @@ declare
 begin
   perform pg_temp.t_eq(pg_temp.j(j_cro), 'ok', '기관 참여');
   perform pg_temp.t_eq(pg_temp.t_save(j_cro, pg_temp.tok(j_cro), true), 'ok', '기관 제출');
-  update public.cro_quotes set total_amount = 30000000 where invite_id = j_cro;
+  update public.cro_quotes set total_amount = 53000000 where invite_id = j_cro;
   perform pg_temp.t_eq(pg_temp.j(j_op), 'ok', '관리 기관이 링크에서 참여');
   perform pg_temp.t_eq((public.save_quote(j_op, jsonb_build_object('total_amount', 60000000, 'entry_source', 'operator', 'pdf_path', 'x/q.pdf', 'start_date', current_date, 'valid_until', current_date + 30), '[]'::jsonb, true, op, pg_temp.tok(j_op))->>'ok')::boolean, true, '참여 뒤 운영자 대리 입력');
 
@@ -359,7 +359,7 @@ declare
 begin
   -- 참여 기록 없이 제출된 견적 (전환 뒤에 흉내 낸다. 0023 은 이런 행을 막는다)
   alter table public.cro_quotes disable trigger cro_quotes_require_join;
-  perform pg_temp.t_quote((id_of->>'nj')::uuid, 30000000);
+  perform pg_temp.t_quote((id_of->>'nj')::uuid, 53000000);
   alter table public.cro_quotes enable trigger cro_quotes_require_join;
 
   -- 전환: 작성 중·제출은 legacy 참여, 열린 sent 는 그대로(참여를 다시 묻는다), 이미 참여한 초대는 그대로
@@ -488,7 +488,7 @@ begin
   -- e) 참여 2곳 중 1곳 제출: 참여 기관 수와 안내 수를 따로 돌려준다
   perform pg_temp.t_eq(pg_temp.j(k), 'ok', 'K 참여');
   perform pg_temp.t_invite(rq, pg_temp.t_org('검토미결정'), now(), false);
-  declare r jsonb := public.save_quote(k, jsonb_build_object('total_amount', 20000000), '[]'::jsonb, true, null, pg_temp.tok(k));
+  declare r jsonb := public.save_quote(k, jsonb_build_object('total_amount', 52500000), '[]'::jsonb, true, null, pg_temp.tok(k));
   begin
     perform pg_temp.t_eq((r->>'total_invites')::int, 3, 'e) 안내 전체 3');
     perform pg_temp.t_eq((r->>'joined_invites')::int, 2, 'e) 참여 기관 2');

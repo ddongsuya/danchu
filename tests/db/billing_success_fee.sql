@@ -73,7 +73,7 @@ begin
   perform pg_temp.t_eq(coalesce((select settled_count from public.billing_summary(pg_temp.t_month(-1), pg_temp.t_month(0)) where org_id = o), 0), 0, '체결일 달에는 없음');
 end $$;
 
--- 요율 미정: 정산 금액은 null (미정), 0 으로 숨기지 않는다
+-- 기관 요율 특별 조건이 없으면 요금표 요율 (0031). 9천만 원 선정 견적은 2%, 미정은 없다
 do $$
 declare
   o uuid := pg_temp.t_org('요율미정기관', 300000, null);
@@ -86,7 +86,7 @@ begin
   perform pg_temp.t_confirm(a);
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.settled_count, 1, '정산 대상 1건');
-  perform pg_temp.t_assert(s.settled_fee is null, '요율 미정이면 null');
-  perform pg_temp.t_assert(s.guidance_fee is null, '예상도 null');
-  perform pg_temp.t_eq(s.terms_pending, true, '미정 표시');
+  perform pg_temp.t_eq(s.settled_fee, 1800000::bigint, '정산 = 90,000,000 × 2% (요금표)');
+  perform pg_temp.t_eq(s.guidance_fee, 1800000::bigint, '예상도 요금표 요율');
+  perform pg_temp.t_eq(s.terms_pending, false, '미정 없음');
 end $$;

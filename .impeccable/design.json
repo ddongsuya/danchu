@@ -4,18 +4,20 @@
   "source": "app/globals.css",
   "mode": "code-led",
   "colors": {
-    "primary": "#246457",
-    "background": "#fcfdfb",
-    "surface": "#f3f5f2",
-    "text": "#202b28",
-    "darkPrimary": "#92cfb7"
+    "primary": "#1b1b19",
+    "accent": "#edef5c",
+    "accentTint": "#f5f6b4",
+    "background": "#f4f4f0",
+    "surface": "#fbfbf8",
+    "text": "#1b1b19",
+    "darkPrimary": "#efefea"
   },
   "radii": {
-    "small": "8px",
-    "medium": "12px",
-    "large": "16px"
+    "small": "2px",
+    "medium": "2px",
+    "large": "4px"
   },
-  "typeface": "Pretendard Variable",
+  "typeface": "Host Grotesk + Pretendard Variable",
   "motion": {
     "press": "160ms",
     "drawer": "220ms",

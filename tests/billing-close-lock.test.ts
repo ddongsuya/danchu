@@ -38,8 +38,8 @@ vi.mock("@/lib/auth", () => ({ sessionOrNull: async () => fx.session }));
 vi.mock("@/lib/audit", async (orig) => ({ ...(await orig<typeof import("@/lib/audit")>()), audit: fx.audit }));
 
 import {
-  ADJUSTMENT_MAX_ABS, CLOSED_MONTH_NOTE, REFERENCE_LABEL, REFERENCE_PER_QUOTE_FEE, REFERENCE_SUCCESS_RATE, REFERENCE_UNIT_LABEL,
-  ADJUSTMENT_CREDIT_ONLY_NOTE, adjustmentsByOrg, countsForReference, parseAdjustmentAmount, rateLabel, referenceForOrg, referenceRate, referenceTotals, referenceUnit, signedWon,
+  ADJUSTMENT_MAX_ABS, CLOSED_MONTH_NOTE, REFERENCE_LABEL, REFERENCE_SOURCE_LABEL, REFERENCE_UNIT_LABEL,
+  ADJUSTMENT_CREDIT_ONLY_NOTE, adjustmentsByOrg, countsForReference, parseAdjustmentAmount, rateLabel, referenceForOrg, referenceTotals, signedWon,
 } from "@/lib/billing";
 import { comma } from "@/lib/format";
 import { POST as closeRoute } from "@/app/api/admin/billing/close/route";
@@ -205,28 +205,17 @@ describe("조정·참고 계산 도우미", () => {
     expect(signedWon(-7000, comma)).toBe("-7,000원");
     expect(signedWon(70000, comma)).toBe("+70,000원");
   });
-  it("참고 단가 함수는 서버(service_role)만 실행한다", () => {
-    for (const fn of ["billing_reference_per_quote_fee", "billing_reference_success_rate"]) {
-      expect(SQL).toMatch(new RegExp(`revoke execute on function public\\.${fn}\\(\\) from public, anon, authenticated`));
-      expect(SQL).toMatch(new RegExp(`grant execute on function public\\.${fn}\\(\\) to service_role`));
-    }
-  });
-  it("참고 단가는 TS 와 SQL 이 같다 (30,000원, 3%)", () => {
-    expect(REFERENCE_PER_QUOTE_FEE).toBe(30_000);
-    expect(REFERENCE_SUCCESS_RATE).toBe(0.03);
-    expect(Number(SQL.match(/function public\.billing_reference_per_quote_fee\(\)[\s\S]*?select (\d+) \$\$/)?.[1])).toBe(REFERENCE_PER_QUOTE_FEE);
-    expect(Number(SQL.match(/function public\.billing_reference_success_rate\(\)[\s\S]*?select ([\d.]+)::numeric/)?.[1])).toBe(REFERENCE_SUCCESS_RATE);
+  it("0031: 옛 참고 단가 함수 대신 요금표 함수를 쓴다 (서버만 실행)", () => {
+    const fee = readFileSync("supabase/migrations/0031_fee_schedule.sql", "utf8");
+    expect(fee).toMatch(/'billing_send_fee\(bigint\)', 'billing_success_rate\(bigint\)'/);
+    expect(fee).toContain("execute format('grant execute on function public.%s to service_role', f)");
+    const ref = fee.slice(fee.indexOf("create or replace function public.billing_reference"));
+    expect(ref).not.toMatch(/billing_reference_per_quote_fee\(\)|billing_reference_success_rate\(\)/);
   });
   it("이름표", () => {
-    expect(REFERENCE_UNIT_LABEL).toBe("참고 단가(예시, 시장 검증 전)");
+    expect(REFERENCE_UNIT_LABEL).toBe("요금표");
     expect(REFERENCE_LABEL).toBe("참고 (시범 기간, 청구 안 함)");
-  });
-  it("기관 약정 값이 있으면 그 값, 없으면 참고 단가", () => {
-    expect(referenceUnit(null)).toEqual({ unit: 30_000, source: "reference" });
-    expect(referenceUnit(300_000)).toEqual({ unit: 300_000, source: "org" });
-    expect(referenceUnit(0)).toEqual({ unit: 0, source: "org" });
-    expect(referenceRate(undefined)).toEqual({ rate: 0.03, source: "reference" });
-    expect(referenceRate(0.05)).toEqual({ rate: 0.05, source: "org" });
+    expect(REFERENCE_SOURCE_LABEL).toEqual({ org: "기관 특별 조건", schedule: "요금표", reference: "옛 참고 단가" });
     expect(rateLabel(0.03)).toBe("3%");
     expect(rateLabel(0.025)).toBe("2.5%");
   });
@@ -237,19 +226,19 @@ describe("조정·참고 계산 도우미", () => {
     expect(countsForReference({ billable: true, join_status: "joined" })).toBe(false);
     expect(countsForReference({ billable: true, join_status: "not_joined" })).toBe(false);
   });
-  it("기관 1곳 참고 수치: tests/db/billing_close_lock.sql 의 참고 단가 기관과 같은 값", () => {
-    const line = (tier: "subscription" | "per_quote" | "per_quote_success", join_status: string, billable = true) => ({ tier, join_status, billable });
+  it("기관 1곳 참고 수치: 특별 조건이 없으면 견적·선정 금액 구간의 요금표", () => {
+    const line = (tier: "subscription" | "per_quote_success", join_status: string, total_amount: number, billable = true) => ({ tier, join_status, billable, total_amount });
     const r = referenceForOrg({
-      lines: [line("subscription", "pilot"), line("per_quote", "pilot"), line("per_quote_success", "pilot"), line("per_quote", "legacy"), line("per_quote", "pilot", false), line("per_quote", "joined")],
-      settlements: [{ contract_amount: 55_000_000 }],
+      lines: [line("subscription", "pilot", 1_000_000), line("per_quote_success", "pilot", 52_000_000), line("per_quote_success", "pilot", 120_000_000), line("per_quote_success", "legacy", 53_000_000), line("per_quote_success", "pilot", 54_000_000, false), line("per_quote_success", "joined", 55_000_000)],
+      settlements: [{ contract_amount: 55_000_000, quote_amount: 60_000_000 }],
       perRequestFee: null,
       feeRate: null,
     });
     expect(r).toEqual({
-      subscription_count: 1, per_quote_count: 3, per_quote_unit: 30_000, per_quote_unit_source: "reference", per_quote_fee: 90_000,
-      success_count: 1, success_contract_amount: 55_000_000, success_rate: 0.03, success_rate_source: "reference", success_fee: 1_650_000,
+      subscription_count: 1, per_quote_count: 3, per_quote_unit: 0, per_quote_unit_source: "schedule", per_quote_fee: 110_000,
+      success_count: 1, success_contract_amount: 55_000_000, success_rate: 0, success_rate_source: "schedule", success_fee: 1_100_000,
     });
-    const own = referenceForOrg({ lines: [line("per_quote", "pilot"), line("per_quote_success", "legacy")], settlements: [{ contract_amount: 70_000_000 }], perRequestFee: 300_000, feeRate: 0.05 });
+    const own = referenceForOrg({ lines: [line("per_quote_success", "pilot", 52_000_000), line("per_quote_success", "legacy", 200_000_000)], settlements: [{ contract_amount: 70_000_000, quote_amount: 70_000_000 }], perRequestFee: 300_000, feeRate: 0.05 });
     expect(own).toMatchObject({ per_quote_count: 2, per_quote_fee: 600_000, per_quote_unit_source: "org", success_fee: 3_500_000, success_rate_source: "org" });
   });
   it("참고 합계는 따로 더한다", () => {
@@ -276,7 +265,7 @@ describe("CSV: 조정은 청구액, 참고 수치는 따로 둔 열에만", () =
     const rows = text.split("\r\n").map((l) => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g)!.map((c) => c.replace(/,$/, "").replace(/^"|"$/g, "")));
     const head = rows[0];
     const col = (name: string) => head.indexOf(name);
-    for (const h of ["참고: 1,000만 원 미만 견적 수", "참고: 건당 이용료 대상 견적 수", "참고: 건당 단가(원)", "참고: 건당 이용료(원)", "참고: 성사수수료(원)"]) expect(head).toContain(h);
+    for (const h of ["참고: 5,000만 원 미만 견적 수", "참고: 송부 비용 대상 견적 수", "참고: 송부 비용 단가(원)", "참고: 송부 비용(원)", "참고: 성사 수수료(원)"]) expect(head).toContain(h);
     const adj = rows.find((c) => c[0] === "조정")!;
     expect(adj[col("청구 대상")]).toBe("Y");
     expect(adj[col("청구액(원)")]).toBe("-120000");
@@ -284,10 +273,11 @@ describe("CSV: 조정은 청구액, 참고 수치는 따로 둔 열에만", () =
     const ref = rows.find((c) => c[0] === "참고 (시범 기간, 청구 안 함)")!;
     expect(ref[col("청구 대상")]).toBe("N");
     expect(ref[col("청구액(원)")]).toBe("0");
-    expect(ref[col("참고: 건당 이용료 대상 견적 수")]).toBe("3");
-    expect(ref[col("참고: 건당 이용료(원)")]).toBe("90000");
-    expect(ref[col("참고: 성사수수료(원)")]).toBe("1650000");
-    expect(ref[col("비고")]).toContain("참고 단가(예시, 시장 검증 전)");
+    expect(ref[col("참고: 송부 비용 대상 견적 수")]).toBe("3");
+    expect(ref[col("참고: 송부 비용(원)")]).toBe("90000");
+    expect(ref[col("참고: 성사 수수료(원)")]).toBe("1650000");
+    expect(ref[col("비고")]).toContain("송부 비용 옛 참고 단가");
+    expect(ref[col("참고: 성사 수수료율")]).toBe("3%");
     // 저장본에 참고 수치가 있으면 다시 집계하지 않는다
     expect(fx.rpc).not.toHaveBeenCalled();
   });
@@ -325,7 +315,7 @@ describe("화면", () => {
   it("조정 입력은 열린 달에만, 참고 수치에는 이름표", () => {
     expect(page).toMatch(/closed \? \([\s\S]*?\) : \([\s\S]*?<BillingAdjustmentForm/);
     expect(page).toContain("REFERENCE_LABEL");
-    expect(page).toContain("REFERENCE_UNIT_LABEL");
+    expect(page).toContain("REFERENCE_SOURCE_LABEL");
   });
   it("조정·참고 수치를 못 읽으면 \"없어요\" 대신 오류를 보여 주고, 정지한 기관도 조정 대상에 넣는다", () => {
     expect(page).toMatch(/error: adjError/);

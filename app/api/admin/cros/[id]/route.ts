@@ -71,8 +71,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 /**
  * PATCH { name?, perRequestFee?, feeRate?, monthlyFee?, monthlyFeeFrom?, contactEmail?, contactPhone?, categories?, autoReply? } — 약정·운영 설정.
  * monthlyFeeFrom 은 구독 시작 월 'YYYY-MM' (비우면 구독료를 처음 저장한 달. 구독료를 지우면 함께 지워진다, 0020 트리거).
- * 청구 기준(0020): 1,000만 원 미만 견적은 월 구독료(monthlyFee), 1,000만 원 이상은 건당 이용료(perRequestFee),
- * 5,000만 원 이상이 체결되면 성사수수료(feeRate). 약정 값은 서면 합의 뒤 운영자만 적는다. 승인된 기관의 이름도 여기서만 바꾼다.
+ * 청구 기준(0031 요금표): 5,000만 원 미만 견적은 월 구독료(monthlyFee), 5,000만 원 이상은 송부 비용(perRequestFee),
+ * 그 견적이 체결되면 성사 수수료(feeRate). 송부 비용·요율은 특별 조건일 때만 적고, 비우면 요금표를 쓴다. 운영자만 적는다. 승인된 기관의 이름도 여기서만 바꾼다.
  * 월 전달 한도는 없앴다. 예전 화면이 monthlyCap 을 보내도 저장하지 않는다.
  */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -89,7 +89,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!name) return NextResponse.json({ error: "기관명을 입력해 주세요." }, { status: 400 });
     patch.name = name;
   }
-  for (const [key, col, label] of [["perRequestFee", "per_request_fee", "건당 이용료"], ["monthlyFee", "monthly_fee", "월 구독료"]] as const) {
+  for (const [key, col, label] of [["perRequestFee", "per_request_fee", "송부 비용"], ["monthlyFee", "monthly_fee", "월 구독료"]] as const) {
     if (!(key in b)) continue;
     const v = b[key];
     if (v === null || v === "") patch[col] = null;
@@ -106,7 +106,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const v = b.feeRate;
     if (v === null || v === "") patch.fee_rate = null;
     else if (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1) patch.fee_rate = Math.round(v * 10000) / 10000;
-    else return NextResponse.json({ error: "성사수수료율은 0~100% 사이여야 합니다." }, { status: 400 });
+    else return NextResponse.json({ error: "성사 수수료율은 0~100% 사이여야 합니다." }, { status: 400 });
   }
   if (typeof b.contactEmail === "string") {
     const e = b.contactEmail.trim().toLowerCase().slice(0, 200);
