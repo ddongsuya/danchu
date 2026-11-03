@@ -11,19 +11,19 @@ export async function POST(
   const s = await sessionOrNull();
   if (!s)
     return NextResponse.json(
-      { error: "로그인이 필요합니다." },
+      { error: "로그인이 필요해요." },
       { status: 401 },
     );
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin"))
     return NextResponse.json(
-      { error: "요청을 찾을 수 없습니다." },
+      { error: "요청을 찾을 수 없어요." },
       { status: 404 },
     );
   if (["closed", "cancelled"].includes(rfq.status))
     return NextResponse.json(
-      { error: "종료된 요청에는 첨부할 수 없습니다." },
+      { error: "종료된 요청에는 첨부할 수 없어요." },
       { status: 409 },
     );
   if (await rateLimited("file-retry", s.userId, 30, 600))
@@ -51,7 +51,7 @@ export async function POST(
     .eq("rfq_id", rfq.id);
   if (error)
     return NextResponse.json(
-      { error: "첨부 목록을 불러오지 못했습니다." },
+      { error: "첨부 목록을 불러오지 못했어요." },
       { status: 503 },
     );
   const existing = files.find(
@@ -60,7 +60,7 @@ export async function POST(
   if (existing?.uploaded_at) return NextResponse.json({ uploaded: true });
   if (!existing && files.length >= 10)
     return NextResponse.json(
-      { error: "첨부는 최대 10개입니다." },
+      { error: "첨부는 최대 10개예요." },
       { status: 400 },
     );
   const path =
@@ -78,7 +78,7 @@ export async function POST(
       });
     if (insertError)
       return NextResponse.json(
-        { error: "첨부 정보를 저장하지 못했습니다." },
+        { error: "첨부 정보를 저장하지 못했어요." },
         { status: 500 },
       );
   }
@@ -87,7 +87,7 @@ export async function POST(
     .createSignedUploadUrl(path, { upsert: true });
   if (signError || !ticket)
     return NextResponse.json(
-      { error: "업로드를 준비하지 못했습니다. 다시 시도해 주세요." },
+      { error: "업로드를 준비하지 못했어요. 다시 시도해 주세요." },
       { status: 500 },
     );
   return NextResponse.json({ name: b.name, path, signedUrl: ticket.signedUrl });

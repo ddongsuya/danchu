@@ -445,7 +445,7 @@ describe("리뷰 수정 (2026-10-18)", () => {
   it("탈퇴: 요청 조회가 실패하면 계정을 지우지 않는다", async () => {
     fx.tables.profiles = [{ id: A, email: "new@example.test", role: "requester", name: null, company: null, cro_org_id: null }];
     fx.fail = (c) => c.table === "rfq_requests" && c.op === "select";
-    await expect(deleteAccount((await import("@/lib/supabase")).getSupabaseAdmin()!, A, { reason: "self" })).rejects.toThrow(/삭제하지 않았습니다/);
+    await expect(deleteAccount((await import("@/lib/supabase")).getSupabaseAdmin()!, A, { reason: "self" })).rejects.toThrow(/삭제하지 않았어요/);
     expect(fx.deleteUser).not.toHaveBeenCalled();
   });
   it("탈퇴: 익명화가 하나라도 실패하면 계정을 지우지 않는다", async () => {

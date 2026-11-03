@@ -9,12 +9,12 @@ export function ThemeSettings() {
   const load = async () => {
     try {
       const r = await fetch("/api/settings");
-      if (!r.ok) throw new Error("알림 설정을 불러오지 못했습니다.");
+      if (!r.ok) throw new Error("알림 설정을 불러오지 못했어요.");
       const d = await r.json();
       setMail(d.email);
       setMessage("");
     } catch {
-      setMessage("알림 설정을 불러오지 못했습니다.");
+      setMessage("알림 설정을 불러오지 못했어요.");
     }
   };
   useEffect(() => {
@@ -32,9 +32,9 @@ export function ThemeSettings() {
       });
       if (!r.ok) throw new Error();
       setMail(!mail);
-      setMessage("알림 설정을 저장했습니다.");
+      setMessage("알림 설정을 저장했어요.");
     } catch {
-      setMessage("저장하지 못했습니다. 다시 눌러 시도해 주세요.");
+      setMessage("저장하지 못했어요. 다시 눌러 시도해 주세요.");
     } finally {
       setBusy(false);
     }
@@ -58,8 +58,8 @@ export function ThemeSettings() {
         <div>
           <b>진행 상황 이메일</b>
           <p className="fld__help">
-            견적 도착과 진행 상황을 메일로 받습니다. 앱 안의 알림, 접수 확인,
-            로그인 메일은 계속 받을 수 있습니다.
+            견적 도착과 진행 상황을 메일로 받아요. 앱 안의 알림, 접수 확인,
+            로그인 메일은 계속 받을 수 있어요.
           </p>
         </div>
         {/* 불러오기 전·실패를 "꺼짐"처럼 보이지 않게 한다 (2026-10-29 점검 7: DB 는 켜짐인데 화면은 꺼진 스위치) */}

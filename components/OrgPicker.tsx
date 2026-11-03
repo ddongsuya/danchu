@@ -30,9 +30,9 @@ export function OrgPicker({ id, values, onChange }: { id: string; values: Values
   }, []);
 
   if (failed === "login") return <p className="field__help">기관 지명은 로그인한 뒤에 할 수 있어요. 지명하지 않아도 분야가 맞는 기관에 참여 안내가 가요.</p>;
-  if (failed) return <p className="field__help">기관 목록을 불러오지 못했습니다. 지명 없이 진행해도 분야가 맞는 기관에 참여 안내가 갑니다.</p>;
+  if (failed) return <p className="field__help">기관 목록을 불러오지 못했어요. 지명 없이 진행해도 분야가 맞는 기관에 참여 안내가 가요.</p>;
   if (!orgs) return <div className="chipset" aria-busy="true"><span className="chip" style={{ opacity: 0.5 }}>기관 목록 불러오는 중</span></div>;
-  if (!orgs.length) return <p className="field__help">아직 참여 기관이 없습니다. 지명 없이 진행하면 승인되는 기관에 순서대로 전달됩니다.</p>;
+  if (!orgs.length) return <p className="field__help">아직 참여 기관이 없어요. 지명 없이 진행하면 승인되는 기관에 순서대로 전달돼요.</p>;
 
   const sorted = [...orgs].sort((a, b) => Number(b.categories.some((c) => cats.includes(c))) - Number(a.categories.some((c) => cats.includes(c))) || a.name.localeCompare(b.name, "ko"));
   const full = picked.length >= max;
@@ -49,7 +49,7 @@ export function OrgPicker({ id, values, onChange }: { id: string; values: Values
           );
         })}
       </div>
-      <p className="field__help">{picked.length ? `${picked.length}곳 지명 (최대 ${max}곳)` : `최대 ${max}곳까지 지명할 수 있습니다. 흐린 기관은 선택한 시험 분야와 다릅니다.`}</p>
+      <p className="field__help">{picked.length ? `${picked.length}곳 지명 (최대 ${max}곳)` : `최대 ${max}곳까지 지명할 수 있어요. 흐린 기관은 선택한 시험 분야와 달라요.`}</p>
     </div>
   );
 }

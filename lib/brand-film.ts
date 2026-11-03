@@ -79,7 +79,7 @@ export const BRAND_FILMS: { mark: MarkFilmSpec; lab: LabFilmSpec } = {
     cues: [
       { start: 0.3, end: 3.3, text: "흩어져 있던\n비임상 시험 견적을," },
       { start: 5.0, end: 7.7, text: "하나의 흐름으로." },
-      { start: 8.3, end: 12.4, text: "나란히 보여 드립니다.\n고르는 건 의뢰자입니다." },
+      { start: 8.3, end: 12.4, text: "나란히 보여요.\n고르는 건 의뢰자예요." },
     ],
     endcard: FILM_ENDCARD,
   },
@@ -94,7 +94,7 @@ export const BRAND_FILMS: { mark: MarkFilmSpec; lab: LabFilmSpec } = {
     cues: [
       { start: 0.4, end: 4.6, text: "비임상 시험의 첫 단추,\n견적부터." },
       { start: 5.4, end: 9.6, text: "흩어져 있던 견적을,\n하나의 흐름으로." },
-      { start: 10.5, end: 14.1, text: "나란히 보여 드립니다.\n고르는 건 의뢰자입니다." },
+      { start: 10.5, end: 14.1, text: "나란히 보여요.\n고르는 건 의뢰자예요." },
     ],
     endcard: FILM_ENDCARD,
   },

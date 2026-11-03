@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     values = body.payload as Values;
     files = cleanFiles(body.files);
   } catch {
-    return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+    return NextResponse.json({ error: "요청 형식이 올바르지 않아요." }, { status: 400 });
   }
   // 허니팟: 사람은 볼 수 없는 칸. 받은 척하고 아무것도 하지 않는다
   if (typeof values.website === "string" && values.website.trim()) {

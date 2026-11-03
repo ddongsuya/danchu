@@ -133,17 +133,17 @@ export function GuestVerify({
         body: JSON.stringify({ payload: { ...values, ...next }, files: files.map(({ name, size, type }) => ({ name, size, type })) }),
       });
       const d = (await r.json().catch(() => ({}))) as { token?: string; uploads?: UploadTicket[]; mailed?: boolean; codeLength?: number; error?: string };
-      if (!r.ok || !d.token) throw new Error(d.error || "인증번호를 보내지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      if (!r.ok || !d.token) throw new Error(d.error || "인증번호를 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
       tokenRef.current = d.token;
       onToken(d.token);
       setCodeLength(d.codeLength || 6);
       setCode("");
       setResendIn(RESEND_AFTER);
       setStep("code");
-      if (!d.mailed) setError("메일을 보내지 못했습니다. 잠시 뒤 '다시 받기'를 눌러 주세요.");
+      if (!d.mailed) setError("메일을 보내지 못했어요. 잠시 뒤 '다시 받기'를 눌러 주세요.");
       startUploads(d.uploads ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "인증번호를 보내지 못했습니다.");
+      setError(e instanceof Error ? e.message : "인증번호를 보내지 못했어요.");
     } finally {
       setBusy("");
     }
@@ -162,11 +162,11 @@ export function GuestVerify({
       if (!r.ok || !d.rfqNo) {
         setCode("");
         if (d.resend) setResendIn(0);
-        throw new Error(d.error || "확인하지 못했습니다. 다시 시도해 주세요.");
+        throw new Error(d.error || "확인하지 못했어요. 다시 시도해 주세요.");
       }
       finish(d.rfqNo);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "확인하지 못했습니다.");
+      setError(e instanceof Error ? e.message : "확인하지 못했어요.");
       setBusy("");
       codeInput.current?.focus();
     }
@@ -181,13 +181,13 @@ export function GuestVerify({
       const r = await fetch("/api/rfq/pending/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: tk }) });
       const d = (await r.json().catch(() => ({}))) as { error?: string; rfqNo?: string; codeLength?: number };
       if (d.rfqNo) return finish(d.rfqNo);
-      if (!r.ok) throw new Error(d.error || "다시 보내지 못했습니다.");
+      if (!r.ok) throw new Error(d.error || "다시 보내지 못했어요.");
       setCodeLength(d.codeLength || 6);
       setCode("");
       setResendIn(RESEND_AFTER);
       codeInput.current?.focus();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "다시 보내지 못했습니다.");
+      setError(e instanceof Error ? e.message : "다시 보내지 못했어요.");
     } finally {
       setBusy("");
     }
@@ -241,8 +241,8 @@ export function GuestVerify({
             sendCode();
           }}
         >
-          <h2 id="gv-title">보내기 전에 이메일만 확인하겠습니다.</h2>
-          <p className="gv__lead">쓰신 요청서는 이 화면에 그대로 둡니다. 확인이 끝나면 바로 접수됩니다.</p>
+          <h2 id="gv-title">보내기 전에 이메일만 확인할게요.</h2>
+          <p className="gv__lead">쓰신 요청서는 이 화면에 그대로 둬요. 확인이 끝나면 바로 접수돼요.</p>
           {field("email", "이메일", "email", "email")}
           {field("company", "회사·기관명", "text", "organization")}
           {field("name", "담당자 성명", "text", "name")}
@@ -255,7 +255,7 @@ export function GuestVerify({
           <button type="submit" className="b1 blg bfull" disabled={!!busy}>
             {busy === "send" ? "보내는 중…" : "인증번호 받기"}
           </button>
-          <p className="fld__help gv__center">이미 가입하셨다면 같은 이메일로 인증하면 됩니다.</p>
+          <p className="fld__help gv__center">이미 가입하셨다면 같은 이메일로 인증하면 돼요.</p>
         </form>
       ) : (
         <form
@@ -266,7 +266,7 @@ export function GuestVerify({
           }}
         >
           <h2 id="gv-title">메일로 보낸 {codeLength}자리를 입력해 주세요.</h2>
-          <p className="gv__lead">{contact.email || c.email}로 보냈습니다.</p>
+          <p className="gv__lead">{contact.email || c.email}로 보냈어요.</p>
           <label className="sr-only" htmlFor="gv-code">
             인증번호
           </label>
@@ -289,15 +289,15 @@ export function GuestVerify({
             }}
           />
           <p id="gv-code-help" className="fld__help">
-            번호를 입력하면 쓰신 요청서가 바로 접수됩니다. 메일 속 버튼으로 열면 요청서를 확인하고 보낼 수 있고, 보내면 이 화면도 이어집니다.
+            번호를 입력하면 쓰신 요청서가 바로 접수돼요. 메일 속 버튼으로 열면 요청서를 확인하고 보낼 수 있고, 보내면 이 화면도 이어져요.
           </p>
           {uploads.total > 0 && (
             <p className="fld__help" role="status">
               {uploads.running
-                ? `첨부 ${uploads.total}개를 올리는 중입니다 (${uploads.done}/${uploads.total}).`
+                ? `첨부 ${uploads.total}개를 올리는 중이에요 (${uploads.done}/${uploads.total}).`
                 : uploads.failed.length
-                  ? `첨부 ${uploads.failed.length}개를 올리지 못했습니다. 접수한 뒤 요청 화면에서 다시 올릴 수 있습니다.`
-                  : `첨부 ${uploads.total}개를 올렸습니다.`}
+                  ? `첨부 ${uploads.failed.length}개를 올리지 못했어요. 접수한 뒤 요청 화면에서 다시 올릴 수 있어요.`
+                  : `첨부 ${uploads.total}개를 올렸어요.`}
             </p>
           )}
           {error && (
@@ -307,7 +307,7 @@ export function GuestVerify({
           )}
           {busy === "verify" && (
             <p className="fld__help" role="status">
-              {uploads.running ? "첨부를 마저 올린 뒤 접수합니다…" : "확인하고 접수하는 중입니다…"}
+              {uploads.running ? "첨부를 마저 올린 뒤 접수해요…" : "확인하고 접수하는 중이에요…"}
             </p>
           )}
           <div className="gv__row">

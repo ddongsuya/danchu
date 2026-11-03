@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   });
   if (!sent) {
     console.warn("[danchu] 문의 미발송(메일 미설정)", type, rfqNo || "-");
-    return NextResponse.json({ error: "지금은 문의를 접수할 수 없습니다. limjm900202@gmail.com로 직접 보내주세요." }, { status: 503 });
+    return NextResponse.json({ error: "지금은 문의를 접수할 수 없어요. limjm900202@gmail.com로 직접 보내주세요." }, { status: 503 });
   }
   return NextResponse.json({ ok: true });
 }

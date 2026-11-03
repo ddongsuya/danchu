@@ -309,7 +309,7 @@ describe("POST /api/quote/[token]/join", () => {
     fx.session = admin;
     const r = await joinPost(json({ agree: true, terms: CRO_TERMS_VERSION }), tctx);
     expect(r.status).toBe(403);
-    expect((await r.json()).error).toContain("대신 참여할 수 없습니다");
+    expect((await r.json()).error).toContain("대신 참여할 수 없어요");
     expect(fx.rpcCalls.some((x) => x.fn === "join_offer")).toBe(false);
     expect(canJoinAs("admin")).toBe(false);
     expect(canJoinAs("cro")).toBe(true);
@@ -321,7 +321,7 @@ describe("POST /api/quote/[token]/join", () => {
     expect(fx.rpcCalls.some((x) => x.fn === "join_offer")).toBe(false);
   });
   it("자리 없음·지명 몫·마감은 409 와 안내", async () => {
-    for (const [code, word] of [["full", "모두 찼습니다"], ["reserved", "지명한 기관 몫"], ["cutoff", "3영업일 전"], ["closed", "더 참여할 수 없습니다"]] as const) {
+    for (const [code, word] of [["full", "모두 찼어요"], ["reserved", "지명한 기관 몫"], ["cutoff", "3영업일 전"], ["closed", "더 참여할 수 없어요"]] as const) {
       fx.rpcResult.join_offer = { ok: false, code };
       const r = await joinPost(json({ agree: true, terms: CRO_TERMS_VERSION }), tctx);
       expect(r.status).toBe(409);
@@ -352,7 +352,7 @@ describe("참여 전에는 견적을 저장할 수 없다", () => {
     fx.session = admin;
     const r = await quotePost(json(body), tctx);
     expect(r.status).toBe(409);
-    expect((await r.json()).error).toContain("대신 입력할 수 없습니다");
+    expect((await r.json()).error).toContain("대신 입력할 수 없어요");
     expect(fx.rpcCalls.some((x) => x.fn === "save_quote")).toBe(false);
     expect(proxyEntryAllowed({ joined_at: null })).toBe(false);
     expect(proxyEntryAllowed({ joined_at: "2026-10-02T00:00:00Z" })).toBe(true);
@@ -371,7 +371,7 @@ describe("참여 전에는 견적을 저장할 수 없다", () => {
     fx.session = admin;
     const r2 = await uploadUrl(json({ name: "q.pdf", size: 1000, type: "application/pdf" }), tctx);
     expect(r2.status).toBe(409);
-    expect((await r2.json()).error).toContain("대신 올릴 수 없습니다");
+    expect((await r2.json()).error).toContain("대신 올릴 수 없어요");
   });
   it("철회한 초대는 403", async () => {
     join({ status: "declined", withdrawn_at: "2026-10-03T00:00:00Z" });
@@ -518,7 +518,7 @@ describe("자리와 단계 이름", () => {
     expect(seatsLabel({ cap: 3, used: 1, reserved: 1, open: 1, join_by: null })).toBe("자리 3곳 중 1곳 남음 (일부 자리는 참여 결정 기한까지 지명 기관 몫)");
     expect(seatsDetailLabel({ cap: null, used: 2, reserved: 0, open: null, join_by: null })).toBe("자리 제한 없음 · 지금 2곳 참여");
     expect(seatsDetailLabel({ cap: 3, used: 1, reserved: 1, open: 1, join_by: null })).toBe("자리 3곳 중 1곳 남음 (지명 기관 몫 1곳 별도)");
-    expect(seatsLabel({ cap: 3, used: 3, reserved: 0, open: 0, join_by: null })).toBe("자리 3곳 모두 찼습니다");
+    expect(seatsLabel({ cap: 3, used: 3, reserved: 0, open: 0, join_by: null })).toBe("자리 3곳 모두 찼어요");
   });
   it("참여 결정 기한: 2영업일, 회신 기한이 5영업일 안이면 1영업일, 회신 기한을 넘지 않음", () => {
     // 2026-10-16 금요일

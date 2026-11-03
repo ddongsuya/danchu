@@ -14,10 +14,10 @@ export function ClaimPendingButton({ token }: { token: string }) {
     try {
       const r = await fetch("/api/rfq/pending/claim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) });
       const d = (await r.json().catch(() => ({}))) as { error?: string; rfqNo?: string };
-      if (!r.ok || !d.rfqNo) throw new Error(d.error || "접수하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      if (!r.ok || !d.rfqNo) throw new Error(d.error || "접수하지 못했어요. 잠시 후 다시 시도해 주세요.");
       router.replace(`/app/new/done?no=${encodeURIComponent(d.rfqNo)}`);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "접수하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setErr(e instanceof Error ? e.message : "접수하지 못했어요. 잠시 후 다시 시도해 주세요.");
       setBusy(false);
     }
   };

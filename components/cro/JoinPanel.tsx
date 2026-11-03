@@ -25,10 +25,10 @@ export function JoinPanel({ token, seats, afterDeclineHref, operator = false, de
     try {
       const res = await fetch(`/api/quote/${token}/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agree: true, terms: CRO_TERMS_VERSION }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(d.error || "참여를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      if (!res.ok) throw new Error(d.error || "참여를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "참여를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setError(e instanceof Error ? e.message : "참여를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
       setBusy(false);
     }
   };
@@ -38,12 +38,12 @@ export function JoinPanel({ token, seats, afterDeclineHref, operator = false, de
       <div className="join__head">
         <h2 id="join-title">{rejoinBy ? "불참을 취소하고 다시 참여할까요?" : "이 요청에 참여할까요?"}</h2>
         <p className="join__lead">
-          {rejoinBy ? `이 요청에는 불참으로 처리했습니다. 참여 결정 기한(${rejoinBy})까지는 남은 자리가 있으면 다시 참여할 수 있습니다. ` : "지금은 요약만 보입니다. "}
-          참여하면 시험물질명, 의뢰자 설명, 첨부가 열리고, 카탈로그를 등록해 두셨다면 회신 초안이 채워집니다.
+          {rejoinBy ? `이 요청에는 불참으로 처리했어요. 참여 결정 기한(${rejoinBy})까지는 남은 자리가 있으면 다시 참여할 수 있어요. ` : "지금은 요약만 보여요. "}
+          참여하면 시험물질명, 의뢰자 설명, 첨부가 열리고, 카탈로그를 등록해 두셨다면 회신 초안이 채워져요.
         </p>
       </div>
       {operator ? (
-        <p className="note note--tint">운영자는 기관 대신 참여할 수 없습니다. 기관이 회신 링크나 포털에서 직접 참여하기를 눌러야 하고, 그 뒤에 PDF 견적을 옮겨 적을 수 있습니다. 참여를 권하려면 기관에 전화나 메일로 안내해 주세요.</p>
+        <p className="note note--tint">운영자는 기관 대신 참여할 수 없어요. 기관이 회신 링크나 포털에서 직접 참여하기를 눌러야 하고, 그 뒤에 PDF 견적을 옮겨 적을 수 있어요. 참여를 권하려면 기관에 전화나 메일로 안내해 주세요.</p>
       ) : (
         <p className="join__consent">{JOIN_CONSENT}</p>
       )}

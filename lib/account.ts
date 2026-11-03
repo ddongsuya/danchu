@@ -91,7 +91,7 @@ export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?:
   // 조회가 실패했는데 "요청 없음"으로 보고 계정을 지우면, 익명화되지 않은 요청이 같은 이메일의 다른 계정에 넘어갈 수 있다
   if (rfqError) {
     captureError(rfqError, "account:list-requests", { user: userId });
-    throw new Error("요청 목록을 확인하지 못해 계정을 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.");
+    throw new Error("요청 목록을 확인하지 못해 계정을 삭제하지 않았어요. 잠시 후 다시 시도해 주세요.");
   }
   const mine = rfqs ?? [];
 
@@ -108,7 +108,7 @@ export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?:
     await logEvent(r.id, "cancelled", "취소", "의뢰자 회원 탈퇴", opts.actorId ?? null, { reason: "account_deleted" });
     // 기관마다 따로 보낸다. 계정이 없거나 운영자 관리 기관은 로그인이 필요한 /cro 대신 회신 링크(/q)로
     const { data: inv } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email").eq("rfq_id", r.id);
-    await notifyInvitedOrgs(inv ?? [], { kind: "시스템", title: `${r.rfq_no} 요청이 취소되었습니다`, body: "의뢰자 사정으로 요청이 취소되어 회신이 닫혔습니다.", portalHref: "/cro" });
+    await notifyInvitedOrgs(inv ?? [], { kind: "시스템", title: `${r.rfq_no} 요청이 취소됐어요`, body: "의뢰자 사정으로 요청이 취소되어 회신이 닫혔어요.", portalHref: "/cro" });
     cancelled++;
   }
 
@@ -116,14 +116,14 @@ export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?:
   const { anonymized, filesDeleted } = await anonymizeRequests(sb, mine.map((r) => r.id));
   // 하나라도 익명화하지 못했으면 계정을 지우지 않는다 (지우면 user_id 가 비워진 채 원래 이메일이 남는다). 다시 시도하면 이어서 처리된다
   if (anonymized < mine.length) {
-    throw new Error("요청 정보를 모두 정리하지 못해 계정을 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.");
+    throw new Error("요청 정보를 모두 정리하지 못해 계정을 삭제하지 않았어요. 잠시 후 다시 시도해 주세요.");
   }
 
   // 4) 계정 삭제
   const { error } = await sb.auth.admin.deleteUser(userId);
   if (error) {
     captureError(error, "account:deleteUser", { user: userId });
-    throw new Error("계정을 삭제하지 못했습니다.");
+    throw new Error("계정을 삭제하지 못했어요.");
   }
 
   // 5) 운영자 알림 (이메일은 이미 지웠으므로 역할·회사만)

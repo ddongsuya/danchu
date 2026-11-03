@@ -14,12 +14,12 @@ export const maxDuration = 60;
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없어요." }, { status: 404 });
   if (rfq.started_at) return NextResponse.json({ ok: true, already: true });
-  if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "이미 마무리된 요청입니다." }, { status: 409 });
+  if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "이미 마무리된 요청이에요." }, { status: 409 });
   try {
     const r = await startRfq(rfq.id);
     // 안내한 기관 수는 의뢰자에게 돌려주지 않는다 (참여 선택형, 0023). 참여·제출 수는 요청 화면의 진행 현황으로 본다
@@ -27,6 +27,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ no: string }>
   } catch (e) {
     console.error("start rfq", e);
     // 시작 표시가 남았으면 예약 작업도 다시 하지 않는다. 운영자가 요청 화면에서 직접 전달한다
-    return NextResponse.json({ ok: false, error: "참여 안내를 마치지 못했습니다. 운영자가 확인해 안내합니다." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "참여 안내를 마치지 못했어요. 운영자가 확인해 안내해요." }, { status: 500 });
   }
 }

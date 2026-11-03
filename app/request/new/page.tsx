@@ -7,7 +7,7 @@ import { NewRequest } from "@/components/NewRequest";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "단추 · 견적 요청서",
-  description: "로그인 없이 요청서를 쓰고, 보내기 직전에 이메일만 확인하면 분야가 맞는 기관에 참여 안내가 갑니다.",
+  description: "로그인 없이 요청서를 쓰고, 보내기 직전에 이메일만 확인하면 분야가 맞는 기관에 참여 안내가 가요.",
   robots: { index: false, follow: true },
 };
 

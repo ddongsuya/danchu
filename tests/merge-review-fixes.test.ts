@@ -49,7 +49,7 @@ describe("의뢰자 목록", () => {
     expect(story).toMatch(/!!r\.compared_at && r\.submitted > 0/);
     expect(story).toMatch(/!r\.selected_quote_id && reportReady\(r\)/);
     const ov = src("components/app/RequestOverview.tsx");
-    expect(ov).not.toMatch(/회신 기한까지는 수정될 수 있습니다/);
+    expect(ov).not.toMatch(/회신 기한까지는 수정될 수 있어요/);
     expect(src("app/app/page.tsx")).toMatch(/outcome, substance/);
   });
 });

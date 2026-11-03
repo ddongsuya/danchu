@@ -37,15 +37,15 @@ export function SelectCroForm({
       if (res.status === 409 && d.code === "quote_changed") {
         // 화면을 연 뒤 견적이 바뀌었다. 새 내용을 불러오고, 바뀐 견적에 다시 동의하게 한다
         setAgree(false);
-        setError(d.error || "견적이 바뀌었습니다. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.");
+        setError(d.error || "견적이 바뀌었어요. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.");
         router.refresh();
         return;
       }
-      if (!res.ok) throw new Error(d.error || "선택을 저장하지 못했습니다.");
+      if (!res.ok) throw new Error(d.error || "선택을 저장하지 못했어요.");
       setDone(true);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "선택을 저장하지 못했습니다.");
+      setError(e instanceof Error ? e.message : "선택을 저장하지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -55,8 +55,8 @@ export function SelectCroForm({
     return (
       <div className="card rise-in" style={{ padding: "36px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
         <CheckDisc size={64} />
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>선택을 마쳤습니다</h2>
-        <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 360 }}>{croName} · 서로 연락처를 주고받았습니다. 기관 담당자 연락처는 요청 상세에 있습니다. 계약을 맺고 기관이 보고하면 그 내용을 확인해 주세요.</p>
+        <h2 style={{ fontSize: 22, fontWeight: 700 }}>선택을 마쳤어요</h2>
+        <p style={{ fontSize: 15, color: "var(--body)", maxWidth: 360 }}>{croName} · 서로 연락처를 주고받았어요. 기관 담당자 연락처는 요청 상세에 있어요. 계약을 맺고 기관이 보고하면 그 내용을 확인해 주세요.</p>
         <Link href={`/app/r/${no}`} className="b1" style={{ marginTop: 8 }}>진행 상태 보기</Link>
       </div>
     );
@@ -77,14 +77,14 @@ export function SelectCroForm({
       </div>
 
       <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
-        <b style={{ fontWeight: 600 }}>선택하면 서로 연락처를 주고받습니다</b>
+        <b style={{ fontWeight: 600 }}>선택하면 서로 연락처를 주고받아요</b>
         <span>이 기관에 공개되는 우리 연락처: {contact}</span>
-        <span>기관 담당자 연락처는 선택 직후 요청 상세에 표시되고 메일로도 보내 드립니다.</span>
+        <span>기관 담당자 연락처는 선택 직후 요청 상세에 표시되고 메일로도 보내요.</span>
       </div>
 
       {others.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>선택하지 않은 기관에는 결과만 안내됩니다</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>선택하지 않은 기관에는 결과만 안내돼요</div>
           {others.map((o) => (
             <div key={o.name} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "12px 16px", border: "1px solid var(--cline)", borderRadius: 12, fontSize: 14, background: "var(--wh)" }}>
               <span>{o.name}</span>

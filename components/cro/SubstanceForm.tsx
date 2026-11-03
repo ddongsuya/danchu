@@ -27,11 +27,11 @@ export function SubstanceForm({ awardId, qty, when, note, updatedAt }: { awardId
         try {
           const res = await fetch(`/api/awards/${awardId}/substance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) });
           const d = (await res.json().catch(() => ({}))) as { error?: string };
-          if (!res.ok) throw new Error(d.error || "저장하지 못했습니다.");
+          if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
           setSaved(true);
           router.refresh();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "저장하지 못했습니다.");
+          setError(err instanceof Error ? err.message : "저장하지 못했어요.");
         } finally {
           setBusy(false);
         }
@@ -40,7 +40,7 @@ export function SubstanceForm({ awardId, qty, when, note, updatedAt }: { awardId
       <div>
         <b style={{ fontSize: 14, fontWeight: 700 }}>시험물질 필요량</b>
         <small style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>
-          {updatedAt ? `의뢰자에게 안내했습니다 · ${new Date(updatedAt).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })}` : "시험물질 정보를 받은 뒤 적어 주세요. 저장하면 의뢰자에게 알림이 갑니다."}
+          {updatedAt ? `의뢰자에게 안내했어요 · ${new Date(updatedAt).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })}` : "시험물질 정보를 받은 뒤 적어 주세요. 저장하면 의뢰자에게 알림이 가요."}
         </small>
       </div>
       <div className="grid2">
@@ -58,7 +58,7 @@ export function SubstanceForm({ awardId, qty, when, note, updatedAt }: { awardId
         <input id={`sn-${awardId}`} className="inp" style={{ height: 44 }} value={v.note} onChange={set("note", SUBSTANCE_LIMITS.note)} placeholder="예: 냉장 보관, 시험성적서(CoA) 함께 보내기" />
       </div>
       {error && <p className="note note--err" role="alert">{error}</p>}
-      {saved && !dirty && <p className="note note--ok" role="status">저장했습니다. 의뢰자에게 알림을 보냈습니다.</p>}
+      {saved && !dirty && <p className="note note--ok" role="status">저장했어요. 의뢰자에게 알림을 보냈어요.</p>}
       <button type="submit" className="b1" disabled={!ok || busy}>{busy ? "저장 중…" : updatedAt ? "고쳐서 다시 안내" : "의뢰자에게 안내"}</button>
     </form>
   );

@@ -36,7 +36,7 @@ export function DurationCalc() {
           <div><b key={r.rodent}>{r.rodent}</b><span>설치류</span></div>
           <div><b key={r.nonRodent}>{r.nonRodent}</b><span>비설치류</span></div>
         </div>
-        <p className="calc__note">요청서에서는 <b>{r.items.join(" · ")}</b> 항목에 해당합니다.{r.note ? ` ${r.note}` : ""}</p>
+        <p className="calc__note">요청서에서는 <b>{r.items.join(" · ")}</b> 항목에 해당해요.{r.note ? ` ${r.note}` : ""}</p>
       </div>
     </div>
   );

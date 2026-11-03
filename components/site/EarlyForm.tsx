@@ -83,7 +83,7 @@ export function EarlyForm({ role, id }: { role: EarlyRole; id: string }) {
     return (
       <div className="ef-done" role="status">
         <b>예약을 받았어요.</b>
-        <p>{req ? "오픈 전에 이메일로 먼저 알려드릴게요." : "오픈 전에 이메일로 먼저 연락드릴게요. 궁금한 점은 그때 함께 답해 드려요."}</p>
+        <p>{req ? "오픈 전에 이메일로 먼저 알려드릴게요." : "오픈 전에 이메일로 먼저 연락드릴게요. 궁금한 점은 그때 함께 답해요."}</p>
       </div>
     );
   }

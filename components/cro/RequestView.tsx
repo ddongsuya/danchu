@@ -27,20 +27,20 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
       {deciding && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} declineEndpoint={declineEndpoint} />}
       {/* 불참 되돌리기 (2026-10-20 결정 3): 참여 전 불참만, 참여 결정 기한 전, 자리가 남았을 때. 참여와 같은 동의·같은 길(join_offer) */}
       {got.canRejoin && !got.withdrawn && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} rejoinBy={joinByLabel} />}
-      {summary && got.declined && !got.withdrawn && !got.canRejoin && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청에는 불참으로 처리했습니다.{joinByLabel ? ` 참여 결정 기한(${joinByLabel})이 지나 다시 참여할 수 없습니다.` : ""}</div>}
-      {got.withdrawn && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청의 참여를 철회했습니다. 청구하지 않으며, 작성 중이던 내용은 의뢰자에게 보이지 않습니다. 철회는 되돌릴 수 없습니다.</div>}
+      {summary && got.declined && !got.withdrawn && !got.canRejoin && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청에는 불참으로 처리했어요.{joinByLabel ? ` 참여 결정 기한(${joinByLabel})이 지나 다시 참여할 수 없어요.` : ""}</div>}
+      {got.withdrawn && !got.closed && <div className="note note--tint" style={{ marginBottom: 16 }}>이 요청의 참여를 철회했어요. 청구하지 않으며, 작성 중이던 내용은 의뢰자에게 보이지 않아요. 철회는 되돌릴 수 없어요.</div>}
 
       {!summary && rfq.identityMasked && !rfq.masked && (
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <Lock />
-          <span>의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 이 기관을 선정하면 공개됩니다. 요청 내용에 대한 질문은 회신의 문의 항목으로 남겨 주세요. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.</span>
+          <span>의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 이 기관을 선정하면 공개돼요. 요청 내용에 대한 질문은 회신의 문의 항목으로 남겨 주세요. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.</span>
         </div>
       )}
       {!summary && rfq.masked && (
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <Lock />
           <span>
-            기밀 등급 <b style={{ fontWeight: 600 }}>CDA 필요</b>. 요청에 맞는 CDA를 양측이 체결하고 운영자가 확인한 뒤 첨부 자료가 열립니다. 단추 화면의 회사명과 연락처는 선정 시 공개되며, CDA 문서에 당사자로 적힌 정보는 체결 과정에서 알게 될 수 있습니다. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.{" "}
+            기밀 등급 <b style={{ fontWeight: 600 }}>CDA 필요</b>. 요청에 맞는 CDA를 양측이 체결하고 운영자가 확인한 뒤 첨부 자료가 열려요. 단추 화면의 회사명과 연락처는 선정 시 공개되며, CDA 문서에 당사자로 적힌 정보는 체결 과정에서 알게 될 수 있어요. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.{" "}
             <a href={`mailto:limjm900202@gmail.com?subject=${encodeURIComponent(`[${rfq.no}] CDA 서명 요청`)}`}>CDA 서명 요청 →</a>
           </span>
         </div>
@@ -87,7 +87,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           {!summary && (
           <div className="card" style={{ padding: "6px 18px" }}>
             <div style={{ padding: "12px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>공통 조건</div>
-            {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>의뢰자가 상세 조건을 입력하지 않았습니다. 기관의 설계로 견적하고 회신에 설명해 주세요.</p>}
+            {rfq.common.length === 0 && <p style={{ padding: "6px 0 12px", fontSize: 14, color: "var(--muted)" }}>의뢰자가 상세 조건을 입력하지 않았어요. 기관의 설계로 견적하고 회신에 설명해 주세요.</p>}
             {rfq.common.map(([k, v]) => (
               <div key={k} className="kv" style={{ borderTop: "1px solid var(--track)" }}>
                 <span className="kv__k">{k}</span>
@@ -110,7 +110,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           <div className="card" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <h2 style={{ fontSize: 16, fontWeight: 700 }}>요청 시험 항목 {rfq.rows.length}</h2>
-              <span style={{ fontSize: 12, color: "var(--muted)" }}>{summary ? "종 · 회복 기간 · GLP 여부" : "항목마다 견적을 적습니다"}</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>{summary ? "종 · 회복 기간 · GLP 여부" : "항목마다 견적을 적어요"}</span>
             </div>
             {rfq.rows.map((r) => {
               const it = draft?.items.find((x) => x.seq === r.seq);
@@ -140,7 +140,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
           {!summary && !submitted && !got.closed && !got.declined && !got.expired && withdrawHref && (
             <div style={{ textAlign: "center" }}>
               <Link href={withdrawHref} className="btxt">참여 철회</Link>
-              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다. 철회한 뒤에는 다시 참여할 수 없습니다.</p>
+              <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않아요. 철회한 뒤에는 다시 참여할 수 없어요.</p>
             </div>
           )}
         </div>

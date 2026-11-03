@@ -127,7 +127,7 @@ export const EXTRA_FIELDS: Partial<Record<Cat, Field[]>> = {
     { id: "matrix", type: "chips", label: "검체 종류", options: ["혈장", "혈청", "전혈", "뇨", "분변", "담즙", "조직", "뇌척수액"] },
     { id: "anticoag", type: "select", label: "항응고제", options: ["헤파린", "EDTA-K2", "EDTA-K3", "구연산나트륨", "없음"] },
     { id: "instrument", type: "select", label: "분석 장비", options: ["LC-MS/MS", "HPLC", "ELISA", "qPCR", "LSC(방사능)", "기타"] },
-    { id: "validation", type: "select", label: "분석법 수준", options: ["Full validation (GLP)", "검량선·QC 수준 (비GLP·내부 확인용)", "의뢰자 분석법 이전"], help: "Partial validation은 로트 변경 등 별도 상황에서 추가로 견적합니다." },
+    { id: "validation", type: "select", label: "분석법 수준", options: ["Full validation (GLP)", "검량선·QC 수준 (비GLP·내부 확인용)", "의뢰자 분석법 이전"], help: "Partial validation은 로트 변경 등 별도 상황에서 추가로 견적해요." },
     { id: "methodDevFee", type: "text", label: "분석법 개발·검증 기본료 (원)", placeholder: "예: 15000000" },
   ],
   안전성약리: [
@@ -339,7 +339,7 @@ export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatc
     groups_ctrl: cat.groups_ctrl, groups_test: cat.groups_test, per_sex: cat.per_sex,
     recovery_weeks: cat.recovery_weeks, recovery_per_sex: cat.recovery_per_sex, dosing: cat.dosing, extra: cat.extra,
   };
-  if (!cat.available) return { ...base, avail: "불가", reason: "해당 조합은 수행하지 않습니다.", source: "catalog", design };
+  if (!cat.available) return { ...base, avail: "불가", reason: "해당 조합은 수행하지 않아요.", source: "catalog", design };
 
   const checks: string[] = [...picked.mismatch];
   const c = row.category;

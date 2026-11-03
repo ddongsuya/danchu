@@ -19,7 +19,7 @@ export default function Forgot() {
       await postJson("/api/auth/forgot", { email });
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "보내지 못했습니다.");
+      setError(err instanceof Error ? err.message : "보내지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -28,9 +28,9 @@ export default function Forgot() {
   return (
     <div className="auth__card">
       {sent ? (
-        <Done title="재설정 메일을 보냈습니다">
+        <Done title="재설정 메일을 보냈어요">
           <p>
-            <b>{email}</b>이 가입된 주소라면 비밀번호 재설정 링크가 도착합니다. 링크는 1시간 동안 유효합니다.
+            <b>{email}</b>이 가입된 주소라면 비밀번호 재설정 링크가 도착해요. 링크는 1시간 동안 유효해요.
           </p>
           <Link href="/login" className="btn--ghost" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>로그인으로</Link>
         </Done>
@@ -38,7 +38,7 @@ export default function Forgot() {
         <>
           <div>
             <h1 className="auth__title">비밀번호 재설정</h1>
-            <p className="auth__sub">가입한 이메일을 알려주시면 새 비밀번호 링크를 보내드려요.</p>
+            <p className="auth__sub">가입한 이메일을 알려주시면 새 비밀번호 링크를 보내요.</p>
           </div>
           <form className="auth__form" onSubmit={submit}>
             <Field id="email" label="이메일" required>

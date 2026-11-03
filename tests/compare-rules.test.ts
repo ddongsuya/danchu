@@ -37,7 +37,9 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
     expect((head.match(/<li>/g) ?? []).length).toBe(7);
     expect((sub.match(/<li>/g) ?? []).length).toBe(7);
     for (let n = 1; n <= 15; n++) expect(src("app/terms/page.tsx")).toContain(`<h2>제${n}조 (`);
-    expect(src("app/terms/page.tsx")).toContain('version="v1.1"');
+    // 화면에는 판 번호 대신 시행일과 부칙을 적는다 (공정위 표준약관 관행, 2026-11-03)
+    expect(src("app/terms/page.tsx")).not.toContain("version=");
+    expect(src("app/terms/page.tsx")).toContain("<h2>부칙</h2>");
   });
   it("약관 밖 화면·메시지에 제4조7항을 마감 근거로 인용하는 문구가 없다 (판 이력 주석은 제외)", () => {
     for (const f of [...walk("app"), ...walk("lib"), ...walk("components")].filter((f) => !f.endsWith(join("app", "terms", "page.tsx")))) {
@@ -56,9 +58,9 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
     for (const f of ["app/cro/quotes/page.tsx", "components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx", "app/api/admin/rfqs/[no]/deadline/route.ts", "app/api/cron/daily/route.ts", "app/api/admin/rfqs/[no]/distribute/route.ts"]) {
       const s = visible(src(f));
       expect(s, f).not.toMatch(/회신 기한까지(는)? (수정|고칠)/);
-      expect(s, f).not.toMatch(/운영자가 회신을 마감하면|기한을 늘려 다시 연|비교표를 닫고 회신을 다시 받습니다/);
+      expect(s, f).not.toMatch(/운영자가 회신을 마감하면|기한을 늘려 다시 연|비교표를 닫고 회신을 다시 받아요/);
     }
-    for (const f of ["app/cro/quotes/page.tsx", "components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx"]) expect(src(f), f).toMatch(/열린 뒤에는 (수정하거나|고치거나) 다시 제출할 수 없습니다/);
+    for (const f of ["app/cro/quotes/page.tsx", "components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx"]) expect(src(f), f).toMatch(/열린 뒤에는 (수정하거나|고치거나) 다시 제출할 수 없어요/);
   });
   it("옮겨 적기 오류는 비교표가 열리기 전에만 바로잡고, 열린 뒤에는 고치지 않고 알린다 (약관 제8조·화면이 같은 말)", () => {
     for (const f of ["app/terms/page.tsx", "app/app/r/[no]/q/[quoteId]/page.tsx", "lib/faq.ts", "components/CompareBoard.tsx"]) {
@@ -80,7 +82,7 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
   });
   it("거절 문구는 정중한 한국어이고 대시가 없다", () => {
     for (const m of [COMPARE_LOCKED_DEADLINE, EARLY_CLOSE_REFUSED]) {
-      expect(m).toMatch(/(니다|주세요)\.$/);
+      expect(m).toMatch(/(니다|요)\.$/);
       expect(m).not.toMatch(/[—–]/);
     }
   });
@@ -108,9 +110,9 @@ describe("개인정보처리방침: 선정 때 연락처를 두 방향으로 제
     expect(privacy).toContain("대표 이메일이 없을 때는 기관 담당자 계정의 이메일");
     expect(privacy).toMatch(/<td>기관 담당자 정보<\/td> <td>기관 등록을 해지하거나 담당자 정보가 바뀌거나 담당자 계정을 삭제할 때까지\. 참여 기록의 접속 IP 주소와 브라우저 정보는 3개월<\/td>/);
   });
-  it("방침 판(v1.1)과 시행일은 그대로, 요청마다 남는 동의 판과 기관 조건 판은 올렸다", () => {
+  it("방침 시행일은 그대로(판 번호는 화면에 적지 않음), 요청마다 남는 동의 판과 기관 조건 판은 올렸다", () => {
     const raw = src("app/privacy/page.tsx");
-    expect(raw).toContain('version="v1.1"');
+    expect(raw).not.toContain("version=");
     expect(raw).toContain('effectiveDate="2026년 11월 16일"');
     expect(CONSENT_VERSION).toBe("2026-10-28");
     expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-21");

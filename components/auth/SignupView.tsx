@@ -47,7 +47,7 @@ function Signup() {
       const result = await postJson<{ mailed: boolean }>("/api/auth/signup", { ...f, password: usePw ? f.password : "", next });
       setMailed(result.mailed); setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "가입하지 못했습니다.");
+      setError(err instanceof Error ? err.message : "가입하지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -56,13 +56,13 @@ function Signup() {
   if (done) {
     return (
       <div className="auth__card">
-        <Done title={mailed ? "확인 메일을 보냈습니다" : "계정은 만들었지만 메일을 보내지 못했습니다"}>
+        <Done title={mailed ? "확인 메일을 보냈어요" : "계정은 만들었지만 메일을 보내지 못했어요"}>
           <p>
-            <b>{f.email}</b>로 보낸 메일의 버튼을 누르면 가입이 완료되고 {next === "/app/new" ? "바로 견적 요청 화면이 열립니다" : "바로 로그인됩니다"}.
+            <b>{f.email}</b>로 보낸 메일의 버튼을 누르면 가입이 완료되고 {next === "/app/new" ? "바로 견적 요청 화면이 열려요" : "바로 로그인돼요"}.
           </p>
-          <p style={{ fontSize: 14, color: "var(--muted)" }}>휴대폰에서 쓰시려면 휴대폰의 메일 앱에서 버튼을 누르세요. 링크를 누른 기기에서 로그인됩니다.</p>
-          <p style={{ fontSize: 14, color: "var(--muted)" }}>메일이 오지 않으면 스팸함을 확인해 주세요. 이 주소로 이미 접수한 견적 요청이 있다면 로그인 후 자동으로 연결됩니다.</p>
-          <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email, next }); setMailed(true); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했습니다."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
+          <p style={{ fontSize: 14, color: "var(--muted)" }}>휴대폰에서 쓰시려면 휴대폰의 메일 앱에서 버튼을 누르세요. 링크를 누른 기기에서 로그인돼요.</p>
+          <p style={{ fontSize: 14, color: "var(--muted)" }}>메일이 오지 않으면 스팸함을 확인해 주세요. 이 주소로 이미 접수한 견적 요청이 있다면 로그인 후 자동으로 연결돼요.</p>
+          <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email, next }); setMailed(true); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했어요."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
           <button type="button" className="btn--ghost" onClick={() => setDone(false)}>다른 이메일로 가입</button><ErrorBox>{error}</ErrorBox>
         </Done>
       </div>
@@ -86,7 +86,7 @@ function Signup() {
             <TextInput id="name" value={f.name} onChange={set("name")} autoComplete="name" />
           </Field>
 
-          <Field id="email" label="업무용 이메일" required help="견적·비교표 알림이 이 주소로 갑니다.">
+          <Field id="email" label="업무용 이메일" required help="견적·비교표 알림이 이 주소로 가요.">
             <TextInput id="email" type="email" inputMode="email" value={f.email} onChange={set("email")} placeholder="name@company.com" autoComplete="email" />
           </Field>
 
@@ -113,7 +113,7 @@ function Signup() {
             <button type="button" aria-pressed={usePw} onClick={() => setUsePw(true)}>비밀번호도 설정</button>
           </div>
           <p className="field__help">
-            {usePw ? "비밀번호와 이메일 링크 둘 다로 로그인할 수 있습니다." : "로그인할 때마다 이메일로 받은 링크를 누릅니다. 비밀번호는 나중에 프로필에서 정할 수 있어요."}
+            {usePw ? "비밀번호와 이메일 링크 둘 다로 로그인할 수 있어요." : "로그인할 때마다 이메일로 받은 링크를 눌러요. 비밀번호는 나중에 프로필에서 정할 수 있어요."}
           </p>
         </div>
         {usePw && (

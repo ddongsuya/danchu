@@ -12,7 +12,7 @@ export async function retryAttachment(
     body: JSON.stringify({ name: file.name, size: file.size, type: file.type }),
   });
   const d = await r.json();
-  if (!r.ok) throw new Error(d.error || "업로드를 준비하지 못했습니다.");
+  if (!r.ok) throw new Error(d.error || "업로드를 준비하지 못했어요.");
   if (d.uploaded) return true;
   if (!(await uploadToSigned(d, file))) return false;
   const confirmed = await fetch(`/api/rfq/${no}/files/confirm`, {
@@ -51,7 +51,7 @@ export function AttachmentRetry({ no }: { no: string }) {
             try {
               if (!(await retryAttachment(no, file)))
                 throw new Error(
-                  "업로드하지 못했습니다. 파일을 다시 선택해 주세요.",
+                  "업로드하지 못했어요. 파일을 다시 선택해 주세요.",
                 );
               setMsg(`${file.name} 업로드 완료`);
               router.refresh();
@@ -69,7 +69,7 @@ export function AttachmentRetry({ no }: { no: string }) {
         {busy
           ? "업로드 중…"
           : msg ||
-            "파일당 20MB 이하, 최대 10개. 같은 이름과 크기의 미완료 파일은 다시 업로드합니다."}
+            "파일당 20MB 이하, 최대 10개. 같은 이름과 크기의 미완료 파일은 다시 업로드해요."}
       </p>
     </div>
   );

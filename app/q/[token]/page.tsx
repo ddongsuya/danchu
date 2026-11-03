@@ -25,11 +25,11 @@ export default async function TokenRequest({ params, searchParams }: { params: P
         <div className="ph">
           <div>
             <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{got.rfq.no}</span>
-            <h1>{withdraw ? "이 요청의 참여를 철회합니다" : "이번 요청에 불참합니다"}</h1>
+            <h1>{withdraw ? "이 요청의 참여를 철회해요" : "이번 요청에 불참해요"}</h1>
             <p>
               {withdraw
-                ? "철회하면 자리가 비고 청구하지 않습니다. 이 요청에는 다시 참여할 수 없습니다."
-                : `불참해도 다음 참여 안내에 영향이 없습니다.${joinByLabel ? ` 참여 결정 기한(${joinByLabel})까지는 남은 자리가 있으면 다시 참여할 수 있습니다.` : ""}`}
+                ? "철회하면 자리가 비고 청구하지 않아요. 이 요청에는 다시 참여할 수 없어요."
+                : `불참해도 다음 참여 안내에 영향이 없어요.${joinByLabel ? ` 참여 결정 기한(${joinByLabel})까지는 남은 자리가 있으면 다시 참여할 수 있어요.` : ""}`}
             </p>
           </div>
         </div>

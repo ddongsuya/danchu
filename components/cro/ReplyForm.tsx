@@ -49,7 +49,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
   return (
     <div style={{ borderTop: "1px dashed var(--cline)", paddingTop: 10 }}>
       <button type="button" onClick={() => setOpen(!open)} style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--muted)", textAlign: "left", background: "none", border: 0, padding: 0 }}>
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (등록한 기본 조건을 적어 두면 비교표에 표시됩니다)"}</span>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>설계 · {summary || "미입력 (등록한 기본 조건을 적어 두면 비교표에 표시돼요)"}</span>
         <span style={{ flex: "none", color: "var(--brand)", fontWeight: 600 }}>{open ? "접기" : "수정"}</span>
       </button>
       {open && (
@@ -90,7 +90,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
       )}
       {explain.length > 0 && (
         <details style={{ marginTop: 10 }}>
-          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>시험 설계와 비용 조건 <span style={{ fontWeight: 400, color: "var(--muted)" }}>{filledExp} / {explain.length} · 비교표에 나란히 표시됩니다</span></summary>
+          <summary style={{ cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--brand)" }}>시험 설계와 비용 조건 <span style={{ fontWeight: 400, color: "var(--muted)" }}>{filledExp} / {explain.length} · 비교표에 나란히 표시돼요</span></summary>
           <div className="stack" style={{ gap: 8, marginTop: 8 }}>
             {explain.map((f) => (
               <div key={f.id} className="fld" style={{ gap: 4 }}>
@@ -102,7 +102,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
         </details>
       )}
       <div className="fld" style={{ gap: 4, marginTop: 10 }}>
-        <label className="fld__lab" style={{ fontSize: 12 }}>그 밖의 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 비교표에 그대로 표시됩니다</span></label>
+        <label className="fld__lab" style={{ fontSize: 12 }}>그 밖의 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 비교표에 그대로 표시돼요</span></label>
         <textarea className="ta" rows={2} style={{ fontSize: 13 }} placeholder="예: 회복 동물은 대조군·고용량군의 마지막 5마리/성 지정. 분석법 검증 1회 포함." disabled={disabled} value={dstr(value, "note")} onChange={(e) => onChange({ ...value, note: e.target.value.slice(0, 1000) })} />
       </div>
     </div>
@@ -164,7 +164,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         setPdfName(d.draft?.pdfName ?? "");
         if (d.draft && !d.draft.prefilled) setSaved("saved");
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했습니다."));
+      .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했어요."));
   }, [token, backHref, router]);
 
   // 화면을 떠날 때 대기 중인 자동 저장을 정리한다
@@ -179,7 +179,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, pdf]);
   const leave = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if ((dirty || pdf) && !window.confirm("아직 저장·제출하지 않은 변경사항 또는 첨부가 있습니다. 이 화면을 나갈까요?")) e.preventDefault();
+    if ((dirty || pdf) && !window.confirm("아직 저장·제출하지 않은 변경사항 또는 첨부가 있어요. 이 화면을 나갈까요?")) e.preventDefault();
   };
   const queueSave = (nextItems: ReplyItem[], nextNote: string, nextCommon: ReplyCommon, nextSteps: ScheduleStep[] = steps) => {
     if (readOnly) return;
@@ -242,15 +242,15 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const pickPdf = (f: File | null) => {
     setError("");
     if (!f) return setPdf(null);
-    if (f.size > MAX_PDF) return setError("PDF는 20MB 이하만 첨부할 수 있습니다.");
-    if (f.type && f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return setError("PDF 파일만 첨부할 수 있습니다.");
+    if (f.size > MAX_PDF) return setError("PDF는 20MB 이하만 첨부할 수 있어요.");
+    if (f.type && f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return setError("PDF 파일만 첨부할 수 있어요.");
     setPdf(f); setDirty(true);
   };
 
   if (error && !data) {
     return (
       <div className="empty">
-        <b>링크를 열 수 없습니다</b>
+        <b>링크를 열 수 없어요</b>
         {error}
         <div style={{ marginTop: 14 }}>
           <Link href={backHref} className="b2">돌아가기</Link>
@@ -272,7 +272,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
   const pending = items.filter((it) => it.checks && it.checks.length).length;
   const canSubmit = !readOnly && filled === items.length && !allNo && commonOk && pending === 0 && (!!pdf || !!pdfName);
   const blockedLabel = readOnly
-    ? "수정할 수 없습니다"
+    ? "수정할 수 없어요"
     : filled < items.length
       ? `항목 ${items.length - filled}개 남음`
       : allNo
@@ -299,17 +299,17 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       if (pdf) {
         const u = await fetch(`/api/quote/${token}/upload-url`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: pdf.name, size: pdf.size, type: pdf.type }) });
         const ud = (await u.json().catch(() => ({}))) as { path?: string; signedUrl?: string; error?: string };
-        if (!u.ok || !ud.path || !ud.signedUrl) throw new Error(ud.error || "PDF 업로드 준비에 실패했습니다.");
-        if (!(await uploadToSigned({ name: pdf.name, path: ud.path, signedUrl: ud.signedUrl }, pdf))) throw new Error("PDF 업로드에 실패했습니다. 네트워크를 확인하고 다시 시도해 주세요.");
+        if (!u.ok || !ud.path || !ud.signedUrl) throw new Error(ud.error || "PDF 업로드 준비에 실패했어요.");
+        if (!(await uploadToSigned({ name: pdf.name, path: ud.path, signedUrl: ud.signedUrl }, pdf))) throw new Error("PDF 업로드에 실패했어요. 네트워크를 확인하고 다시 시도해 주세요.");
         pdfRef = { path: ud.path, name: pdf.name, size: pdf.size };
       }
       const res = await fetch(`/api/quote/${token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items, note, common, steps, pdf: pdfRef }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(d.error || "제출에 실패했습니다.");
+      if (!res.ok) throw new Error(d.error || "제출에 실패했어요.");
       setDirty(false); setPdf(null);
       router.push(`${doneHref}${doneHref.includes("?") ? "&" : "?"}t=${total}&w=${finalW}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "제출에 실패했습니다.");
+      setError(e instanceof Error ? e.message : "제출에 실패했어요.");
       setBusy(false);
     }
   };
@@ -324,20 +324,20 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         </Link>
         <span role="status" style={{ fontSize: 12, fontWeight: 600, color: saved === "saved" ? "var(--ok)" : saved === "failed" ? "var(--err)" : "var(--muted)" }}>{readOnly ? "" : savedLabel}</span>
       </div>
-      {saved === "failed" && !readOnly && !isSubmitted && <div className="note note--err"><span>초안을 저장하지 못했습니다. 화면을 닫기 전에 다시 저장해 주세요.</span><button className="b2" type="button" onClick={() => queueSave(items, note, common)}>초안 다시 저장</button></div>}
-      {pdf && <p className="fld__help">첨부파일은 견적 제출 시 업로드됩니다. 화면을 닫으면 다시 선택해야 합니다.</p>}
+      {saved === "failed" && !readOnly && !isSubmitted && <div className="note note--err"><span>초안을 저장하지 못했어요. 화면을 닫기 전에 다시 저장해 주세요.</span><button className="b2" type="button" onClick={() => queueSave(items, note, common)}>초안 다시 저장</button></div>}
+      {pdf && <p className="fld__help">첨부파일은 견적 제출 시 업로드돼요. 화면을 닫으면 다시 선택해야 해요.</p>}
       <div className="ph">
         <div>
           <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>견적 회신 · {rfq.no} · {filled} / {items.length} 항목 완료</p>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p>시험마다 수행 가능 여부와 금액·기간을 적으세요. 금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수입니다. 앞 단계를 고르면 전체 일정이 순서대로 그려집니다.</p>
+          <p>시험마다 수행 가능 여부와 금액·기간을 적으세요. 금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수예요. 앞 단계를 고르면 전체 일정이 순서대로 그려져요.</p>
         </div>
       </div>
 
       {data.draft?.prefilled && !readOnly && (
         <div className="note" style={{ marginBottom: 16 }}>
-          <b>카탈로그로 초안을 채웠습니다.</b>{" "}
-          {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있습니다. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있습니다."}{" "}
+          <b>카탈로그로 초안을 채웠어요.</b>{" "}
+          {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
           <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
         </div>
       )}
@@ -345,7 +345,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       {rfq.ask.length > 0 && (
         <div className="note note--tint" style={{ marginBottom: 16, flexDirection: "column", alignItems: "stretch", gap: 6 }}>
           <b>회신에서 설명해 주세요</b>
-          <span style={{ fontSize: 13 }}>가이드라인이 정하지 않아 기관마다 다른 부분입니다. 해당 항목의 설계 설명 칸이나 전달 사항에 기관의 방식을 적어 주세요. 의뢰자는 기관별 설명을 나란히 봅니다.</span>
+          <span style={{ fontSize: 13 }}>가이드라인이 정하지 않아 기관마다 다른 부분이에요. 해당 항목의 설계 설명 칸이나 전달 사항에 기관의 방식을 적어 주세요. 의뢰자는 기관별 설명을 나란히 봐요.</span>
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: "flex", flexDirection: "column", gap: 3 }}>
             {rfq.ask.map((x) => <li key={x}>{x}</li>)}
           </ul>
@@ -354,7 +354,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
 
       {readOnly && (
         <div className="note note--err" style={{ marginBottom: 16 }}>
-          {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔습니다." : data.expired ? "이 링크는 만료되어 열람만 할 수 있습니다. 연장이 필요하면 limjm900202@gmail.com로 알려주세요." : data.withdrawn ? "참여를 철회한 요청입니다. 철회는 되돌릴 수 없습니다." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청입니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다." : "불참으로 처리한 요청입니다.") : "회신 기한이 지나 제출한 견적을 수정할 수 없습니다."}
+          {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔어요." : data.expired ? "이 링크는 만료되어 열람만 할 수 있어요. 연장이 필요하면 limjm900202@gmail.com로 알려주세요." : data.withdrawn ? "참여를 철회한 요청이에요. 철회는 되돌릴 수 없어요." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청이에요. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있어요." : "불참으로 처리한 요청이에요.") : "회신 기한이 지나 제출한 견적을 수정할 수 없어요."}
         </div>
       )}
 
@@ -390,7 +390,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
                 </div>
                 {checks.length > 0 && !readOnly && (
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
-                    <span>요청 조건이 등록한 기본 조건과 다릅니다. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
+                    <span>요청 조건이 등록한 기본 조건과 달라요. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
                     <button type="button" className="b2 bsm" style={{ flex: "none" }} disabled={busy} onClick={() => confirmChecks(r.seq)}>현재 금액과 기간으로 회신</button>
                   </div>
                 )}
@@ -460,7 +460,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             </div>
             <div className="fld">
               <span className="fld__lab">기본 포함 항목</span>
-              <span className="fld__help">총액에 포함된 것만 선택하세요. 비교표의 핵심 행입니다.</span>
+              <span className="fld__help">총액에 포함된 것만 선택하세요. 비교표의 핵심 행이에요.</span>
               <div className="chips">
                 {INCL_KEYS.map((k) => {
                   const on = common.includes.includes(k);
@@ -473,7 +473,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             {orgCerts && (
               <div className="fld">
                 <span className="fld__lab">보유 GLP 인증 (기관 정보에서 자동)</span>
-                <span style={{ fontSize: 14, color: "var(--body)" }}>{orgCerts.length ? orgCerts.join(" · ") : "등록된 인증이 없습니다. 기관 탭에서 등록하세요."}</span>
+                <span style={{ fontSize: 14, color: "var(--body)" }}>{orgCerts.length ? orgCerts.join(" · ") : "등록된 인증이 없어요. 기관 탭에서 등록하세요."}</span>
               </div>
             )}
             <div className="fld">
@@ -495,11 +495,11 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
               </span>
               <span style={{ color: "var(--brand)", fontWeight: 600, flex: "none" }}>{readOnly ? "" : pdf || pdfName ? "교체" : "첨부"}</span>
             </button>
-            <p className="fld__help" style={{ marginTop: 6 }}>비교표와 PDF가 다르면 PDF가 우선합니다. 단추가 불일치를 발견하면 확인을 요청합니다.</p>
+            <p className="fld__help" style={{ marginTop: 6 }}>비교표와 PDF가 다르면 PDF가 우선해요. 단추가 불일치를 발견하면 확인을 요청해요.</p>
           </div>
 
           {/* 제출 전 알아 둘 것: 휴대폰에서 아래에 붙는 제출 칸이 화면을 덮지 않게 칸 밖으로 뺐다 (2026-10-31) */}
-          {!readOnly && <p className="fld__help" style={{ margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보입니다. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없습니다. 다른 기관에는 보이지 않습니다.</p>}
+          {!readOnly && <p className="fld__help" style={{ margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보여요. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없어요. 다른 기관에는 보이지 않아요.</p>}
 
           {error && <p className="note note--err" role="alert">{error}</p>}
 

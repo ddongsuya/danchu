@@ -327,7 +327,7 @@ describe("화면", () => {
     expect(page).toContain("REFERENCE_LABEL");
     expect(page).toContain("REFERENCE_UNIT_LABEL");
   });
-  it("조정·참고 수치를 못 읽으면 \"없습니다\" 대신 오류를 보여 주고, 정지한 기관도 조정 대상에 넣는다", () => {
+  it("조정·참고 수치를 못 읽으면 \"없어요\" 대신 오류를 보여 주고, 정지한 기관도 조정 대상에 넣는다", () => {
     expect(page).toMatch(/error: adjError/);
     expect(page).toMatch(/error: refError/);
     expect(page).toMatch(/adjFailed \? \(/);

@@ -45,13 +45,13 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
         <div>
           <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{rfq.rfq_no} · 제출 {ymd(q.submitted_at)}</span>
           <h1>{q.cro_name}</h1>
-          {q.auto && <p className="note note--warn">기관 확인 전 예비 견적입니다. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
-          {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려 드립니다.</p>}
+          {q.auto && <p className="note note--warn">기관 확인 전 예비 견적이에요. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
+          {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었어요. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려요.</p>}
           {/* 아직 고를 수 있는 요청에서만 왜 선택할 수 없는지 알린다. 선정이 끝난 뒤에는 보이지 않는다 */}
           {!quoteSelectable(q) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && (
             <p className="note" style={{ marginTop: 10 }}>
               <span>
-                {q.valid_until && dday(q.valid_until).n < 0 ? "견적 유효기간이 지나 바로 선택할 수 없습니다." : "정식 견적서와 착수일이 확인되면 선택할 수 있습니다."}{" "}
+                {q.valid_until && dday(q.valid_until).n < 0 ? "견적 유효기간이 지나 바로 선택할 수 없어요." : "정식 견적서와 착수일이 확인되면 선택할 수 있어요."}{" "}
                 <Link href={`/app/support?rfq=${rfq.rfq_no}`} style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>정식 견적·유효기간 문의하기</Link>
               </span>
             </p>
@@ -160,12 +160,12 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
       <section id="schedule" className="card card--pad stack" style={{ gap: 16, marginTop: 16, scrollMarginTop: 80 }} aria-labelledby="schedule-title">
         <div className="stack" style={{ gap: 4 }}>
           <h2 id="schedule-title" style={{ fontSize: 18, fontWeight: 700 }}>전체 일정</h2>
-          <p className="fld__help" style={{ margin: 0 }}>기관이 회신에 적은 시험 기간, 앞 단계, 보고서 기간으로 그린 예상 일정입니다. 실제 일정은 계약 때 기관과 확인하세요.</p>
+          <p className="fld__help" style={{ margin: 0 }}>기관이 회신에 적은 시험 기간, 앞 단계, 보고서 기간으로 그린 예상 일정이에요. 실제 일정은 계약 때 기관과 확인하세요.</p>
         </div>
         {plan ? (
           <ScheduleGantt plan={plan} startDate={q.start_date} bestFinal={best} scale={scaleWeeks(...others, q.final_weeks)} />
         ) : (
-          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>이 견적에는 순서와 보고서 기간이 없습니다. 항목별 기간은 위 목록에서 확인하세요.</p>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>이 견적에는 순서와 보고서 기간이 없어요. 항목별 기간은 위 목록에서 확인하세요.</p>
         )}
       </section>
 

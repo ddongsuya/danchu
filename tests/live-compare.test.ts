@@ -145,7 +145,7 @@ describe("견적 제출 알림: 비교표가 열리기 전에는 진행 현황�
     await vi.waitFor(() => expect(calls().some((c) => c[0][0] === "sponsor-1")).toBe(true));
     const sponsor = calls().filter((c) => c[0][0] === "sponsor-1");
     expect(sponsor).toHaveLength(1);
-    expect(sponsor[0][1].title).toContain("비교표가 열렸습니다");
+    expect(sponsor[0][1].title).toContain("비교표가 열렸어요");
     expect(sponsor[0][2]?.to).toEqual(["sponsor@example.com"]);
     expect(fx.logEvent.mock.calls.some((c) => c[1] === "compared")).toBe(true);
   });
@@ -153,7 +153,7 @@ describe("견적 제출 알림: 비교표가 열리기 전에는 진행 현황�
     fx.saveQuote.mockResolvedValueOnce({ ok: false, code: "closed" });
     const r = await submitQuote(json(body), ctx);
     expect(r.status).toBe(409);
-    expect((await r.json()).error).toContain("회신이 닫혔습니다");
+    expect((await r.json()).error).toContain("회신이 닫혔어요");
     expect(sponsorCall()).toBeUndefined();
   });
 });
@@ -204,7 +204,7 @@ describe("회신 마감 (compared_at = 회신 마감 시각)", () => {
     expect(r.status).toBe(409);
     const d = await r.json();
     expect(d.code).toBe("early_close_removed");
-    expect(d.error).toContain("회신 기한 전에는 회신을 마감할 수 없습니다");
+    expect(d.error).toContain("회신 기한 전에는 회신을 마감할 수 없어요");
     expect(d.error).not.toContain("의뢰자");
     expect(fx.calls.some((c) => c.op === "update")).toBe(false);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
@@ -284,7 +284,7 @@ describe("열린 비교표는 다시 열지 않고 회신 기한도 바꾸지 �
     expect(r.status).toBe(409);
     const d = await r.json();
     expect(d.code).toBe("compare_locked");
-    expect(d.error).toBe("비교표가 열린 요청은 회신 기한을 바꾸거나 회신을 다시 열 수 없습니다. 받은 견적으로 선정하시거나, 더 받아야 하면 새 요청으로 보내 주세요.");
+    expect(d.error).toBe("비교표가 열린 요청은 회신 기한을 바꾸거나 회신을 다시 열 수 없어요. 받은 견적으로 선정하시거나, 더 받아야 하면 새 요청으로 보내 주세요.");
     expect(fx.calls.some((c) => c.op === "update")).toBe(false);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
     expect(fx.audit).not.toHaveBeenCalled();

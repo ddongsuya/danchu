@@ -317,7 +317,7 @@ export function BrandFilm({ film, ratio, seek, controls, fill = false, variant =
           <div className="bfilm__progress" aria-hidden="true"><i /></div>
           <div className="bfilm__buttons">
             {phase === "still" ? (
-              <p className="bfilm__note">동작 줄이기 설정에 맞춰 마지막 장면만 보여 드립니다.</p>
+              <p className="bfilm__note">동작 줄이기 설정에 맞춰 마지막 장면만 보여요.</p>
             ) : (
               <button
                 ref={pauseRef}

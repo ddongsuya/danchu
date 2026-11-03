@@ -5,7 +5,7 @@ import "./page.css";
 
 export const metadata: Metadata = {
   title: "기관 참여 안내 · 단추",
-  description: "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 시범운영 기간에는 기관도 무료입니다.",
+  description: "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 시범운영 기간에는 기관도 무료예요.",
 };
 
 export default function Page() {
@@ -19,11 +19,11 @@ export default function Page() {
 <figure className="hfilm"><CroHeroReel /></figure>
 </section>
 
-<section className="rsx film-steps" aria-labelledby="st"><header><h2 id="st">참여부터 계약까지<br /><span>이렇게 진행됩니다.</span></h2></header><CroStepsReel /></section>
+<section className="rsx film-steps" aria-labelledby="st"><header><h2 id="st">참여부터 계약까지<br /><span>이렇게 진행돼요.</span></h2></header><CroStepsReel /></section>
 
-<section className="rsx side" aria-labelledby="fm"><header><h2 id="fm">단추에 견적서를<br /><span>보내주세요.</span><br />정리는 단추가 합니다.</h2></header><CroReplyReel /></section>
+<section className="rsx side" aria-labelledby="fm"><header><h2 id="fm">단추에 견적서를<br /><span>보내주세요.</span><br />정리는 단추가 해요.</h2></header><CroReplyReel /></section>
 
-<section className="rsx side" aria-labelledby="ru"><header><h2 id="ru">모든 기관에<br /><span>같은 규칙이 적용됩니다.</span></h2></header><CroRulesReel /></section>
+<section className="rsx side" aria-labelledby="ru"><header><h2 id="ru">모든 기관에<br /><span>같은 규칙이 적용돼요.</span></h2></header><CroRulesReel /></section>
 
 <section className="freeb" aria-labelledby="tm" id="cro-terms">
 <div className="fg">
@@ -31,7 +31,7 @@ export default function Page() {
 <div className="fr">
 <p className="lead">그리고 단추가 마음에 든다면 협업을 결정해주세요.</p>
 <div className="act"><div><p className="actk">이것만 있으면 시작할 수 있어요.</p><div className="chk"><label><input type="checkbox" />기관명</label><label><input type="checkbox" />보유 GLP 인증</label><label><input type="checkbox" />수행 가능 분야</label><label><input type="checkbox" />담당자 연락처</label></div></div>
-<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a></div><p className="gatehint">네가지 모두 확인하면 신청할 수 있습니다.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
+<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a></div><p className="gatehint">네가지 모두 확인하면 신청할 수 있어요.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
 <details className="terms"><summary>이용 조건 전체 보기</summary>
 <div className="tm">
 <section><h3>이용 조건 동의 및 참여 기록</h3>

@@ -10,13 +10,13 @@ import { useRouter } from "next/navigation";
  */
 const COPY = {
   decline: {
-    help: "사유는 단추 운영자에게만 전달됩니다. 불참해도 다음 참여 안내에 영향이 없습니다.",
+    help: "사유는 단추 운영자에게만 전달돼요. 불참해도 다음 참여 안내에 영향이 없어요.",
     placeholder: "예: 해당 시험 항목 미수행, 일정 불가, 시설 점검 중",
     submit: "불참으로 처리",
     operatorSubmit: "기관이 알린 불참 기록",
   },
   withdraw: {
-    help: "제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다. 작성 중이던 내용은 의뢰자에게 보이지 않습니다. 사유는 단추 운영자에게만 전달됩니다.",
+    help: "제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않아요. 작성 중이던 내용은 의뢰자에게 보이지 않아요. 사유는 단추 운영자에게만 전달돼요.",
     placeholder: "예: 일정 조정이 어려움, 요청 조건 확인 결과 수행 불가",
     submit: "참여 철회",
     operatorSubmit: "기관이 알린 철회 기록",
@@ -50,11 +50,11 @@ export function DeclineForm({ token, mode, backHref, onCancel, afterHref, operat
             try {
               const res = await fetch(endpoint ?? `/api/quote/${token}/decline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason, mode }) });
               const d = (await res.json().catch(() => ({}))) as { error?: string };
-              if (!res.ok) throw new Error(d.error || "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+              if (!res.ok) throw new Error(d.error || "처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
               router.push(afterHref);
               router.refresh();
             } catch (e) {
-              setError(e instanceof Error ? e.message : "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+              setError(e instanceof Error ? e.message : "처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
               setBusy(false);
             }
           }}

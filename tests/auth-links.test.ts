@@ -29,9 +29,9 @@ describe("authErrorKo — Supabase 오류를 사용자 문구로", () => {
     expect(authErrorKo("User already registered")).toMatch(/이미 가입/);
   });
   it("자격 증명 오류", () => {
-    expect(authErrorKo("Invalid login credentials")).toMatch(/맞지 않습니다/);
+    expect(authErrorKo("Invalid login credentials")).toMatch(/맞지 않아요/);
   });
   it("알 수 없는 오류는 일반 문구", () => {
-    expect(authErrorKo(undefined)).toMatch(/처리하지 못했습니다/);
+    expect(authErrorKo(undefined)).toMatch(/처리하지 못했어요/);
   });
 });

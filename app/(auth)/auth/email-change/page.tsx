@@ -10,16 +10,16 @@ export default async function EmailChangePage({ searchParams }: { searchParams: 
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) {
     return (
       <div className="auth__card">
-        <h1 className="auth__title">링크가 올바르지 않습니다</h1>
-        <p className="auth__sub">메일의 버튼을 다시 눌러 주세요. 계속 안 되면 프로필에서 변경을 다시 요청할 수 있습니다.</p>
+        <h1 className="auth__title">링크가 올바르지 않아요</h1>
+        <p className="auth__sub">메일의 버튼을 다시 눌러 주세요. 계속 안 되면 프로필에서 변경을 다시 요청할 수 있어요.</p>
       </div>
     );
   }
   return (
     <div className="auth__card">
       <div>
-        <h1 className="auth__title">로그인 이메일을 바꿉니다</h1>
-        <p className="auth__sub">잠시 후 자동으로 넘어갑니다. 로그인되어 있지 않으면 먼저 로그인 화면이 열립니다.</p>
+        <h1 className="auth__title">로그인 이메일을 바꿔요</h1>
+        <p className="auth__sub">잠시 후 자동으로 넘어가요. 로그인되어 있지 않으면 먼저 로그인 화면이 열려요.</p>
       </div>
       <EmailChangeConfirm token={token} />
     </div>

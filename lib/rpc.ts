@@ -31,15 +31,15 @@ export type SelectQuoteResult = { ok: true; award_id: string; invite_id: string;
 export function selectQuote(rfqId: string, quoteId: string, userId: string, revision: number) {
   return call<SelectQuoteResult, "select_quote">("select_quote", { p_rfq_id: rfqId, p_quote_id: quoteId, p_user: userId, p_revision: revision });
 }
-export const QUOTE_CHANGED_MESSAGE = "견적이 바뀌었습니다. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.";
+export const QUOTE_CHANGED_MESSAGE = "견적이 바뀌었어요. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.";
 export const SELECT_QUOTE_ERRORS: Record<string, { message: string; status: number }> = {
-  not_found: { message: "요청을 찾을 수 없습니다.", status: 404 },
-  not_open: { message: "마무리된 요청이라 선택할 수 없습니다.", status: 409 },
-  already_selected: { message: "이미 CRO를 선택했습니다.", status: 409 },
-  bad_quote: { message: "선택할 수 없는 견적입니다.", status: 400 },
+  not_found: { message: "요청을 찾을 수 없어요.", status: 404 },
+  not_open: { message: "마무리된 요청이라 선택할 수 없어요.", status: 409 },
+  already_selected: { message: "이미 CRO를 선택했어요.", status: 409 },
+  bad_quote: { message: "선택할 수 없는 견적이에요.", status: 400 },
   quote_changed: { message: QUOTE_CHANGED_MESSAGE, status: 409 },
   // 0025: 비교표가 열리기 전에는 선택할 수 없다 (2026-10-20 결정 1, 기한 전 확인 단계 선택은 없다)
-  not_compared: { message: "비교표가 열린 뒤에 기관을 선택할 수 있습니다. 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열립니다.", status: 409 },
+  not_compared: { message: "비교표가 열린 뒤에 기관을 선택할 수 있어요. 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열려요.", status: 409 },
 };
 
 /* ── CRO 회신 저장·제출 ── */
@@ -176,11 +176,11 @@ export function reportContract(awardId: string, date: string, amount: number, no
   return call<ReportContractResult, "report_contract">("report_contract", { p_award_id: awardId, p_date: date, p_amount: amount, p_note: note, p_force: force });
 }
 export const REPORT_CONTRACT_ERRORS: Record<string, { message: string; status: number }> = {
-  not_found: { message: "수주 기록이 없습니다.", status: 404 },
-  already: { message: "이미 보고한 계약입니다. 정정이 필요하면 단추(limjm900202@gmail.com)에 알려 주세요.", status: 409 },
-  amount: { message: "계약금액은 1원 이상이어야 합니다.", status: 400 },
-  date: { message: "체결일이 선정일보다 앞설 수 없습니다.", status: 400 },
-  future: { message: "체결일은 오늘 이전 날짜여야 합니다.", status: 400 },
+  not_found: { message: "수주 기록이 없어요.", status: 404 },
+  already: { message: "이미 보고한 계약이에요. 정정이 필요하면 단추(limjm900202@gmail.com)에 알려 주세요.", status: 409 },
+  amount: { message: "계약금액은 1원 이상이어야 해요.", status: 400 },
+  date: { message: "체결일이 선정일보다 앞설 수 없어요.", status: 400 },
+  future: { message: "체결일은 오늘 이전 날짜여야 해요.", status: 400 },
 };
 
 /* ── 계약 확인 (0025, 2026-10-20 결정 2) ──
@@ -212,12 +212,12 @@ export function resolveContractDispute(awardId: string, adminId: string, resolut
   return call<ResolveDisputeResult, "resolve_contract_dispute">("resolve_contract_dispute", { p_award_id: awardId, p_actor: adminId, p_resolution: resolution, p_note: note });
 }
 export const CONTRACT_CONFIRM_ERRORS: Record<string, { message: string; status: number }> = {
-  not_found: { message: "수주 기록이 없습니다.", status: 404 },
-  forbidden: { message: "이 요청의 의뢰자만 확인할 수 있습니다.", status: 403 },
-  not_reported: { message: "기관이 아직 계약 체결을 보고하지 않았습니다.", status: 409 },
-  disputed: { message: "이의를 낸 계약입니다. 운영자가 기관과 확인한 뒤 정리합니다.", status: 409 },
-  confirmed: { message: "이미 확정된 계약입니다. 바로잡을 내용이 있으면 단추(limjm900202@gmail.com)에 알려 주세요.", status: 409 },
+  not_found: { message: "수주 기록이 없어요.", status: 404 },
+  forbidden: { message: "이 요청의 의뢰자만 확인할 수 있어요.", status: 403 },
+  not_reported: { message: "기관이 아직 계약 체결을 보고하지 않았어요.", status: 409 },
+  disputed: { message: "이의를 낸 계약이에요. 운영자가 기관과 확인한 뒤 정리해요.", status: 409 },
+  confirmed: { message: "이미 확정된 계약이에요. 바로잡을 내용이 있으면 단추(limjm900202@gmail.com)에 알려 주세요.", status: 409 },
   note: { message: "실제와 다른 부분을 500자 안에서 적어 주세요.", status: 400 },
-  no_dispute: { message: "정리할 이의가 없습니다. 화면을 새로 고쳐 주세요.", status: 409 },
+  no_dispute: { message: "정리할 이의가 없어요. 화면을 새로 고쳐 주세요.", status: 409 },
   bad_resolution: { message: "정리 방법을 선택해 주세요.", status: 400 },
 };

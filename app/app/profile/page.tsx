@@ -7,10 +7,10 @@ import { CONTACT } from "@/lib/rfq-schema";
 import { EmailChangeForm } from "@/components/EmailChangeForm";
 
 const NOTICES: Record<string, { ok: boolean; text: string }> = {
-  email_changed: { ok: true, text: "로그인 이메일을 바꿨습니다. 다음부터는 새 주소로 로그인하세요." },
-  email_expired: { ok: false, text: "이메일 변경 링크가 만료되었거나 올바르지 않습니다. 아래에서 다시 요청해 주세요." },
-  email_taken: { ok: false, text: "그 주소는 이미 다른 계정에서 쓰고 있어 바꾸지 못했습니다." },
-  email_failed: { ok: false, text: "이메일을 바꾸지 못했습니다. 잠시 후 다시 시도해 주세요." },
+  email_changed: { ok: true, text: "로그인 이메일을 바꿨어요. 다음부터는 새 주소로 로그인하세요." },
+  email_expired: { ok: false, text: "이메일 변경 링크가 만료되었거나 올바르지 않아요. 아래에서 다시 요청해 주세요." },
+  email_taken: { ok: false, text: "그 주소는 이미 다른 계정에서 쓰고 있어 바꾸지 못했어요." },
+  email_failed: { ok: false, text: "이메일을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요." },
 };
 
 export const dynamic = "force-dynamic";

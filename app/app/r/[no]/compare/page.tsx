@@ -113,7 +113,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (
         <p className="note" style={{ marginBottom: 16 }}>회신이 마감되어 견적은 더 바뀌지 않아요. 비교한 뒤 진행할 기관을 선택해 주세요.</p>
       ) : (
-        <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기입니다. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있습니다.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
+        <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기예요. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있어요.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
       )}
       <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status)} />
     </>

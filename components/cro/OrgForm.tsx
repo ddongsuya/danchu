@@ -31,11 +31,11 @@ export function OrgForm({ org, autoReplyAvailable = false }: { org: CroOrg; auto
     try {
       const res = await fetch("/api/cro/org", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, glpCerts: glp, categories: cats, aaalac, autoReply }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(d.error || "저장하지 못했습니다.");
-      setMsg({ ok: true, text: "저장했습니다." });
+      if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
+      setMsg({ ok: true, text: "저장했어요." });
       router.refresh();
     } catch (err) {
-      setMsg({ ok: false, text: err instanceof Error ? err.message : "저장하지 못했습니다." });
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "저장하지 못했어요." });
     } finally {
       setBusy(false);
     }
@@ -69,7 +69,7 @@ export function OrgForm({ org, autoReplyAvailable = false }: { org: CroOrg; auto
       </div>
       <div className="fld">
         <span className="fld__lab">수행 가능 시험 분야<span className="req">*</span></span>
-        <span className="fld__help">선택한 분야의 요청서만 배포됩니다.</span>
+        <span className="fld__help">선택한 분야의 요청서만 배포돼요.</span>
         <div className="chips">
           {CATS.map((c) => <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, setCats, c)}>{c}</button>)}
         </div>
@@ -79,7 +79,7 @@ export function OrgForm({ org, autoReplyAvailable = false }: { org: CroOrg; auto
         <div className="kv" style={{ alignItems: "center", padding: "12px 14px", border: "1px solid var(--cline)", borderRadius: 12 }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontWeight: 600 }}>기한까지 손대지 않은 초안을 예비 견적으로 자동 제출</span>
-            <span style={{ fontSize: 12.5, color: "var(--muted)" }}>카탈로그로 채워진 초안이 확인 없이 기한에 제출됩니다. 예비 견적은 PDF를 붙여 정식 견적으로 바꾸기 전까지 선정 대상이 아닙니다. 확인 필요 항목이 남아 있으면 제출되지 않습니다.</span>
+            <span style={{ fontSize: 12.5, color: "var(--muted)" }}>카탈로그로 채워진 초안이 확인 없이 기한에 제출돼요. 예비 견적은 PDF를 붙여 정식 견적으로 바꾸기 전까지 선정 대상이 아니에요. 확인 필요 항목이 남아 있으면 제출되지 않아요.</span>
           </div>
           <button type="button" className="tgl" aria-pressed={autoReply} aria-label="자동 회신" onClick={() => setAutoReply(!autoReply)}><span /></button>
         </div>

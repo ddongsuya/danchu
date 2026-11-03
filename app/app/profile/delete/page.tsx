@@ -37,18 +37,18 @@ export default async function DeleteAccountPage() {
         <div className="card card--pad stack" style={{ gap: 14 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>탈퇴하면</h2>
           <ul style={{ paddingLeft: 18, fontSize: 14, lineHeight: 1.7, color: "var(--muted)" }}>
-            <li>계정, 프로필, 알림이 바로 삭제됩니다. 되돌릴 수 없습니다.</li>
-            <li>보낸 요청서에서 담당자 이름·이메일·전화·접속 기록이 지워집니다. 회사명과 시험 내용은 회신 기관의 기록 근거로 남습니다.</li>
-            <li>기관을 선정하지 않은 요청의 첨부파일은 삭제됩니다. 선정한 요청의 첨부는 계약 근거로 보관합니다.</li>
-            {s.profile.role === "cro" ? <li>기관과 다른 담당자의 정보는 그대로입니다. 기관이 제출한 견적은 기관 기록으로 남습니다.</li> : null}
+            <li>계정, 프로필, 알림이 바로 삭제돼요. 되돌릴 수 없어요.</li>
+            <li>보낸 요청서에서 담당자 이름·이메일·전화·접속 기록이 지워져요. 회사명과 시험 내용은 회신 기관의 기록 근거로 남아요.</li>
+            <li>기관을 선정하지 않은 요청의 첨부파일은 삭제돼요. 선정한 요청의 첨부는 계약 근거로 보관해요.</li>
+            {s.profile.role === "cro" ? <li>기관과 다른 담당자의 정보는 그대로예요. 기관이 제출한 견적은 기관 기록으로 남아요.</li> : null}
           </ul>
-          {open > 0 && <p className="note note--warn" style={{ fontSize: 14 }}>진행 중인 요청 {open}건이 취소되고 회신 중인 기관에 안내됩니다.</p>}
+          {open > 0 && <p className="note note--warn" style={{ fontSize: 14 }}>진행 중인 요청 {open}건이 취소되고 회신 중인 기관에 안내돼요.</p>}
           {contracting.length > 0 && (
             <p className="note note--warn" style={{ fontSize: 14 }}>
-              기관을 선정한 요청({contracting.join(", ")})이 진행 중이라 지금은 탈퇴할 수 없습니다. 계약이 끝나거나 운영자가 종료 처리한 뒤 다시 시도해 주세요. 문의: <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
+              기관을 선정한 요청({contracting.join(", ")})이 진행 중이라 지금은 탈퇴할 수 없어요. 계약이 끝나거나 운영자가 종료 처리한 뒤 다시 시도해 주세요. 문의: <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
             </p>
           )}
-          {isAdmin && <p className="note note--warn" style={{ fontSize: 14 }}>운영자 계정은 탈퇴할 수 없습니다. 먼저 다른 운영자에게 역할 변경을 요청해 주세요.</p>}
+          {isAdmin && <p className="note note--warn" style={{ fontSize: 14 }}>운영자 계정은 탈퇴할 수 없어요. 먼저 다른 운영자에게 역할 변경을 요청해 주세요.</p>}
         </div>
         <div className="card card--pad">
           {isAdmin || contracting.length > 0 ? (

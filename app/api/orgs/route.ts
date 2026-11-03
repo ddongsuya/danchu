@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (await rateLimited("orgs-list", s.userId, 60, 60)) return NextResponse.json({ orgs: [] }, { status: 429 });
   const sb = getSupabaseAdmin();
   if (!sb) return NextResponse.json({ orgs: [] });

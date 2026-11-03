@@ -130,7 +130,7 @@ export function CompareBoard({
           <>
             {quoteKindLabel({ auto: c.auto, entry_source: c.operator ? "operator" : "cro" })}
             {c.operator && !c.auto && (
-              <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 같은 양식으로 옮겨 정리했습니다. 금액·조건이 다르면 PDF 원본이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려 드립니다.</p>
+              <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 같은 양식으로 옮겨 정리했어요. 금액·조건이 다르면 PDF 원본이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려요.</p>
             )}
           </>
         ),
@@ -209,7 +209,7 @@ export function CompareBoard({
             {c.glp.join(" · ") || "등록 정보 없음"}
             <p className="fld__help">
               {c.glpOk
-                ? "선택한 제출처에 해당하는 등록 정보가 있습니다. 적용 범위는 기관에 확인하세요."
+                ? "선택한 제출처에 해당하는 등록 정보가 있어요. 적용 범위는 기관에 확인하세요."
                 : c.glpMissing.length
                   ? `등록 정보 확인 필요: ${c.glpMissing.join(", ")}`
                   : "제출처를 지정한 뒤 기관에 적용 범위를 확인하세요."}
@@ -241,9 +241,9 @@ export function CompareBoard({
   return (
     <div className="stack" style={{ gap: 20 }}>
       <p className="note note--tint">
-        수행 범위와 포함 비용이 다르면 합계만으로 비교하기 어렵습니다. 조건을
+        수행 범위와 포함 비용이 다르면 합계만으로 비교하기 어려워요. 조건을
         먼저 확인하세요. 예비 견적은 기관 확인 후 정식 견적서를 받아야 선택할 수
-        있습니다.
+        있어요.
       </p>
       {/* 기관이 두 곳 이하면 고를 것이 없어 기관 고르기를 감춘다 */}
       {cols.length > 2 && <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
@@ -341,7 +341,7 @@ export function CompareBoard({
       </div>
       <p className="fld__help cmp-wide">
         표를 좌우로 움직여 기관별 조건을 비교하세요. 위 요약과 아래 시험별
-        금액은 같은 열에 표시됩니다.
+        금액은 같은 열에 표시돼요.
       </p>
       <div
         className="card tbl-wrap cmp-wide"
@@ -405,7 +405,7 @@ export function CompareBoard({
         견적서 원본과 표의 내용이 다르면 기관에 확인해 주세요.
         {canSelect
           ? " 진행할 기관을 정했다면 위에서 그 기관의 \"견적 보고 선택\"을 눌러 정식 견적서를 확인하고 \"이 기관 선택\"을 누르세요."
-          : " 선정 후에도 상세 내용을 열람할 수 있습니다."}
+          : " 선정 후에도 상세 내용을 열람할 수 있어요."}
       </p>
       <Link
         href={`/app/support?rfq=${no}`}

@@ -19,11 +19,11 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (await rateLimited("contract-confirm:user", s.userId, 20, 10 * 60)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없어요." }, { status: 404 });
 
   const b = (await req.json().catch(() => ({}))) as { action?: unknown; note?: unknown };
   const action = b.action === "confirm" || b.action === "dispute" ? b.action : null;
@@ -33,16 +33,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (note.length > 500) return NextResponse.json({ error: CONTRACT_CONFIRM_ERRORS.note.message }, { status: 400 });
 
   const sb = getSupabaseAdmin();
-  if (!sb) return NextResponse.json({ error: "지금은 처리할 수 없습니다. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+  if (!sb) return NextResponse.json({ error: "지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
   const { data: award } = await sb.from("rfq_awards").select("id, cro_org_id, cro_name, contract_date, contract_amount").eq("rfq_id", rfq.id).maybeSingle();
-  if (!award) return NextResponse.json({ error: "선정한 기관이 없는 요청입니다." }, { status: 404 });
+  if (!award) return NextResponse.json({ error: "선정한 기관이 없는 요청이에요." }, { status: 404 });
 
   const byOperator = s.profile.role === "admin" && !ownsRfq(rfq, s.userId);
-  if (byOperator && action === "confirm") return NextResponse.json({ error: "계약 확인은 의뢰자만 할 수 있습니다. 이의가 있으면 수주·계약 화면에서 정리해 주세요.", code: "forbidden" }, { status: 403 });
+  if (byOperator && action === "confirm") return NextResponse.json({ error: "계약 확인은 의뢰자만 할 수 있어요. 이의가 있으면 수주·계약 화면에서 정리해 주세요.", code: "forbidden" }, { status: 403 });
   const r = action === "confirm" ? await confirmContract(award.id, s.userId) : await disputeContract(award.id, s.userId, note);
   if (!r.ok) {
     const e = CONTRACT_CONFIRM_ERRORS[r.code];
-    return NextResponse.json({ error: e?.message ?? "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.", code: r.code }, { status: e?.status ?? 500 });
+    return NextResponse.json({ error: e?.message ?? "처리하지 못했어요. 잠시 후 다시 시도해 주세요.", code: r.code }, { status: e?.status ?? 500 });
   }
   if (r.already) return NextResponse.json({ ok: true, already: true });
 
@@ -55,7 +55,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
 
   if (action === "confirm") {
     await logEvent(rfq.id, "closed", "의뢰자가 계약 내용 확인 · 확정 · 종료", summary, s.userId, { via: r.via ?? "sponsor" });
-    await notifyUsers(await orgMembers(), { kind: "계약", title: `${rfq.rfq_no} 의뢰자가 계약 내용을 확인했습니다`, body: `${summary} · 계약이 확정되어 요청을 마쳤습니다.`, href: "/cro/awards" });
+    await notifyUsers(await orgMembers(), { kind: "계약", title: `${rfq.rfq_no} 의뢰자가 계약 내용을 확인했어요`, body: `${summary} · 계약이 확정되어 요청을 마쳤어요.`, href: "/cro/awards" });
     return NextResponse.json({ ok: true });
   }
 
@@ -63,10 +63,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   await logEvent(rfq.id, "contract", byOperator ? "운영자가 의뢰자 대신 계약 이의 기록" : "의뢰자가 계약 내용 이의", note, s.userId);
   await notifyUsers(
     await adminUserIds(),
-    { kind: "계약", title: `${rfq.rfq_no} 계약 보고에 의뢰자 이의 · ${award.cro_name}`, body: `기관 보고: ${summary}\n의뢰자: ${note}\n수주·계약 화면에서 기관과 확인한 뒤 정리해 주세요. 정리 전에는 정산하지 않습니다.`, href: "/admin/awards" },
+    { kind: "계약", title: `${rfq.rfq_no} 계약 보고에 의뢰자 이의 · ${award.cro_name}`, body: `기관 보고: ${summary}\n의뢰자: ${note}\n수주·계약 화면에서 기관과 확인한 뒤 정리해 주세요. 정리 전에는 정산하지 않아요.`, href: "/admin/awards" },
     { to: adminEmails() },
   );
   // 기관에는 이의가 있었다는 사실만 알린다 (운영자가 연락해 확인한다)
-  await notifyUsers(await orgMembers(), { kind: "계약", title: `${rfq.rfq_no} 의뢰자가 계약 보고 내용을 확인 중입니다`, body: "보고하신 계약 내용에 의뢰자가 다른 점을 알려 왔습니다. 단추 운영자가 연락드려 함께 확인합니다.", href: "/cro/awards" });
+  await notifyUsers(await orgMembers(), { kind: "계약", title: `${rfq.rfq_no} 의뢰자가 계약 보고 내용을 확인 중이에요`, body: "보고하신 계약 내용에 의뢰자가 다른 점을 알려 왔어요. 단추 운영자가 연락드려 함께 확인해요.", href: "/cro/awards" });
   return NextResponse.json({ ok: true });
 }

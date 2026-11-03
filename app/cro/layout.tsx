@@ -6,7 +6,7 @@ import { Shell, type NavItem } from "@/components/shell/Shell";
 
 export const metadata: Metadata = {
   title: "단추 CRO · 받은 요청",
-  description: "배포된 견적 요청을 확인하고 단추 표준 양식으로 회신합니다.",
+  description: "배포된 견적 요청을 확인하고 단추 표준 양식으로 회신해요.",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추 CRO" },
   robots: { index: false, follow: false },
 };

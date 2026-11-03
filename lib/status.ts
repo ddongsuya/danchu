@@ -3,15 +3,15 @@
 export type RfqStatus = "received" | "distributed" | "quoted" | "compared" | "selected" | "contracting" | "closed" | "cancelled";
 
 export const STAGES: { key: RfqStatus; label: string; pct: number; desc: string }[] = [
-  { key: "received", label: "접수", pct: 8, desc: "기관에 참여 안내를 보낼 준비를 하고 있습니다" },
+  { key: "received", label: "접수", pct: 8, desc: "기관에 참여 안내를 보낼 준비를 하고 있어요" },
   // 참여 선택형(0023): 기관에 요청서를 "전달"하지 않고 참여 안내를 보낸다. 참여한 기관만 견적을 쓴다
-  { key: "distributed", label: "참여 안내", pct: 25, desc: "분야가 맞는 기관에 참여 안내를 보냈습니다. 참여한 기관이 견적을 준비합니다" },
-  { key: "quoted", label: "견적 도착", pct: 45, desc: "견적이 들어오고 있습니다. 비교표가 열리면 기관 이름과 금액이 함께 보입니다" },
+  { key: "distributed", label: "참여 안내", pct: 25, desc: "분야가 맞는 기관에 참여 안내를 보냈어요. 참여한 기관이 견적을 준비해요" },
+  { key: "quoted", label: "견적 도착", pct: 45, desc: "견적이 들어오고 있어요. 비교표가 열리면 기관 이름과 금액이 함께 보여요" },
   // compared: 비교표 공개 (compared_at, 2026-10-20 결정). 참여 결정이 끝난 뒤 참여한 기관이 모두 제출했거나 회신 기한이 지나면 열린다. 선택은 이때부터
-  { key: "compared", label: "비교표 공개", pct: 60, desc: "도착한 견적을 나란히 비교하고 기관을 선택할 수 있습니다" },
-  { key: "selected", label: "기관 선택", pct: 75, desc: "선택한 기관과 서로 연락처를 주고받았습니다" },
+  { key: "compared", label: "비교표 공개", pct: 60, desc: "도착한 견적을 나란히 비교하고 기관을 선택할 수 있어요" },
+  { key: "selected", label: "기관 선택", pct: 75, desc: "선택한 기관과 서로 연락처를 주고받았어요" },
   { key: "contracting", label: "계약 진행", pct: 88, desc: "기관이 계약 체결을 보고하면 내용을 확인해 주세요" },
-  { key: "closed", label: "계약 완료", pct: 100, desc: "계약을 확인하고 요청을 마쳤습니다" },
+  { key: "closed", label: "계약 완료", pct: 100, desc: "계약을 확인하고 요청을 마쳤어요" },
 ];
 
 /** 기관을 고르지 않고 마친 요청(외부 진행·보류·취소)의 마지막 단계 이름 */

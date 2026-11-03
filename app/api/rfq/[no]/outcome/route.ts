@@ -20,12 +20,12 @@ type Outcome = (typeof OUTCOMES)[number];
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
-  if (rfq.selected_quote_id) return NextResponse.json({ error: "이미 기관을 선정한 요청입니다." }, { status: 409 });
-  if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "이미 마무리된 요청입니다." }, { status: 409 });
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없어요." }, { status: 404 });
+  if (rfq.selected_quote_id) return NextResponse.json({ error: "이미 기관을 선정한 요청이에요." }, { status: 409 });
+  if (["closed", "cancelled"].includes(rfq.status)) return NextResponse.json({ error: "이미 마무리된 요청이에요." }, { status: 409 });
 
   const b = (await req.json().catch(() => ({}))) as { outcome?: unknown; note?: unknown };
   const outcome = OUTCOMES.find((o) => o === b.outcome) as Outcome | undefined;
@@ -40,12 +40,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     .update({ outcome, outcome_note: note || null, outcome_at: now, status: outcome === "취소" ? "cancelled" : "closed", closed_at: now })
     .eq("id", rfq.id)
     .is("selected_quote_id", null);
-  if (error) return NextResponse.json({ error: "저장하지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+  if (error) return NextResponse.json({ error: "저장하지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
   // 아직 회신 중인 기관에는 닫혔다고 알린다 (기관명·금액은 의뢰자에게 알리지 않는다)
   const { data: open } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]);
   await sb.from("rfq_invites").update({ status: "expired" }).eq("rfq_id", rfq.id).in("status", ["sent", "draft"]);
   // 기관마다 따로 보낸다. 계정이 없거나 운영자 관리 기관은 로그인이 필요한 /cro 대신 회신 링크(/q)로
-  await notifyInvitedOrgs(open ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 마무리되었습니다`, body: outcome === "취소" ? "의뢰자 사정으로 요청이 취소되어 회신이 닫혔습니다." : "의뢰자가 이번에는 진행하지 않기로 해 회신이 닫혔습니다. 참여해 주셔서 감사합니다.", portalHref: "/cro" });
+  await notifyInvitedOrgs(open ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 마무리됐어요`, body: outcome === "취소" ? "의뢰자 사정으로 요청이 취소되어 회신이 닫혔어요." : "의뢰자가 이번에는 진행하지 않기로 해 회신이 닫혔어요. 참여해 주셔서 감사합니다.", portalHref: "/cro" });
 
   await logEvent(rfq.id, "outcome", `선정 없이 마무리 · ${outcome}`, note || undefined, s.userId, { outcome });
   await notifyUsers(

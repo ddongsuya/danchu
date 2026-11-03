@@ -13,7 +13,7 @@ export default function Page() {
     <Site current="/about" next={{ href: "/how-it-works", label: "이용 안내" }}>
 <section className="ph2" aria-labelledby="t">
 <h1 id="t">단추는?</h1>
-<p className="lead">단추는 다양한 비임상시험 비교 견적을 제공합니다.</p>
+<p className="lead">단추는 다양한 비임상시험 비교 견적을 제공해요.</p>
 </section>
 <section className="rsx film-about" aria-label="서비스 소개 영상"><AboutReel /></section>
 <section className="say scene" aria-label="단추로 바뀌는 것"><p className="sv" style={{ "--k": "litc", "--r": "entry 40% cover 38%" }}>한번의 요청으로 여러 기관에.</p><p className="sv" style={{ "--k": "litc", "--r": "entry 52% cover 46%" }}>편하게 비교하세요.</p></section>

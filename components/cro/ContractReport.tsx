@@ -24,10 +24,10 @@ export function ContractReport({ awardId }: { awardId: string }) {
         try {
           const res = await fetch(`/api/awards/${awardId}/contract`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, amount, note }) });
           const d = (await res.json().catch(() => ({}))) as { error?: string };
-          if (!res.ok) throw new Error(d.error || "저장하지 못했습니다.");
+          if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
           router.refresh();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "저장하지 못했습니다.");
+          setError(err instanceof Error ? err.message : "저장하지 못했어요.");
           setBusy(false);
         }
       }}

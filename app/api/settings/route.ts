@@ -5,7 +5,7 @@ export async function GET() {
   const s = await sessionOrNull();
   if (!s)
     return NextResponse.json(
-      { error: "로그인이 필요합니다." },
+      { error: "로그인이 필요해요." },
       { status: 401 },
     );
   const { data, error } = await getSupabaseAdmin()!
@@ -15,7 +15,7 @@ export async function GET() {
     .single();
   if (error)
     return NextResponse.json(
-      { error: "알림 설정을 불러오지 못했습니다." },
+      { error: "알림 설정을 불러오지 못했어요." },
       { status: 503 },
     );
   return NextResponse.json({ email: data.email_notifications });
@@ -24,7 +24,7 @@ export async function PUT(req: Request) {
   const s = await sessionOrNull();
   if (!s)
     return NextResponse.json(
-      { error: "로그인이 필요합니다." },
+      { error: "로그인이 필요해요." },
       { status: 401 },
     );
   const b = await req.json().catch(() => ({}));
@@ -39,7 +39,7 @@ export async function PUT(req: Request) {
     .eq("id", s.userId);
   if (error)
     return NextResponse.json(
-      { error: "저장하지 못했습니다. 다시 시도해 주세요." },
+      { error: "저장하지 못했어요. 다시 시도해 주세요." },
       { status: 500 },
     );
   return NextResponse.json({ email: b.email });

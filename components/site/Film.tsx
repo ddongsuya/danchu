@@ -101,7 +101,7 @@ export function Film({ scope, dur, scenes, tracks, title, children }: { scope: s
         <div className="bfilm__progress" aria-hidden="true"><i /></div>
         <div className="bfilm__buttons">
           {phase === "still" ? (
-            <p className="bfilm__note">동작 줄이기 설정에 맞춰 마지막 장면만 보여 드립니다.</p>
+            <p className="bfilm__note">동작 줄이기 설정에 맞춰 마지막 장면만 보여요.</p>
           ) : (
             <button type="button" className="bfilm__btn" aria-label={phase === "playing" ? "일시정지" : "재생"} aria-disabled={ended || undefined} onClick={toggle}>
               {phase === "playing" ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}

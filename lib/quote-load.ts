@@ -54,17 +54,17 @@ export type ClosedReason = "selected" | "ended" | "compared" | "invite_cancelled
 export function closedMessage(reason: ClosedReason | null): string {
   switch (reason) {
     case "selected":
-      return "의뢰자가 기관을 선정해 이 요청의 회신이 닫혔습니다.";
+      return "의뢰자가 기관을 선정해 이 요청의 회신이 닫혔어요.";
     case "ended":
-      return "의뢰자가 요청을 마무리해 회신이 닫혔습니다.";
+      return "의뢰자가 요청을 마무리해 회신이 닫혔어요.";
     case "compared":
-      return "비교표가 열려 이 요청의 회신이 닫혔습니다. 제출한 견적은 의뢰자가 보고 있으며, 수정하거나 다시 제출할 수 없습니다.";
+      return "비교표가 열려 이 요청의 회신이 닫혔어요. 제출한 견적은 의뢰자가 보고 있으며, 수정하거나 다시 제출할 수 없어요.";
     case "invite_cancelled":
-      return "운영자가 이 기관에 보낸 요청을 취소했습니다. 저장하거나 제출할 수 없습니다.";
+      return "운영자가 이 기관에 보낸 요청을 취소했어요. 저장하거나 제출할 수 없어요.";
     case "org_suspended":
-      return "기관의 참여가 중지되어 회신할 수 없습니다. limjm900202@gmail.com로 문의해 주세요.";
+      return "기관의 참여가 중지되어 회신할 수 없어요. limjm900202@gmail.com로 문의해 주세요.";
     default:
-      return "이 요청의 회신이 닫혔습니다.";
+      return "이 요청의 회신이 닫혔어요.";
   }
 }
 

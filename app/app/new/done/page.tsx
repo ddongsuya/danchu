@@ -40,7 +40,7 @@ export default async function Done({
     <div className="stack" style={{ maxWidth: 640, margin: "0 auto", gap: 24 }}>
       <div className="ph">
         <div>
-          <h1>요청서를 접수했습니다</h1>
+          <h1>요청서를 접수했어요</h1>
           <p>
             {rfq.substance} · 접수 번호 {rfq.rfq_no}
           </p>
@@ -51,41 +51,41 @@ export default async function Done({
         {offered ? (
           <ol style={{ paddingLeft: 20, margin: 0 }} className="stack">
             <li>
-              오늘 · 시험 분야가 맞는 기관에 참여 안내를 보냈습니다. 참여할
-              기관이 직접 참여를 정합니다.
+              오늘 · 시험 분야가 맞는 기관에 참여 안내를 보냈어요. 참여할
+              기관이 직접 참여를 정해요.
             </li>
             {rfq.join_by && <li>{md(rfq.join_by)} · 참여 결정 기한</li>}
             <li>{md(due)} · 회신 기한</li>
             <li>
               {md(nextDay(due))} 오전 9시 · 비교표 공개. 참여한 기관이 모두
-              제출하면 더 빨리 열립니다.
+              제출하면 더 빨리 열려요.
             </li>
           </ol>
         ) : !rfq.started_at ? (
           <div>
             <p>
               {missing.length
-                ? "첨부 일부가 올라가지 않아 아직 기관에 안내하지 않았습니다. 아래에서 다시 올리거나, 지금 있는 첨부로 바로 보낼 수 있습니다."
-                : "기관에 안내하는 중 문제가 생겼습니다. 다시 보내 주세요."}
+                ? "첨부 일부가 올라가지 않아 아직 기관에 안내하지 않았어요. 아래에서 다시 올리거나, 지금 있는 첨부로 바로 보낼 수 있어요."
+                : "기관에 안내하는 중 문제가 생겼어요. 다시 보내 주세요."}
             </p>
             <StartNow no={rfq.rfq_no} />
           </div>
         ) : (
           <p>
             요청 분야에 바로 맞는 참여 기관이 없어 운영자가 안내할 기관을
-            확인하고 있습니다. 보통 영업일 1~2일 안에 결과를 알려 드립니다.
+            확인하고 있어요. 보통 영업일 1~2일 안에 결과를 알려요.
           </p>
         )}
         <p className="fld__help">
-          비교표가 열리기 전에는 참여한 기관 수와 제출한 기관 수만 보입니다.
-          기관 이름과 견적은 비교표가 열릴 때 함께 공개됩니다. 그 사이에 하실
-          일은 없으며, 비교표가 열리면 메일로 알려 드립니다.
+          비교표가 열리기 전에는 참여한 기관 수와 제출한 기관 수만 보여요.
+          기관 이름과 견적은 비교표가 열릴 때 함께 공개돼요. 그 사이에 하실
+          일은 없으며, 비교표가 열리면 메일로 알려요.
         </p>
         {needsCda(rfq.confidentiality) && (
           <p className="fld__help">
-            기관에는 시험 개요만 먼저 안내했습니다. 첨부는 기관별 CDA 체결을
+            기관에는 시험 개요만 먼저 안내했어요. 첨부는 기관별 CDA 체결을
             확인한 뒤 공개하고, 회사명과 담당자 연락처는 선정한 기관에만
-            공개합니다.
+            공개해요.
           </p>
         )}
       </section>
@@ -98,7 +98,7 @@ export default async function Done({
             ))}
           </ul>
           <p className="fld__help">
-            다시 올리면 요청을 받은 기관에 함께 알려 드립니다.
+            다시 올리면 요청을 받은 기관에 함께 알려요.
           </p>
           <AttachmentRetry no={no} />
         </section>

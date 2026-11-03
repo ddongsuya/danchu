@@ -44,8 +44,8 @@ export function prepareValues(values: Values, files: FileMeta[]): string {
   } else values.replyBy = addBusinessDays(nowSeoul(), 7).toLocaleDateString("sv-SE");
   const err = validateRequired(values);
   if (err) return err;
-  if (files.length > MAX_FILES) return `첨부는 최대 ${MAX_FILES}개까지 가능합니다.`;
-  if (files.some((f) => f.size > MAX_FILE || f.size <= 0)) return "파일당 20MB 이하만 첨부할 수 있습니다.";
+  if (files.length > MAX_FILES) return `첨부는 최대 ${MAX_FILES}개까지 가능해요.`;
+  if (files.some((f) => f.size > MAX_FILE || f.size <= 0)) return "파일당 20MB 이하만 첨부할 수 있어요.";
   return "";
 }
 
@@ -174,15 +174,15 @@ export async function startRfq(rfqId: string): Promise<{ started: boolean; sent:
   }
 
   if (failed) {
-    await notifyUsers(await adminUserIds(), { kind: "배포", title: `${rfq.rfq_no} 자동 안내 실패`, body: "안내 대상을 조회하거나 초대를 만드는 중 오류가 났습니다. 오류 기록과 DB 판(npm run check:schema)을 확인한 뒤 직접 안내해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() }).catch(() => {});
+    await notifyUsers(await adminUserIds(), { kind: "배포", title: `${rfq.rfq_no} 자동 안내 실패`, body: "안내 대상을 조회하거나 초대를 만드는 중 오류가 났어요. 오류 기록과 DB 판(npm run check:schema)을 확인한 뒤 직접 안내해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() }).catch(() => {});
   } else if (!matched || !sent) {
-    await notifyUsers(await adminUserIds(), { kind: "배포", title: `${rfq.rfq_no} 안내할 기관 없음`, body: "분야가 맞는 승인 기관이 없거나 메일을 보낼 수 없었습니다. 참여 안내를 보낼 기관을 직접 골라 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() }).catch(() => {});
+    await notifyUsers(await adminUserIds(), { kind: "배포", title: `${rfq.rfq_no} 안내할 기관 없음`, body: "분야가 맞는 승인 기관이 없거나 메일을 보낼 수 없었어요. 참여 안내를 보낼 기관을 직접 골라 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() }).catch(() => {});
   }
   if (rfq.user_id) {
     // 의뢰자에게는 안내한 기관 수를 알리지 않는다. 참여한 기관 수와 제출 수만 진행 현황으로 보인다 (0023, 2026-10-20 결정 1)
     await notifyUsers([rfq.user_id], sent
-      ? { kind: "접수", title: `${rfq.rfq_no} 접수했고, 참여 안내를 보냈습니다`, body: `회신 기한 ${replyBy} · 분야가 맞는 기관이 참여를 결정하면 요청 화면에 참여·제출 수가 보입니다. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열리고, 그때 메일로 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }
-      : { kind: "접수", title: `${rfq.rfq_no} 접수했습니다 · 참여 안내를 보낼 기관을 찾고 있습니다`, body: "요청 분야에 바로 맞는 참여 기관이 없어 운영자가 직접 안내할 기관을 정합니다. 보통 영업일 1~2일 안에 결과를 알려 드리고, 맞는 기관이 없으면 그 사실을 안내합니다. 기다리지 않으시려면 요청 화면에서 마무리할 수 있습니다.", href: `/app/r/${rfq.rfq_no}` },
+      ? { kind: "접수", title: `${rfq.rfq_no} 접수했고, 참여 안내를 보냈어요`, body: `회신 기한 ${replyBy} · 분야가 맞는 기관이 참여를 결정하면 요청 화면에 참여·제출 수가 보여요. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열리고, 그때 메일로 알려요.`, href: `/app/r/${rfq.rfq_no}` }
+      : { kind: "접수", title: `${rfq.rfq_no} 접수했어요 · 참여 안내를 보낼 기관을 찾고 있어요`, body: "요청 분야에 바로 맞는 참여 기관이 없어 운영자가 직접 안내할 기관을 정해요. 보통 영업일 1~2일 안에 결과를 알려 드리고, 맞는 기관이 없으면 그 사실을 안내해요. 기다리지 않으시려면 요청 화면에서 마무리할 수 있어요.", href: `/app/r/${rfq.rfq_no}` },
     );
   }
   try {

@@ -24,7 +24,7 @@ export function beforeDeadline(replyBy: string | null | undefined, now = Date.no
 }
 
 /** 비교표가 열린 요청의 회신 기한 변경·다시 열기를 거절하는 문구 (2026-10-21 결정 3). 라우트와 운영자 화면이 같이 쓴다 */
-export const COMPARE_LOCKED_DEADLINE = "비교표가 열린 요청은 회신 기한을 바꾸거나 회신을 다시 열 수 없습니다. 받은 견적으로 선정하시거나, 더 받아야 하면 새 요청으로 보내 주세요.";
+export const COMPARE_LOCKED_DEADLINE = "비교표가 열린 요청은 회신 기한을 바꾸거나 회신을 다시 열 수 없어요. 받은 견적으로 선정하시거나, 더 받아야 하면 새 요청으로 보내 주세요.";
 
 const CLOSED_STATUSES = ["selected", "contracting", "closed", "cancelled"];
 

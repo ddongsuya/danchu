@@ -175,10 +175,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                 {confirmedAt && reported
                   ? `계약 확정 · ${d.award.contract_date ? ymd(d.award.contract_date) : ""} · ${won(d.award.contract_amount ?? 0)}${viaNote}`
                   : disputeOpen
-                    ? "계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있습니다. 확인을 마칠 때까지 계약을 확정하지 않습니다."
+                    ? "계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있어요. 확인을 마칠 때까지 계약을 확정하지 않아요."
                     : reported && d.award.contract_status === "signed"
-                      ? "기관이 계약 체결을 보고했습니다. 아래에서 내용을 확인해 주세요."
-                      : "서로 연락처를 주고받았습니다. 계약은 기관과 직접 진행합니다."}
+                      ? "기관이 계약 체결을 보고했어요. 아래에서 내용을 확인해 주세요."
+                      : "서로 연락처를 주고받았어요. 계약은 기관과 직접 진행해요."}
               </span>
               {croContact && (
                 <span>
@@ -196,7 +196,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   {d.award.substance_note ? <span style={{ display: "block" }}>{d.award.substance_note}</span> : null}
                 </span>
               ) : (
-                <span>{d.award.cro_name}에 시험물질 정보를 보내면 기관이 필요량과 보낼 시점을 여기에 적습니다.</span>
+                <span>{d.award.cro_name}에 시험물질 정보를 보내면 기관이 필요량과 보낼 시점을 여기에 적어요.</span>
               )}
             </div>
           )}

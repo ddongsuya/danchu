@@ -49,7 +49,7 @@ function Login() {
       await postJson("/api/auth/magic", { email, next });
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "로그인하지 못했습니다.");
+      setError(err instanceof Error ? err.message : "로그인하지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -58,9 +58,9 @@ function Login() {
   if (sent) {
     return (
       <div className="auth__card">
-        <Done title="로그인 링크를 보냈습니다">
+        <Done title="로그인 링크를 보냈어요">
           <p>
-            <b>{email}</b>의 받은 편지함을 확인해 주세요. 링크는 1시간 동안 유효합니다.
+            <b>{email}</b>의 받은 편지함을 확인해 주세요. 링크는 1시간 동안 유효해요.
           </p>
           <p style={{ fontSize: 14, color: "var(--muted)" }}>메일이 오지 않으면 스팸함을 확인하거나, 가입한 주소가 맞는지 확인해 주세요. 아직 계정이 없다면 <Link href="/signup">가입</Link>부터 해 주세요.</p>
           <button type="button" className="btn--ghost" onClick={() => setSent(false)}>다른 이메일로 받기</button>

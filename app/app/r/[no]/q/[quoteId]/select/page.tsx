@@ -28,7 +28,7 @@ export default async function SelectCro({ params, searchParams }: { params: Prom
     return (
       <>
         <Crumb href={`/app/r/${rfq.rfq_no}`} label={rfq.rfq_no} />
-        <div className="note note--ok">이미 CRO를 선택한 요청입니다. 진행 상태는 요청 상세에서 확인하세요.</div>
+        <div className="note note--ok">이미 CRO를 선택한 요청이에요. 진행 상태는 요청 상세에서 확인하세요.</div>
       </>
     );
   }
@@ -51,7 +51,7 @@ export default async function SelectCro({ params, searchParams }: { params: Prom
         <div>
           <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{rfq.rfq_no}</span>
           <h1>이 기관과 진행할까요?</h1>
-          <p>선택하면 이 기관과 서로 연락처를 주고받습니다. 계약은 기관과 직접 맺고, 단추는 조건에 관여하지 않습니다.</p>
+          <p>선택하면 이 기관과 서로 연락처를 주고받아요. 계약은 기관과 직접 맺고, 단추는 조건에 관여하지 않아요.</p>
         </div>
       </div>
       <SelectCroForm

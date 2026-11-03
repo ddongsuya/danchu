@@ -15,22 +15,22 @@ const md = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDate
 /** join_offer 거절 코드 → 기관에 보여 줄 안내 (문제 + 다음에 할 일) */
 function denied(code: string, joinBy?: string | null): { error: string; status: number } {
   switch (code) {
-    case "closed": return { error: "비교표가 열렸거나 의뢰자가 기관을 선정해 이 요청에는 더 참여할 수 없습니다.", status: 409 };
+    case "closed": return { error: "비교표가 열렸거나 의뢰자가 기관을 선정해 이 요청에는 더 참여할 수 없어요.", status: 409 };
     case "revoked":
-    case "not_found": return { error: "유효하지 않거나 만료된 링크입니다. 받은 요청 화면이나 단추(limjm900202@gmail.com)에서 새 링크를 받아 주세요.", status: 404 };
+    case "not_found": return { error: "유효하지 않거나 만료된 링크예요. 받은 요청 화면이나 단추(limjm900202@gmail.com)에서 새 링크를 받아 주세요.", status: 404 };
     // 철회는 되돌릴 수 없다. 참여 전 불참은 참여 결정 기한 전에만 다시 참여할 수 있다 (2026-10-20 결정 3)
-    case "withdrawn": return { error: "참여를 철회한 요청이라 다시 참여할 수 없습니다.", status: 403 };
-    case "declined": return { error: `불참으로 처리한 요청입니다. 참여 결정 기한${joinBy ? `(${md(joinBy)})` : ""}이 지나 다시 참여할 수 없습니다.`, status: 403 };
-    case "expired": return { error: "링크가 만료되어 참여할 수 없습니다. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 };
+    case "withdrawn": return { error: "참여를 철회한 요청이라 다시 참여할 수 없어요.", status: 403 };
+    case "declined": return { error: `불참으로 처리한 요청이에요. 참여 결정 기한${joinBy ? `(${md(joinBy)})` : ""}이 지나 다시 참여할 수 없어요.`, status: 403 };
+    case "expired": return { error: "링크가 만료되어 참여할 수 없어요. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 };
     case "operator_not_allowed": return { error: OPERATOR_JOIN_DENIED, status: 403 };
-    case "not_member": return { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관으로 참여할 수 없습니다. 이 기관의 안내라면 로그아웃한 뒤 메일의 링크로 다시 열어 주세요.", status: 403 };
-    case "org_inactive": return { error: "기관 참여가 중지되어 참여할 수 없습니다. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 403 };
-    case "cutoff": return { error: "참여 마감이 지났습니다. 회신 기한 3영업일 전까지 참여할 수 있습니다.", status: 409 };
-    case "reserved": return { error: `남은 자리는 의뢰자가 지명한 기관 몫입니다.${joinBy ? ` 참여 결정 기한(${md(joinBy)})이 지나도 지명 기관이 참여하지 않으면 자리가 풀리니 그때 다시 눌러 주세요.` : ""}`, status: 409 };
-    case "full": return { error: "참여 자리가 모두 찼습니다. 참여한 기관이 철회하면 자리가 생깁니다.", status: 409 };
+    case "not_member": return { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관으로 참여할 수 없어요. 이 기관의 안내라면 로그아웃한 뒤 메일의 링크로 다시 열어 주세요.", status: 403 };
+    case "org_inactive": return { error: "기관 참여가 중지되어 참여할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 403 };
+    case "cutoff": return { error: "참여 마감이 지났어요. 회신 기한 3영업일 전까지 참여할 수 있어요.", status: 409 };
+    case "reserved": return { error: `남은 자리는 의뢰자가 지명한 기관 몫이에요.${joinBy ? ` 참여 결정 기한(${md(joinBy)})이 지나도 지명 기관이 참여하지 않으면 자리가 풀리니 그때 다시 눌러 주세요.` : ""}`, status: 409 };
+    case "full": return { error: "참여 자리가 모두 찼어요. 참여한 기관이 철회하면 자리가 생겨요.", status: 409 };
     case "terms_required":
-    case "bad_channel": return { error: "참여 정보가 올바르지 않습니다. 화면을 새로 고친 뒤 다시 눌러 주세요.", status: 400 };
-    default: return { error: "참여를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.", status: 500 };
+    case "bad_channel": return { error: "참여 정보가 올바르지 않아요. 화면을 새로 고친 뒤 다시 눌러 주세요.", status: 400 };
+    default: return { error: "참여를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.", status: 500 };
   }
 }
 
@@ -48,11 +48,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const role = s?.profile.role;
   if (!canJoinAs(role)) return NextResponse.json({ error: OPERATOR_JOIN_DENIED }, { status: 403 });
   const got = await loadQuote(token, loadOptsFor(role));
-  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
+  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
 
   const b = (await req.json().catch(() => ({}))) as { agree?: unknown; terms?: unknown };
   if (b.agree !== true) return NextResponse.json({ error: "참여 문구를 확인한 뒤 참여하기를 눌러 주세요." }, { status: 400 });
-  if (b.terms !== CRO_TERMS_VERSION) return NextResponse.json({ error: "이용 조건이 바뀌었습니다. 화면을 새로 고쳐 바뀐 조건을 확인한 뒤 다시 눌러 주세요." }, { status: 409 });
+  if (b.terms !== CRO_TERMS_VERSION) return NextResponse.json({ error: "이용 조건이 바뀌었어요. 화면을 새로 고쳐 바뀐 조건을 확인한 뒤 다시 눌러 주세요." }, { status: 409 });
   if (got.joined && !got.declined) return NextResponse.json({ ok: true, already: true });
 
   const portal = role === "cro" && !!s?.profile.cro_org_id && s.profile.cro_org_id === got.croOrgId;

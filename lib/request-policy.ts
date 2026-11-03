@@ -144,7 +144,7 @@ export function seatsLabel(s: SeatInfo | null | undefined): string {
   if (s.cap == null) return "자리 제한 없음";
   const open = s.open ?? Math.max(0, s.cap - s.used - s.reserved);
   const reserved = s.reserved > 0 ? " (일부 자리는 참여 결정 기한까지 지명 기관 몫)" : "";
-  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼습니다${reserved}`;
+  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼어요${reserved}`;
 }
 
 /** 운영자 화면용 자리 표시: 참여 수와 지명 기관 몫 수까지 적는다 */
@@ -153,7 +153,7 @@ export function seatsDetailLabel(s: SeatInfo | null | undefined): string {
   if (s.cap == null) return `자리 제한 없음 · 지금 ${s.used}곳 참여`;
   const open = s.open ?? Math.max(0, s.cap - s.used - s.reserved);
   const reserved = s.reserved > 0 ? ` (지명 기관 몫 ${s.reserved}곳 별도)` : "";
-  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼습니다${reserved}`;
+  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼어요${reserved}`;
 }
 
 /**

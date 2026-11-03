@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   const sess = await sessionOrNull();
-  if (!sess) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!sess) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   const ip = clientIp(req);
   if ((await rateLimited("rfq:user", sess.userId, 5, 10 * 60)) || (await rateLimited("rfq:ip", ip, 10, 10 * 60))) {
     return NextResponse.json({ error: TOO_MANY }, { status: 429 });
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     values = body.payload as Values;
     files = cleanFiles(body.files);
   } catch {
-    return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+    return NextResponse.json({ error: "요청 형식이 올바르지 않아요." }, { status: 400 });
   }
 
   const year = nowSeoul().getFullYear();
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     // 환경변수 미설정. 운영에서는 "접수된 것처럼" 200 을 돌려주면 안 된다
     if (isProduction()) {
       captureError(new Error("SUPABASE 미설정"), "rfq:config");
-      return NextResponse.json({ error: "지금은 접수를 저장할 수 없습니다. 잠시 후 다시 시도하거나 limjm900202@gmail.com로 알려 주세요." }, { status: 503 });
+      return NextResponse.json({ error: "지금은 접수를 저장할 수 없어요. 잠시 후 다시 시도하거나 limjm900202@gmail.com로 알려 주세요." }, { status: 503 });
     }
     // 로컬: 임시 번호 발급 (9000번대). 폼 내용은 로그에 남기지 않는다
     const rfqNo = `DC-${year}-9${String(Date.now() % 1000).padStart(3, "0")}`;
@@ -67,6 +67,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ rfqNo, persisted: true, uploads });
   } catch (e) {
     console.error("supabase", e);
-    return NextResponse.json({ error: "접수 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." }, { status: 500 });
+    return NextResponse.json({ error: "접수 저장 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
   }
 }

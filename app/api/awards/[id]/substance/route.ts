@@ -12,14 +12,14 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
   const sb = getSupabaseAdmin();
-  if (!sb) return NextResponse.json({ error: "지금은 저장할 수 없습니다. 잠시 뒤 다시 시도해 주세요." }, { status: 503 });
+  if (!sb) return NextResponse.json({ error: "지금은 저장할 수 없어요. 잠시 뒤 다시 시도해 주세요." }, { status: 503 });
   const { data: award } = await sb.from("rfq_awards").select("id, rfq_id, cro_name, cro_org_id, substance_qty").eq("id", id).maybeSingle();
-  if (!award) return NextResponse.json({ error: "수주 기록이 없습니다." }, { status: 404 });
-  if (s.profile.role !== "admin" && (!s.profile.cro_org_id || award.cro_org_id !== s.profile.cro_org_id)) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!award) return NextResponse.json({ error: "수주 기록이 없어요." }, { status: 404 });
+  if (s.profile.role !== "admin" && (!s.profile.cro_org_id || award.cro_org_id !== s.profile.cro_org_id)) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
 
   const v = parseAwardSubstance(await req.json().catch(() => ({})));
   if (!v) return NextResponse.json({ error: "필요량을 입력해 주세요." }, { status: 400 });
@@ -29,7 +29,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .eq("id", id);
   if (error) {
     console.error("award substance", error);
-    return NextResponse.json({ error: "저장하지 못했습니다. 잠시 뒤 다시 시도해 주세요." }, { status: 500 });
+    return NextResponse.json({ error: "저장하지 못했어요. 잠시 뒤 다시 시도해 주세요." }, { status: 500 });
   }
 
   const changed = !!award.substance_qty;

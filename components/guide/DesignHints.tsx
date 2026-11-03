@@ -37,7 +37,7 @@ export function DesignHints({ values, onFill }: { values: Values; onFill: (patch
       {advice && (
         <p className="hints__m3">
           임상 예정 투여기간 <b>{clin}</b> 기준, 임상시험 진입에는 설치류 <b>{advice.rodent}</b> · 비설치류 <b>{advice.nonRodent}</b> 반복투여독성이 필요해요. 근거 ICH M3
-          {advice.items.some((i) => !items.includes(i)) && items.some((i) => i.startsWith("반복투여")) ? ` 요청서 항목으로는 ${advice.items.join(" · ")}입니다.` : ""}
+          {advice.items.some((i) => !items.includes(i)) && items.some((i) => i.startsWith("반복투여")) ? ` 요청서 항목: ${advice.items.join(" · ")}.` : ""}
         </p>
       )}
       {cards.map((c) => (
@@ -47,7 +47,7 @@ export function DesignHints({ values, onFill }: { values: Values; onFill: (patch
               <b>{c.title}</b>
               <span>{c.purpose}</span>
             </button>
-            <button type="button" className="b2 bsm" onClick={() => fill(c)}>{filled === c.title ? "채웠습니다" : "이 예로 채우기"}</button>
+            <button type="button" className="b2 bsm" onClick={() => fill(c)}>{filled === c.title ? "채웠어요" : "이 예로 채우기"}</button>
           </div>
           {open === c.title && (
             <dl className="hint__dl">

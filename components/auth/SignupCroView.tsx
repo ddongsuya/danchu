@@ -41,7 +41,7 @@ export function SignupCroView() {
       });
       setDone({ joined: d.joined, mailed: d.mailed });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "신청하지 못했습니다.");
+      setError(err instanceof Error ? err.message : "신청하지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -50,17 +50,17 @@ export function SignupCroView() {
   if (done) {
     return (
       <div className="auth__card">
-        <Done title={done.mailed ? "가입 신청을 받았습니다" : "신청은 받았지만 확인 메일을 보내지 못했습니다"}>
+        <Done title={done.mailed ? "가입 신청을 받았어요" : "신청은 받았지만 확인 메일을 보내지 못했어요"}>
           <p>
-            {done.mailed ? <><b>{f.email}</b>로 보낸 확인 메일의 버튼을 눌러 이메일을 확인해 주세요.</> : <>아래 버튼으로 <b>{f.email}</b>에 확인 메일을 다시 보낼 수 있습니다.</>}
+            {done.mailed ? <><b>{f.email}</b>로 보낸 확인 메일의 버튼을 눌러 이메일을 확인해 주세요.</> : <>아래 버튼으로 <b>{f.email}</b>에 확인 메일을 다시 보낼 수 있어요.</>}
           </p>
           <p className="auth__note" style={{ textAlign: "left" }}>
             {done.joined
-              ? "이미 등록된 기관이라 담당자 추가로 접수되었습니다. 운영자가 확인 후 연결해 드립니다."
-              : "기관 정보를 확인한 뒤 승인해드려요. 보통 영업일 1~2일 안에 메일로 알려드려요."}{" "}
-            승인 전에도 로그인해서 신청 내용을 볼 수 있습니다.
+              ? "이미 등록된 기관이라 담당자 추가로 접수됐어요. 운영자가 확인 후 연결해요."
+              : "기관 정보를 확인한 뒤 승인해요. 보통 영업일 1~2일 안에 메일로 알려요."}{" "}
+            승인 전에도 로그인해서 신청 내용을 볼 수 있어요.
           </p>
-          <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email }); setDone({ ...done, mailed: true }); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했습니다."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
+          <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email }); setDone({ ...done, mailed: true }); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했어요."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
           <ErrorBox>{error}</ErrorBox>
         </Done>
       </div>
@@ -91,7 +91,7 @@ export function SignupCroView() {
           </Field>
         </div>
 
-        <Field id="glp" label="보유 GLP 인증" help="회신할 때 자동으로 채워지고, 제출처 대응 여부 판정에 쓰입니다.">
+        <Field id="glp" label="보유 GLP 인증" help="회신할 때 자동으로 채워지고, 제출처 대응 여부 판정에 쓰여요.">
           <div className="chipset" role="group" aria-label="보유 GLP 인증">
             {GLP_OPTS.map((o) => (
               <button key={o} type="button" className="chip" aria-pressed={glp.includes(o)} onClick={() => toggle(glp, setGlp, o)}>{o}</button>
@@ -110,7 +110,7 @@ export function SignupCroView() {
             <TextInput id="otherCerts" value={f.otherCerts} onChange={set("otherCerts")} placeholder="KOLAS, ISO 17025 등" />
           </Field>
         </div>
-        <Field id="cats" label="수행 가능 시험 분야" required help="선택한 분야의 요청서만 배포됩니다.">
+        <Field id="cats" label="수행 가능 시험 분야" required help="선택한 분야의 요청서만 배포돼요.">
           <div className="chipset" role="group" aria-label="수행 가능 시험 분야">
             {CATS.map((c) => (
               <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, setCats, c)}>{c}</button>
@@ -129,7 +129,7 @@ export function SignupCroView() {
           <Field id="phone" label="연락처">
             <TextInput id="phone" type="tel" inputMode="tel" value={f.phone} onChange={set("phone")} placeholder="010-0000-0000" autoComplete="tel" />
           </Field>
-          <Field id="email" label="업무용 이메일" required help="기관 도메인 이메일을 권장합니다.">
+          <Field id="email" label="업무용 이메일" required help="기관 도메인 이메일을 권장해요.">
             <TextInput id="email" type="email" inputMode="email" value={f.email} onChange={set("email")} placeholder="name@cro.co.kr" autoComplete="email" />
           </Field>
           <Field id="password" label="비밀번호" required>

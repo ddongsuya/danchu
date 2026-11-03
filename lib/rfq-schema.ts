@@ -146,13 +146,13 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "의뢰 개요",
     q: "의뢰 목적이 무엇인가요?",
-    sub: "자료 제출 목적과 제출처에 따라 필요한 시험 조건이 달라집니다.",
+    sub: "자료 제출 목적과 제출처에 따라 필요한 시험 조건이 달라져요.",
     fields: [{ id: "purpose", type: "radio", required: true, options: ["허가자료 제출용", "자체 연구용", "기타"] }],
   },
   {
     eyebrow: "의뢰 개요",
     q: "이번 요청의 성격은 무엇인가요?",
-    sub: "예산 검토나 비교 견적도 정상 요청입니다. 기관이 회신 내용을 맞추는 데 쓰이며, 전달 여부에는 영향이 없습니다.",
+    sub: "예산 검토나 비교 견적도 정상 요청이에요. 기관이 회신 내용을 맞추는 데 쓰이며, 전달 여부에는 영향이 없어요.",
     fields: [{ id: "intent", type: "radio", required: true, options: ["발주 예정", "비교 견적", "예산 검토"] }],
   },
   {
@@ -186,7 +186,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "의뢰 개요",
     q: "어디에 제출할 자료인가요?",
-    sub: "해당하는 곳을 모두 선택하세요. 자체 연구용이면 건너뛰어도 됩니다.",
+    sub: "해당하는 곳을 모두 선택하세요. 자체 연구용이면 건너뛰어도 돼요.",
     fields: [
       {
         id: "authority",
@@ -221,13 +221,13 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "일정·예산",
     q: "견적 회신은 언제까지 필요하세요?",
-    sub: "비워 두면 접수일에서 평일 기준 7일 뒤로 정합니다. 공휴일은 별도로 반영하지 않습니다. 기한 전에 회신을 마감해 드리지 않으니, 급하면 기한을 짧게 정해 주세요.",
+    sub: "비워 두면 접수일에서 평일 기준 7일 뒤로 정해요. 공휴일은 별도로 반영하지 않아요. 기한 전에 회신을 마감해 드리지 않으니, 급하면 기한을 짧게 정해 주세요.",
     fields: [{ id: "replyBy", type: "date" }],
   },
   {
     eyebrow: "일정·예산",
     q: "예산 범위가 있나요?",
-    sub: "없으면 미정을 선택하세요. 예산은 기관에 전달하지 않습니다.",
+    sub: "없으면 미정을 선택하세요. 예산은 기관에 전달하지 않아요.",
     fields: [
       {
         id: "budget",
@@ -239,27 +239,27 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "일정·예산",
     q: "몇 곳의 견적을 받을까요?",
-    sub: "분야가 맞는 기관에 참여 안내가 가고, 요약을 보고 참여한 기관이 견적을 씁니다. 자리는 먼저 참여한 순서로 찹니다. 전체를 고르면 참여한 기관 모두가 견적을 보냅니다.",
+    sub: "분야가 맞는 기관에 참여 안내가 가고, 요약을 보고 참여한 기관이 견적을 써요. 자리는 먼저 참여한 순서로 차요. 전체를 고르면 참여한 기관 모두가 견적을 보내요.",
     fields: [{ id: "croCount", type: "segmented", required: true, options: ["3곳", "5곳", "전체"] }],
   },
   {
     eyebrow: "일정·예산",
     q: "꼭 포함하고 싶은 기관이 있나요?",
-    sub: "선택 사항입니다. 지명한 기관 몫의 자리는 참여 결정 기한까지 비워 둡니다. 지명한 기관이 불참하거나 기한까지 정하지 않으면 그 자리는 먼저 참여한 다른 기관에 돌아갑니다. 지명 기관의 참여 결과는 요청 화면에서 볼 수 있습니다.",
+    sub: "선택 사항이에요. 지명한 기관 몫의 자리는 참여 결정 기한까지 비워 둬요. 지명한 기관이 불참하거나 기한까지 정하지 않으면 그 자리는 먼저 참여한 다른 기관에 돌아가요. 지명 기관의 참여 결과는 요청 화면에서 볼 수 있어요.",
     fields: [
       { id: "nominees", type: "orgs", label: "지명 기관" },
       {
         id: "nomineesOnly",
         type: "checkbox",
         label: "지명 기관에만 안내",
-        help: "켜면 분야가 맞는 다른 기관에는 참여 안내를 보내지 않습니다. 지명한 기관이 참여하지 않으면 받는 견적이 줄어들 수 있습니다. 지명 기관을 고른 경우에만 적용됩니다.",
+        help: "켜면 분야가 맞는 다른 기관에는 참여 안내를 보내지 않아요. 지명한 기관이 참여하지 않으면 받는 견적이 줄어들 수 있어요. 지명 기관을 고른 경우에만 적용돼요.",
       },
     ],
   },
   {
     eyebrow: "일정·예산",
     q: "기밀 등급을 선택해 주세요",
-    sub: "회사명과 담당자 연락처는 모든 요청에서 선정한 기관에만 공개됩니다. CDA를 선택하면 첨부파일도 기관별 체결 확인 후 공개합니다.",
+    sub: "회사명과 담당자 연락처는 모든 요청에서 선정한 기관에만 공개돼요. CDA를 선택하면 첨부파일도 기관별 체결 확인 후 공개해요.",
     fields: [
       { id: "confid", type: "radio", required: true, options: ["일반", "CDA 필요 (단추 표준 CDA)", "자체 CDA 사용"] },
     ],
@@ -283,7 +283,7 @@ export const WIZ: WizStep[] = [
   },
   {
     eyebrow: "마지막 단계",
-    q: "동의가 필요합니다",
+    q: "동의가 필요해요",
     sub: "요청 내용이 어디까지 전달되는지 확인한 뒤 각각 동의해 주세요.",
     fields: [
       {
@@ -327,7 +327,7 @@ export const SUBSTANCE_TIP = {
 export const STEP2: Group[] = [
   {
     title: "시험물질·투여 조건",
-    desc: "한번 입력하면 선택한 모든 시험에 적용됩니다.",
+    desc: "한번 입력하면 선택한 모든 시험에 적용돼요.",
     fields: [
       { id: "route", type: "select", label: "시험 투여경로", options: ROUTES },
       { id: "clinRoute", type: "select", label: "임상 예정 투여경로", options: ROUTES, help: "시험 투여경로와 다를 경우" },
@@ -336,7 +336,7 @@ export const STEP2: Group[] = [
         type: "select",
         label: "임상 예정 투여기간",
         options: ["단회", "2주 이내", "1개월 이내", "3개월 이내", "6개월 이내", "6개월 초과·만성", "미정"],
-        help: "반복투여독성 기간을 정하는 근거가 됩니다.",
+        help: "반복투여독성 기간을 정하는 근거가 돼요.",
       },
       {
         id: "storage",
@@ -374,7 +374,7 @@ export const STEP2: Group[] = [
   },
   {
     title: "계약·운영 조건",
-    desc: "KIT 등 일부 기관은 견적 단계에서 함께 확인합니다.",
+    desc: "KIT 등 일부 기관은 견적 단계에서 함께 확인해요.",
     fields: [
       { id: "archive", type: "select", label: "자료 보관기간", options: ["3년", "5년", "10년", "기타", "미정"] },
       { id: "residual", type: "radio", label: "잔여 시험물질 처리", options: ["반환", "폐기", "미정"] },
@@ -386,7 +386,7 @@ export const STEP2: Group[] = [
         type: "file",
         label: "파일 첨부 (COA, 시험물질 자료 등)",
         placeholder: "PDF, 이미지, 문서 · 파일당 20MB 이하",
-        help: "알고 있는 자료를 첨부하세요. 파일은 임시 저장되지 않아, 화면을 닫으면 다시 선택해야 합니다.",
+        help: "알고 있는 자료를 첨부하세요. 파일은 임시 저장되지 않아, 화면을 닫으면 다시 선택해야 해요.",
       },
     ],
   },
@@ -423,10 +423,10 @@ export const DETAILS: Record<Cat, Field[]> = {
     },
     { id: "species", type: "chips", label: "동물종", options: SPECIES },
     { id: "method", type: "chips", label: "시험법·가이드라인 (알면 선택)", options: ["OECD TG 420 고정용량법", "OECD TG 423 급성독성등급법", "OECD TG 425 상하법", "용량증량(DE)법", "최대투여량(Limit test)", "ICH M3 단회 설계", "OECD TG 407 (28일)", "OECD TG 408 (90일)", "OECD TG 409 (비설치류 90일)", "ICH M3/S4 반복투여", "MFDS 독성시험기준", "기관 추천"] },
-    { id: "recovery", type: "select", label: "회복시험", options: ["없음", "2주", "4주", "기타", "미정"], help: "투여를 멈춘 뒤 독성 변화가 회복되는지 봅니다. 대조군과 고용량군에 둡니다. 회복 동물을 어떻게 지정하는지는 기관마다 다르므로 회신에서 확인하세요." },
-    { ...yn("tk", "TK 병행"), help: "독성시험 동물의 혈중 농도를 측정해 실제 노출량을 확인합니다. 허가 제출용 반복투여독성에는 보통 병행합니다." },
-    { ...yn("formulation", "조제물분석 포함"), help: "투여 조제물의 함량·균질성·안정성 확인. GLP 독성시험에 따라옵니다." },
-    { ...yn("doseRange", "용량설정시험 포함"), help: "본시험 용량을 정하기 위한 예비시험(DRF)입니다. 보통 Non-GLP로 수행합니다." },
+    { id: "recovery", type: "select", label: "회복시험", options: ["없음", "2주", "4주", "기타", "미정"], help: "투여를 멈춘 뒤 독성 변화가 회복되는지 봐요. 대조군과 고용량군에 둬요. 회복 동물을 어떻게 지정하는지는 기관마다 다르므로 회신에서 확인하세요." },
+    { ...yn("tk", "TK 병행"), help: "독성시험 동물의 혈중 농도를 측정해 실제 노출량을 확인해요. 허가 제출용 반복투여독성에는 보통 병행해요." },
+    { ...yn("formulation", "조제물분석 포함"), help: "투여 조제물의 함량·균질성·안정성 확인. GLP 독성시험에 따라와요." },
+    { ...yn("doseRange", "용량설정시험 포함"), help: "본시험 용량을 정하기 위한 예비시험(DRF)이에요. 보통 Non-GLP로 수행해요." },
     yn("histopath", "조직병리 포함"),
     { id: "interval", type: "select", label: "투여 간격", options: ["매일", "주 5회", "주 3회", "주 1회", "격일", "기타"] },
     { id: "doses", type: "text", label: "총 투여 횟수", placeholder: "예: 28회" },
@@ -530,7 +530,7 @@ export const DETAILS: Record<Cat, Field[]> = {
   국소내성: [
     { id: "species", type: "chips", label: "동물종", options: ["마우스", "랫드", "토끼", "개(비글)", "기타"] },
     { id: "site", type: "text", label: "투여 부위", placeholder: "예: 정맥 주위, 근육" },
-    { id: "mode", type: "radio", label: "수행 방식", options: ["단독 시험", "일반독성시험에 포함", "기관 제안"], help: "임상 경로의 국소내성은 일반독성시험 안에서 평가하는 것이 원칙입니다. 임상 제형으로 투여 부위를 조직병리 검사하면 별도 시험을 생략할 수 있습니다." },
+    { id: "mode", type: "radio", label: "수행 방식", options: ["단독 시험", "일반독성시험에 포함", "기관 제안"], help: "임상 경로의 국소내성은 일반독성시험 안에서 평가하는 것이 원칙이에요. 임상 제형으로 투여 부위를 조직병리 검사하면 별도 시험을 생략할 수 있어요." },
     GLP_LEVEL,
   ],
   안전성약리: [
@@ -637,15 +637,15 @@ export const DETAILS: Record<Cat, Field[]> = {
     GLP_LEVEL,
   ],
   "효력시험(약효)": [
-    { id: "items", type: "chips", label: "질환 영역", options: [...AREA_NAMES], help: "영역마다 회신 행이 하나씩 생깁니다." },
+    { id: "items", type: "chips", label: "질환 영역", options: [...AREA_NAMES], help: "영역마다 회신 행이 하나씩 생겨요." },
     { id: "method", type: "text", label: "질환 모델", placeholder: "예: DSS 유도 대장염. 모르면 비워 두세요 (기관 제안)" },
     { id: "species", type: "chips", label: "동물종", options: [...RODENT, "누드마우스", "개(비글)", "미니피그", "원숭이(영장류)", "세포·조직(체외)", "기관 제안"] },
-    { id: "groups", type: "text", label: "희망 군 수와 군당 마릿수", placeholder: "예: 5군, 군당 8마리. 모르면 비워 두세요", help: "기관 제안에 맡기면 기관마다 설계가 달라져 비교가 어려워질 수 있습니다." },
+    { id: "groups", type: "text", label: "희망 군 수와 군당 마릿수", placeholder: "예: 5군, 군당 8마리. 모르면 비워 두세요", help: "기관 제안에 맡기면 기관마다 설계가 달라져 비교가 어려워질 수 있어요." },
     { id: "positive", type: "radio", label: "양성 대조군", options: ["필요", "불필요", "기관 제안"] },
     { id: "duration", type: "text", label: "투여 기간", placeholder: "예: 2주, 1일 1회" },
     { id: "endpoints", type: "textarea", label: "꼭 필요한 평가 지표", placeholder: "예: 체중, 질병활성지수, 대장 길이, 조직 점수, 사이토카인" },
     { id: "pilot", type: "radio", label: "예비시험", options: ["필요", "불필요", "기관 제안"] },
-    { id: "use", type: "select", label: "자료의 용도", options: ["내부 판단 (후보물질 선별·용량 탐색)", "허가·임상시험계획 제출", "학술지 게재 (건강기능식품 기능성 등)", "투자 유치·기술 이전", "기타"], help: "용도에 따라 보고서 형식과 기관에 요구할 것이 달라집니다." },
+    { id: "use", type: "select", label: "자료의 용도", options: ["내부 판단 (후보물질 선별·용량 탐색)", "허가·임상시험계획 제출", "학술지 게재 (건강기능식품 기능성 등)", "투자 유치·기술 이전", "기타"], help: "용도에 따라 보고서 형식과 기관에 요구할 것이 달라져요." },
     GLP_LEVEL,
   ],
   환경유해성: [
@@ -713,7 +713,7 @@ export const DETAILS: Record<Cat, Field[]> = {
       options: [...OTHER_AREAS, "조직교차반응성(인체 조직)", "인체첩포시험", "병리 피어리뷰", "다지점시험", "위탁 보관", "기타"],
     },
     { id: "samples", type: "text", label: "시료 종류와 수", placeholder: "예: 랫드 혈청, 40개" },
-    { id: "desc", type: "textarea", label: "받고 싶은 분석", placeholder: "예: 혈장 내 염증성 마커를 측정하고 싶습니다." },
+    { id: "desc", type: "textarea", label: "받고 싶은 분석", placeholder: "예: 혈장 내 염증성 마커를 측정하고 싶어요." },
   ],
 };
 

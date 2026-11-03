@@ -19,7 +19,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const { data: q } = await sb.from("cro_quotes").select("*").eq("id", id).maybeSingle();
-  if (!q || !q.pdf_path) return NextResponse.json({ error: "PDF가 없습니다." }, { status: 404 });
+  if (!q || !q.pdf_path) return NextResponse.json({ error: "PDF가 없어요." }, { status: 404 });
   const quote = q;
   const { data: r } = await sb.from("rfq_requests").select("*").eq("id", quote.rfq_id).maybeSingle();
   const rfq = r;
@@ -36,9 +36,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       else if (token && inv.token === token && !!inv.joined_at) allowed = true;
     }
   }
-  if (!allowed) return NextResponse.json({ error: "열람 권한이 없습니다." }, { status: 403 });
+  if (!allowed) return NextResponse.json({ error: "열람 권한이 없어요." }, { status: 403 });
 
   const { data: signed, error } = await sb.storage.from("cro-files").createSignedUrl(quote.pdf_path!, 300, { download: quote.pdf_name || "quote.pdf" });
-  if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했습니다." }, { status: 500 });
+  if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했어요." }, { status: 500 });
   return NextResponse.redirect(signed.signedUrl, 302);
 }

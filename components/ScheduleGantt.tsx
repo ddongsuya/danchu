@@ -86,7 +86,7 @@ export function ScheduleGantt({
   if (!lines.length || plan.finalWeek == null) {
     return (
       <div className="sg sg--empty">
-        <p>{plan.incomplete.length ? "기간이 적힌 시험이 없어 일정을 그리지 못했습니다." : "일정 정보가 없습니다."}</p>
+        <p>{plan.incomplete.length ? "기간이 적힌 시험이 없어 일정을 그리지 못했어요." : "일정 정보가 없어요."}</p>
       </div>
     );
   }
@@ -154,7 +154,7 @@ export function ScheduleGantt({
         <li><i className="sg-key sg-key--rep" />초안 뒤 최종보고서{hasTrans ? " · 번역" : ""}</li>
         {late > 0 && <li><i className="sg-key sg-key--late" />가장 빠른 기관과의 차이</li>}
       </ul>
-      {plan.incomplete.length > 0 && <p className="sg-note">기간이 비어 일정에 넣지 못한 항목이 {plan.incomplete.length}개 있습니다.</p>}
+      {plan.incomplete.length > 0 && <p className="sg-note">기간이 비어 일정에 넣지 못한 항목이 {plan.incomplete.length}개 있어요.</p>}
     </div>
   );
 }

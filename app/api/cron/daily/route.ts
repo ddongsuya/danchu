@@ -65,7 +65,7 @@ export async function GET(req: Request) {
     if (isProduction() && !(process.env.CRON_SECRET || "").trim()) {
       captureError(new Error("CRON_SECRET 미설정"), "cron:auth");
       // 이 경로는 인증 없이 열려 있으므로 알림은 하루 한 번만
-      if (!(await rateLimited("cron-secret-missing", "global", 1, 86400))) await notifyUsers(await adminUserIds(), { kind: "시스템", title: "예약 작업이 실행되지 않았습니다 · CRON_SECRET 미설정", body: "Vercel 환경변수에 CRON_SECRET 을 넣고 다시 배포해 주세요. 리마인더·회신 마감이 멈춰 있습니다.", href: "/admin" }, { to: adminEmails() }).catch(() => {});
+      if (!(await rateLimited("cron-secret-missing", "global", 1, 86400))) await notifyUsers(await adminUserIds(), { kind: "시스템", title: "예약 작업이 실행되지 않았어요 · CRON_SECRET 미설정", body: "Vercel 환경변수에 CRON_SECRET 을 넣고 다시 배포해 주세요. 리마인더·회신 마감이 멈춰 있어요.", href: "/admin" }, { to: adminEmails() }).catch(() => {});
       return NextResponse.json({ error: "CRON_SECRET 미설정" }, { status: 500 });
     }
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -154,13 +154,13 @@ export async function GET(req: Request) {
       const href = replyPath(inv, { managed, members: ids.length });
       // 운영자 관리 기관의 초안은 운영자가 PDF 를 옮겨 적다 저장한 것일 수 있고, 기관은 PDF 를 이미 메일로 보냈을 수 있다. 초안 여부로 문구를 나누지 않는다
       // 받는 기관은 모두 참여한 기관이므로 시험물질명을 적어도 된다. 제출이 어려우면 철회를 안내한다 (철회하면 청구 없음, 자리는 다른 기관에)
-      const withdrawHint = "제출이 어려우면 요청 화면에서 참여를 철회해 주세요. 철회하면 청구하지 않고 자리는 다른 기관에 돌아갑니다.";
+      const withdrawHint = "제출이 어려우면 요청 화면에서 참여를 철회해 주세요. 철회하면 청구하지 않고 자리는 다른 기관에 돌아가요.";
       const body = managed
-        ? `참여하신 요청에 아직 제출된 견적이 없습니다. 아래 버튼의 회신 링크에서 직접 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 비교표에 옮겨 적습니다. 이미 PDF를 보내셨다면 이 안내는 넘기셔도 됩니다. ${withdrawHint}`
-        : inv.status === "draft" ? `작성 중인 초안이 있습니다. 확인하고 제출해 주세요. ${withdrawHint}` : `참여하신 요청의 견적을 아직 작성하지 않았습니다. ${withdrawHint}`;
+        ? `참여하신 요청에 아직 제출된 견적이 없어요. 아래 버튼의 회신 링크에서 직접 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 비교표에 옮겨 적어요. 이미 PDF를 보내셨다면 이 안내는 넘기셔도 돼요. ${withdrawHint}`
+        : inv.status === "draft" ? `작성 중인 초안이 있어요. 확인하고 제출해 주세요. ${withdrawHint}` : `참여하신 요청의 견적을 아직 작성하지 않았어요. ${withdrawHint}`;
       await notifyUsers(
         ids,
-        { kind: "견적", title: kind === "d2" ? `회신 기한 이틀 전 · ${inv.rfq_no} ${rfq.substance}` : `오늘이 회신 기한입니다 · ${inv.rfq_no} ${rfq.substance}`, body, href },
+        { kind: "견적", title: kind === "d2" ? `회신 기한 이틀 전 · ${inv.rfq_no} ${rfq.substance}` : `오늘이 회신 기한이에요 · ${inv.rfq_no} ${rfq.substance}`, body, href },
         { to: mails, replyTo: inviteReplyTo({ managed }) },
       );
       await sb.from("invite_reminders").insert({ invite_id: inv.id, kind });
@@ -184,7 +184,7 @@ export async function GET(req: Request) {
       out.compared++;
       // 참여했지만 내지 않은 기관 이름을 적는다 (운영자 앱 알림만, 하루 요약 메일에 모인다).
       // 비교표가 열린 뒤에는 다시 열거나 기한을 늘릴 수 없으므로(2026-10-21 결정 3) 늦게 온 견적서 PDF 는 옮겨 적지 않는다
-      const names = r.pendingNames?.length ? `미회신: ${r.pendingNames.join(", ")}. 비교표가 열린 뒤 도착한 견적서 PDF는 비교표에 옮겨 적지 않습니다.` : undefined;
+      const names = r.pendingNames?.length ? `미회신: ${r.pendingNames.join(", ")}. 비교표가 열린 뒤 도착한 견적서 PDF는 비교표에 옮겨 적지 않아요.` : undefined;
       await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 비교표 공개 · 견적 ${r.count}건${r.pending ? ` · 미회신 ${r.pending}곳` : ""}`, body: names, href: `/admin/r/${rfq.rfq_no}` });
     } else if (!r.count) {
       // 회신이 하나도 없으면 열지 않고(늦은 회신을 받을 수 있게) 운영자에게 판단을 넘긴다. 같은 기한에는 한 번만 (기한을 늘렸다 다시 지나면 다시 알린다)
@@ -196,9 +196,9 @@ export async function GET(req: Request) {
       }
       if (!noReplyNotified(ev ?? [], rfq.reply_by ?? "")) {
         await logEvent(rfq.id, "no_reply", "기한 경과 · 회신 없음", "참여 안내 추가 또는 기한 연장 판단 필요", null, { reply_by: rfq.reply_by });
-        await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "제출된 견적이 없어 비교표를 열지 않았습니다. 의뢰자와 상의해 회신 기한을 늘리고, 필요하면 참여 안내를 추가해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+        await notifyUsers(await adminUserIds(), { kind: "비교", title: `${rfq.rfq_no} 기한 경과 · 회신 없음`, body: "제출된 견적이 없어 비교표를 열지 않았어요. 의뢰자와 상의해 회신 기한을 늘리고, 필요하면 참여 안내를 추가해 주세요.", href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
         // 의뢰자에게도 한 번: 기다리는 이유와 선택지
-        await notifyUsers(rfq.user_id ? [rfq.user_id] : [], { kind: "비교", title: `${rfq.rfq_no} 회신 기한이 지났지만 아직 견적이 없습니다`, body: `${rfq.substance} · 운영자가 회신 기한 연장과 참여 안내 추가를 안내해 드립니다. 진행을 원하지 않으시면 요청 화면에서 마무리할 수 있습니다.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+        await notifyUsers(rfq.user_id ? [rfq.user_id] : [], { kind: "비교", title: `${rfq.rfq_no} 회신 기한이 지났지만 아직 견적이 없어요`, body: `${rfq.substance} · 운영자가 회신 기한 연장과 참여 안내 추가를 안내해요. 진행을 원하지 않으시면 요청 화면에서 마무리할 수 있어요.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
       }
     }
   }
@@ -212,7 +212,7 @@ export async function GET(req: Request) {
   for (const rfq of idle ?? []) {
     const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", rfq.id).eq("kind", "outcome_asked").maybeSingle();
     if (ev || !rfq.user_id) continue;
-    await notifyUsers([rfq.user_id], { kind: "비교", title: `${rfq.rfq_no} 기관을 정하셨나요?`, body: `${rfq.substance} 회신이 마감된 지 2주가 지났습니다. 비교표에서 기관을 선정하거나, 다른 경로로 진행·보류하신 경우 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` });
+    await notifyUsers([rfq.user_id], { kind: "비교", title: `${rfq.rfq_no} 기관을 정하셨나요?`, body: `${rfq.substance} 회신이 마감된 지 2주가 지났어요. 비교표에서 기관을 선정하거나, 다른 경로로 진행·보류하신 경우 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` });
     await logEvent(rfq.id, "outcome_asked", "선정 여부 확인 요청", "회신 마감 14일 경과", null);
     out.outcomeAsked++;
   }
@@ -245,8 +245,8 @@ export async function GET(req: Request) {
       const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", stage).maybeSingle();
       if (ev) continue;
       if (stage === "contract_asked") {
-        await notifyUsers(await adminUserIds(), { kind: "계약", title: `${rfq.rfq_no} 선정 45일 경과 · 계약 보고 없음`, body: `${a.cro_name} 이 계약 체결을 보고하지 않았습니다. 기관과 의뢰자에게 진행 여부를 확인하고 요청 화면의 계약 결과 기록에 남겨 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-        if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약이 진행되고 있나요?`, body: `${rfq.substance} · ${a.cro_name} 을 선정한 지 45일이 지났습니다. 계약이 끝났거나 진행하지 않기로 했다면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+        await notifyUsers(await adminUserIds(), { kind: "계약", title: `${rfq.rfq_no} 선정 45일 경과 · 계약 보고 없음`, body: `${a.cro_name} 이 계약 체결을 보고하지 않았어요. 기관과 의뢰자에게 진행 여부를 확인하고 요청 화면의 계약 결과 기록에 남겨 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+        if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약이 진행되고 있나요?`, body: `${rfq.substance} · ${a.cro_name} 을 선정한 지 45일이 지났어요. 계약이 끝났거나 진행하지 않기로 했다면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
         await logEvent(a.rfq_id, stage, "계약 진행 여부 확인 요청", "선정 45일 경과", null);
       } else {
         const [{ data: org }, { data: members }] = a.cro_org_id
@@ -288,10 +288,10 @@ export async function GET(req: Request) {
     for (const a of rows ?? []) {
       const summary = `체결일 ${a.contract_date ?? "-"} · ${won(a.contract_amount ?? 0)}`;
       await logEvent(a.rfq_id, "closed", "계약 확인 기한 경과 · 자동 확정 · 종료", summary, null, { auto: true, via: "auto" });
-      if (a.user_id) await notifyUsers([a.user_id], { kind: "계약", title: `${a.rfq_no} 계약 내용을 보고대로 확정했습니다`, body: `${a.cro_name} · ${summary}. 확인 기한 안에 이의가 없어 보고 내용대로 확정하고 요청을 마쳤습니다. 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${a.rfq_no}` });
+      if (a.user_id) await notifyUsers([a.user_id], { kind: "계약", title: `${a.rfq_no} 계약 내용을 보고대로 확정했어요`, body: `${a.cro_name} · ${summary}. 확인 기한 안에 이의가 없어 보고 내용대로 확정하고 요청을 마쳤어요. 실제와 다르면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${a.rfq_no}` });
       if (a.cro_org_id) {
         const { data: ms } = await sb.from("profiles").select("id").eq("cro_org_id", a.cro_org_id);
-        await notifyUsers((ms ?? []).map((m) => m.id as string), { kind: "계약", title: `${a.rfq_no} 계약 내용이 확정되었습니다`, body: `${summary} · 요청을 마쳤습니다.`, href: "/cro/awards" });
+        await notifyUsers((ms ?? []).map((m) => m.id as string), { kind: "계약", title: `${a.rfq_no} 계약 내용이 확정됐어요`, body: `${summary} · 요청을 마쳤어요.`, href: "/cro/awards" });
       }
       out.contractConfirmed++;
     }
@@ -332,7 +332,7 @@ export async function GET(req: Request) {
     if (!to.length) return;
     const html = mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">어제 단추에서 있었던 일</h2>
-      ${lines.length ? `<ul style="padding-left:20px;margin:0 0 20px">${lines.map(([k, n]) => `<li>${esc(k)} ${n}건</li>`).join("")}</ul>` : `<p>새로 들어온 요청과 견적은 없습니다.</p>`}
+      ${lines.length ? `<ul style="padding-left:20px;margin:0 0 20px">${lines.map(([k, n]) => `<li>${esc(k)} ${n}건</li>`).join("")}</ul>` : `<p>새로 들어온 요청과 견적은 없어요.</p>`}
       ${attention.length ? `<h3 style="font-size:16px;margin:0 0 8px">확인이 필요한 일 ${attention.length}건</h3><ul style="padding-left:20px;margin:0 0 20px">${attention.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
       <p><a href="${siteUrl()}/admin">운영 화면 열기</a></p>`);
     out.digest = await sendMail({ to, subject: `[단추] ${today} 하루 요약${attention.length ? ` · 확인할 일 ${attention.length}건` : ""}`, html });
@@ -351,7 +351,7 @@ export async function GET(req: Request) {
 
   // 실패한 단계가 있으면 운영자에게 알린다. 응답 JSON 은 아무도 읽지 않는다
   if (out.errors.length) {
-    await notifyUsers(await adminUserIds(), { kind: "시스템", title: `예약 작업 일부 실패 · ${out.errors.length}건`, body: `${today} 09:00 실행 중 실패한 단계:\n${out.errors.join("\n")}\n\n같은 작업은 다음 실행 때 다시 시도합니다. 반복되면 Sentry 또는 Vercel 로그를 확인해 주세요.`, href: "/admin" }, { to: adminEmails() }).catch((e) => captureError(e, "cron:notify"));
+    await notifyUsers(await adminUserIds(), { kind: "시스템", title: `예약 작업 일부 실패 · ${out.errors.length}건`, body: `${today} 09:00 실행 중 실패한 단계:\n${out.errors.join("\n")}\n\n같은 작업은 다음 실행 때 다시 시도해요. 반복되면 Sentry 또는 Vercel 로그를 확인해 주세요.`, href: "/admin" }, { to: adminEmails() }).catch((e) => captureError(e, "cron:notify"));
   }
 
   return NextResponse.json({ ok: out.errors.length === 0, today, ...out });

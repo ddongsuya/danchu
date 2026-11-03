@@ -41,7 +41,7 @@ const metaOf = (m: unknown): Record<string, unknown> => (m && typeof m === "obje
 export async function runOptInSteps(sb: Admin, today: string, now = Date.now()): Promise<OptInCronResult> {
   const out: OptInCronResult = { joinDeadlines: 0, lowParticipation: 0, extendAsked: 0, reoffered: 0, errors: [] };
   const { data: rfqs, error } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).is("compared_at", null).is("selected_quote_id", null);
-  if (error) throw new Error(`열린 요청을 조회하지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`열린 요청을 조회하지 못했어요: ${error.message}`);
   for (const rfq of (rfqs ?? []) as RfqRow[]) {
     if (rfq.compared_at || rfq.selected_quote_id) continue;
     try {
@@ -76,7 +76,7 @@ async function runForRfq(sb: Admin, rfq: RfqRow, today: string, now: number, out
       rfq.id,
       "join_deadline",
       `참여 결정 기한 경과 · ${seatText}`,
-      undecidedNominees.length ? `결정하지 않은 지명 기관 ${undecidedNominees.length}곳(${undecidedNominees.map((i) => i.cro_name).join(", ")}) 몫 자리를 일반 자리로 풀었습니다` : undefined,
+      undecidedNominees.length ? `결정하지 않은 지명 기관 ${undecidedNominees.length}곳(${undecidedNominees.map((i) => i.cro_name).join(", ")}) 몫 자리를 일반 자리로 풀었어요` : undefined,
       null,
       { join_by: rfq.join_by, used: seats.used, released: undecidedNominees.length },
     );
@@ -85,7 +85,7 @@ async function runForRfq(sb: Admin, rfq: RfqRow, today: string, now: number, out
       await notifyUsers(admins, {
         kind: "배포",
         title: `${rfq.rfq_no} 참여 부족 · ${seatText}`,
-        body: `참여 결정 기한이 지났지만 참여한 기관이 적습니다 (안내 ${offered}곳). 분야가 맞는 기관에 참여를 권하거나 참여 안내를 추가해 주세요. 회신 기한 3영업일 전까지는 늦은 참여를 받을 수 있습니다.`,
+        body: `참여 결정 기한이 지났지만 참여한 기관이 적어요 (안내 ${offered}곳). 분야가 맞는 기관에 참여를 권하거나 참여 안내를 추가해 주세요. 회신 기한 3영업일 전까지는 늦은 참여를 받을 수 있어요.`,
         href: `/admin/r/${rfq.rfq_no}`,
       }, { to: adminEmails() });
       // 의뢰자 안내는 요청마다 한 번 (참여 결정 기한을 늘려도 다시 보내지 않는다).
@@ -95,8 +95,8 @@ async function runForRfq(sb: Admin, rfq: RfqRow, today: string, now: number, out
       if (!opensNow && !events.some((e) => e.kind === "low_participation")) {
         await notifyUsers(rfq.user_id ? [rfq.user_id] : [], {
           kind: "배포",
-          title: `${rfq.rfq_no} 참여한 기관이 아직 ${seats.used}곳입니다`,
-          body: `참여 결정 기한이 지났고 지금 ${seatText}입니다. 운영자가 분야가 맞는 기관에 참여를 권하고 있으며, 회신 기한 3영업일 전까지는 늦게 참여한 기관도 견적을 보낼 수 있습니다. 회신 기한을 늘리고 싶으시면 요청 화면의 문의하기로 알려 주세요.`,
+          title: `${rfq.rfq_no} 참여한 기관이 아직 ${seats.used}곳이에요`,
+          body: `참여 결정 기한이 지났고 지금 ${seatText}이에요. 운영자가 분야가 맞는 기관에 참여를 권하고 있으며, 회신 기한 3영업일 전까지는 늦게 참여한 기관도 견적을 보낼 수 있어요. 회신 기한을 늘리고 싶으시면 요청 화면의 문의하기로 알려 주세요.`,
           href: `/app/r/${rfq.rfq_no}`,
         }, { to: [rfq.email] });
       }
@@ -111,7 +111,7 @@ async function runForRfq(sb: Admin, rfq: RfqRow, today: string, now: number, out
     await notifyUsers(admins, {
       kind: "배포",
       title: `${rfq.rfq_no} 회신 기한 임박 · ${seatText}`,
-      body: `회신 기한(${rfq.reply_by})이 3영업일 안인데 참여한 기관이 ${seats.used}곳입니다. 의뢰자에게 회신 기한 연장을 여쭤 보고, 동의하면 회신 기한을 늘려 주세요.`,
+      body: `회신 기한(${rfq.reply_by})이 3영업일 안인데 참여한 기관이 ${seats.used}곳이에요. 의뢰자에게 회신 기한 연장을 여쭤 보고, 동의하면 회신 기한을 늘려 주세요.`,
       href: `/admin/r/${rfq.rfq_no}`,
     }, { to: adminEmails() });
     await logEvent(rfq.id, "low_participation_cutoff", `회신 기한 연장 문의 필요 · ${seatText}`, `회신 기한 ${rfq.reply_by}`, null, { reply_by: rfq.reply_by, used: seats.used });
@@ -140,15 +140,15 @@ async function reofferReleasedSeats(rfq: RfqRow, invites: OfferRow[], events: { 
       const wasFull = seats.used + fresh.length >= seats.cap;
       const late = lateJoinOpen(rfq.reply_by, rfq.join_by, today, now);
       const due = open > 0 && wasFull && late && targets.length > 0;
-      const why = open <= 0 ? "그 사이 다른 기관이 참여해 남은 자리가 없습니다"
-        : !wasFull ? "자리가 남아 있던 중이라 다시 안내하지 않았습니다"
-        : !late ? "늦은 참여 마감(회신 기한 3영업일 전)이 지나 다시 안내하지 않았습니다"
-        : "참여를 결정하지 않은 안내 기관이 없습니다";
+      const why = open <= 0 ? "그 사이 다른 기관이 참여해 남은 자리가 없어요"
+        : !wasFull ? "자리가 남아 있던 중이라 다시 안내하지 않았어요"
+        : !late ? "늦은 참여 마감(회신 기한 3영업일 전)이 지나 다시 안내하지 않았어요"
+        : "참여를 결정하지 않은 안내 기관이 없어요";
       if (due) {
         await notifyInvitedOrgs(targets, {
           kind: "배포",
-          title: `자리가 생겼습니다 · ${rfq.rfq_no}`,
-          body: `${(rfq.categories ?? []).join(" · ")} 견적 요청에 참여 자리 ${open}곳이 생겼습니다. 먼저 참여한 기관부터 자리가 찹니다. 요약을 보고 참여를 결정해 주세요.${rfq.reply_by ? ` 회신 기한 ${rfq.reply_by}.` : ""}`,
+          title: `자리가 생겼어요 · ${rfq.rfq_no}`,
+          body: `${(rfq.categories ?? []).join(" · ")} 견적 요청에 참여 자리 ${open}곳이 생겼어요. 먼저 참여한 기관부터 자리가 차요. 요약을 보고 참여를 결정해 주세요.${rfq.reply_by ? ` 회신 기한 ${rfq.reply_by}.` : ""}`,
         });
         reoffered = targets.length;
       }

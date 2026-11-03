@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 /** 갈래는 ?for=cro (기본은 의뢰자) */
 type SP = Promise<{ for?: string }>;
 
-const REQ_POINTS = ["한번의 요청으로 여러 기관에.", "금액만 말고 구성도 함께 비교하세요.", "선정 전까지 회사명은 가려드려요."];
+const REQ_POINTS = ["한번의 요청으로 여러 기관에.", "금액만 말고 구성도 함께 비교하세요.", "선정 전까지 회사명은 가려요."];
 const CRO_POINTS = ["분야에 맞는 요청서만 받아보세요.", "회신은 의뢰자만 봐요. 다른 기관은 볼 수 없어요.", "필요한 요청에만 참여하세요. 참여하지 않은 요청은 비용이 없어요."];
 
 export default async function Page({ searchParams }: { searchParams: SP }) {
@@ -41,7 +41,7 @@ function OneScreen({ role }: { role: "req" | "cro" }) {
           <EarlyForm key={role} role={role} id={`eb-${role}`} />
         </div>
       </section>
-      <section className="rsx side" aria-labelledby="eb-f"><header><h2 id="eb-f">{req ? <>회신 받은 내용을<br /><span>비교표로.</span></> : <>모든 기관에<br /><span>같은 규칙이 적용됩니다.</span></>}</h2></header>{req ? <HowReel /> : <CroRulesReel />}</section>
+      <section className="rsx side" aria-labelledby="eb-f"><header><h2 id="eb-f">{req ? <>회신 받은 내용을<br /><span>비교표로.</span></> : <>모든 기관에<br /><span>같은 규칙이 적용돼요.</span></>}</h2></header>{req ? <HowReel /> : <CroRulesReel />}</section>
     </Site>
   );
 }

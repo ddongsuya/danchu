@@ -188,12 +188,12 @@ describe("배포가 메일을 기다리는 사이 선정되면 (#5)", () => {
 describe("배포 대상 조회 오류는 '대상 없음'이 아니다 (#10)", () => {
   it("기관 조회가 실패하면 빈 목록이 아니라 오류를 던진다", async () => {
     fx.failSelect.cro_orgs = "permission denied for table cro_orgs";
-    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/배포 대상 기관을 조회하지 못했습니다/);
+    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/배포 대상 기관을 조회하지 못했어요/);
   });
   it("카탈로그 조회가 실패해도 오류를 던진다", async () => {
     fx.tables.cro_orgs = [{ ...org(1), status: "approved" }];
     fx.failSelect.cro_catalog = "column cro_catalog.available does not exist";
-    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/카탈로그를 조회하지 못했습니다/);
+    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/카탈로그를 조회하지 못했어요/);
   });
   it("정상이면 분야가 맞는 기관을 돌려준다", async () => {
     fx.tables.cro_orgs = [{ ...org(1), status: "approved" }, { ...org(2), status: "approved", categories: ["안전성약리"] }];
@@ -273,13 +273,13 @@ describe("선정은 확인 화면이 본 견적 판으로만 (#7)", () => {
     expect((await r.json()).code).toBe("quote_changed");
     expect(fx.selectQuote).not.toHaveBeenCalled();
   });
-  it("그 사이 견적이 바뀌었으면 409 와 '견적이 바뀌었습니다' 안내, 알림·메일 없음", async () => {
+  it("그 사이 견적이 바뀌었으면 409 와 '견적이 바뀌었어요' 안내, 알림·메일 없음", async () => {
     fx.selectQuote.mockResolvedValueOnce({ ok: false, code: "quote_changed" });
     const r = await selectRoute(req({ quoteId: QID, revision: 3 }), ctx);
     expect(r.status).toBe(409);
     const body = await r.json();
     expect(body).toMatchObject({ code: "quote_changed", error: QUOTE_CHANGED_MESSAGE });
-    expect(body.error).toMatch(/^견적이 바뀌었습니다/);
+    expect(body.error).toMatch(/^견적이 바뀌었어요/);
     expect(fx.selectQuote).toHaveBeenCalledWith(RFQ_ID, QID, "sponsor-1", 3);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
     expect(fx.logEvent).not.toHaveBeenCalled();

@@ -124,7 +124,7 @@ describe("참여 선택형 공개 문구", () => {
   it("약관 제4조는 참여 안내와 참여한 요청에 제출한 견적으로 설명한다", () => {
     const terms = visible(src("app/terms/page.tsx"));
     for (const s of ["참여 안내", "참여한 요청에 제출한 견적", "지명 기관에만 안내", "참여 결정 기한", "참여를 철회", "대신하여 참여를"]) expect(terms).toContain(s);
-    expect(terms).not.toContain("견적 요청을 배포합니다");
+    expect(terms).not.toContain("견적 요청을 배포해요");
     expect(terms).not.toContain("전달받은 참여 CRO가 모두 회신");
     expect(terms).not.toContain("그 합의 이후에 전달된");
   });

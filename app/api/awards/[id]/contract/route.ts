@@ -15,14 +15,14 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return NextResponse.json({ error: "잘못된 요청" }, { status: 400 });
   const sb = getSupabaseAdmin()!;
   const { data: a } = await sb.from("rfq_awards").select("*").eq("id", id).maybeSingle();
-  if (!a) return NextResponse.json({ error: "수주 기록이 없습니다." }, { status: 404 });
+  if (!a) return NextResponse.json({ error: "수주 기록이 없어요." }, { status: 404 });
   const award = a;
-  if (s.profile.role !== "admin" && (!s.profile.cro_org_id || award.cro_org_id !== s.profile.cro_org_id)) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (s.profile.role !== "admin" && (!s.profile.cro_org_id || award.cro_org_id !== s.profile.cro_org_id)) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const date = typeof b.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.date) ? b.date : "";
@@ -36,7 +36,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const rc = await reportContract(id, date, amount, note, isAdmin);
   if (!rc.ok) {
     const known = REPORT_CONTRACT_ERRORS[rc.code];
-    return NextResponse.json({ error: known?.message ?? "저장하지 못했습니다." }, { status: known?.status ?? 500 });
+    return NextResponse.json({ error: known?.message ?? "저장하지 못했어요." }, { status: known?.status ?? 500 });
   }
   const r = { rfq_no: rc.rfq_no, user_id: rc.user_id, substance: rc.substance };
   const corrected = rc.corrected === true;
@@ -53,24 +53,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (corrected) {
     // 확인 전 정정이면 의뢰자가 바뀐 내용을 다시 확인한다 (새 기한). 확정 뒤 정정은 운영자 정정이라 의뢰자 확인을 다시 받지 않는다
     if (!confirmed && r.user_id) {
-      await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용이 정정되었습니다`, body: `체결일 ${date} · ${won(amount)}. 맞는지 요청 화면에서 다시 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 이 내용대로 확정합니다.` : ""}`, href: `/app/r/${r.rfq_no}` });
+      await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용이 정정됐어요`, body: `체결일 ${date} · ${won(amount)}. 맞는지 요청 화면에서 다시 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 이 내용대로 확정해요.` : ""}`, href: `/app/r/${r.rfq_no}` });
     }
     return NextResponse.json({ ok: true, corrected: true, confirmDueAt: rc.confirm_due_at ?? null });
   }
   if (r?.user_id) {
     const { data: rq } = await getSupabaseAdmin()!.from("rfq_requests").select("email").eq("id", award.rfq_id).maybeSingle();
     // 기관 보고(운영자 기록 포함)는 의뢰자가 확인한다. 기한 안에 이의가 없으면 보고대로 확정한다 (2026-10-20 결정 2)
-    const tail = `맞는지 요청 화면에서 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 보고 내용대로 확정합니다.` : ""}`;
+    const tail = `맞는지 요청 화면에서 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 보고 내용대로 확정해요.` : ""}`;
     await notifyUsers(
       [r.user_id],
       isAdmin
-        ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 단추가 기관에 확인해 기록했습니다. ${tail}`, href: `/app/r/${r.rfq_no}` }
+        ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 단추가 기관에 확인해 기록했어요. ${tail}`, href: `/app/r/${r.rfq_no}` }
         : { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. ${tail}`, href: `/app/r/${r.rfq_no}` },
       rq?.email ? { to: [rq.email] } : undefined,
     );
   }
   // 의뢰자 계정이 없는 요청(계정 삭제 등)은 의뢰자가 확인·이의를 할 수 없다. 자동 확정 전에 운영자가 의뢰자 연락처로 확인하도록 알린다
-  const orphan = !r?.user_id ? ` · 의뢰자 계정이 없어 확인 요청을 보내지 못했습니다. ${due ? `${due}에 자동 확정되기 전에 ` : ""}의뢰자 연락처로 확인하고, 다르면 수주·계약 화면에서 체결 정보를 정정해 주세요` : "";
+  const orphan = !r?.user_id ? ` · 의뢰자 계정이 없어 확인 요청을 보내지 못했어요. ${due ? `${due}에 자동 확정되기 전에 ` : ""}의뢰자 연락처로 확인하고, 다르면 수주·계약 화면에서 체결 정보를 정정해 주세요` : "";
   await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} ${what} · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}${orphan}`, href: `/admin/awards` }, { to: adminEmails() });
   return NextResponse.json({ ok: true, confirmDueAt: rc.confirm_due_at ?? null });
 }
