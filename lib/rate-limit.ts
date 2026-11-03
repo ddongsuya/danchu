@@ -36,4 +36,7 @@ export function clientIp(req: Request): string {
   return /^[0-9a-fA-F.:]+$/.test(ip) ? ip : "unknown";
 }
 
-export const TOO_MANY = "요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.";
+export const TOO_MANY = "요청이 너무 잦아요. 잠시 후 다시 해 주세요.";
+
+/** 가입 신청처럼 한 시간 단위로 막는 곳. "잠시 후"라고 하면 계속 다시 눌러 보게 된다 (2026-11-02 가상 35명 테스트 5번) */
+export const TOO_MANY_HOUR = "한 시간 안에 가입 신청이 여러 번 들어와 잠시 막았어요. 한 시간 뒤에 다시 해 주세요.";

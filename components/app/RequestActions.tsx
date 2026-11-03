@@ -32,7 +32,7 @@ export function ContractConfirm({ no, cro, date, amount, autoOn }: { no: string;
     }
   };
   return (
-    <div className="card" style={{ padding: 18 }}>
+    <div id="contract-confirm" className="card" style={{ padding: 18, scrollMarginTop: 88 }}>
       <div className="sec-title" style={{ margin: "0 0 6px" }}>
         <h2>계약 내용이 맞나요?</h2>
       </div>

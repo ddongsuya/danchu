@@ -95,6 +95,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         award={d.award ? { name: d.award.cro_name, at: d.award.awarded_at, reportedAt: d.award.contract_reported_at ?? null } : null}
         f={story}
         canCompare={canCompare}
+        confirm={needsConfirm}
         next={
           (noJoinPastDue || contractOpen) && (
             <div className="rs-next">

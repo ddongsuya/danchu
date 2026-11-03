@@ -18,7 +18,7 @@ export default async function CroQuotes() {
       <div className="ph">
         <div>
           <h1>제출한 견적</h1>
-          <p>제출한 견적은 비교표가 열릴 때 의뢰자에게 보여요. 비교표가 열리기 전까지 수정할 수 있고, 열린 뒤에는 수정하거나 다시 제출할 수 없어요. 결과는 의뢰자 선정 후 안내돼요.</p>
+          <p>제출한 견적은 비교표가 열릴 때 의뢰자에게 보여요. 비교표가 열리기 전까지는 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없어요. 결과는 의뢰자가 기관을 고르면 알려요.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/awards" className="b2 bsm">수주·계약 보고</Link>
@@ -48,6 +48,8 @@ export default async function CroQuotes() {
                 const q = i.quote!;
                 const dd = dday(i.reply_by);
                 const rs = i.rfq?.status ?? "";
+                // 비교표가 열렸거나 선정·마무리된 요청은 회신 기한이 남아 있어도 이미 끝난 요청이다
+                const open = dd.n >= 0 && !i.rfq?.compared_at && ["distributed", "quoted"].includes(rs);
                 const result = rs === "selected" || rs === "contracting" || rs === "closed" ? (i.rfq?.selected_quote_id === q.id ? "선정" : "미선정") : statusLabel(rs);
                 return (
                   <tr key={i.id}>
@@ -58,7 +60,7 @@ export default async function CroQuotes() {
                     <td className="tnum" data-label="총액" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
                     <td className="tnum" data-label="기간">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
                     <td className="tnum tbl__opt" data-label="제출일">{ymd(q.submitted_at)}</td>
-                    <td className="tnum" data-label="회신 기한">{i.reply_by}<span className="pill pill--sf" style={{ marginLeft: 6 }}>{dd.n >= 0 ? dd.label : "마감"}</span></td>
+                    <td className="tnum" data-label="회신 기한">{i.reply_by}<span className="pill pill--sf" style={{ marginLeft: 6 }}>{open ? dd.label : "마감"}</span></td>
                     <td data-label="진행"><span className="pill pill--tint">{result}</span></td>
                     <td className="tbl__act"><Link href={`/cro/r/${i.id}`} className="b2 bsm">견적 보기</Link></td>
                   </tr>

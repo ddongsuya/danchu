@@ -27,11 +27,11 @@ export function SubstanceForm({ awardId, qty, when, note, updatedAt }: { awardId
         try {
           const res = await fetch(`/api/awards/${awardId}/substance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) });
           const d = (await res.json().catch(() => ({}))) as { error?: string };
-          if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
+          if (!res.ok) throw new Error(d.error || "저장하지 못했어요. 다시 눌러 주세요.");
           setSaved(true);
           router.refresh();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "저장하지 못했어요.");
+          setError(err instanceof Error ? err.message : "저장하지 못했어요. 다시 눌러 주세요.");
         } finally {
           setBusy(false);
         }
