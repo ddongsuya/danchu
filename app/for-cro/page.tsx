@@ -29,9 +29,9 @@ export default function Page() {
 <div className="fg">
 <h2 id="tm" className="huge">무료로<br /><span>참여해보세요.</span></h2>
 <div className="fr">
-<p className="lead">그리고 단추가 마음에 든다면 협업을 결정해주세요.</p>
+<p className="lead">써 보시고 마음에 들면, 단추와 함께해요.</p>
 <div className="act"><div><p className="actk">이것만 있으면 시작할 수 있어요.</p><div className="chk"><label><input type="checkbox" />기관명</label><label><input type="checkbox" />보유 GLP 인증</label><label><input type="checkbox" />수행 가능 분야</label><label><input type="checkbox" />담당자 연락처</label></div></div>
-<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a></div><p className="gatehint">네가지 모두 확인하면 신청할 수 있어요.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
+<div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a></div><p className="gatehint">모두 준비되셨다면 바로 신청해 주세요.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
 <details className="terms"><summary>이용 조건 전체 보기</summary>
 <div className="tm">
 <section><h3>이용 조건 동의 및 참여 기록</h3>
