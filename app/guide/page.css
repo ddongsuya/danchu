@@ -270,3 +270,14 @@
 .a .fst .grid{display:none}
 
 /* 다양한 시험 정보: 왼쪽 시험 목록에서 하나씩 골라 오른쪽 정보 카드가 넘어간다 (16초, 시험 4개 × 4초) */
+
+/* 자료실로 가는 장면: 목차를 그대로 보여 주고 누르면 해당 주제로 간다 */
+.a .libgo .lgl{margin:0;font-size:16px;line-height:1.7;color:var(--muted)}
+.a .libgo .lgt{list-style:none;margin:0;padding:0;border-top:1px solid var(--ink);display:grid;grid-template-columns:1fr 1fr;column-gap:40px}
+.a .libgo .lgt a{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:52px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:16px}
+.a .libgo .lgt a .tnum{color:var(--muted);font-size:14px}
+.a .libgo .lgt a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (hover:hover) and (pointer:fine){.a .libgo .lgt a:hover span:first-child{text-decoration:underline;text-underline-offset:5px}}
+@media (max-width:860px){.a .libgo .lgt{grid-template-columns:1fr}.a .libgo .lgt a{min-height:46px;font-size:15px}}
+.a .ex .basis a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.a .ex .basis a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
