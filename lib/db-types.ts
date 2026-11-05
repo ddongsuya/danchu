@@ -518,7 +518,7 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rfq_pending"]["Row"]>;
         Relationships: [];
       };
-      /** 사전예약 (0030). 서비스 키로만 읽고 쓴다. 같은 갈래·이메일은 한 행. 2027-07-01 뒤 정리 작업이 지운다 */
+      /** 사전예약 (0030). 서비스 키로만 읽고 쓴다. 같은 갈래·이메일은 한 행. 2027-12-01 뒤 정리 작업이 지운다 */
       early_signups: {
         Row: {
           id: string;

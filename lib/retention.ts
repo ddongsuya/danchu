@@ -21,7 +21,7 @@ function daysAgo(n: number): string {
  * 1) 90일 지난 접속 기록 비우기 (요청 접수 IP·브라우저, 기관 참여 기록의 IP·브라우저)
  * 2) 3년 지난 요청서 익명화 + 미선정 첨부 삭제 (한 번에 최대 200건)
  * 3) 180일 지난 읽은 알림 삭제
- * 4) 정식 오픈 6개월 뒤(2027-07-01)부터 사전예약 삭제 (0030)
+ * 4) 시범 운영 시작 6개월 뒤(2027-12-01)부터 사전예약 삭제 (0030)
  * 5) 90일 지난 문자 알림 기록 삭제 (0033)
  */
 export async function runRetention(sb: Admin, now = new Date()): Promise<{ accessLogs: number; requests: number; files: number; notifications: number; early: number; sms: number }> {

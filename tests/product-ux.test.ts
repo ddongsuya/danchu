@@ -111,7 +111,7 @@ const visible = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, "").replace(
 
 describe("참여 선택형 공개 문구", () => {
   it("기관 조건 판은 한 곳에서 정하고 기관 안내 문서가 같은 값을 보여 준다", () => {
-    expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-21");
+    expect(CRO_TERMS_VERSION).toBe("pilot-2026-11-05");
     // 시범 판은 pilot- 으로 시작해야 청구 함수가 무료로 본다 (0023 billing_lines)
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
     const forCro = src("app/for-cro/page.tsx");

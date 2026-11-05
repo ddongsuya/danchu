@@ -115,7 +115,7 @@ describe("개인정보처리방침: 선정 때 연락처를 두 방향으로 제
     expect(raw).not.toContain("version=");
     expect(raw).toContain('effectiveDate="2026년 11월 16일"');
     expect(CONSENT_VERSION).toBe("2026-10-28");
-    expect(CRO_TERMS_VERSION).toBe("pilot-2026-10-21");
+    expect(CRO_TERMS_VERSION).toBe("pilot-2026-11-05");
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
     expect(src("app/privacy/page.tsx")).not.toMatch(/[—–]/);
   });

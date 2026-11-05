@@ -83,7 +83,7 @@ export function EarlyForm({ role, id }: { role: EarlyRole; id: string }) {
     return (
       <div className="ef-done" role="status">
         <b>예약을 받았어요.</b>
-        <p>{req ? "오픈 전에 이메일로 먼저 알려드릴게요." : "오픈 전에 이메일로 먼저 연락드릴게요. 궁금한 점은 그때 함께 답해요."}</p>
+        <p>{req ? "시범 운영 전에 이메일로 먼저 알려드릴게요." : "시범 운영 전에 이메일로 먼저 연락드릴게요. 궁금한 점은 그때 함께 답해요."}</p>
       </div>
     );
   }
@@ -162,7 +162,7 @@ export function EarlyForm({ role, id }: { role: EarlyRole; id: string }) {
         <label className="ef-agree">
           <input type="checkbox" name="agree" />
           <span>
-            오픈 안내를 위해 이메일{req ? "" : "·기관명"}과 고른 항목을 모으고, 오픈 6개월 뒤 지워요. 동의하지 않으면 예약할 수 없어요.{" "}
+            시범 운영 안내를 위해 이메일{req ? "" : "·기관명"}과 고른 항목을 모으고, 시범 운영 시작 6개월 뒤(2027년 12월 1일) 지워요. 동의하지 않으면 예약할 수 없어요.{" "}
             <a href="/privacy" target="_blank" rel="noopener">처리방침</a>
           </span>
         </label>

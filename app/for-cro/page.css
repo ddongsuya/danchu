@@ -253,3 +253,10 @@
 /* 2026-10-25 품질 3차: 영상 무대의 회색 상자·점 격자를 걷고 종이 위에 바로 (랜딩 아래 섹션과 같은 방식) */
 .a .fst{background-color:transparent;box-shadow:none}
 .a .fst .grid{display:none}
+.a details.terms .tm strong{font-weight:600;color:var(--ink)}
+.a details.terms .tm-fee{width:100%;margin:12px 0;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.a details.terms .tm-fee th,.a details.terms .tm-fee td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.a details.terms .tm-fee thead th{font-size:12.5px;font-weight:600;color:var(--muted);border-bottom-color:var(--ink)}
+.a details.terms .tm-fee tbody th{font-weight:500;color:var(--ink)}
+.a details.terms .tm-fee td{color:var(--ink2)}
+@media (max-width:767px){.a details.terms .tm-fee{font-size:13px}.a details.terms .tm-fee th,.a details.terms .tm-fee td{padding:8px 4px}}

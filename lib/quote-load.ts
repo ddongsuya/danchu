@@ -116,7 +116,7 @@ export function rfqSummaryOf(r: RfqRow, inv: InviteRow, fileCount: number, seats
     ["CDA", cda ? "필요 (첨부는 CDA 체결 확인 뒤)" : "필요 없음"],
     ["첨부", fileCount ? `${fileCount}건 · 참여 뒤 열람` : "없음"],
     ["참여 자리", seatsLabel(seats)],
-    ["이용 조건", `${CRO_TERMS_VERSION} (시범 운영, 무료)`],
+    ["이용 조건", `${CRO_TERMS_VERSION} (2027년 12월 31일까지 참여한 요청은 무료)`],
   ];
   return {
     full: false,
