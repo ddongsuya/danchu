@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
-import { logEvent, notifyUsers } from "./notify";
+import { logEvent, notifyUsers, siteUrl } from "./notify";
 import { beforeDeadline, pendingInvites } from "./reply-window";
 import { captureError } from "./observe";
 import { occupiesSeat, undecidedOffer } from "./request-policy";
@@ -137,6 +137,7 @@ export async function announceCompareOpened(rfqIn: RfqRow | string, reason: Comp
       href: `/app/r/${r.rfq_no}/compare`,
     },
     { to: [r.email], subject: `[단추] ${r.rfq_no} 비교표가 열렸어요 · 견적 ${count}건` },
+    { kind: "compare", text: `${r.rfq_no} 비교표가 열렸어요. 견적 ${count}건을 비교하고 기관을 선택해 주세요. ${siteUrl()}/app/r/${r.rfq_no}/compare`, dedupeKey: `compare:${r.rfq_no}` },
   );
 }
 

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getRfqByNo, ownsRfq, type QuoteRow } from "@/lib/data";
-import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo } from "@/lib/notify";
+import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo, siteUrl } from "@/lib/notify";
 import { replyPath } from "@/lib/concierge";
 import { inviteMailTo, notifyInvitedOrgs, orgMailTargets } from "@/lib/distribute";
 import { won } from "@/lib/format";
@@ -76,6 +76,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     },
     // 운영자 관리 기관은 단추 메일의 회신이 운영 주소로 가도록 안내받았다. 그 밖에는 의뢰자에게 바로 닿게 둔다
     { to: winnerMails, replyTo: winnerManaged ? operatorReplyTo() : rfq.email },
+    { kind: "selected", text: `${rfq.rfq_no} 의뢰자가 우리 기관 견적을 선정했어요. 의뢰자 연락처를 확인해 주세요. ${siteUrl()}/cro/awards`, dedupeKey: `selected:${rfq.id}` },
   );
 
   // 나머지 기관: 결과 안내 (금액·타사명은 알리지 않는다). 기관마다 따로, 계정 없는 기관은 /q 링크로

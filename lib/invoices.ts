@@ -137,7 +137,11 @@ export async function deliverInvoice(inv: BillingInvoiceRow, kind: MailKind): Pr
   // 청구서는 수신 거부 설정과 상관없이 보낸다 (서비스 이용 계약상 고지). 화면 알림은 늘 남긴다
   const mailed = emails.length ? await sendMail({ to: emails, subject, html, replyTo: operatorReplyTo() }) : false;
   const title = kind === "overdue" ? `${monthLabel(inv.month)} 이용료 납부 기한이 지났어요` : kind === "reminder_before" ? `${monthLabel(inv.month)} 이용료 납부 기한이 3일 남았어요` : `${monthLabel(inv.month)} 이용료 청구서가 왔어요`;
-  await notifyUsers(userIds, { kind: "기관", title, body: `${inv.invoice_no} · 합계 ${won(inv.total)} · 기한 ${dayLabel(inv.due_date)}`, href: `/cro/billing/${inv.id}` });
+  // 문자는 처음 발행과 기한 지남에만 (다시 보내기·3일 전 안내는 메일과 사이트 알림만)
+  const sms = kind === "issued" || kind === "overdue"
+    ? { kind: "invoice" as const, text: `${monthLabel(inv.month)} 이용료 ${kind === "overdue" ? "납부 기한이 지났어요" : "청구서가 나왔어요"}. 합계 ${won(inv.total)}, 기한 ${inv.due_date}. ${siteUrl()}/cro/billing/${inv.id}`, dedupeKey: `invoice:${inv.id}:${kind}:${inv.reminder_stage}` }
+    : undefined;
+  await notifyUsers(userIds, { kind: "기관", title, body: `${inv.invoice_no} · 합계 ${won(inv.total)} · 기한 ${dayLabel(inv.due_date)}`, href: `/cro/billing/${inv.id}` }, undefined, sms);
   if (mailed && (kind === "issued" || kind === "resend")) {
     const sb = getSupabaseAdmin();
     const { error } = sb ? await sb.rpc("mark_invoice_sent", { p_id: inv.id }) : { error: null };
