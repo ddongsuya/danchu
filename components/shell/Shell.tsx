@@ -56,7 +56,11 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
               <span className="pt__role">{ROLE_LABEL[role]}</span>
             </Link>
             <span className="pt__workspace-title">{ROLE_LABEL[role]} 워크스페이스</span>
-            <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
+            <div className="pt__topr">
+              {/* 좁은 화면에는 사이드바가 없어 자료실 링크를 위 바에 둔다 */}
+              <a href="/guide/library" className="pt__toplib only-narrow" aria-label="가이드라인 자료실"><BookOpenText size={22} aria-hidden="true" /></a>
+              <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
+            </div>
           </div>
         </header>
         <main className="pt__main" id="main-content">{children}</main>
