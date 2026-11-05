@@ -9,13 +9,13 @@ import { Card, Film, sceneTracks, type Scene } from "./Film";
  */
 const DUR = 21;
 const SCENES: Scene[] = [
-  ["접수", 0, "요청서는 한 번만 씁니다"],
-  ["참여 안내", 3, "분야가 맞는 기관에 참여를 묻습니다"],
-  ["견적 도착", 6.5, "기관은 서로의 회신을 볼 수 없습니다"],
-  ["비교표 공개", 10, "같은 항목끼리 나란히 봅니다"],
-  ["기관 선택", 13.5, "연락처를 서로 주고받습니다"],
-  ["계약 진행", 16.5, "계약은 기관과 직접 합니다"],
-  ["계약 완료", 19, "확인하면 요청을 마칩니다"],
+  ["접수", 0, "요청서는 한 번만 써요"],
+  ["참여 안내", 3, "분야가 맞는 기관에 참여를 물어요"],
+  ["견적 도착", 6.5, "기관은 서로의 회신을 볼 수 없어요"],
+  ["비교표 공개", 10, "같은 항목끼리 나란히 봐요"],
+  ["기관 선택", 13.5, "연락처를 서로 주고받아요"],
+  ["계약 진행", 16.5, "계약은 기관과 직접 해요"],
+  ["계약 완료", 19, "확인하면 요청을 마쳐요"],
 ];
 const hide = "opacity:0";
 const show = "opacity:1";
@@ -63,7 +63,7 @@ export function FlowFilm() {
         <g className="ff-hub">
           <rect className="ff-box ff-box--hub" x="340" y="420" width="240" height="100" rx="12" />
           <text className="ff-label" x="460" y="470" textAnchor="middle">단추</text>
-          <text className="ff-sub" x="460" y="498" textAnchor="middle">같은 양식으로 모읍니다</text>
+          <text className="ff-sub" x="460" y="498" textAnchor="middle">같은 양식으로 모아요</text>
         </g>
         {ORGS.map(([k, x, name, st]) => (
           <g key={k}>

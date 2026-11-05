@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { EMAIL_RE, authErrorKo, sendLoginLink } from "@/lib/auth-links";
 import { adminEmails, adminUserIds, notifyUsers } from "@/lib/notify";
 import { CATS } from "@/lib/rfq-schema";
-import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
+import { clientIp, rateLimited, TOO_MANY_HOUR } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "�
  */
 export async function POST(req: Request) {
   const ip = clientIp(req);
-  if (await rateLimited("signup-cro:ip", ip, 5, 60 * 60)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
+  if (await rateLimited("signup-cro:ip", ip, 5, 60 * 60)) return NextResponse.json({ error: TOO_MANY_HOUR }, { status: 429 });
 
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const o = (b.org && typeof b.org === "object" ? b.org : {}) as Record<string, unknown>;
@@ -37,12 +37,12 @@ export async function POST(req: Request) {
   const orgName = s(o, "name");
 
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "이메일 형식을 확인해 주세요." }, { status: 400 });
-  if (password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 합니다." }, { status: 400 });
+  if (password.length < 8) return NextResponse.json({ error: "비밀번호는 8자 이상이어야 해요." }, { status: 400 });
   if (!name || !orgName) return NextResponse.json({ error: "담당자 성명과 기관명을 입력해 주세요." }, { status: 400 });
-  if (await rateLimited("signup-cro:email", email, 3, 60 * 60)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
+  if (await rateLimited("signup-cro:email", email, 3, 60 * 60)) return NextResponse.json({ error: TOO_MANY_HOUR }, { status: 429 });
 
   const admin = getSupabaseAdmin();
-  if (!admin) return NextResponse.json({ error: "서버 설정이 완료되지 않았습니다." }, { status: 503 });
+  if (!admin) return NextResponse.json({ error: "서버 설정이 완료되지 않았어요." }, { status: 503 });
 
   // 같은 기관이 이미 있으면 합류 신청으로 받는다 (연결은 기관 대표 또는 운영자가 한다).
   // 사업자번호가 같으면 이름이 달라도 같은 기관이다. 없으면 이름(대소문자·양끝 공백 무시)으로 본다
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   }
   if (existing && (existing.status === "rejected" || existing.status === "suspended")) {
     // 반려·중지된 기관에 합류 신청을 받으면 신청자는 영원히 "대기 중"만 본다. 여기서 끝낸다
-    return NextResponse.json({ error: existing.status === "rejected" ? "이 기관은 가입 신청이 반려된 상태라 담당자 합류를 받을 수 없습니다. hello@danchu.kr로 문의해 주세요." : "이 기관은 참여가 중지되어 담당자 합류를 받을 수 없습니다. hello@danchu.kr로 문의해 주세요." }, { status: 400 });
+    return NextResponse.json({ error: existing.status === "rejected" ? "이 기관은 가입 신청이 반려된 상태라 담당자 합류를 받을 수 없어요. limjm900202@gmail.com로 문의해 주세요." : "이 기관은 참여가 중지되어 담당자 합류를 받을 수 없어요. limjm900202@gmail.com로 문의해 주세요." }, { status: 400 });
   }
   let orgId = existing?.id as string | undefined;
   if (!orgId) {
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       }
       if (!orgId) {
         console.error("cro_orgs insert", oe);
-        return NextResponse.json({ error: "기관 정보를 저장하지 못했습니다." }, { status: 500 });
+        return NextResponse.json({ error: "기관 정보를 저장하지 못했어요." }, { status: 500 });
       }
     } else orgId = org.id;
   }

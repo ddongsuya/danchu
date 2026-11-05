@@ -19,10 +19,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const { data: f } = await sb.from("rfq_files").select("*").eq("id", id).maybeSingle();
-  if (!f) return NextResponse.json({ error: "파일이 없습니다." }, { status: 404 });
+  if (!f) return NextResponse.json({ error: "파일이 없어요." }, { status: 404 });
   const file = f;
   const { data: r } = await sb.from("rfq_requests").select("*").eq("id", file.rfq_id).maybeSingle();
-  if (!r) return NextResponse.json({ error: "요청이 없습니다." }, { status: 404 });
+  if (!r) return NextResponse.json({ error: "요청이 없어요." }, { status: 404 });
   const rfq = r;
 
   const s = await sessionOrNull();
@@ -54,7 +54,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const { data: org } = await sb.from("cro_orgs").select("status").eq("id", viaInvite.cro_org_id).maybeSingle();
     if (org?.status !== "approved") allowed = false;
   }
-  if (!allowed) return NextResponse.json({ error: "열람 권한이 없습니다." }, { status: 403 });
+  if (!allowed) return NextResponse.json({ error: "열람 권한이 없어요." }, { status: 403 });
 
   let downloadName = file.file_name;
   let asciiName: string | null = null; // 선정 전 기관에 흘려 줄 때의 ASCII 대체 이름. null 이면 리다이렉트
@@ -73,15 +73,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!file.uploaded_at) {
     // 접수 직후 확인 API 를 못 탄 파일: 저장소에 있으면 지금 확인 표시, 없으면 아직 안 올라온 것
     const ok = await storageHas(sb, "rfq-files", file.storage_path);
-    if (!ok) return NextResponse.json({ error: "아직 업로드되지 않은 파일입니다. 의뢰자가 다시 첨부해야 합니다." }, { status: 404 });
+    if (!ok) return NextResponse.json({ error: "아직 업로드되지 않은 파일이에요. 의뢰자가 다시 첨부해야 해요." }, { status: 404 });
     await sb.from("rfq_files").update({ uploaded_at: new Date().toISOString() }).eq("id", file.id);
   }
   if (asciiName) {
     // 저장 경로(rfq_no/시각-원본이름)와 서명 URL 에는 원본 파일명이 남아 있다. 선정 전 기관에는 URL 을 넘기지 않고 서버가 대신 받아 흘려 준다
     const { data: signed, error } = await sb.storage.from("rfq-files").createSignedUrl(file.storage_path, 60);
-    if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했습니다." }, { status: 500 });
+    if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했어요." }, { status: 500 });
     const upstream = await fetch(signed.signedUrl).catch(() => null);
-    if (!upstream?.ok || !upstream.body) return NextResponse.json({ error: "파일을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 502 });
+    if (!upstream?.ok || !upstream.body) return NextResponse.json({ error: "파일을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 502 });
     const headers = new Headers({
       "Content-Type": file.mime_type || "application/octet-stream",
       "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`,
@@ -91,6 +91,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     return new NextResponse(upstream.body, { status: 200, headers });
   }
   const { data: signed, error } = await sb.storage.from("rfq-files").createSignedUrl(file.storage_path, 300, { download: downloadName });
-  if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했습니다." }, { status: 500 });
+  if (error || !signed) return NextResponse.json({ error: "파일 링크를 만들지 못했어요." }, { status: 500 });
   return NextResponse.redirect(signed.signedUrl, 302);
 }

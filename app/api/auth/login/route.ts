@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
   const sb = await createSessionClient();
   const admin = getSupabaseAdmin();
-  if (!sb || !admin) return NextResponse.json({ error: "서버 설정이 완료되지 않았습니다." }, { status: 503 });
+  if (!sb || !admin) return NextResponse.json({ error: "서버 설정이 완료되지 않았어요." }, { status: 503 });
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error || !data.user) {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (!data.user.email_confirmed_at) {
     // 대시보드의 "Confirm email" 이 꺼져 있어도 미확인 계정은 들이지 않는다
     await sb.auth.signOut({ scope: "local" }).catch(() => null);
-    return NextResponse.json({ error: "이메일 확인이 끝나지 않았습니다. 받은 편지함의 확인 링크를 눌러 주세요." }, { status: 403 });
+    return NextResponse.json({ error: "이메일 확인이 끝나지 않았어요. 받은 편지함의 확인 링크를 눌러 주세요." }, { status: 403 });
   }
   const { data: p } = await admin.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
   const role = ((p?.role as Role) || "requester") as Role;

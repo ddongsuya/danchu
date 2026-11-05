@@ -22,11 +22,11 @@ export function DeleteAccountForm({ email }: { email: string }) {
     try {
       const r = await fetch("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm, password }) });
       const d = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) throw new Error(d.error || "탈퇴 처리에 실패했습니다.");
+      if (!r.ok) throw new Error(d.error || "탈퇴 처리에 실패했어요.");
       router.replace("/login?notice=deleted");
       router.refresh();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "탈퇴 처리에 실패했습니다.");
+      setErr(e instanceof Error ? e.message : "탈퇴 처리에 실패했어요.");
       setBusy(false);
     }
   };

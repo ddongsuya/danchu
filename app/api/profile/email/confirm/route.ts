@@ -36,6 +36,6 @@ export async function POST(req: Request) {
   await sb.from("profiles").update({ email: next, pending_email: null, pending_email_hash: null, pending_email_expires_at: null }).eq("id", s.userId);
   // 진행 중인 요청의 연락 이메일도 따라간다 (종료·취소된 요청은 기록으로 둔다)
   await sb.from("rfq_requests").update({ email: next }).eq("user_id", s.userId).not("status", "in", "(closed,cancelled)");
-  await sendMail({ to: p.email, subject: "[단추] 로그인 이메일이 변경되었습니다", html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">로그인 이메일이 바뀌었습니다</h2><p>이제 이 계정은 <b>${next}</b> 로 로그인합니다. 본인이 한 변경이 아니라면 즉시 hello@danchu.kr 로 알려 주세요.</p>`) }).catch(() => false);
+  await sendMail({ to: p.email, subject: "[단추] 로그인 이메일이 변경됐어요", html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">로그인 이메일이 바뀌었어요</h2><p>이제 이 계정은 <b>${next}</b> 로 로그인해요. 본인이 한 변경이 아니라면 즉시 limjm900202@gmail.com 로 알려 주세요.</p>`) }).catch(() => false);
   return back("email_changed");
 }

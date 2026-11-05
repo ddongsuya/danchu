@@ -20,13 +20,13 @@ export function EmailChangeForm({ current, pending }: { current: string; pending
     try {
       const res = await fetch("/api/profile/email", { method, headers: { "Content-Type": "application/json" }, body: method === "POST" ? JSON.stringify({ email: email.trim() }) : undefined });
       const d = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-      if (!res.ok) throw new Error(d.error || "처리하지 못했습니다.");
-      setMsg({ ok: true, text: d.message || (method === "DELETE" ? "변경 요청을 취소했습니다." : "처리했습니다.") });
+      if (!res.ok) throw new Error(d.error || "처리하지 못했어요.");
+      setMsg({ ok: true, text: d.message || (method === "DELETE" ? "변경 요청을 취소했어요." : "처리했어요.") });
       setOpen(false);
       setEmail("");
       router.refresh();
     } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : "처리하지 못했습니다." });
+      setMsg({ ok: false, text: e instanceof Error ? e.message : "처리하지 못했어요." });
     } finally {
       setBusy(false);
     }
@@ -51,7 +51,7 @@ export function EmailChangeForm({ current, pending }: { current: string; pending
           <div className="fld">
             <label className="fld__lab" htmlFor="new-email">새 이메일</label>
             <input id="new-email" className="inp" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <p className="fld__help">새 주소로 확인 링크를 보냅니다. 링크를 누르기 전까지는 지금 주소로 로그인합니다.</p>
+            <p className="fld__help">새 주소로 확인 링크를 보내요. 링크를 누르기 전까지는 지금 주소로 로그인해요.</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="submit" className="b1 bsm" disabled={!valid || busy}>{busy ? "보내는 중…" : "확인 메일 보내기"}</button>

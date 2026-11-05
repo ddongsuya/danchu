@@ -7,7 +7,7 @@ description: "단추 저장소용 축약본. UI/UX 근거를 로컬 데이터에
 
 > **단추 저장소에서 쓸 때 (먼저 읽기).** 이 사본은 nextlevelbuilder/ui-ux-pro-max-skill@623a9a9 를 줄이고 고친 것이다 (SOURCE.md).
 > - 이 스킬의 결과는 참고 근거다. CLAUDE.md 디자인 규칙, DESIGN.md 토큰, "이 프로젝트에서 먼저 알아야 할 것"과 다르면 그쪽을 따른다.
-> - `--design-system`, `--persist` 로 새 디자인 시스템을 만들거나 `design-system/` 폴더를 쓰지 않는다. 단추의 색(#246457 초록 하나), 글꼴(Pretendard 셀프호스트), 모서리(8/12/16), 다크 모드는 이미 정해져 있다.
+> - `--design-system`, `--persist` 로 새 디자인 시스템을 만들거나 `design-system/` 폴더를 쓰지 않는다. 단추의 색(흑연 #1b1b19 + 형광펜 노랑은 차이에만), 글꼴(Host Grotesk + Pretendard 셀프호스트), 모서리(2/2/4), 다크 모드는 이미 정해져 있다.
 > - 검색 결과의 팔레트, Google Fonts `@import`, Inter, Tailwind·shadcn·GSAP 설치 명령, `transition: all`, ease-in, 300ms 넘는 UI 모션은 쓰지 않는다. 아이콘은 @phosphor-icons/react.
 > - 쓰는 곳: `--domain ux` (접근성·폼·내비게이션), `--domain chart`, `--domain icons`, `--domain react`, `--stack nextjs` 또는 `--stack react`. 랜딩 구조(`--domain landing`)와 스타일(`--domain style`)은 참고만 한다.
 > - 이 사본에서 뺀 것: GSAP 프리셋(motion.csv), Google Fonts 목록(google-fonts.csv), nextjs·react 외 스택, 개발용 테스트·검증 스크립트. 그 도메인을 찾으면 "파일 없음"이 나온다.

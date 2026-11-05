@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { maskedText } from "@/lib/contact-guard";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { requireSession } from "@/lib/auth";
@@ -94,13 +95,14 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       valid: q.valid_until,
       pay: q.pay_terms,
       includes: q.includes ?? [],
-      note: q.note,
+      // 선정 전 자유 입력란의 연락처는 가린다 (lib/contact-guard.ts). 선정한 기관 것만 그대로
+      note: rfq.selected_quote_id === q.id ? q.note : maskedText(q.note),
       glpOk: cov.ok,
       glpMissing: cov.missing,
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · ") || undefined, explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
@@ -113,7 +115,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (
         <p className="note" style={{ marginBottom: 16 }}>회신이 마감되어 견적은 더 바뀌지 않아요. 비교한 뒤 진행할 기관을 선택해 주세요.</p>
       ) : (
-        <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기입니다. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있습니다.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
+        <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기예요. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있어요.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
       )}
       <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status)} />
     </>

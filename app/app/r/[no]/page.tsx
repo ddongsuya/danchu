@@ -1,7 +1,8 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
 import { NextStep } from "@/components/app/NextStep";
-import { ContractConfirm, ReopenRequest, StartNow } from "@/components/app/RequestActions";
+import { ContractConfirm, ReopenRequest, SponsorContractResult, StartNow } from "@/components/app/RequestActions";
+import { GAP_REASON_LABEL, gapLabel, gapOf, isGapReason, SPONSOR_STATUS_LABEL } from "@/lib/contract-gap";
 import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import Link from "next/link";
@@ -61,6 +62,15 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const needsConfirm = !!(aw && reported && aw.contract_status === "signed" && !confirmedAt && !disputeOpen && ["selected", "contracting"].includes(rfq.status) && ownsRfq(rfq, s.userId));
   const dueAt = aw?.contract_confirm_due_at ?? (reported ? new Date(new Date(reported).getTime() + 7 * 864e5).toISOString() : null);
   const autoOn = dueAt ? ymd(dueAt) : "";
+  // 선정 견적 대비 계약 금액 (0034). 기관이 고른 차이 사유와 함께 확인 카드에 보인다
+  const quoteAmount = aw ? aw.fee_basis_amount ?? d.quotes?.find((q) => q.id === aw.quote_id)?.total_amount ?? null : null;
+  const gap = aw && reported ? gapOf(quoteAmount, aw.contract_amount) : null;
+  const gapLine = gap && gap.diff !== 0 ? `${gapLabel(gap, won)}${aw?.contract_gap_reason && isGapReason(aw.contract_gap_reason) ? ` · 기관이 남긴 사유: ${GAP_REASON_LABEL[aw.contract_gap_reason]}${aw.contract_note ? `, ${aw.contract_note}` : ""}` : ""}` : "";
+  // 의뢰자 계약 결과 알림 (0034): 기관 보고 전, 확정 전, 요청 주인만
+  const canTellResult = !!(aw && !confirmedAt && !needsConfirm && !disputeOpen && aw.contract_status !== "not_signed" && ["selected", "contracting"].includes(rfq.status) && ownsRfq(rfq, s.userId));
+  const sponsorNow = aw?.sponsor_contract_status && aw.sponsor_reported_at
+    ? { status: aw.sponsor_contract_status, at: ymd(aw.sponsor_reported_at), label: [SPONSOR_STATUS_LABEL[aw.sponsor_contract_status], aw.sponsor_contract_amount ? won(aw.sponsor_contract_amount) : "", aw.sponsor_contract_date ? `계약일 ${ymd(aw.sponsor_contract_date)}` : "", aw.sponsor_contract_note ?? ""].filter(Boolean).join(" · ") }
+    : null;
   const via = aw?.contract_confirmed_via ?? (aw?.requester_confirmed_at ? (aw.confirmed_auto ? "auto" : "sponsor") : null);
   const viaNote = via === "auto" ? " (보고 7일 뒤 자동 확정)" : via === "operator" ? " (운영자가 기관과 확인한 뒤 확정)" : "";
   // 비교표가 열린 뒤 보류한 요청만 다시 연다. 열리기 전에 보류한 요청을 다시 열면 기한 전 선정 길이 되므로 막는다 (결정 1)
@@ -95,6 +105,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         award={d.award ? { name: d.award.cro_name, at: d.award.awarded_at, reportedAt: d.award.contract_reported_at ?? null } : null}
         f={story}
         canCompare={canCompare}
+        confirm={needsConfirm}
         next={
           (noJoinPastDue || contractOpen) && (
             <div className="rs-next">
@@ -175,10 +186,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                 {confirmedAt && reported
                   ? `계약 확정 · ${d.award.contract_date ? ymd(d.award.contract_date) : ""} · ${won(d.award.contract_amount ?? 0)}${viaNote}`
                   : disputeOpen
-                    ? "계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있습니다. 확인을 마칠 때까지 계약을 확정하지 않습니다."
+                    ? "계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있어요. 확인을 마칠 때까지 계약을 확정하지 않아요."
                     : reported && d.award.contract_status === "signed"
-                      ? "기관이 계약 체결을 보고했습니다. 아래에서 내용을 확인해 주세요."
-                      : "서로 연락처를 주고받았습니다. 계약은 기관과 직접 진행합니다."}
+                      ? "기관이 계약 체결을 보고했어요. 아래에서 내용을 확인해 주세요."
+                      : "서로 연락처를 주고받았어요. 계약은 기관과 직접 진행해요."}
               </span>
               {croContact && (
                 <span>
@@ -196,7 +207,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   {d.award.substance_note ? <span style={{ display: "block" }}>{d.award.substance_note}</span> : null}
                 </span>
               ) : (
-                <span>{d.award.cro_name}에 시험물질 정보를 보내면 기관이 필요량과 보낼 시점을 여기에 적습니다.</span>
+                <span>{d.award.cro_name}에 시험물질 정보를 보내면 기관이 필요량과 보낼 시점을 여기에 적어요.</span>
               )}
             </div>
           )}
@@ -207,7 +218,11 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
               date={d.award.contract_date ? ymd(d.award.contract_date) : "-"}
               amount={won(d.award.contract_amount ?? 0)}
               autoOn={autoOn}
+              gap={gapLine}
             />
+          )}
+          {canTellResult && d.award && (
+            <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
           )}
       </div>}
 

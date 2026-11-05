@@ -75,16 +75,16 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
       const catRemoved = removed.filter((id) => initialRows.some((r) => r.id === id && r.category === cat) || !initialRows.some((r) => r.id === id));
       const res = await fetch("/api/cro/catalog", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: payload, removed: catRemoved }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string; saved?: number; rows?: CatalogRow[] };
-      if (!res.ok) throw new Error(d.error || "저장하지 못했습니다.");
+      if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
       if (d.rows) {
         // 서버가 돌려준 행으로 이 분류를 교체 (새 id 반영). 다른 분류의 미저장 편집은 유지
         setRows((s) => [...s.filter((r) => r.category !== cat), ...d.rows!.filter((r) => r.category === cat)]);
       }
       setRemoved((s) => s.filter((id) => !catRemoved.includes(id)));
       setDirty((s) => { const n = new Set(s); n.delete(cat); return n; });
-      setMsg((m) => ({ ...m, [cat]: { ok: true, text: `저장했습니다 (조합 ${d.saved}개)` } }));
+      setMsg((m) => ({ ...m, [cat]: { ok: true, text: `저장했어요 (조합 ${d.saved}개)` } }));
     } catch (e) {
-      setMsg((m) => ({ ...m, [cat]: { ok: false, text: e instanceof Error ? e.message : "저장하지 못했습니다." } }));
+      setMsg((m) => ({ ...m, [cat]: { ok: false, text: e instanceof Error ? e.message : "저장하지 못했어요." } }));
     } finally {
       setBusy("");
     }
@@ -104,7 +104,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
       addVariant(it, { species: pi.species ?? [], route: pi.route ?? null, method: pi.method ?? null, note: pi.note ?? null, source: "manual" });
       made++;
     }
-    setMsg((m) => ({ ...m, __preset: { ok: true, text: made ? `${p.name}: 조합 ${made}개를 만들었습니다. 각 분류에서 설계·예상 소요기간·단가를 채우고 저장하세요.` : `${p.name}: 이미 모든 조합이 있습니다.` } }));
+    setMsg((m) => ({ ...m, __preset: { ok: true, text: made ? `${p.name}: 조합 ${made}개를 만들었어요. 각 분류에서 설계·예상 소요기간·단가를 채우고 저장하세요.` : `${p.name}: 이미 모든 조합이 있어요.` } }));
   };
 
   const totalVariants = rows.length;
@@ -121,7 +121,7 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
         </div>
       )}
 
-      <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>조합 {totalVariants}개 · 항목 {filledItems} / {items.length}. 항목 하나에 동물종·투여경로·시험법이 다른 조합을 여러 개 둘 수 있습니다.</p>
+      <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>조합 {totalVariants}개 · 항목 {filledItems} / {items.length}. 항목 하나에 동물종·투여경로·시험법이 다른 조합을 여러 개 둘 수 있어요.</p>
 
       {/* 수행 분야 밖 분류는 한 줄 아래로 접는다 (2026-10-31, 휴대폰에서 분류 열 개가 다 펼쳐져 보이던 것) */}
       {(orgCategories.length ? cats.filter((c) => orgCategories.includes(c) || rows.some((r) => r.category === c)) : cats).map((cat) => renderCat(cat))}
@@ -156,8 +156,8 @@ export function CatalogEditor({ items, initialRows, orgCategories, orgPresets }:
               </span>
             </summary>
             <div style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 12 }}>
-              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>조합이 없는 항목은 회신할 때 직접 적습니다. 자주 하는 항목만 추가해 두세요.</p>
-              {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 참여 안내가 오지 않습니다. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>조합이 없는 항목은 회신할 때 직접 적어요. 자주 하는 항목만 추가해 두세요.</p>
+              {!inScope && <p className="note note--warn">이 분야는 기관 정보의 수행 분야에 없어 참여 안내가 오지 않아요. 수행하려면 기관 탭에서 분야를 추가하세요.</p>}
               {list.map((it) => (
                 <ItemBlock key={it.key} item={it} rows={rowsOf(it.key)} cat={cat as Cat} onAdd={() => addVariant(it)} onPatch={patch} onDuplicate={duplicate} onRemove={remove} />
               ))}
@@ -202,7 +202,7 @@ function PresetPanel({ orgPresets, rows, onApply, note }: { orgPresets: OrgPrese
     <div className="card card--pad stack" style={{ gap: 12 }}>
       <div>
         <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>패키지 프리셋</h2>
-        <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>자주 묶이는 시험 세트입니다. 고르면 해당 항목의 조합이 한 번에 만들어져 설계·단가만 채우면 됩니다. "제공"은 귀 기관이 이 패키지를 묶어 수행하는지 기록해 두는 표시입니다. 요청 전달 순서나 비교표 노출에는 영향을 주지 않습니다.</p>
+        <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>자주 묶이는 시험 세트예요. 고르면 해당 항목의 조합이 한 번에 만들어져 설계·단가만 채우면 돼요. "제공"은 귀 기관이 이 패키지를 묶어 수행하는지 기록해 두는 표시예요. 요청 전달 순서나 비교표 노출에는 영향을 주지 않아요.</p>
       </div>
       {audiences.map((a) => (
         <div key={a} className="fld" style={{ gap: 6 }}>
@@ -340,7 +340,7 @@ function VariantEditor({ row, cat, onChange, onDuplicate, onRemove }: { row: Cat
         <div style={{ padding: "0 12px 14px", display: "flex", flexDirection: "column", gap: 14, borderTop: "1px solid var(--track)" }}>
           {row.last_amount != null && (
             <p className="note note--tint" style={{ marginTop: 12 }}>
-              최근 회신 {ymd(row.last_quoted_at)} · {perSample ? `검체당 ${row.last_amount.toLocaleString("ko-KR")}원` : won(row.last_amount)}{row.last_weeks ? ` · ${row.last_weeks}주` : ""}. 아래 값을 비워 두면 이 값이 초안에 들어갑니다.
+              최근 회신 {ymd(row.last_quoted_at)} · {perSample ? `검체당 ${row.last_amount.toLocaleString("ko-KR")}원` : won(row.last_amount)}{row.last_weeks ? ` · ${row.last_weeks}주` : ""}. 아래 값을 비워 두면 이 값이 초안에 들어가요.
             </p>
           )}
 
@@ -407,7 +407,7 @@ function VariantEditor({ row, cat, onChange, onDuplicate, onRemove }: { row: Cat
 
           <div className="fld">
             <span className="fld__lab">기본 포함 항목</span>
-            <span className="fld__help">총액 안에 든 것만 고르세요. 조직병리는 검경까지 포함이 기본입니다.</span>
+            <span className="fld__help">총액 안에 든 것만 고르세요. 조직병리는 검경까지 포함이 기본이에요.</span>
             <div className="chips">
               {INCLUDE_KEYS.map((key) => (
                 <button key={key} type="button" className="chip chip--sm" aria-pressed={row.includes.includes(key)} onClick={() => onChange({ includes: toggle(row.includes, key) })}>{key}</button>

@@ -327,6 +327,14 @@ export type Database = {
           substance_when: string | null;
           substance_note: string | null;
           substance_updated_at: string | null;
+          /** 계약 금액이 선정 견적과 10% 이상 다를 때 기관이 고른 사유 (0034). 0034 전이면 없음 */
+          contract_gap_reason?: string | null;
+          /** 의뢰자가 알린 계약 결과 (0034). sponsor_report_contract 로만 쓴다 */
+          sponsor_contract_status?: "signed" | "negotiating" | "not_signed" | null;
+          sponsor_contract_amount?: number | null;
+          sponsor_contract_date?: string | null;
+          sponsor_contract_note?: string | null;
+          sponsor_reported_at?: string | null;
         };
         /** 확인·이의 열(ContractConfirmColumn)은 DB 함수만 쓴다 (0025 트리거) */
         Insert: Ins<Omit<Database["public"]["Tables"]["rfq_awards"]["Row"], ContractConfirmColumn>, "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "contract_status" | "quote_revision" | "substance_qty" | "substance_when" | "substance_note" | "substance_updated_at">;
@@ -356,9 +364,9 @@ export type Database = {
           approved_at: string | null;
           updated_at: string;
           auto_reply: boolean;
-          /** 건당 이용료 (원). 1,000만 원 이상 견적 1건마다. null 이면 미정 (0020) */
+          /** 송부 비용 특별 조건 (원). 5,000만 원 이상 견적 1건마다. null 이면 요금표 (0031) */
           per_request_fee: number | null;
-          /** 성사수수료율 (0.03 = 3%). null 이면 미정 */
+          /** 성사 수수료율 특별 조건 (0.03 = 3%). null 이면 요금표 (0031) */
           fee_rate: number | null;
           /** 월 구독료 (원). null 이면 구독하지 않음 (0020) */
           monthly_fee: number | null;
@@ -368,6 +376,8 @@ export type Database = {
           managed: boolean;
           /** 생성 컬럼: 사업자번호 숫자만. insert/update 에 넣지 않는다 */
           business_no_norm: string | null;
+          /** 청구서 받을 이메일 (0032). 비어 있으면 contact_email */
+          billing_email?: string | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_orgs"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_orgs"]["Row"], "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_orgs"]["Row"]>;
@@ -388,6 +398,8 @@ export type Database = {
           updated_at: string;
           pending_org_id: string | null;
           email_notifications: boolean;
+          /** 문자 알림 받기 (0033). 0033 전 DB 에는 없다 */
+          sms_notifications?: boolean;
           org_role: string;
           pending_email: string | null;
           pending_email_hash: string | null;
@@ -514,6 +526,42 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rfq_pending"]["Row"]>;
         Relationships: [];
       };
+      /** 사전예약 (0030). 서비스 키로만 읽고 쓴다. 같은 갈래·이메일은 한 행. 2027-12-01 뒤 정리 작업이 지운다 */
+      early_signups: {
+        Row: {
+          id: string;
+          role: "req" | "cro";
+          email: string;
+          org: string | null;
+          org_type: string | null;
+          kinds: string[];
+          timing: string | null;
+          glp: string[];
+          intent: string | null;
+          ask: string | null;
+          source: string | null;
+          agreed_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["early_signups"]["Row"]>;
+        Relationships: [];
+      };
+      /** 문자 알림 기록 (0033). 번호는 가려서. 서버만 */
+      sms_log: {
+        Row: { id: string; user_id: string | null; phone_masked: string; kind: string; dedupe_key: string | null; status: "sent" | "failed" | "skipped"; reason: string | null; provider_id: string | null; created_at: string };
+        Insert: { user_id?: string | null; phone_masked: string; kind: string; dedupe_key?: string | null; status: "sent" | "failed" | "skipped"; reason?: string | null; provider_id?: string | null };
+        Update: Partial<{ status: "sent" | "failed" | "skipped"; reason: string | null }>;
+        Relationships: [];
+      };
+      /** 월 청구서 (0032). 서버만 읽고 쓴다. 금액·내역은 발행 뒤 바꿀 수 없다(트리거) */
+      billing_invoices: {
+        Row: BillingInvoiceRow;
+        Insert: Partial<BillingInvoiceRow>;
+        Update: Partial<Pick<BillingInvoiceRow, "status">>;
+        Relationships: [];
+      };
       admin_audit: {
         Row: {
           id: string;
@@ -559,7 +607,9 @@ export type Database = {
       /** 0021: 운영자 초대 취소 (철회 표식 + 토큰 재발급). { ok, already?, status } 또는 { ok: false, code } */
       revoke_invite: { Args: { p_invite_id: string; p_reason: string | null }; Returns: Json };
       /** 0025: 첫 보고면 confirm_due_at(+7일)을 잡고, 확인 전 정정이면 다시 잡는다. { ok, rfq_id, rfq_no, user_id, substance, corrected, confirm_due_at } */
-      report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string; p_force?: boolean }; Returns: Json };
+      report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string; p_force?: boolean; p_gap_reason?: string | null }; Returns: Json };
+      /** 0034: 의뢰자(요청 주인)가 계약 결과를 알린다. 확정 뒤에는 confirmed */
+      sponsor_report_contract: { Args: { p_award_id: string; p_actor: string; p_status: string; p_amount: number | null; p_date: string | null; p_note: string }; Returns: Json };
       /** 0025: 의뢰자(요청 주인) 또는 운영자가 계약 보고를 확인. { ok, already?, rfq_id, rfq_no, cro_org_id, contract_amount, contract_date } 또는 { ok: false, code: not_found·forbidden·not_reported·disputed } */
       confirm_contract: { Args: { p_award_id: string; p_actor: string }; Returns: Json };
       /** 0025: 의뢰자 이의. 정산을 멈춘다. { ok, already?, ... } 또는 { ok: false, code: not_found·forbidden·not_reported·confirmed·note } */
@@ -587,6 +637,16 @@ export type Database = {
       /** 0024: 시범 기간 참고 수치. 합계에 넣지 않는다 */
       billing_reference: { Args: { p_from: string; p_to: string }; Returns: BillingReferenceRow[] };
       billing_tier: { Args: { p_amount: number | null }; Returns: string };
+      /** 0032: 마감한 달의 청구서 발행. { ok, month, issued, skipped } 또는 { ok: false, code: bad_month·not_closed } */
+      issue_billing_invoices: { Args: { p_month: string; p_actor: string | null }; Returns: Json };
+      /** 0032: 보낸 기록. { ok, sent_count } */
+      mark_invoice_sent: { Args: { p_id: string }; Returns: Json };
+      /** 0032: 입금 확인. { ok, invoice_no, org_id } · { ok, already } · { ok: false, code: not_found·void·paid_on } */
+      mark_invoice_paid: { Args: { p_id: string; p_actor: string | null; p_paid_on: string; p_note: string }; Returns: Json };
+      /** 0032: 취소. { ok, invoice_no, org_id } · { ok, already } · { ok: false, code: not_found·paid·reason } */
+      void_invoice: { Args: { p_id: string; p_actor: string | null; p_reason: string }; Returns: Json };
+      /** 0032: 독촉 단계 올리기. 올렸으면 true */
+      mark_invoice_reminded: { Args: { p_id: string; p_stage: number }; Returns: boolean };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -622,13 +682,13 @@ export type BillingSummaryRow = {
   excluded: number;
   /** 금액 미입력 견적 (아직 청구하지 않음) */
   no_amount: number;
-  /** 1,000만 원 미만 (구독) */
+  /** 5,000만 원 미만 (구독) */
   subscription: number;
-  /** 건당 이용료 대상 (1,000만 원 이상) */
+  /** 송부 비용 대상 (5,000만 원 이상) */
   per_quote: number;
   /** 그중 5,000만 원 이상 */
   success_eligible: number;
-  /** 건당 이용료 합계. 대상이 있는데 단가 미정이면 null */
+  /** 송부 비용 합계 (0031부터 미정 없음) */
   per_quote_fee: number | null;
   /** 이 달 제출 견적 중 선정된 수 */
   selected: number;
@@ -667,7 +727,7 @@ export type BillingLineRow = {
   /** 건당 이용료를 청구하는 행 */
   chargeable: boolean;
   per_request_fee: number | null;
-  /** 청구할 건당 이용료. 대상 아니면 0, 단가 미정이면 null */
+  /** 청구할 송부 비용. 대상 아니면 0 */
   fee_due: number | null;
   /** 참여 기록 (0023). joined 만 청구한다. 0023 전 저장본에는 없다 */
   join_status?: JoinStatus;
@@ -717,19 +777,20 @@ export type BillingAdjustmentRow = {
 };
 
 /** 참고 단가 출처: org 기관 약정 값 · reference 참고 단가(예시, 시장 검증 전) */
-export type ReferenceSource = "org" | "reference";
+/** org 기관 특별 조건 · schedule 요금표(0031) · reference 0031 전 참고 단가(마감 저장본에만) */
+export type ReferenceSource = "org" | "schedule" | "reference";
 
 /** billing_reference() 한 행: 시범 기간이라 청구하지 않은 견적·체결의 "유료였다면" 수치 (0024). 합계·청구에 넣지 않는다 */
 export type BillingReferenceRow = {
   org_id: string;
   org_name: string;
-  /** 1,000만 원 미만 견적 수 (구독 구간, 구독료 미정이라 금액 없음) */
+  /** 5,000만 원 미만 견적 수 (구독 구간) */
   subscription_count: number;
-  /** 1,000만 원 이상 견적 수 */
+  /** 5,000만 원 이상 견적 수 */
   per_quote_count: number;
   per_quote_unit: number;
   per_quote_unit_source: ReferenceSource;
-  /** 참고 건당 이용료 = 건수 × 단가 */
+  /** 참고 송부 비용 합계 (요금표 또는 기관 특별 조건) */
   per_quote_fee: number;
   /** 체결 확인된 수주 (선정 견적 5,000만 원 이상, signed) */
   success_count: number;
@@ -748,4 +809,35 @@ export type BillingSnapshot = {
   awards: BillingAwardRow[];
   adjustments?: BillingAdjustmentRow[];
   reference?: BillingReferenceRow[];
+};
+
+/** billing_invoices 한 행 (0032) */
+export type BillingInvoiceRow = {
+  id: string;
+  invoice_no: string;
+  org_id: string;
+  org_name: string;
+  /** 청구 달 (그 달 1일) */
+  month: string;
+  /** 공급가액 = 그 달 마감 명세 합계 */
+  supply_amount: number;
+  vat: number;
+  total: number;
+  /** 마감 저장본 중 그 기관 몫 */
+  detail: { summary?: BillingSummaryRow; lines?: BillingLineRow[]; awards?: BillingAwardRow[]; adjustments?: BillingAdjustmentRow[] };
+  issued_at: string;
+  issued_by: string | null;
+  due_date: string;
+  status: "issued" | "paid" | "void";
+  sent_at: string | null;
+  last_sent_at: string | null;
+  sent_count: number;
+  reminder_stage: number;
+  paid_at: string | null;
+  paid_on: string | null;
+  paid_by: string | null;
+  paid_note: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
 };

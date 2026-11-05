@@ -8,7 +8,7 @@ import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/com
 const ERRORS: Record<string, string> = {
   link: "링크를 확인하지 못했어요. 메일의 버튼을 다시 눌러주세요.",
   expired: "링크가 만료됐거나 이미 쓰였어요. 아래에서 새 링크를 받아보세요.",
-  config: "지금은 로그인을 쓸 수 없어요. hello@danchu.kr로 알려주세요.",
+  config: "지금은 로그인을 쓸 수 없어요. limjm900202@gmail.com로 알려주세요.",
 };
 
 const NOTICES: Record<string, string> = {
@@ -34,6 +34,8 @@ function Login() {
   const [error, setError] = useState(ERRORS[sp.get("error") || ""] || "");
   const [sent, setSent] = useState(false);
   const notice = NOTICES[sp.get("notice") || ""] || "";
+  // 메일 속 링크(요청·비교 보고서)로 들어온 사람. 로그인 없이 요청한 의뢰자는 비밀번호가 없으니 이메일 링크 하나로 이어 준다 (2026-11-02 가상 35명 테스트 1번)
+  const fromMail = /^\/app\/r\//.test(next);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +51,7 @@ function Login() {
       await postJson("/api/auth/magic", { email, next });
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "로그인하지 못했습니다.");
+      setError(err instanceof Error ? err.message : "로그인하지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -58,9 +60,9 @@ function Login() {
   if (sent) {
     return (
       <div className="auth__card">
-        <Done title="로그인 링크를 보냈습니다">
+        <Done title="로그인 링크를 보냈어요">
           <p>
-            <b>{email}</b>의 받은 편지함을 확인해 주세요. 링크는 1시간 동안 유효합니다.
+            <b>{email}</b>의 받은 편지함을 확인해 주세요. 링크는 1시간 동안 쓸 수 있어요.{next ? " 누르면 보던 화면으로 바로 이어져요." : ""}
           </p>
           <p style={{ fontSize: 14, color: "var(--muted)" }}>메일이 오지 않으면 스팸함을 확인하거나, 가입한 주소가 맞는지 확인해 주세요. 아직 계정이 없다면 <Link href="/signup">가입</Link>부터 해 주세요.</p>
           <button type="button" className="btn--ghost" onClick={() => setSent(false)}>다른 이메일로 받기</button>
@@ -73,7 +75,7 @@ function Login() {
     <div className="auth__card">
       <div>
         <h1 className="auth__title">로그인</h1>
-        <p className="auth__sub">{next === "/app/new" ? "로그인하면 쓰던 요청서로 바로 이어져요." : "다시 오셨네요. 진행 중인 견적을 확인하세요."}</p>
+        <p className="auth__sub">{next === "/app/new" ? "로그인하면 쓰던 요청서로 바로 이어져요." : fromMail ? "메일에서 누른 화면은 로그인한 뒤에 열려요. 비밀번호가 없다면 이메일만 적어 주세요. 그 화면으로 바로 들어가는 링크를 보내요." : "다시 오셨네요. 진행 중인 견적을 확인하세요."}</p>
       </div>
 
       <div className="auth__tabs" role="group" aria-label="로그인 방법">

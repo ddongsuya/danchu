@@ -28,7 +28,7 @@ export default function Home() {
 <section id="cmp" className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
 <div className="gm-cmp-grid">
 <div className="gm-copy">
-<h2 id="cmp-h">같지만 다릅니다.<br /><span>다양한 항목들을 비교하세요.</span></h2>
+<h2 id="cmp-h">같지만 달라요.<br /><span>다양한 항목들을 비교하세요.</span></h2>
 <ol className="gm-ph">
 <li><span className="mono lab">금액으로만 확인하면</span><p>B가 더 저렴해 보여요</p></li>
 <li><span className="mono lab">자세하게 비교하면</span><p>B 기관의 견적서에는 <b>TK 분석</b>이 빠져 있어요. 여기서 발생한 차이에요.</p></li>
@@ -63,7 +63,7 @@ export default function Home() {
 <tr className="g-r4 g-total"><th scope="row">합계</th><td>1,200만 원</td><td>900만 원</td></tr>
 </tbody>
 </table>
-<figcaption className="mono lab">최종 견적서는 각 기관의 견적서로 확인합니다.</figcaption>
+<figcaption className="mono lab">최종 견적서는 각 기관의 견적서로 확인해요.</figcaption>
 </figure>
 </div>
 </section>

@@ -94,6 +94,8 @@ export function NewRequest({
   const [kind, setKind] = useState<Kind | null>(null);
   /** 주소에 갈래 없이 들어왔을 때(앱의 "새 요청" 등) 시작 화면에서 고른 갈래. Tox는 길이 둘이라 한 번 더 고른다 */
   const [fork, setFork] = useState<Kind | null>(null);
+  /** 주소(?kind=)로 들어온 갈래. 쓰던 초안의 갈래와 다르면 "그 갈래로 새로 쓰기"를 보여 준다 */
+  const [askKind, setAskKind] = useState<Kind | null>(null);
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Values>(initial);
   const [files, setFiles] = useState<File[]>([]);
@@ -127,7 +129,7 @@ export function NewRequest({
         const r = await fetch(`/api/rfq/pending/status?token=${encodeURIComponent(draft.pendingToken)}`).then((x) => x.json()).catch(() => null);
         if (r?.claimed) {
           clearDraft(own ? userId : GUEST);
-          if (guest) setNotice(`메일의 버튼으로 요청서 ${r.rfqNo}를 이미 접수했습니다. 로그인하면 진행 상황을 볼 수 있습니다.`);
+          if (guest) setNotice(`메일의 버튼으로 요청서 ${r.rfqNo}를 이미 접수했어요. 로그인하면 진행 상황을 볼 수 있어요.`);
           draft = null;
         }
       }
@@ -138,6 +140,8 @@ export function NewRequest({
       // ?kind=tox|pd|pk|other 는 네 갈래 첫 화면에서 고른 갈래. 시험 항목을 그 갈래 것만 보여 준다 (start() 참고)
       const sp = new URLSearchParams(window.location.search);
       const chosen = sp.get("start");
+      const ak = sp.get("kind");
+      setAskKind(isKind(ak) ? ak : null);
       if (chosen === "advisor" && !draft) setPhase("advisor");
       else if ((chosen === "manual" || sp.get("preset")) && !draft) start();
     })();
@@ -157,15 +161,16 @@ export function NewRequest({
         ...files.map(({ name, size }) => ({ name, size })),
       ],
       pendingNo,
+      ...(kind ? { kind } : {}),
       ...(guest ? { contact: guestContact, pendingToken } : {}),
       updatedAt: new Date().toISOString(),
     });
     setSaveState(
       ok
         ? "이 브라우저에 임시 저장됨"
-        : "임시 저장하지 못했습니다. 이 화면을 닫지 말고 다시 시도해 주세요.",
+        : "임시 저장하지 못했어요. 이 화면을 닫지 말고 다시 시도해 주세요.",
     );
-  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, guest, guestContact, pendingToken]);
+  }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, kind, guest, guestContact, pendingToken]);
   useEffect(() => {
     if (phase === "edit") title.current?.focus();
   }, [phase, step]);
@@ -202,7 +207,7 @@ export function NewRequest({
       replace &&
       cats.length &&
       !window.confirm(
-        "시험 항목과 항목별 상세 조건을 이 구성으로 바꿀까요? 일정·물질·첨부는 유지됩니다.",
+        "시험 항목과 항목별 상세 조건을 이 구성으로 바꿀까요? 일정·물질·첨부는 유지돼요.",
       )
     )
       return;
@@ -263,7 +268,10 @@ export function NewRequest({
     if (isKind(k)) {
       setKind(k);
       // Tox는 대분류가 많아 미리 고르지 않는다. PD·PK·Other는 대표 항목 하나를 골라 둔다
-      if (k !== "tox") setValues({ ...initial(), categories: [KINDS[k].cats[0]] });
+      // ?cat= 은 소개 페이지에서 고른 시험 하나. 그 갈래의 항목일 때만 미리 체크한다
+      const cat = sp.get("cat");
+      const pre = cat && KINDS[k].cats.includes(cat as Cat) ? cat : k !== "tox" ? KINDS[k].cats[0] : null;
+      if (pre) setValues({ ...initial(), categories: [pre] });
     } else setKind(null);
     const key = sp.get("preset");
     if (key) {
@@ -358,7 +366,7 @@ export function NewRequest({
         const d = await r.json();
         if (!r.ok || !d.rfqNo)
           throw new Error(
-            d.error || "접수하지 못했습니다. 다시 시도해 주세요.",
+            d.error || "접수하지 못했어요. 다시 시도해 주세요.",
           );
         no = d.rfqNo as string;
         setPendingNo(no);
@@ -382,14 +390,14 @@ export function NewRequest({
       }
       if (failed.length)
         throw new Error(
-          `요청서 ${no}를 저장했습니다. 올리지 못한 첨부: ${failed.join(", ")}. 다시 올리거나, 빠진 첨부 없이 참여 안내를 보낼 수 있습니다.`,
+          `요청서 ${no}를 저장했어요. 올리지 못한 첨부: ${failed.join(", ")}. 다시 올리거나, 빠진 첨부 없이 참여 안내를 보낼 수 있어요.`,
         );
       await finish(no);
     } catch (e) {
       setError(
         e instanceof Error
           ? e.message
-          : "처리하지 못했습니다. 다시 시도해 주세요.",
+          : "처리하지 못했어요. 다시 시도해 주세요.",
       );
     } finally {
       setBusy(false);
@@ -411,13 +419,13 @@ export function NewRequest({
       setBusy(false);
     }
   };
-  if (!ready) return <p role="status">작성 중인 요청을 확인하고 있습니다.</p>;
+  if (!ready) return <p role="status">작성 중인 요청을 확인하고 있어요.</p>;
   if (phase === "advisor")
     return (
       <div className="request">
         <p className="fld__help">
-          시험 찾기의 답변은 화면을 닫으면 사라집니다. 선택한 시험을 요청서에
-          담으면 임시 저장됩니다.
+          시험 찾기의 답변은 화면을 닫으면 사라져요. 선택한 시험을 요청서에
+          담으면 임시 저장돼요.
         </p>
         <Advisor
           onManual={() => {
@@ -446,7 +454,7 @@ export function NewRequest({
         )}
         <h1>{fork === "tox" ? KINDS.tox.name : "새 견적 요청"}</h1>
         <p className="request__lead">
-          {fork === "tox" ? KINDS.tox.lead : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
+          {fork === "tox" ? KINDS.tox.lead : resume ? "쓰던 요청서를 이어서 쓰거나 새로 시작하세요." : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
         </p>
         {notice && (
           <p className="note note--tint" role="status">
@@ -455,13 +463,14 @@ export function NewRequest({
         )}
         {resume && (
           <section className="request__resume">
-            <h2>작성 중인 요청이 있습니다</h2>
+            <h2>쓰던 요청서가 있어요</h2>
             <p>
+              {resume.kind ? `${KINDS[resume.kind].name} · ` : ""}
               {String(resume.values.substance || "시험물질명 미입력")} ·{" "}
               {STEPS[resume.q]}
             </p>
             <p className="fld__help">
-              이 브라우저에 저장된 내용입니다. 첨부파일은 다시 선택해야 합니다.
+              이 브라우저에 저장된 내용이에요. 첨부파일은 다시 골라 주세요.
             </p>
             <div className="request__actions">
               <button
@@ -471,6 +480,7 @@ export function NewRequest({
                   setStep(resume.q);
                   setPendingNo(guest ? undefined : resume.pendingNo);
                   setMissingFiles(resume.files);
+                  setKind(resume.kind ?? null);
                   if (guest) {
                     setGuestContact(resume.contact ?? EMPTY_CONTACT);
                     setPendingToken(resume.pendingToken);
@@ -478,14 +488,14 @@ export function NewRequest({
                   setPhase("edit");
                 }}
               >
-                이어서 작성
+                이어서 쓰기
               </button>
               <button
                 className="b2"
                 onClick={() => {
                   if (
                     window.confirm(
-                      "저장된 초안을 지우고 새로 작성할까요? 이미 접수된 요청은 삭제되지 않습니다.",
+                      "저장된 초안을 지우고 새로 작성할까요? 이미 접수된 요청은 삭제되지 않아요.",
                     )
                   ) {
                     clearDraft(userId);
@@ -497,7 +507,7 @@ export function NewRequest({
                   }
                 }}
               >
-                새로 작성
+                {askKind && askKind !== resume.kind ? `${KINDS[askKind].name}으로 새로 쓰기` : "새로 쓰기"}
               </button>
             </div>
           </section>
@@ -519,7 +529,7 @@ export function NewRequest({
             <button onClick={() => setPhase("advisor")}>
               <b>필요한 시험 찾아보기</b>
               <span>
-                개발 상황을 고르면 해당하는 가이드라인 기준을 보여드려요.
+                개발 상황을 고르면 해당하는 가이드라인 기준을 보여요.
               </span>
             </button>
             <button onClick={() => start("tox")}>
@@ -562,15 +572,15 @@ export function NewRequest({
         {step === 0
           ? "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
           : step === 1
-            ? "미정인 조건은 비워 둘 수 있습니다."
+            ? "미정인 조건은 비워 둘 수 있어요."
             : step === 2
               ? "요청 내용이 공개되는 범위를 확인하세요."
               : "입력한 내용과 첨부 상태를 확인한 뒤 요청을 보내세요."}
       </p>
       {pendingNo && (
         <div className="note note--tint">
-          요청서 {pendingNo}를 저장했습니다. 첨부가 모두 올라가면 기관에
-          참여 안내를 보냅니다.{" "}
+          요청서 {pendingNo}를 저장했어요. 첨부가 모두 올라가면 기관에
+          참여 안내를 보내요.{" "}
           <Link href={`/app/r/${pendingNo}`}>저장된 요청 보기</Link>
         </div>
       )}
@@ -684,7 +694,7 @@ export function NewRequest({
                   {g.title} <span>선택 입력</span>
                 </summary>
                 <p className="fld__help">
-                  비워 둔 조건은 기관이 회신에서 제안합니다.
+                  비워 둔 조건은 기관이 회신에서 제안해요.
                 </p>
                 <div className="request__fields">
                   {g.fields
@@ -699,8 +709,8 @@ export function NewRequest({
           <section className="request__section request__fields">
             {baseFields(["start", "replyBy", "budget", "croCount", "nominees", ...(hasNominees ? ["nomineesOnly"] : [])])}
             <p className="fld__help">
-              시험 분야가 맞는 승인 기관에 참여 안내가 갑니다. 참여한 기관이
-              고른 수보다 적으면 받는 견적도 그만큼 줄어들 수 있습니다.
+              시험 분야가 맞는 승인 기관에 참여 안내가 가요. 참여한 기관이
+              고른 수보다 적으면 받는 견적도 그만큼 줄어들 수 있어요.
             </p>
           </section>
         )}
@@ -729,7 +739,7 @@ export function NewRequest({
                 ) : (
                   <p className="fld__help">
                     보내기를 누르면 이메일과 담당자 정보를 묻고, 메일로 받은
-                    번호를 확인합니다. 쓰신 요청서는 그대로 둡니다.
+                    번호를 확인해요. 쓰신 요청서는 그대로 둬요.
                   </p>
                 )}
               </section>
@@ -740,7 +750,7 @@ export function NewRequest({
                   {contact.company} · {contact.name}
                 </p>
                 <p>{contact.email}</p>
-                {preview ? <p>체험 화면에서는 예시 담당자 정보가 표시됩니다.</p> : <Link href="/app/profile">담당자 정보 수정</Link>}
+                {preview ? <p>체험 화면에서는 예시 담당자 정보가 표시돼요.</p> : <Link href="/app/profile">담당자 정보 수정</Link>}
                 {!contactOk && (
                   <p role="alert">
                     회사·기관명과 성명을 프로필에서 입력해 주세요.
@@ -834,7 +844,7 @@ export function NewRequest({
                   ))}
                 </ul>
               ) : (
-                <p className="fld__help">선택된 파일이 없습니다.</p>
+                <p className="fld__help">선택된 파일이 없어요.</p>
               )}
               <button
                 type="button"
@@ -853,7 +863,7 @@ export function NewRequest({
                   ))}
                 </ul>
                 <p className="fld__help">
-                  참고 안내입니다. 입력한 내용으로 요청할 수 있습니다.
+                  참고 안내예요. 입력한 내용으로 요청할 수 있어요.
                 </p>
               </details>
             )}
@@ -867,7 +877,7 @@ export function NewRequest({
         <section className="note note--warn request__missing">
           <b>다시 선택해야 하는 첨부파일</b>
           <p>
-            파일 내용은 브라우저에 저장하지 않습니다. 같은 파일을 선택하거나
+            파일 내용은 브라우저에 저장하지 않아요. 같은 파일을 선택하거나
             요청에서 제외해 주세요.
           </p>
           {missingFiles.map((f) => (

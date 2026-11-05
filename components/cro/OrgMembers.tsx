@@ -22,12 +22,12 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
     try {
       const r = await fetch("/api/cro/org/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action }) });
       const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
-      if (!r.ok) throw new Error(d.error || "처리하지 못했습니다.");
-      setMsg({ ok: true, text: d.message || "처리했습니다." });
+      if (!r.ok) throw new Error(d.error || "처리하지 못했어요.");
+      setMsg({ ok: true, text: d.message || "처리했어요." });
       setArm("");
       router.refresh();
     } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : "처리하지 못했습니다." });
+      setMsg({ ok: false, text: e instanceof Error ? e.message : "처리하지 못했어요." });
     } finally {
       setBusy("");
     }
@@ -64,7 +64,7 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
           {isOwner && m.id !== selfId && m.org_role !== "owner" ? (
             arm === m.id ? (
               <span style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12 }}>
-                <span>내보내면 이 기관의 열린 회신 링크가 새로 발급됩니다.</span>
+                <span>내보내면 이 기관의 열린 회신 링크가 새로 발급돼요.</span>
                 <button type="button" className="b2 b2--danger bsm" disabled={!!busy} onClick={() => act(m.id, "remove")}>{busy === m.id ? "…" : "내보내기 확정"}</button>
                 <button type="button" className="b2 bsm" disabled={!!busy} onClick={() => setArm("")}>취소</button>
               </span>
@@ -77,7 +77,7 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
         </div>
       ))}
       <div style={{ padding: "10px 0 12px", fontSize: 13, color: "var(--muted)" }}>
-        {isOwner ? "담당자 추가는 같은 기관명으로 CRO 가입 신청을 하면 여기에 합류 신청으로 보입니다." : "기관 정보 수정과 담당자 관리는 대표 담당자가 합니다."}
+        {isOwner ? "담당자 추가는 같은 기관명으로 CRO 가입 신청을 하면 여기에 합류 신청으로 보여요." : "기관 정보 수정과 담당자 관리는 대표 담당자가 해요."}
       </div>
       {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status" style={{ marginBottom: 12 }}>{msg.text}</p>}
     </div>

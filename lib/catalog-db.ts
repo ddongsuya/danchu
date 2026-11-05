@@ -103,7 +103,7 @@ export async function upsertCatalog(orgId: string, rows: unknown[], removed: unk
   const del = removed.filter((x): x is string => typeof x === "string" && own.has(x));
   if (del.length) {
     const { error } = await sb.from("cro_catalog").delete().eq("org_id", orgId).in("id", del);
-    if (error) return { saved: 0, rows: [], error: "삭제하지 못했습니다." };
+    if (error) return { saved: 0, rows: [], error: "삭제하지 못했어요." };
   }
 
   const updates: (TablesInsert<"cro_catalog"> & { id: string })[] = [];
@@ -127,14 +127,14 @@ export async function upsertCatalog(orgId: string, rows: unknown[], removed: unk
     const { error } = await sb.from("cro_catalog").upsert(updates, { onConflict: "id" });
     if (error) {
       console.error("cro_catalog update", error);
-      return { saved: 0, rows: [], error: "저장하지 못했습니다." };
+      return { saved: 0, rows: [], error: "저장하지 못했어요." };
     }
   }
   if (inserts.length) {
     const { error } = await sb.from("cro_catalog").insert(inserts);
     if (error) {
       console.error("cro_catalog insert", error);
-      return { saved: 0, rows: [], error: "저장하지 못했습니다." };
+      return { saved: 0, rows: [], error: "저장하지 못했어요." };
     }
   }
   return { saved: updates.length + inserts.length, rows: await loadCatalog(orgId) };

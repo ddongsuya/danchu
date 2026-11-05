@@ -21,7 +21,7 @@ export function EfficacyCosts({ value, disabled, onChange }: { value: Design; di
     <div style={{ borderTop: "1px dashed var(--cline)", paddingTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
         <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>비용 구분</span>
-        <span style={{ fontSize: 12, color: "var(--muted)" }}>채우면 합계가 금액에 들어갑니다</span>
+        <span style={{ fontSize: 12, color: "var(--muted)" }}>채우면 합계가 금액에 들어가요</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
         {COST_PARTS.map(([key, label, hint]) => (

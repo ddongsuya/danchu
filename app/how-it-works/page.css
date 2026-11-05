@@ -24,6 +24,9 @@
 .a .act:has(.chk input:not(:checked)) .btn.gate{opacity:.42}
 .a .act:has(.chk):not(:has(.chk input:not(:checked))) .btn.gate{opacity:1;pointer-events:auto}
 .a .act:has(.pick input:checked) .btn.gate2{opacity:1;pointer-events:auto}
+/* 고른 길마다 버튼 주소가 다르다. 아무것도 고르지 않았을 땐 첫 버튼만 흐리게 보인다 */
+.a .act .btn.go{display:none}
+.a .act:not(:has(.pick input:checked)) .btn.g0,.a .act:has(#hs0:checked) .btn.g0,.a .act:has(#hs1:checked) .btn.g1,.a .act:has(#hs2:checked) .btn.g2{display:inline-flex}
 @media (hover:hover) and (pointer:fine){
  .a .nextp:hover .ar{transform:translateX(8px)}.a .nextp:hover b{text-decoration:underline;text-underline-offset:8px;text-decoration-thickness:2px}
  .a .ft2 nav a:hover{color:var(--ink)}

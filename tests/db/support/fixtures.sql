@@ -1,6 +1,11 @@
 -- 단추 DB 테스트 공용 도우미. scripts/db-test.sh 가 테스트 파일마다 같은 트랜잭션 안에서 먼저 적용하고 함께 되돌린다.
 -- t_ 로 시작하는 함수는 테스트에서만 쓴다.
 
+-- 청구 시작일 (0031). 운영 값은 2028-01-01 이라 지금 만든 테스트 참여는 모두 시범(무료)이 된다.
+-- 청구 규칙을 보는 테스트는 유료 기간이라고 보고 짜여 있으므로, 트랜잭션 안에서만 아주 이른 날로 바꾼다 (되돌림과 함께 원래대로).
+-- 시범·유료 경계 자체는 tests/db/fee_schedule.sql 이 운영 값으로 되돌려 확인한다
+create or replace function public.billing_paid_from() returns date language sql immutable as $$ select date '2000-01-01' $$;
+
 create or replace function pg_temp.t_assert(p_cond boolean, p_msg text) returns void
 language plpgsql as $$
 begin

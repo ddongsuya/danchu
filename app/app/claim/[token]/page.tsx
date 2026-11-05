@@ -22,7 +22,7 @@ export default async function ClaimPending({ params }: { params: Promise<{ token
       <div className="stack" style={{ maxWidth: 560, margin: "0 auto", gap: 16 }}>
         <div className="ph">
           <div>
-            <h1>요청서를 접수하지 못했습니다</h1>
+            <h1>요청서를 접수하지 못했어요</h1>
             <p>{r.error}</p>
           </div>
         </div>
@@ -35,8 +35,8 @@ export default async function ClaimPending({ params }: { params: Promise<{ token
     <div className="stack" style={{ maxWidth: 560, margin: "0 auto", gap: 16 }}>
       <div className="ph">
         <div>
-          <h1>이메일을 확인했습니다</h1>
-          <p>아래 요청서가 맞으면 보내기를 눌러 주세요. 보내면 분야가 맞는 기관에 참여 안내가 갑니다.</p>
+          <h1>이메일을 확인했어요</h1>
+          <p>아래 요청서가 맞으면 보내기를 눌러 주세요. 보내면 분야가 맞는 기관에 참여 안내가 가요.</p>
         </div>
       </div>
       <section className="card card--rows" aria-label="맡겨 둔 요청서">
@@ -53,7 +53,7 @@ export default async function ClaimPending({ params }: { params: Promise<{ token
         ))}
       </section>
       <ClaimPendingButton token={token} />
-      <p style={{ fontSize: 13, color: "var(--muted)" }}>직접 쓴 요청서가 아니면 보내지 마세요. 보내지 않은 요청서는 7일 뒤 지워집니다.</p>
+      <p style={{ fontSize: 13, color: "var(--muted)" }}>직접 쓴 요청서가 아니면 보내지 마세요. 보내지 않은 요청서는 7일 뒤 지워져요.</p>
       <Link href="/app" className="b2">내 견적 요청</Link>
     </div>
   );

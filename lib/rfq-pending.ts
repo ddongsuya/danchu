@@ -55,12 +55,12 @@ export async function sendPendingCode(email: string, token: string): Promise<{ o
 export async function sendBlockedNotice(email: string): Promise<boolean> {
   return sendMail({
     to: email,
-    subject: "[단추] 이 이메일로는 견적 요청서를 보낼 수 없습니다",
+    subject: "[단추] 이 이메일로는 견적 요청서를 보낼 수 없어요",
     html: mailWrap(`
-      <h2 style="margin:0 0 12px;font-size:20px">이 이메일로는 견적 요청서를 보낼 수 없습니다</h2>
-      <p>방금 단추에서 이 주소로 견적 요청서를 보내려는 시도가 있었습니다. 이 주소는 기관 또는 운영자 계정으로 가입되어 있어 의뢰자 요청서를 받을 수 없습니다.</p>
-      <p>직접 보내신 것이라면 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요. 쓰신 요청서는 같은 브라우저에 임시 저장되어 있습니다.</p>
-      <p style="font-size:13px;color:#6F6A63">요청하지 않았다면 이 메일은 무시하세요. 계정과 요청서에는 아무 변화가 없습니다. 문의: ${esc("hello@danchu.kr")}</p>`),
+      <h2 style="margin:0 0 12px;font-size:20px">이 이메일로는 견적 요청서를 보낼 수 없어요</h2>
+      <p>방금 단추에서 이 주소로 견적 요청서를 보내려는 시도가 있었어요. 이 주소는 기관 또는 운영자 계정으로 가입되어 있어 의뢰자 요청서를 받을 수 없어요.</p>
+      <p>직접 보내신 것이라면 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요. 쓰신 요청서는 같은 브라우저에 임시 저장되어 있어요.</p>
+      <p style="font-size:13px;color:#61615c">요청하지 않았다면 이 메일은 무시하세요. 계정과 요청서에는 아무 변화가 없어요. 문의: ${esc("limjm900202@gmail.com")}</p>`),
   });
 }
 
@@ -73,7 +73,7 @@ export type PendingInput = { email: string; values: Values; files: FileMeta[]; i
  */
 export async function createPending(input: PendingInput): Promise<{ token: string; uploads: UploadTicket[]; mailed: boolean; codeLength: number } | { error: string; status: number }> {
   const sb = getSupabaseAdmin();
-  if (!sb) return { error: "지금은 접수를 저장할 수 없습니다. 잠시 후 다시 시도해 주세요.", status: 503 };
+  if (!sb) return { error: "지금은 접수를 저장할 수 없어요. 잠시 후 다시 시도해 주세요.", status: 503 };
   const email = input.email.toLowerCase();
 
   const { data: prof } = await sb.from("profiles").select("id, role").eq("email", email).maybeSingle();
@@ -89,7 +89,7 @@ export async function createPending(input: PendingInput): Promise<{ token: strin
     // 동시에 두 번 눌러 이미 만들어진 경우는 그대로 진행한다
     if (error && !/already|registered|exists/i.test(error.message)) {
       console.error("pending createUser", error.message);
-      return { error: "계정을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.", status: 500 };
+      return { error: "계정을 만들지 못했어요. 잠시 후 다시 시도해 주세요.", status: 500 };
     }
   }
 
@@ -109,7 +109,7 @@ export async function createPending(input: PendingInput): Promise<{ token: strin
   const { error: e2 } = await sb.from("rfq_pending").insert({ token, email, payload: input.values, files, ip: input.ip !== "unknown" ? input.ip : null });
   if (e2) {
     console.error("pending insert", e2);
-    return { error: "요청서를 맡기지 못했습니다. 잠시 후 다시 시도해 주세요.", status: 500 };
+    return { error: "요청서를 맡기지 못했어요. 잠시 후 다시 시도해 주세요.", status: 500 };
   }
   if (blocked) {
     // 응답은 일반 경우와 같다. 이 임시 요청서는 접수될 수 없고(번호 확인이 늘 실패), 예약 작업이 첨부와 함께 정리한다
@@ -149,13 +149,13 @@ async function fillEmptyProfile(userId: string, values: Values): Promise<void> {
  */
 export async function pendingPreview(token: string, email: string): Promise<{ claimedRfqNo: string | null; substance: string; company: string; categories: string[]; files: string[] } | { error: string; status: number }> {
   const sb = getSupabaseAdmin();
-  if (!sb) return { error: "지금은 요청서를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.", status: 503 };
+  if (!sb) return { error: "지금은 요청서를 불러올 수 없어요. 잠시 후 다시 시도해 주세요.", status: 503 };
   const { data: row } = await sb.from("rfq_pending").select("email, payload, files, claimed_rfq_no, expires_at, verify_type").eq("token", token).maybeSingle();
   // 다른 계정의 임시 요청서는 있는지조차 알리지 않는다
-  if (!row || row.email.toLowerCase() !== email.toLowerCase()) return { error: "맡겨 둔 요청서를 찾지 못했습니다. 요청서를 쓸 때 입력한 이메일로 로그인했는지 확인해 주세요.", status: 404 };
+  if (!row || row.email.toLowerCase() !== email.toLowerCase()) return { error: "맡겨 둔 요청서를 찾지 못했어요. 요청서를 쓸 때 입력한 이메일로 로그인했는지 확인해 주세요.", status: 404 };
   if (row.claimed_rfq_no) return { claimedRfqNo: row.claimed_rfq_no, substance: "", company: "", categories: [], files: [] };
-  if (new Date(row.expires_at).getTime() < Date.now()) return { error: "요청서를 맡긴 지 7일이 지나 보관 기간이 끝났습니다. 같은 브라우저에서 열면 임시 저장된 내용으로 다시 보낼 수 있습니다.", status: 410 };
-  if (row.verify_type === BLOCKED_VERIFY_TYPE) return { error: "이 계정으로는 견적 요청서를 보낼 수 없습니다. 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요.", status: 403 };
+  if (new Date(row.expires_at).getTime() < Date.now()) return { error: "요청서를 맡긴 지 7일이 지나 보관 기간이 끝났어요. 같은 브라우저에서 열면 임시 저장된 내용으로 다시 보낼 수 있어요.", status: 410 };
+  if (row.verify_type === BLOCKED_VERIFY_TYPE) return { error: "이 계정으로는 견적 요청서를 보낼 수 없어요. 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요.", status: 403 };
   const p = (row.payload ?? {}) as Values;
   const str = (k: string) => (typeof p[k] === "string" ? (p[k] as string).trim().slice(0, 200) : "");
   const categories = Array.isArray(p.categories) ? (p.categories as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 20) : [];
@@ -171,14 +171,14 @@ export async function claimPending(token: string, user: { id: string; email: str
   const sb = getSupabaseAdmin();
   if (!sb) return { error: "저장소 미설정", status: 503 };
   const { data: row } = await sb.from("rfq_pending").select("*").eq("token", token).maybeSingle();
-  if (!row) return { error: "맡겨 둔 요청서를 찾지 못했습니다. 다시 보내 주세요.", status: 404 };
-  if (row.email.toLowerCase() !== user.email.toLowerCase()) return { error: "요청서를 쓸 때 입력한 이메일과 다른 계정으로 로그인되어 있습니다.", status: 403 };
+  if (!row) return { error: "맡겨 둔 요청서를 찾지 못했어요. 다시 보내 주세요.", status: 404 };
+  if (row.email.toLowerCase() !== user.email.toLowerCase()) return { error: "요청서를 쓸 때 입력한 이메일과 다른 계정으로 로그인되어 있어요.", status: 403 };
   if (row.claimed_rfq_no) return { rfqNo: row.claimed_rfq_no, started: true };
-  if (new Date(row.expires_at).getTime() < Date.now()) return { error: "요청서를 맡긴 지 7일이 지나 보관 기간이 끝났습니다. 같은 브라우저에서 열면 임시 저장된 내용으로 다시 보낼 수 있습니다.", status: 410 };
-  if (row.verify_type === BLOCKED_VERIFY_TYPE) return { error: "이 계정으로는 견적 요청서를 보낼 수 없습니다. 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요.", status: 403 };
+  if (new Date(row.expires_at).getTime() < Date.now()) return { error: "요청서를 맡긴 지 7일이 지나 보관 기간이 끝났어요. 같은 브라우저에서 열면 임시 저장된 내용으로 다시 보낼 수 있어요.", status: 410 };
+  if (row.verify_type === BLOCKED_VERIFY_TYPE) return { error: "이 계정으로는 견적 요청서를 보낼 수 없어요. 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요.", status: 403 };
   // 의뢰자 계정으로만 접수한다 (기관·운영자 계정 세션으로 메일 버튼을 연 경우)
   const { data: prof } = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (prof && prof.role !== "requester") return { error: "의뢰자 계정으로만 견적 요청서를 보낼 수 있습니다. 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요.", status: 403 };
+  if (prof && prof.role !== "requester") return { error: "의뢰자 계정으로만 견적 요청서를 보낼 수 있어요. 의뢰자로 쓰실 다른 이메일로 다시 보내 주세요.", status: 403 };
 
   // 먼저 잡은 쪽만 진행한다. 늦게 온 쪽은 번호가 생길 때까지 잠깐 기다린다
   const { data: won } = await sb.from("rfq_pending").update({ claimed_at: new Date().toISOString(), claimed_user: user.id }).eq("token", token).is("claimed_at", null).select("token").maybeSingle();
@@ -189,7 +189,7 @@ export async function claimPending(token: string, user: { id: string; email: str
       if (again?.claimed_rfq_no) return { rfqNo: again.claimed_rfq_no, started: true };
       if (!again?.claimed_at) break;
     }
-    return { error: "접수를 마무리하는 중입니다. 잠시 후 요청 목록에서 확인해 주세요.", status: 409 };
+    return { error: "접수를 마무리하는 중이에요. 잠시 후 요청 목록에서 확인해 주세요.", status: 409 };
   }
 
   try {
@@ -219,7 +219,7 @@ export async function claimPending(token: string, user: { id: string; email: str
     console.error("claim pending", e);
     // 다시 시도할 수 있게 잡은 표시를 푼다
     await sb.from("rfq_pending").update({ claimed_at: null, claimed_user: null }).eq("token", token).is("claimed_rfq_no", null);
-    return { error: "접수하지 못했습니다. 잠시 후 다시 시도해 주세요.", status: 500 };
+    return { error: "접수하지 못했어요. 잠시 후 다시 시도해 주세요.", status: 500 };
   }
 }
 

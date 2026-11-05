@@ -27,9 +27,9 @@ begin
   perform pg_temp.t_eq(s.total_due, 0::bigint, '예상은 합계에 넣지 않는다');
 
   -- 체결 보고(실제 함수): 계약 금액 5,500만. 이번 달에 확인
-  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false);
+  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false, 'scope');
   perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고');
-  res := public.report_contract(a_small, (now() at time zone 'Asia/Seoul')::date, 49999999, '', false);
+  res := public.report_contract(a_small, (now() at time zone 'Asia/Seoul')::date, 49999999, '', false, 'scope');
   -- 확인 전에는 정산하지 않는다 (0025)
   perform pg_temp.t_eq(coalesce((select settled_count from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 0), 0, '확인 전 정산 없음');
   perform pg_temp.t_confirm(a_big);
@@ -50,7 +50,7 @@ begin
   -- 정정(운영자)은 보고·확인 시각을 바꾸지 않는다: 정산 월이 옮겨 가지 않는다
   update public.rfq_awards set contract_reported_at = pg_temp.t_mid(0) where id = a_big;
   select contract_confirmed_at into v_conf from public.rfq_awards where id = a_big;
-  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 70000000, '정정', true);
+  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 70000000, '정정', true, 'scope');
   perform pg_temp.t_eq(res->>'corrected', 'true', '정정');
   perform pg_temp.t_eq(res->>'confirmed', 'true', '확인된 계약의 정정');
   perform pg_temp.t_eq((select contract_reported_at from public.rfq_awards where id = a_big), pg_temp.t_mid(0), '처음 보고 시각 유지');
@@ -66,14 +66,14 @@ declare
   a uuid := pg_temp.t_award(q, pg_temp.t_mid(-2));
   res jsonb;
 begin
-  res := public.report_contract(a, pg_temp.t_month(-1) + 3, 50000000, '', false);
+  res := public.report_contract(a, pg_temp.t_month(-1) + 3, 50000000, '', false, 'scope');
   perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고');
   perform pg_temp.t_confirm(a);
   perform pg_temp.t_eq((select settled_fee from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 1500000::bigint, '확인한 이번 달에 정산');
   perform pg_temp.t_eq(coalesce((select settled_count from public.billing_summary(pg_temp.t_month(-1), pg_temp.t_month(0)) where org_id = o), 0), 0, '체결일 달에는 없음');
 end $$;
 
--- 요율 미정: 정산 금액은 null (미정), 0 으로 숨기지 않는다
+-- 기관 요율 특별 조건이 없으면 요금표 요율 (0031). 9천만 원 선정 견적은 2%, 미정은 없다
 do $$
 declare
   o uuid := pg_temp.t_org('요율미정기관', 300000, null);
@@ -82,11 +82,11 @@ declare
   res jsonb;
   s record;
 begin
-  res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false);
+  res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.settled_count, 1, '정산 대상 1건');
-  perform pg_temp.t_assert(s.settled_fee is null, '요율 미정이면 null');
-  perform pg_temp.t_assert(s.guidance_fee is null, '예상도 null');
-  perform pg_temp.t_eq(s.terms_pending, true, '미정 표시');
+  perform pg_temp.t_eq(s.settled_fee, 1800000::bigint, '정산 = 90,000,000 × 2% (요금표)');
+  perform pg_temp.t_eq(s.guidance_fee, 1800000::bigint, '예상도 요금표 요율');
+  perform pg_temp.t_eq(s.terms_pending, false, '미정 없음');
 end $$;

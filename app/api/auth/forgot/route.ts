@@ -11,6 +11,6 @@ export async function POST(req: Request) {
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: "이메일 형식을 확인해 주세요." }, { status: 400 });
   if ((await rateLimited("forgot:email", email, 3, 15 * 60)) || (await rateLimited("forgot:ip", clientIp(req), 10, 15 * 60))) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const r = await sendLoginLink("recovery", email, "/reset-password");
-  if (!r.ok && !r.notFound) return NextResponse.json({ error: "메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+  if (!r.ok && !r.notFound) return NextResponse.json({ error: "메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
   return NextResponse.json({ ok: true });
 }

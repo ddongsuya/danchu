@@ -41,7 +41,7 @@ export function parseManagedOrg(raw: unknown): ManagedOrgInput | string {
   const email = s("contactEmail", 200).toLowerCase();
   const categories = pick("categories", CATS);
   if (!name) return "기관명을 입력해 주세요.";
-  if (!email) return "대표 이메일을 입력해 주세요. 요청서와 회신 링크가 이 주소로 갑니다.";
+  if (!email) return "대표 이메일을 입력해 주세요. 요청서와 회신 링크가 이 주소로 가요.";
   if (!EMAIL.test(email)) return "대표 이메일 형식을 확인해 주세요.";
   if (!categories.length) return "수행 분야를 하나 이상 선택해 주세요.";
   const bizRaw = s("businessNo", 40);
@@ -111,8 +111,8 @@ export function canJoinAs(role: string | null | undefined): boolean {
 export function proxyEntryAllowed(inv: { joined_at?: string | null } | { joined: boolean }): boolean {
   return "joined" in inv ? inv.joined : !!inv.joined_at;
 }
-export const OPERATOR_JOIN_DENIED = "운영자는 기관 대신 참여할 수 없습니다. 기관이 회신 링크나 포털에서 직접 참여하기를 눌러야 합니다. 참여를 권하려면 기관에 전화나 메일로 안내해 주세요.";
-export const PROXY_BEFORE_JOIN = "기관이 이 요청에 참여하기 전이라 견적을 대신 입력할 수 없습니다. 기관이 회신 링크에서 참여하기를 누른 뒤 PDF 견적을 옮겨 적어 주세요.";
+export const OPERATOR_JOIN_DENIED = "운영자는 기관 대신 참여할 수 없어요. 기관이 회신 링크나 포털에서 직접 참여하기를 눌러야 해요. 참여를 권하려면 기관에 전화나 메일로 안내해 주세요.";
+export const PROXY_BEFORE_JOIN = "기관이 이 요청에 참여하기 전이라 견적을 대신 입력할 수 없어요. 기관이 회신 링크에서 참여하기를 누른 뒤 PDF 견적을 옮겨 적어 주세요.";
 
 /** 제출한 세션의 역할로 입력 주체를 정한다. 운영자가 회신 링크로 제출하면 대리 입력이다 */
 export function entrySourceFor(role: string | null | undefined): QuoteEntrySource {
@@ -167,8 +167,8 @@ export function isContractStatus(v: unknown): v is ContractStatus {
 export function parseContractStatus(raw: unknown, reported: boolean): { status: ManualContractStatus; note: string } | string {
   const b = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const status = typeof b.status === "string" ? b.status : "";
-  if (!(MANUAL_CONTRACT_STATUSES as readonly string[]).includes(status)) return "계약 상태 값이 올바르지 않습니다. 체결은 체결일과 금액으로 기록해 주세요.";
-  if (reported) return "체결이 보고된 수주입니다. 체결 내용을 고치려면 체결 정보를 다시 저장해 주세요.";
+  if (!(MANUAL_CONTRACT_STATUSES as readonly string[]).includes(status)) return "계약 상태 값이 올바르지 않아요. 체결은 체결일과 금액으로 기록해 주세요.";
+  if (reported) return "체결이 보고된 수주예요. 체결 내용을 고치려면 체결 정보를 다시 저장해 주세요.";
   const note = typeof b.note === "string" ? b.note.trim().slice(0, 300) : "";
   if (status === "not_signed" && !note) return "미체결 사유를 적어 주세요 (예: 의뢰자 일정 보류, 다른 경로로 진행).";
   return { status: status as ManualContractStatus, note };

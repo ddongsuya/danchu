@@ -1,0 +1,55 @@
+/* 가이드라인 자료실. 구조는 FAQ와 같다: 왼쪽 고르기(고정) + 오른쪽 목록. 카드 대신 구분선. */
+.a .libs .ph{padding:56px 0 32px}
+.a .lib{display:grid;grid-template-columns:minmax(0,14em) minmax(0,1fr);gap:64px;padding:40px 0 96px}
+.a .lib > input{position:absolute;opacity:0;pointer-events:none}
+.a .lside{position:sticky;top:108px;align-self:start;display:grid;gap:2px}
+.a .lk{font-size:13px;color:var(--muted);margin:0 0 8px}
+.a .lk + .lf,.a .lk + .lt{margin-bottom:28px}
+.a .lf,.a .lt{display:grid;gap:2px}
+.a .lf label,.a .lt a{padding:6px 0 6px 16px;border-left:2px solid var(--line);color:var(--muted);font-size:15px;cursor:pointer;text-decoration:none;transition:color 160ms ease,border-color 160ms ease}
+.a #p-all:checked ~ .lside label[for=p-all],.a #p-drug:checked ~ .lside label[for=p-drug],.a #p-bio:checked ~ .lside label[for=p-bio],.a #p-cgt:checked ~ .lside label[for=p-cgt],.a #p-hf:checked ~ .lside label[for=p-hf],.a #p-cos:checked ~ .lside label[for=p-cos],.a #p-dev:checked ~ .lside label[for=p-dev],.a #p-chem:checked ~ .lside label[for=p-chem]{color:var(--ink);font-weight:500;border-left-color:var(--ink)}
+.a #p-all:focus-visible ~ .lside label[for=p-all],.a #p-drug:focus-visible ~ .lside label[for=p-drug],.a #p-bio:focus-visible ~ .lside label[for=p-bio],.a #p-cgt:focus-visible ~ .lside label[for=p-cgt],.a #p-hf:focus-visible ~ .lside label[for=p-hf],.a #p-cos:focus-visible ~ .lside label[for=p-cos],.a #p-dev:focus-visible ~ .lside label[for=p-dev],.a #p-chem:focus-visible ~ .lside label[for=p-chem]{outline:2px solid var(--acc);outline-offset:2px}
+.a .lt a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.a .lib:has(#p-drug:checked) .ldoc:not(.p-drug),.a .lib:has(#p-drug:checked) .ltopic:not(.has-drug),.a .lib:has(#p-drug:checked) .lt a:not(.has-drug){display:none}
+.a .lib:has(#p-bio:checked) .ldoc:not(.p-bio),.a .lib:has(#p-bio:checked) .ltopic:not(.has-bio),.a .lib:has(#p-bio:checked) .lt a:not(.has-bio){display:none}
+.a .lib:has(#p-cgt:checked) .ldoc:not(.p-cgt),.a .lib:has(#p-cgt:checked) .ltopic:not(.has-cgt),.a .lib:has(#p-cgt:checked) .lt a:not(.has-cgt){display:none}
+.a .lib:has(#p-hf:checked) .ldoc:not(.p-hf),.a .lib:has(#p-hf:checked) .ltopic:not(.has-hf),.a .lib:has(#p-hf:checked) .lt a:not(.has-hf){display:none}
+.a .lib:has(#p-cos:checked) .ldoc:not(.p-cos),.a .lib:has(#p-cos:checked) .ltopic:not(.has-cos),.a .lib:has(#p-cos:checked) .lt a:not(.has-cos){display:none}
+.a .lib:has(#p-dev:checked) .ldoc:not(.p-dev),.a .lib:has(#p-dev:checked) .ltopic:not(.has-dev),.a .lib:has(#p-dev:checked) .lt a:not(.has-dev){display:none}
+.a .lib:has(#p-chem:checked) .ldoc:not(.p-chem),.a .lib:has(#p-chem:checked) .ltopic:not(.has-chem),.a .lib:has(#p-chem:checked) .lt a:not(.has-chem){display:none}
+.a .ltopic{scroll-margin-top:108px}
+/* 목차: 지금 읽는 주제 표시. 사이드바가 화면보다 길면 안에서 스크롤 */
+.a .lside{max-height:calc(100svh - 128px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.a .lt a[aria-current]{color:var(--ink);font-weight:500;border-left-color:var(--ink)}
+/* 마지막 주제도 목차를 누르면 화면 위까지 올라오도록 목록 아래에 여유를 둔다(넓은 화면만) */
+@media (min-width:861px){.a .lbody{padding-bottom:max(0px,calc(100svh - 300px))}}
+.a .ltopic + .ltopic{margin-top:56px}
+.a .ltopic h2{font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.3;margin:0 0 14px;text-wrap:balance}
+.a .ltopic ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--ink)}
+.a .ldoc{display:grid;grid-template-columns:minmax(0,13em) minmax(0,1fr) auto;gap:8px 24px;align-items:baseline;padding:18px 0;border-bottom:1px solid var(--line)}
+.a .ldoc b{font-weight:600;font-size:16.5px;letter-spacing:-.01em}
+.a .ldoc p{margin:0;font-size:15.5px;line-height:1.65;color:var(--ink2);max-width:40em}
+.a .ldoc small{display:block;margin-top:4px;font-size:13px;line-height:1.5;color:var(--muted)}
+.a .ldoc > a{display:inline-flex;align-items:center;gap:4px;min-height:44px;font-size:14.5px;font-weight:500;color:var(--ink);text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;white-space:nowrap;transition:transform 160ms var(--eo)}
+.a .ldoc > a:active{transform:scale(.97)}
+.a .ldoc > a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.a .ldisc{margin:40px 0 0;font-size:14px;line-height:1.7;color:var(--muted);max-width:46em}
+@media (hover:hover) and (pointer:fine){
+ .a .lf label:hover,.a .lt a:hover{color:var(--ink)}
+ .a .ldoc > a:hover{background:var(--accsoft)}
+}
+@media (max-width:860px){
+ .a .libs .ph{padding:28px 0 20px}
+ .a .lib{grid-template-columns:1fr;gap:24px;padding:20px 0 64px}
+ .a .lside{position:static;max-height:none;overflow:visible}
+ .a .lt,.a #lk-t{display:none}
+ .a .lk + .lf{margin-bottom:0}
+ .a .lf{display:flex;flex-wrap:wrap;gap:8px}
+ .a .lf label{border:1px solid var(--line);border-radius:2px;padding:0 12px;height:36px;display:inline-flex;align-items:center;white-space:nowrap}
+ .a .lib #p-all:checked ~ .lside label[for=p-all],.a .lib #p-drug:checked ~ .lside label[for=p-drug],.a .lib #p-bio:checked ~ .lside label[for=p-bio],.a .lib #p-cgt:checked ~ .lside label[for=p-cgt],.a .lib #p-hf:checked ~ .lside label[for=p-hf],.a .lib #p-cos:checked ~ .lside label[for=p-cos],.a .lib #p-dev:checked ~ .lside label[for=p-dev],.a .lib #p-chem:checked ~ .lside label[for=p-chem]{border-color:var(--ink)}
+ .a .ldoc{grid-template-columns:1fr;gap:4px;padding:16px 0}
+ .a .ldoc > a{justify-self:start;min-height:40px}
+ .a .ltopic + .ltopic{margin-top:40px}
+ .a .ltopic h2{font-size:19px}
+}
+.a .lib{scroll-margin-top:72px}

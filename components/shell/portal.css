@@ -961,6 +961,25 @@
 .pt .cat-more > summary { cursor: pointer; list-style: none; min-height: 48px; display: flex; align-items: center; padding: 0 4px; font-size: 14px; font-weight: 600; color: var(--body); text-decoration: underline; text-underline-offset: 3px; }
 .pt .cat-more > summary::-webkit-details-marker { display: none; }
 .pt .cat-more > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: var(--r-md); }
+/* 청구서 (0032): 머리 오른쪽 날짜·상태 */
+.pt .invoice__meta { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; font-size: 13px; }
+.pt .invoice__meta div { display: contents; }
+.pt .invoice__meta dt { color: var(--muted); }
+.pt .invoice__meta dd { margin: 0; font-weight: 600; }
+/* 청구서 인쇄(PDF 저장): 메뉴·상단 바·하단 탭을 숨기고 청구서만 */
+@media print {
+  .pt .pt__side, .pt .pt__top, .pt .pt__tabs, .pt .noprint { display: none !important; }
+  .pt .pt__body { margin: 0 !important; padding: 0 !important; }
+  .pt .invoice { border: 0; box-shadow: none; padding: 0 !important; }
+  .pt .tbl-wrap { overflow: visible; }
+}
+
+/* 좁은 화면 위 바 오른쪽: 가이드라인 자료실 + 이름 */
+.pt__topr { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.pt__toplib { flex: none; display: grid; place-items: center; width: 44px; height: 44px; color: var(--muted); border-radius: var(--r-md); transition: transform 160ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1)), color 160ms ease; }
+.pt__toplib:active { transform: scale(0.97); }
+.pt__toplib:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .pt__toplib:hover { color: var(--ink); } }
 
 /* 개발 단계 미리보기 띠 (lib/demo.ts). 출시 전에 지운다 */
 .pt__demo {

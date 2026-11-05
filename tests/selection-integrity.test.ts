@@ -16,7 +16,7 @@ const fx = vi.hoisted(() => ({
   calls: [] as { table: string; op: string; payload?: unknown; filters: [string, string, unknown][] }[],
   /** 다음 select 에 돌려줄 오류 (표 이름 → 메시지) */
   failSelect: {} as Record<string, string>,
-  schema: { data: 29 as unknown, error: null as null | { code?: string; message: string } },
+  schema: { data: 34 as unknown, error: null as null | { code?: string; message: string } },
   sendMail: vi.fn(async (_m: unknown) => true),
   notifyUsers: vi.fn(async () => {}),
   logEvent: vi.fn(async () => {}),
@@ -117,7 +117,7 @@ beforeEach(() => {
   fx.tables = { rfq_requests: [rfqRow()], rfq_invites: [], profiles: [], cro_orgs: [], cro_catalog: [] };
   fx.calls = [];
   fx.failSelect = {};
-  fx.schema = { data: 29, error: null };
+  fx.schema = { data: 34, error: null };
   fx.sendMail.mockReset().mockResolvedValue(true);
   fx.notifyUsers.mockClear();
   fx.logEvent.mockClear();
@@ -188,12 +188,12 @@ describe("배포가 메일을 기다리는 사이 선정되면 (#5)", () => {
 describe("배포 대상 조회 오류는 '대상 없음'이 아니다 (#10)", () => {
   it("기관 조회가 실패하면 빈 목록이 아니라 오류를 던진다", async () => {
     fx.failSelect.cro_orgs = "permission denied for table cro_orgs";
-    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/배포 대상 기관을 조회하지 못했습니다/);
+    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/배포 대상 기관을 조회하지 못했어요/);
   });
   it("카탈로그 조회가 실패해도 오류를 던진다", async () => {
     fx.tables.cro_orgs = [{ ...org(1), status: "approved" }];
     fx.failSelect.cro_catalog = "column cro_catalog.available does not exist";
-    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/카탈로그를 조회하지 못했습니다/);
+    await expect(matchOrgs(rfqRow() as never)).rejects.toThrow(/카탈로그를 조회하지 못했어요/);
   });
   it("정상이면 분야가 맞는 기관을 돌려준다", async () => {
     fx.tables.cro_orgs = [{ ...org(1), status: "approved" }, { ...org(2), status: "approved", categories: ["안전성약리"] }];
@@ -219,8 +219,8 @@ describe("배포 대상 조회 오류는 '대상 없음'이 아니다 (#10)", ()
     expect(await readSchemaStatus()).toMatchObject({ ok: false, reason: "behind", version: 21 });
     fx.schema = { data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } };
     expect(await readSchemaStatus()).toMatchObject({ ok: false, reason: "error" });
-    fx.schema = { data: 29, error: null };
-    expect(await readSchemaStatus()).toEqual({ ok: true, version: 29, required: 29 });
+    fx.schema = { data: 34, error: null };
+    expect(await readSchemaStatus()).toEqual({ ok: true, version: 34, required: 34 });
   });
 });
 
@@ -233,7 +233,7 @@ describe("배포 순서 확인 (npm run check:schema)", () => {
   });
   it("판이 모자라면 실패, 맞으면 통과", async () => {
     expect((await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "21") })).ok).toBe(false);
-    expect(await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "29") })).toMatchObject({ ok: true, version: 29 });
+    expect(await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "34") })).toMatchObject({ ok: true, version: 34 });
   });
   it("환경변수가 없으면 실패하고, 주소·키를 출력하지 않는다", async () => {
     const r = await checkSchema({ url: "", key: "" });
@@ -273,13 +273,13 @@ describe("선정은 확인 화면이 본 견적 판으로만 (#7)", () => {
     expect((await r.json()).code).toBe("quote_changed");
     expect(fx.selectQuote).not.toHaveBeenCalled();
   });
-  it("그 사이 견적이 바뀌었으면 409 와 '견적이 바뀌었습니다' 안내, 알림·메일 없음", async () => {
+  it("그 사이 견적이 바뀌었으면 409 와 '견적이 바뀌었어요' 안내, 알림·메일 없음", async () => {
     fx.selectQuote.mockResolvedValueOnce({ ok: false, code: "quote_changed" });
     const r = await selectRoute(req({ quoteId: QID, revision: 3 }), ctx);
     expect(r.status).toBe(409);
     const body = await r.json();
     expect(body).toMatchObject({ code: "quote_changed", error: QUOTE_CHANGED_MESSAGE });
-    expect(body.error).toMatch(/^견적이 바뀌었습니다/);
+    expect(body.error).toMatch(/^견적이 바뀌었어요/);
     expect(fx.selectQuote).toHaveBeenCalledWith(RFQ_ID, QID, "sponsor-1", 3);
     expect(fx.notifyUsers).not.toHaveBeenCalled();
     expect(fx.logEvent).not.toHaveBeenCalled();

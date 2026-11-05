@@ -15,11 +15,11 @@ export const maxDuration = 60;
  */
 export async function POST(req: Request) {
   const s = await sessionOrNull("requester");
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   if (await rateLimited("pending-claim:user", s.userId, 10, 15 * 60)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const b = (await req.json().catch(() => ({}))) as { token?: unknown };
   const token = isPendingToken(b.token) ? b.token : "";
-  if (!token) return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+  if (!token) return NextResponse.json({ error: "요청 형식이 올바르지 않아요." }, { status: 400 });
   const r = await claimPending(token, { id: s.userId, email: s.email });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, rfqNo: r.rfqNo, started: r.started });

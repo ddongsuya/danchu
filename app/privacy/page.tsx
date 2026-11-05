@@ -12,14 +12,13 @@ export default function PrivacyPage() {
     <LegalLayout
       title="개인정보처리방침"
       effectiveDate="2026년 11월 16일"
-      version="v1.1"
       current="/privacy"
-      noticeSummary="개정 안내: 2026년 11월 16일부터 v1.1 시행"
+      noticeSummary="개정 안내: 2026년 11월 16일 시행"
       notice={
         <>
           <p>
-            2026년 11월 16일부터 v1.1을 시행합니다(2026년 10월 17일 공지, 10월 28일 보완). 2026년 10월 17일 이후 v1.1에 동의하고
-            보낸 요청에는 보낸 때부터 v1.1을, 그 전에 보낸 요청에는 v1.0(2026년 9월 6일 시행)을 적용합니다.
+            개정 방침을 2026년 11월 16일부터 시행합니다(2026년 10월 17일 공지, 10월 28일 보완). 2026년 10월 17일 이후 개정 방침에
+            동의하고 보낸 요청에는 보낸 때부터 개정 방침을, 그 전에 보낸 요청에는 종전 방침(2026년 9월 6일 시행)을 적용합니다.
           </p>
           <p>
             <strong>주요 변경</strong>
@@ -32,6 +31,7 @@ export default function PrivacyPage() {
             <li>회원 가입과 문의 때 받는 항목과 보유기간을 적었습니다(1·3항)</li>
             <li>데이터 보관 국가를 대한민국(서울)으로 바로잡고 국외 이전 내용을 자세히 적었습니다(5·6항)</li>
             <li>쿠키 사용 안내를 더했습니다(10항)</li>
+            <li>사전예약 정보의 이용 목적과 보유기간을 적었습니다(2·3항)</li>
           </ul>
         </>
       }
@@ -89,6 +89,13 @@ export default function PrivacyPage() {
             <td>답변 받을 이메일, 문의 유형, 요청 번호, 문의 내용</td>
           </tr>
           <tr>
+            <td>사전예약</td>
+            <td>
+              의뢰자: 이메일, 맡길 시험 분야. 선택: 회사 유형, 예정 시기. 기관: 기관명, 담당자 이메일, 수행 분야, 참여 생각. 선택:
+              보유 GLP 인증, 확인하고 싶은 점
+            </td>
+          </tr>
+          <tr>
             <td>자동 수집</td>
             <td>접속 IP 주소, 브라우저 정보(User-Agent), 접수 일시, 로그인 유지 쿠키(10항)</td>
           </tr>
@@ -114,6 +121,7 @@ export default function PrivacyPage() {
         <li>이용자가 기관을 선정한 때 계약 협의를 위해 이용자와 선정된 기관의 담당자 연락처를 서로 전달</li>
         <li>선정 이후 이용자와 기관에 대한 계약 진행 여부 확인</li>
         <li>문의 응대, 일정 조율 등 서비스 운영에 필요한 연락</li>
+        <li>사전예약한 이용자에 대한 시범 운영 시작 안내</li>
         <li>서비스 개선을 위한 통계 분석(개인을 식별할 수 없는 형태로 처리)</li>
       </ul>
 
@@ -137,6 +145,10 @@ export default function PrivacyPage() {
           <tr>
             <td>문의 내용</td>
             <td>답변을 마친 뒤 1년</td>
+          </tr>
+          <tr>
+            <td>사전예약 정보</td>
+            <td>시범 운영 시작일(2027년 6월 1일)부터 6개월(2027년 11월 30일까지). 기간이 지나면 자동으로 삭제합니다</td>
           </tr>
           <tr>
             <td>접속 기록(IP 등)</td>
@@ -274,7 +286,7 @@ export default function PrivacyPage() {
         종료된 뒤 탈퇴할 수 있습니다.
       </p>
       <p>
-        그 밖의 열람·정정·처리 정지 요구는 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>로 요청하실 수 있으며, 회사는 지체
+        그 밖의 열람·정정·처리 정지 요구는 <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>로 요청하실 수 있으며, 회사는 지체
         없이 조치합니다. 다만 이미 기관에 제공된 정보에 대해서는 해당 기관에 별도로 요청하셔야 할 수 있으며, 회사는 이를
         안내합니다.
       </p>
@@ -307,7 +319,7 @@ export default function PrivacyPage() {
       <ul>
         <li>개인정보 보호책임자: {privacyOfficerName() ? `${privacyOfficerName()}, 대표` : "대표"}</li>
         <li>
-          연락처: <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
+          연락처: <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
         </li>
       </ul>
       <p>

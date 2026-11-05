@@ -56,7 +56,7 @@ export async function legacyOpenRequests(sb: Admin, today: string): Promise<RfqR
     .gte("reply_by", today)
     .order("created_at", { ascending: true })
     .limit(200);
-  if (error) throw new Error(`전환 대상 요청을 읽지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`전환 대상 요청을 읽지 못했어요: ${error.message}`);
   return data ?? [];
 }
 
@@ -71,11 +71,11 @@ async function managedOffers(sb: Admin, rfqId: string, nowIso: string) {
     .is("revoked_at", null)
     .is("withdrawn_at", null)
     .gt("expires_at", nowIso);
-  if (error) throw new Error(`안내 목록을 읽지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`안내 목록을 읽지 못했어요: ${error.message}`);
   const orgIds = [...new Set((invs ?? []).map((i) => i.cro_org_id).filter((x): x is string => !!x))];
   if (!orgIds.length) return [];
   const { data: orgs, error: orgError } = await sb.from("cro_orgs").select("id, managed, status").in("id", orgIds);
-  if (orgError) throw new Error(`기관 정보를 읽지 못했습니다: ${orgError.message}`);
+  if (orgError) throw new Error(`기관 정보를 읽지 못했어요: ${orgError.message}`);
   const managed = new Set((orgs ?? []).filter((o) => o.managed && o.status === "approved").map((o) => o.id));
   const targets = await orgMailTargets(sb, [...managed]);
   return (invs ?? [])
@@ -135,7 +135,7 @@ export async function runOptInTransition(sb: Admin, actorId: string | null, toda
     try {
       offers = await managedOffers(sb, r.id, now.toISOString());
     } catch (e) {
-      out.failed.push(`${r.rfq_no} · ${e instanceof Error ? e.message : "안내 목록을 읽지 못했습니다"}`);
+      out.failed.push(`${r.rfq_no} · ${e instanceof Error ? e.message : "안내 목록을 읽지 못했어요"}`);
     }
     for (const o of offers) {
       const mailTo = await notificationRecipients(o.to);

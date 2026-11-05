@@ -52,7 +52,7 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
           </div>
           <div className="card card--pad">
             <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>약정 · 운영 설정</h2>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>시범운영 기간에는 청구하지 않습니다. 월 구독료, 건당 이용료, 성사수수료율은 서면 합의 후 그 값을 적고, 월 명세의 참고 집계에 그대로 쓰입니다.</p>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>2027년 12월 31일까지 참여한 견적은 청구하지 않습니다. 청구는 2028년 1월 1일부터입니다. 송부 비용과 성사 수수료율은 비우면 요금표를 쓰고, 서면으로 합의한 특별 조건이 있을 때만 적습니다.</p>
             <OrgTerms org={org} autoReplyAvailable={autoReplyEnabled()} />
           </div>
         </div>

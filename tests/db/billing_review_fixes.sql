@@ -15,7 +15,7 @@ begin
   perform pg_temp.t_eq((select tier from public.billing_lines(pg_temp.t_month(-1), pg_temp.t_month(0)) where quote_id = q), 'no_amount', '지난달에는 금액 미입력으로 나온다');
   perform public.close_billing_month(pg_temp.t_month(-1), null, '금액 미입력 상태로 마감');
 
-  res := public.save_quote(i, jsonb_build_object('total_amount', 30000000), '[]'::jsonb, true, null, (select token from public.rfq_invites where id = i));
+  res := public.save_quote(i, jsonb_build_object('total_amount', 53000000), '[]'::jsonb, true, null, (select token from public.rfq_invites where id = i));
   perform pg_temp.t_eq(res->>'ok', 'true', '금액을 넣어 다시 제출');
   perform pg_temp.t_eq((select first_submitted_at from public.cro_quotes where id = q), pg_temp.t_mid(-1), '처음 제출 시각은 그대로');
   perform pg_temp.t_eq((select billing_at from public.cro_quotes where id = q), now(), '청구 기준 시각 = 금액이 들어온 때');
@@ -29,7 +29,7 @@ begin
 
   -- 한 번 정해지면 바뀌지 않는다: 금액을 지웠다 다시 넣어도, 직접 바꾸려 해도
   update public.cro_quotes set total_amount = null where id = q;
-  update public.cro_quotes set total_amount = 40000000, billing_at = now() - interval '90 days' where id = q;
+  update public.cro_quotes set total_amount = 54000000, billing_at = now() - interval '90 days' where id = q;
   perform pg_temp.t_eq((select billing_at from public.cro_quotes where id = q), now(), '청구 기준 시각 고정');
 end $$;
 
@@ -38,7 +38,7 @@ do $$
 declare
   o uuid := pg_temp.t_org('금액처음기관', 300000);
   i uuid := pg_temp.t_invite(pg_temp.t_rfq('T-RV-2'), o, pg_temp.t_mid(-1));
-  q uuid := pg_temp.t_quote(i, 20000000, pg_temp.t_mid(-1));
+  q uuid := pg_temp.t_quote(i, 52500000, pg_temp.t_mid(-1));
 begin
   perform pg_temp.t_eq((select billing_at from public.cro_quotes where id = q), pg_temp.t_mid(-1), '처음 제출에 금액이 있으면 그 시각');
   perform public.save_quote(i, jsonb_build_object('total_amount', 25000000), '[]'::jsonb, true, null, (select token from public.rfq_invites where id = i));
@@ -79,7 +79,7 @@ declare
 begin
   update public.rfq_invites set billable = false, bill_excluded_reason = '중복 요청' where id = i;
   a := pg_temp.t_award(q);
-  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 55000000, null);
+  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 55000000, null, false, 'scope');
   perform pg_temp.t_confirm(a);
   perform pg_temp.t_eq((select invite_billable from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a and kind = 'settlement'), false, '정산 행에 청구 제외 초대 표시');
   perform pg_temp.t_eq((select fee from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a and kind = 'settlement'), 1650000::bigint, '정산 금액은 그대로');

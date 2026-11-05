@@ -36,6 +36,8 @@ export type CroOrg = {
   address: string | null;
   contact_name: string | null;
   contact_email: string | null;
+  /** 청구서 받을 이메일 (0032). 비어 있으면 contact_email */
+  billing_email?: string | null;
   contact_phone: string | null;
   glp_certs: string[];
   aaalac: boolean | null;
@@ -46,9 +48,9 @@ export type CroOrg = {
   approved_at: string | null;
   /** 기한까지 손대지 않은 초안을 예비 견적으로 자동 제출 */
   auto_reply?: boolean;
-  /** 약정 (0020): 건당 이용료(원, 1,000만 원 이상 견적 1건마다, null 이면 미정) */
+  /** 약정 (0020): 송부 비용 특별 조건(원, 5,000만 원 이상 견적 1건마다, null 이면 요금표 0031) */
   per_request_fee?: number | null;
-  /** 성사수수료율 (0.03 = 3%). 선정 견적 5,000만 원 이상이 체결되면 계약 금액에 곱한다. null 이면 미정 */
+  /** 성사수수료율 (0.03 = 3%). 선정 견적 5,000만 원 이상이 체결되면 계약 금액에 곱한다. null 이면 요금표 (0031) */
   fee_rate?: number | null;
   /** 월 구독료 (원, 1,000만 원 미만 견적 포함). null 이면 구독하지 않음 */
   monthly_fee?: number | null;

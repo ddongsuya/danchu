@@ -152,7 +152,7 @@ describe("참여 결정 기한 경과와 참여 부족", () => {
     expect(admin?.[2]?.to).toEqual(["ops@danchu.kr"]);
     const sponsor = notified().filter((c) => c[0][0] === "sponsor-1");
     expect(sponsor).toHaveLength(1);
-    expect(sponsor[0][1].title).toContain("참여한 기관이 아직 1곳입니다");
+    expect(sponsor[0][1].title).toContain("참여한 기관이 아직 1곳이에요");
     expect(sponsor[0][2]?.to).toEqual(["sponsor@example.com"]);
     // 의뢰자 안내에 참여하지 않은 기관 이름은 없다
     expect(JSON.stringify(sponsor[0])).not.toMatch(/기관b|기관c|지명랩/);
@@ -204,7 +204,7 @@ describe("회신 기한 3영업일 전에도 참여 1곳 이하", () => {
   });
 });
 
-describe("빈 자리 재안내 (자리가 생겼습니다)", () => {
+describe("빈 자리 재안내 (자리가 생겼어요)", () => {
   const full = [
     inv("a", { joined_at: J }),
     inv("b", { joined_at: J, status: "draft" }),
@@ -221,7 +221,7 @@ describe("빈 자리 재안내 (자리가 생겼습니다)", () => {
     expect(fx.notifyInvitedOrgs).toHaveBeenCalledTimes(1);
     const [targets, n] = fx.notifyInvitedOrgs.mock.calls[0] as unknown as [Inv[], { title: string; body: string }];
     expect(targets.map((t) => t.id).sort()).toEqual(["u1", "u2"]);
-    expect(n.title).toBe("자리가 생겼습니다 · DC-2099-0001");
+    expect(n.title).toBe("자리가 생겼어요 · DC-2099-0001");
     expect(n.body).toContain("참여 자리 1곳");
     expect(n.body).toContain("먼저 참여한 기관부터");
     expect(`${n.title} ${n.body}`).not.toContain("ABC-1");
@@ -351,7 +351,7 @@ describe("GET /api/cron/daily", () => {
     expect(fx.closeReplies).toHaveBeenCalledTimes(1);
     expect(r.body.compared).toBe(0);
     expect(eventKinds()).toContain("no_reply");
-    expect(notified().find((c) => c[0][0] === "admin-1" && c[1].title.includes("회신 없음"))?.[1].body).toContain("열지 않았습니다");
-    expect(notified().some((c) => c[0][0] === "sponsor-1" && c[1].title.includes("아직 견적이 없습니다"))).toBe(true);
+    expect(notified().find((c) => c[0][0] === "admin-1" && c[1].title.includes("회신 없음"))?.[1].body).toContain("열지 않았어요");
+    expect(notified().some((c) => c[0][0] === "sponsor-1" && c[1].title.includes("아직 견적이 없어요"))).toBe(true);
   });
 });

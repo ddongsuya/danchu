@@ -13,27 +13,27 @@ const MAX_PDF = 20 * 1024 * 1024;
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const got = await loadQuote(token, await viewerLoadOpts());
-  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
-  if (got.locked || got.closed || got.declined) return NextResponse.json({ error: "지금은 수정할 수 없습니다." }, { status: 403 });
+  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
+  if (got.expired) return NextResponse.json({ error: "링크가 만료됐어요." }, { status: 403 });
+  if (got.locked || got.closed || got.declined) return NextResponse.json({ error: "지금은 수정할 수 없어요." }, { status: 403 });
   // 견적서 PDF 는 참여한 초대에만 올린다 (견적 저장과 같은 조건, 0023)
-  if (!got.joined) return NextResponse.json({ error: got.operator ? "기관이 이 요청에 참여하기 전이라 견적서를 대신 올릴 수 없습니다." : "이 요청에 참여한 뒤에 견적서를 올릴 수 있습니다." }, { status: 409 });
+  if (!got.joined) return NextResponse.json({ error: got.operator ? "기관이 이 요청에 참여하기 전이라 견적서를 대신 올릴 수 없어요." : "이 요청에 참여한 뒤에 견적서를 올릴 수 있어요." }, { status: 409 });
 
   const b = (await req.json().catch(() => ({}))) as { name?: unknown; size?: unknown; type?: unknown };
   const name = typeof b.name === "string" ? b.name : "";
   const size = typeof b.size === "number" ? b.size : 0;
   const type = typeof b.type === "string" ? b.type : "";
-  if (!name || size <= 0) return NextResponse.json({ error: "파일 정보가 올바르지 않습니다." }, { status: 400 });
-  if (size > MAX_PDF) return NextResponse.json({ error: "PDF는 20MB 이하만 첨부할 수 있습니다." }, { status: 400 });
-  if (type && type !== "application/pdf" && !/\.pdf$/i.test(name)) return NextResponse.json({ error: "PDF 파일만 첨부할 수 있습니다." }, { status: 400 });
+  if (!name || size <= 0) return NextResponse.json({ error: "파일 정보가 올바르지 않아요." }, { status: 400 });
+  if (size > MAX_PDF) return NextResponse.json({ error: "PDF는 20MB 이하만 첨부할 수 있어요." }, { status: 400 });
+  if (type && type !== "application/pdf" && !/\.pdf$/i.test(name)) return NextResponse.json({ error: "PDF 파일만 첨부할 수 있어요." }, { status: 400 });
 
   const sb = getSupabaseAdmin();
-  if (!sb) return NextResponse.json({ error: "저장소가 설정되지 않았습니다." }, { status: 503 });
+  if (!sb) return NextResponse.json({ error: "저장소가 설정되지 않았어요." }, { status: 503 });
   const path = `${got.rfq.no}/${got.inviteId}/${Date.now()}_${safeName(name)}`;
   const { data, error } = await sb.storage.from("cro-files").createSignedUploadUrl(path);
   if (error || !data) {
     console.error("cro signed upload url", error);
-    return NextResponse.json({ error: "업로드 URL을 만들지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "업로드 URL을 만들지 못했어요." }, { status: 500 });
   }
   return NextResponse.json({ path, signedUrl: data.signedUrl });
 }

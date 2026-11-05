@@ -1,12 +1,12 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { RfqRow } from "./data";
-import { logEvent, notifyUsers } from "./notify";
+import { logEvent, notifyUsers, siteUrl } from "./notify";
 import { beforeDeadline, pendingInvites } from "./reply-window";
 import { captureError } from "./observe";
 import { occupiesSeat, undecidedOffer } from "./request-policy";
 
 /** 기한 전 마감을 거절할 때 쓰는 문구 (2026-10-21 결정 2). 운영자 화면과 라우트가 같이 쓴다 */
-export const EARLY_CLOSE_REFUSED = "회신 기한 전에는 회신을 마감할 수 없습니다. 비교표는 참여가 마감된 뒤 참여한 기관이 모두 제출하면 바로 열리고, 그렇지 않으면 회신 기한 다음 날 오전 9시에 열립니다.";
+export const EARLY_CLOSE_REFUSED = "회신 기한 전에는 회신을 마감할 수 없어요. 비교표는 참여가 마감된 뒤 참여한 기관이 모두 제출하면 바로 열리고, 그렇지 않으면 회신 기한 다음 날 오전 9시에 열려요.";
 
 export type CloseRepliesResult = {
   ok: boolean;
@@ -45,8 +45,8 @@ export type AutoPublish = false | "deadline" | "all";
 export async function closeReplies(rfq: RfqRow, actorId: string | null, auto = false): Promise<CloseRepliesResult> {
   const sb = getSupabaseAdmin();
   if (!sb) return { ok: false, count: 0, pending: 0, message: "저장소 미설정" };
-  if (rfq.compared_at) return { ok: false, count: 0, pending: 0, message: "이미 비교표가 열린 요청입니다." };
-  if (!["distributed", "quoted"].includes(rfq.status)) return { ok: false, count: 0, pending: 0, message: "회신을 받는 중인 요청만 마감할 수 있습니다." };
+  if (rfq.compared_at) return { ok: false, count: 0, pending: 0, message: "이미 비교표가 열린 요청이에요." };
+  if (!["distributed", "quoted"].includes(rfq.status)) return { ok: false, count: 0, pending: 0, message: "회신을 받는 중인 요청만 마감할 수 있어요." };
   if (beforeDeadline(rfq.reply_by)) return { ok: false, count: 0, pending: 0, message: EARLY_CLOSE_REFUSED };
 
   const [{ count, error: countError }, { data: invites, error: invitesError }] = await Promise.all([
@@ -56,9 +56,9 @@ export async function closeReplies(rfq: RfqRow, actorId: string | null, auto = f
   // 읽기 오류를 "제출 0건"으로 보면 예약 작업이 의뢰자에게 잘못된 "견적 없음" 안내를 보낸다
   if (countError || invitesError) {
     captureError(countError ?? invitesError, "compare:count", { rfq: rfq.rfq_no });
-    return { ok: false, failed: true, count: 0, pending: 0, message: "견적 수를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+    return { ok: false, failed: true, count: 0, pending: 0, message: "견적 수를 확인하지 못했어요. 잠시 후 다시 시도해 주세요." };
   }
-  if (!count) return { ok: false, count: 0, pending: 0, message: "제출된 견적이 없습니다. 기한을 늘리거나 기관을 추가해 주세요." };
+  if (!count) return { ok: false, count: 0, pending: 0, message: "제출된 견적이 없어요. 기한을 늘리거나 기관을 추가해 주세요." };
   // 미회신은 참여한 기관 안에서 센다 (0023). 참여 결정 전 안내는 "미회신"이 아니다
   const pending = pendingInvites(invites ?? []);
 
@@ -74,14 +74,14 @@ export async function closeReplies(rfq: RfqRow, actorId: string | null, auto = f
   // 저장 오류를 "이미 열림"으로 보이게 하지 않는다
   if (doneError) {
     captureError(doneError, "compare:close", { rfq: rfq.rfq_no });
-    return { ok: false, count, pending, message: "비교표 공개를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+    return { ok: false, count, pending, message: "비교표 공개를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." };
   }
-  if (!done?.length) return { ok: false, count, pending, message: "이미 비교표가 열린 요청입니다." };
+  if (!done?.length) return { ok: false, count, pending, message: "이미 비교표가 열린 요청이에요." };
 
   await logEvent(rfq.id, "compared", `비교표 공개 · 견적 ${count}건${auto ? " (기한 후 자동)" : " (기한 후 운영자)"}`, pending ? `미회신 ${pending}곳` : undefined, actorId, { auto, pending });
   await announceCompareOpened(rfq, auto ? "deadline" : "operator", count, { pending });
   const joinedOpen = (invites ?? []).filter((i) => (i.status === "sent" || i.status === "draft") && occupiesSeat(i));
-  return { ok: true, count, pending, pendingNames: joinedOpen.map((i) => i.cro_name).filter(Boolean), message: `비교표를 열고 의뢰자에게 알렸습니다 (견적 ${count}건${pending ? `, 미회신 ${pending}곳` : ""}).` };
+  return { ok: true, count, pending, pendingNames: joinedOpen.map((i) => i.cro_name).filter(Boolean), message: `비교표를 열고 의뢰자에게 알렸어요 (견적 ${count}건${pending ? `, 미회신 ${pending}곳` : ""}).` };
 }
 
 /**
@@ -112,9 +112,9 @@ export async function announceCompareOpened(rfqIn: RfqRow | string, reason: Comp
   // 앱 알림만 (메일은 선택 결과가 나올 때). 받는 사람은 지금 소속 담당자
   try {
     const groups: { list: typeof all; title: string; body: string }[] = [
-      { list: submitted, title: `${r.rfq_no} 비교표가 열려 견적 수정이 닫혔습니다`, body: "의뢰자가 회신을 비교하고 있습니다. 선택 결과는 정해지는 대로 알려 드립니다." },
-      { list: joinedOpen, title: `${r.rfq_no} 회신이 닫혔습니다`, body: reason === "all" ? "참여한 다른 기관이 모두 제출해 비교표가 먼저 열렸습니다." : "회신 기한이 지나 비교표가 열렸습니다." },
-      { list: undecided, title: `${r.rfq_no} 참여 안내가 마감되었습니다`, body: "비교표가 열려 더는 참여를 받지 않습니다. 안내를 확인해 주셔서 감사합니다." },
+      { list: submitted, title: `${r.rfq_no} 비교표가 열려 견적 수정이 닫혔어요`, body: "의뢰자가 회신을 비교하고 있어요. 선택 결과는 정해지는 대로 알려요." },
+      { list: joinedOpen, title: `${r.rfq_no} 회신이 닫혔어요`, body: reason === "all" ? "참여한 다른 기관이 모두 제출해 비교표가 먼저 열렸어요." : "회신 기한이 지나 비교표가 열렸어요." },
+      { list: undecided, title: `${r.rfq_no} 참여 안내가 마감됐어요`, body: "비교표가 열려 더는 참여를 받지 않아요. 안내를 확인해 주셔서 감사합니다." },
     ];
     for (const g of groups) {
       const orgIds = [...new Set(g.list.map((i) => i.cro_org_id).filter((x): x is string => !!x))];
@@ -127,16 +127,17 @@ export async function announceCompareOpened(rfqIn: RfqRow | string, reason: Comp
   }
 
   const pending = ctx.pending ?? 0;
-  const lead = reason === "all" ? "참여한 기관이 모두 견적을 제출해 비교표가 열렸습니다." : "회신 기한이 지나 비교표가 열렸습니다.";
+  const lead = reason === "all" ? "참여한 기관이 모두 견적을 제출해 비교표가 열렸어요." : "회신 기한이 지나 비교표가 열렸어요.";
   await notifyUsers(
     r.user_id ? [r.user_id] : [],
     {
       kind: "비교",
-      title: `비교표가 열렸습니다 · ${r.rfq_no}`,
-      body: `${lead} 견적 ${count}건${pending ? ` · ${pending}곳 미제출` : ""}. 이제 기관 이름과 금액을 나란히 보고 기관을 선택할 수 있습니다. 견적은 더 바뀌지 않습니다.`,
+      title: `비교표가 열렸어요 · ${r.rfq_no}`,
+      body: `${lead} 견적 ${count}건${pending ? ` · ${pending}곳 미제출` : ""}. 이제 기관 이름과 금액을 나란히 보고 기관을 선택할 수 있어요. 견적은 더 바뀌지 않아요.`,
       href: `/app/r/${r.rfq_no}/compare`,
     },
-    { to: [r.email], subject: `[단추] ${r.rfq_no} 비교표가 열렸습니다 · 견적 ${count}건` },
+    { to: [r.email], subject: `[단추] ${r.rfq_no} 비교표가 열렸어요 · 견적 ${count}건` },
+    { kind: "compare", text: `${r.rfq_no} 비교표가 열렸어요. 견적 ${count}건을 비교하고 기관을 선택해 주세요. ${siteUrl()}/app/r/${r.rfq_no}/compare`, dedupeKey: `compare:${r.rfq_no}` },
   );
 }
 

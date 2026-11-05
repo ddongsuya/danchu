@@ -18,6 +18,8 @@ export type StoryProps = {
   f: Funnel;
   /** 비교 보고서를 열 수 있다 (열렸고 견적이 있다) */
   canCompare: boolean;
+  /** 기관이 체결을 보고했고 의뢰자 확인을 기다린다. 첫 장면을 확인 한 가지로 바꾼다 (2026-11-02 가상 35명 테스트 2번) */
+  confirm?: boolean;
   /** 첫 장면 아래, 지나온 길 위에 둘 것 (다음 할 일 띠) */
   next?: ReactNode;
   /** 지나온 길 아래에 붙는 설명 (지명 기관, 공개 시점 안내 등) */
@@ -64,6 +66,9 @@ export function RequestStory(p: StoryProps) {
   if (p.status === "cancelled") {
     title = <>취소한<br />요청이에요</>;
     lead = "이 요청은 더 진행하지 않아요.";
+  } else if (p.award && p.confirm) {
+    title = <>계약 내용을<br /><span className="rs-mark">확인</span>해 주세요</>;
+    lead = `${p.award.name}에서 계약 체결을 보고했어요. 체결일과 금액이 맞는지 봐 주세요.`;
   } else if (p.award) {
     title = <>기관 선택을<br />마쳤어요</>;
     lead = `${p.award.name} 선택. 서로 연락처를 주고받았고, 계약은 기관과 직접 진행해요.`;
@@ -95,6 +100,7 @@ export function RequestStory(p: StoryProps) {
             <h1 id="story-title" className="rs-h1">{title}</h1>
             <p className="rs-lead">{lead}</p>
             <div className="rs-acts">
+              {p.confirm && <a href="#contract-confirm" className="b1 blg">계약 내용 확인</a>}
               {p.canCompare && <Link href={`/app/r/${p.no}/compare`} className={p.award ? "b2 blg" : "b1 blg"}>비교 보고서 받아보기</Link>}
               <Link href={`/app/support?rfq=${p.no}`} className="b2 blg">이 요청 문의하기</Link>
             </div>

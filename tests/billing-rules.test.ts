@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-/* 청구 기준 (2026-10-18 결정, 0020). DB 쪽 검사는 tests/db/*.sql (npm run test:db) */
+/* 청구 기준 (2026-10-18 결정 0020, 2026-11-03 요금표 0031). DB 쪽 검사는 tests/db/*.sql (npm run test:db) */
 
 type Q = { table: string; op: "select" | "insert" | "update" | "delete"; cols?: string; payload?: unknown; filters: [string, string, unknown][] };
 const fx = vi.hoisted(() => ({
@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase", () => {
     return b;
   };
   // 배포 전 스키마 판 확인(lib/schema-version.ts)은 이 코드가 기대하는 판을 돌려준다
-  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 29, error: null } : { data: null, error: null }) }) };
+  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 34, error: null } : { data: null, error: null }) }) };
 });
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/mail", () => ({ mailWrap: (s: string) => s, esc: (s: string) => s, sendMail: fx.sendMail }));
@@ -53,7 +53,7 @@ vi.mock("@/lib/data", () => ({ getCroOrg: async () => fx.org }));
 vi.mock("@/lib/audit", async (orig) => ({ ...(await orig<typeof import("@/lib/audit")>()), audit: fx.audit }));
 
 import {
-  SUBSCRIPTION_MAX_EXCL, SUCCESS_FEE_MIN, billingTier, chargesPerQuote, joinStatusNote, statementDigest, statementTotals, successFeeEligible, successFeeView, wonOrPending,
+  PAID_FROM, PILOT_FROM, SUBSCRIPTION_FEE, SUBSCRIPTION_MAX_EXCL, SUCCESS_FEE_MIN, billingTier, effectiveRate, effectiveSendFee, joinedBeforePaid, sendFee, successRate, chargesPerQuote, joinStatusNote, statementDigest, statementTotals, successFeeEligible, successFeeView, wonOrPending,
 } from "@/lib/billing";
 import { comma } from "@/lib/format";
 import { ORG_COLUMNS, distributeTo } from "@/lib/distribute";
@@ -61,35 +61,59 @@ import { PATCH as patchOrg } from "@/app/api/admin/cros/[id]/route";
 import { GET as exportCsv } from "@/app/api/admin/billing/export/route";
 
 const SQL = readFileSync("supabase/migrations/0020_billing_rules.sql", "utf8");
+const FEE = readFileSync("supabase/migrations/0031_fee_schedule.sql", "utf8");
 
-describe("구간 기준 금액", () => {
+describe("구간 기준 금액 (0031 요금표)", () => {
   it("TS 와 SQL 기준 금액이 같다", () => {
-    const sub = SQL.match(/function public\.billing_subscription_max_excl\(\)[\s\S]*?select (\d+)::bigint/);
-    const succ = SQL.match(/function public\.billing_success_fee_min\(\)[\s\S]*?select (\d+)::bigint/);
+    const sub = FEE.match(/function public\.billing_subscription_max_excl\(\)[\s\S]*?select (\d+)::bigint/);
+    const succ = FEE.match(/function public\.billing_success_fee_min\(\)[\s\S]*?select (\d+)::bigint/);
     expect(sub && Number(sub[1])).toBe(SUBSCRIPTION_MAX_EXCL);
     expect(succ && Number(succ[1])).toBe(SUCCESS_FEE_MIN);
-    expect(SUBSCRIPTION_MAX_EXCL).toBe(10_000_000);
+    expect(SUBSCRIPTION_MAX_EXCL).toBe(50_000_000);
     expect(SUCCESS_FEE_MIN).toBe(50_000_000);
+    expect(SUBSCRIPTION_FEE).toBe(1_000_000);
+    expect(FEE).toMatch(/function public\.billing_subscription_fee\(\)[\s\S]*?select 1000000/);
+    expect(FEE).toMatch(/function public\.billing_paid_from\(\)[\s\S]*?date '2028-01-01'/);
+    expect(FEE).toMatch(/function public\.billing_pilot_from\(\)[\s\S]*?date '2027-06-01'/);
+    expect(PAID_FROM).toBe("2028-01-01");
+    expect(PILOT_FROM).toBe("2027-06-01");
   });
-  it("경계: 9,999,999 / 10,000,000 / 49,999,999 / 50,000,000", () => {
-    expect(billingTier(9_999_999)).toBe("subscription");
-    expect(billingTier(10_000_000)).toBe("per_quote");
-    expect(billingTier(49_999_999)).toBe("per_quote");
+  it("송부 비용·성사 수수료율 구간이 SQL 과 같다", () => {
+    expect(FEE).toMatch(/when p_amount is null or p_amount < 50000000 then 0\s+when p_amount < 100000000 then 30000\s+else 50000/);
+    expect(FEE).toMatch(/when p_amount < 100000000 then 0\.02::numeric\s+when p_amount < 500000000 then 0\.05::numeric\s+else 0\.07::numeric/);
+  });
+  it("경계: 49,999,999 / 50,000,000 / 99,999,999 / 100,000,000 / 499,999,999 / 500,000,000", () => {
+    expect(billingTier(49_999_999)).toBe("subscription");
     expect(billingTier(50_000_000)).toBe("per_quote_success");
-    expect(chargesPerQuote(9_999_999)).toBe(false);
-    expect(chargesPerQuote(10_000_000)).toBe(true);
+    expect(chargesPerQuote(49_999_999)).toBe(false);
+    expect(chargesPerQuote(50_000_000)).toBe(true);
     expect(successFeeEligible(49_999_999)).toBe(false);
     expect(successFeeEligible(50_000_000)).toBe(true);
+    const cases: [number, number, number][] = [
+      [1, 0, 0], [49_999_999, 0, 0], [50_000_000, 30_000, 0.02], [99_999_999, 30_000, 0.02],
+      [100_000_000, 50_000, 0.05], [499_999_999, 50_000, 0.05], [500_000_000, 50_000, 0.07], [3_000_000_000, 50_000, 0.07],
+    ];
+    for (const [amt, fee, rate] of cases) {
+      expect(sendFee(amt), String(amt)).toBe(fee);
+      expect(successRate(amt), String(amt)).toBe(rate);
+    }
+  });
+  it("기관 특별 조건이 있으면 그 값, 없으면 요금표", () => {
+    expect(effectiveSendFee(120_000_000, null)).toBe(50_000);
+    expect(effectiveSendFee(120_000_000, 20_000)).toBe(20_000);
+    expect(effectiveRate(60_000_000, undefined)).toBe(0.02);
+    expect(effectiveRate(60_000_000, 0.01)).toBe(0.01);
+  });
+  it("2027-12-31 까지 참여는 무료, 2028-01-01 부터 청구", () => {
+    expect(joinedBeforePaid("2027-12-31")).toBe(true);
+    expect(joinedBeforePaid("2028-01-01")).toBe(false);
   });
   it("금액이 없거나 0 이면 금액 미입력 (청구하지 않음)", () => {
     expect(billingTier(null)).toBe("no_amount");
     expect(billingTier(undefined)).toBe("no_amount");
     expect(billingTier(0)).toBe("no_amount");
     expect(chargesPerQuote(null)).toBe(false);
-  });
-  it("SQL 구간 함수의 경계 비교가 TS 와 같다 (미만 / 이상)", () => {
-    expect(SQL).toMatch(/when p_amount < public\.billing_subscription_max_excl\(\) then 'subscription'/);
-    expect(SQL).toMatch(/when p_amount < public\.billing_success_fee_min\(\) then 'per_quote'/);
+    expect(sendFee(null)).toBe(0);
   });
 });
 
@@ -107,11 +131,11 @@ describe("성사수수료: 예상(견적 기준)과 정산(계약 기준)", () =
   it("선정 견적 5,000만 원 미만은 계약 금액이 커도 대상 아님", () => {
     expect(successFeeView({ quoteAmount: 49_999_999, contractAmount: 70_000_000, contractStatus: "signed", feeRate: 0.03 })).toMatchObject({ eligible: false, settled: 0 });
   });
-  it("요율 미정은 0 이 아니라 미정", () => {
-    const f = successFeeView({ quoteAmount: 90_000_000, contractAmount: 90_000_000, contractStatus: "signed", feeRate: null });
-    expect(f.settled).toBeNull();
-    expect(f.expected).toBeNull();
-    expect(wonOrPending(f.settled, comma, "요율 미정")).toBe("요율 미정");
+  it("기관 요율이 없으면 선정 견적 구간의 요금표 요율 (미정 없음)", () => {
+    expect(successFeeView({ quoteAmount: 90_000_000, contractAmount: 90_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 1_800_000, settled: 1_800_000 });
+    expect(successFeeView({ quoteAmount: 120_000_000, contractAmount: 110_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 6_000_000, settled: 5_500_000 });
+    expect(successFeeView({ quoteAmount: 600_000_000, contractAmount: 600_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ settled: 42_000_000 });
+    expect(wonOrPending(null, comma, "요율 미정")).toBe("요율 미정");
     expect(wonOrPending(0, comma)).toBe("0원");
   });
 });
@@ -262,7 +286,7 @@ describe("리뷰 수정 (2026-10-18)", () => {
     expect(quoteRows.map((c) => c[yn])).toEqual(["N", "Y"]);
     // 금액이 나중에 들어온 견적은 금액이 들어온 날로 적는다
     expect(quoteRows[1][day]).toBe("2026-10-02");
-    expect(rows.find((c) => c[0] === "성사수수료 정산")?.join(",")).toContain("견적 청구 제외한 초대");
+    expect(rows.find((c) => c[0] === "성사 수수료 정산")?.join(",")).toContain("견적 청구 제외한 초대");
   });
   it("0020: 청구 월은 금액이 있는 상태로 처음 제출된 시각, 구독료는 시작 월부터 이번 달까지", () => {
     expect(SQL).toMatch(/coalesce\(q\.billing_at, q\.first_submitted_at\) at time zone 'Asia\/Seoul'\)::date >= p_from/);
@@ -318,7 +342,7 @@ describe("참여 기록과 청구 (0023)", () => {
     expect(quoteRows.map((c) => c[yn])).toEqual(["Y", "Y", "N", "N"]);
     expect(quoteRows[2].join(",")).toContain("참여 기능 도입 전 견적");
     expect(quoteRows[3].join(",")).toContain("참여 기록 없음");
-    const settle = rows.find((c) => c[0] === "성사수수료 정산")!;
+    const settle = rows.find((c) => c[0] === "성사 수수료 정산")!;
     expect(settle[yn]).toBe("N");
     expect(settle[fee]).toBe("0");
     expect(settle.join(",")).toContain("참여 기록 없음");

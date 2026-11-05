@@ -1,4 +1,4 @@
-export function Chevron({ size = 18, color = "#6F6A63", className = "chev" }: { size?: number; color?: string; className?: string }) {
+export function Chevron({ size = 18, color = "#61615c", className = "chev" }: { size?: number; color?: string; className?: string }) {
   return (
     <svg
       className={className}

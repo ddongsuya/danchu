@@ -5,12 +5,13 @@ import { ContractReport } from "@/components/cro/ContractReport";
 import { SubstanceForm } from "@/components/cro/SubstanceForm";
 import { ymd, won } from "@/lib/format";
 import { contractConfirmState } from "@/lib/status";
+import { GAP_REASON_LABEL, isGapReason } from "@/lib/contract-gap";
 
 export const dynamic = "force-dynamic";
 
 const NEXT = [
-  ["의뢰자와 계약 협의", "단추는 조건에 관여하지 않습니다. 직접 진행하세요."],
-  ["계약 체결 보고", "체결일·계약금액을 아래에 입력 (계약 진행 확인용). 보고하면 의뢰자가 내용을 확인합니다. 의뢰자가 확인하거나 7일 안에 이의가 없으면 확정되고 요청이 종료됩니다"],
+  ["의뢰자와 계약 협의", "계약 조건은 의뢰자와 직접 정해요."],
+  ["계약 체결 보고", "체결일과 계약금액을 아래에 적어 주세요. 의뢰자가 확인하거나 7일 안에 다른 의견이 없으면 확정되고 요청을 마쳐요."],
   ["시험물질 필요량 안내", "의뢰자에게 시험물질 정보를 받아 필요량과 보낼 시점을 아래에 적어 주세요."],
 ];
 
@@ -25,13 +26,13 @@ export default async function CroAwards() {
       <div className="ph">
         <div>
           <h1>수주</h1>
-          <p>의뢰자가 우리 기관을 선택한 요청입니다. 연락처가 공개되어 있습니다.</p>
+          <p>의뢰자가 우리 기관을 고른 요청이에요. 의뢰자 연락처가 열려 있어요.</p>
         </div>
       </div>
       {list.length === 0 ? (
         <div className="empty">
-          <b>아직 수주가 없습니다</b>
-          의뢰자가 선택하면 알림과 함께 여기에 연락처가 표시됩니다.
+          <b>아직 수주가 없어요</b>
+          의뢰자가 선택하면 알림과 함께 여기에 연락처가 표시돼요.
         </div>
       ) : (
         <div className="stack" style={{ gap: 16 }}>
@@ -54,6 +55,9 @@ export default async function CroAwards() {
                 </span>
               </div>
 
+              {!a.contract_reported_at && a.sponsor_contract_status === "signed" && (
+                <p className="note note--warn" role="status">의뢰자가 계약했다고 알려 왔어요. 체결일과 계약금액을 보고해 주세요.</p>
+              )}
               {!a.contract_reported_at && (
                 <div className="grid2" style={{ alignItems: "start" }}>
                   <div className="stack" style={{ gap: 10 }}>
@@ -67,7 +71,7 @@ export default async function CroAwards() {
                       </div>
                     ))}
                   </div>
-                  <ContractReport awardId={a.id} />
+                  <ContractReport awardId={a.id} quoteAmount={a.quoteAmount} />
                 </div>
               )}
               <SubstanceForm awardId={a.id} qty={a.substance_qty ?? ""} when={a.substance_when ?? ""} note={a.substance_note ?? ""} updatedAt={a.substance_updated_at} />
@@ -75,7 +79,7 @@ export default async function CroAwards() {
                 <div className="kv" style={{ padding: 0, fontSize: 13 }}>
                   <span className="kv__k">보고</span>
                   <span className="kv__v" style={{ fontWeight: 500 }}>
-                    체결일 {a.contract_date} · {won(a.contract_amount ?? 0)}{a.contract_note ? ` · ${a.contract_note}` : ""}
+                    체결일 {a.contract_date} · {won(a.contract_amount ?? 0)}{a.contract_gap_reason && isGapReason(a.contract_gap_reason) ? ` · 차이 사유 ${GAP_REASON_LABEL[a.contract_gap_reason]}` : ""}{a.contract_note ? ` · ${a.contract_note}` : ""}
                     {contractConfirmState(a, { includeNote: false }) && <span style={{ display: "block", color: "var(--muted)" }}>{contractConfirmState(a, { includeNote: false })!.label}</span>}
                   </span>
                 </div>

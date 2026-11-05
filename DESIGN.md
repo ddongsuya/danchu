@@ -2,33 +2,35 @@
 name: Danchu Research Workspace
 description: 비임상 시험의 요청과 견적 비교를 위한 차분한 연구 워크스페이스
 colors:
-  primary: "#246457"
-  primary-deep: "#194e43"
-  primary-tint: "#edf4f0"
-  background: "#fcfdfb"
-  surface: "#f3f5f2"
-  text: "#202b28"
-  secondary: "#66716c"
-  border: "#dfe5e0"
-  dark-primary: "#92cfb7"
-  dark-background: "#1c2520"
-  dark-surface: "#131b17"
+  primary: "#1b1b19"
+  primary-deep: "#33332f"
+  accent: "#edef5c"
+  accent-tint: "#f5f6b4"
+  accent-line: "#e4e58e"
+  background: "#f4f4f0"
+  surface: "#fbfbf8"
+  text: "#1b1b19"
+  secondary: "#61615c"
+  border: "#d9d9d3"
+  dark-primary: "#efefea"
+  dark-background: "#191916"
+  dark-surface: "#222220"
 typography:
   display:
-    fontFamily: "Pretendard Variable"
+    fontFamily: "Host Grotesk, Pretendard Variable"
     fontSize: "clamp(36px, 4.05vw, 56px)"
     fontWeight: 600
     lineHeight: 1.27
     letterSpacing: "-0.04em"
   body:
-    fontFamily: "Pretendard Variable"
+    fontFamily: "Host Grotesk, Pretendard Variable"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.7
 rounded:
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
+  sm: "2px"
+  md: "2px"
+  lg: "4px"
   pill: "999px"
 spacing:
   sm: "8px"
@@ -51,11 +53,11 @@ components:
 
 ## Colors
 
-모든 색의 실제 정의는 `app/globals.css`. 밝은 연구 환경을 위한 그린 그레이 바탕과 짙은 녹색 강조를 사용한다. 공개·인증·포털·토큰 회신은 같은 토큰을 공유한다. 다크 모드는 `data-theme`의 CSS 변수로만 바꾼다. 성공·경고·오류 색은 의미가 있는 상태에 한해 사용한다. 꼬리말도 같은 테마를 유지한다.
+모든 색의 실제 정의는 `app/globals.css`. 종이색 바탕(--surface)에 흑연 단색(--brand, --ink)을 쓰고, 형광펜 노랑(--acc-fill, --brand-tint)은 "차이"를 보여 줄 때만 쓴다. 예전 녹색(#246457 계열)은 2026-11-03에 메일 버튼까지 모두 걷어냈다. 메일처럼 CSS 변수를 못 쓰는 곳은 같은 값을 인라인으로 적는다(버튼 #1b1b19 바탕, #f4f4f0 글자, 모서리 2px). 공개·인증·포털·토큰 회신은 같은 토큰을 공유한다. 다크 모드는 `data-theme`의 CSS 변수로만 바꾼다. 성공·경고·오류 색은 의미가 있는 상태에 한해 사용한다. 꼬리말도 같은 테마를 유지한다.
 
 ## Typography
 
-기존 셀프호스트 Pretendard Variable을 유지한다. 한글은 keep-all, 긴 사용자 입력은 overflow-wrap으로 보호한다. 큰 제목은 56px 이내, -0.04em보다 좁게 하지 않는다. 포털 제목은 29px, 행 제목은 16px, 보조 정보는 12~14px. 요청 번호·금액·기간은 tabular-nums를 사용한다.
+라틴은 Host Grotesk, 한글은 셀프호스트 Pretendard Variable, 숫자·코드는 IBM Plex Mono(--font-sans, --font-mono). 한글은 keep-all, 긴 사용자 입력은 overflow-wrap으로 보호한다. 큰 제목은 56px 이내, -0.04em보다 좁게 하지 않는다. 포털 제목은 29px, 행 제목은 16px, 보조 정보는 12~14px. 요청 번호·금액·기간은 tabular-nums를 사용한다.
 
 ## Layout
 
@@ -69,7 +71,7 @@ components:
 
 ## Shapes
 
-8px는 작은 입력·상태, 12px는 버튼·알림, 16px는 큰 표면과 이미지에 사용한다. pill은 필터와 짧은 태그에 한한다. 네 구멍의 단추 마크를 공개와 포털에서 공통으로 사용한다. 아이콘은 Phosphor regular; 기존 양식의 SVG 아이콘은 기능을 보존한다.
+모서리는 거의 각지게: 입력·버튼·알림 2px(--r-sm, --r-md), 큰 표면 4px(--r-lg). pill은 필터와 짧은 태그에 한한다. 네 구멍의 단추 마크를 공개와 포털에서 공통으로 사용한다. 아이콘은 Phosphor regular; 기존 양식의 SVG 아이콘은 기능을 보존한다.
 
 ## Components
 

@@ -1,6 +1,7 @@
 import { notificationRecipients } from "./mail-preferences";
 import { getSupabaseAdmin } from "./supabase";
 import { sendMail, mailWrap, esc } from "./mail";
+import { smsUsers, type SmsKind } from "./sms";
 
 export type NotifyKind = "접수" | "배포" | "견적" | "비교" | "선정" | "계약" | "기관" | "시스템";
 
@@ -11,11 +12,13 @@ export function siteUrl(): string {
 /**
  * 앱 내 알림 + (선택) 이메일.
  * 사용자 ID 목록에 알림 행을 만들고, email 이 주어지면 같은 내용을 Resend로 보낸다.
+ * sms 가 주어지면 같은 사람들의 프로필 휴대전화로 문자도 보낸다 (0033, 꼭 알아야 하는 알림만. lib/sms.ts)
  */
 export async function notifyUsers(
   userIds: string[],
   n: { kind: NotifyKind; title: string; body?: string; href?: string },
   email?: { to: string[]; subject?: string; html?: string; replyTo?: string },
+  sms?: { kind: SmsKind; text: string; dedupeKey?: string },
 ): Promise<void> {
   const sb = getSupabaseAdmin();
   const ids = [...new Set(userIds.filter(Boolean))];
@@ -24,6 +27,7 @@ export async function notifyUsers(
     const { error } = await sb.from("notifications").insert(rows);
     if (error) console.error("notifications insert", error);
   }
+  if (sms && ids.length) await smsUsers(ids, sms).catch((e) => console.error("notify sms", e));
   if (email && email.to.length) {
     const to = await notificationRecipients(email.to);
     if (!to.length) return;
@@ -33,7 +37,7 @@ export async function notifyUsers(
       mailWrap(`
         <h2 style="margin:0 0 12px;font-size:20px">${esc(n.title)}</h2>
         ${n.body ? `<p style="white-space:pre-wrap">${esc(n.body)}</p>` : ""}
-        <p style="margin-top:20px"><a href="${esc(link)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600">단추에서 보기</a></p>`);
+        <p style="margin-top:20px"><a href="${esc(link)}" style="display:inline-block;background:#1b1b19;color:#f4f4f0;text-decoration:none;padding:12px 20px;border-radius:2px;font-weight:600">단추에서 보기</a></p>`);
     await sendMail({ to, subject: email.subject ?? `[단추] ${n.title}`, html, replyTo: email.replyTo }).catch((e) => console.error("notify mail", e));
   }
 }
@@ -70,5 +74,5 @@ export function adminEmails(): string[] {
  * ADMIN_EMAIL 은 운영자 알림을 받을 사람 목록이라 여기에 쓰지 않는다.
  */
 export function operatorReplyTo(): string {
-  return (process.env.OPERATOR_REPLY_TO || "").trim() || "hello@danchu.kr";
+  return (process.env.OPERATOR_REPLY_TO || "").trim() || "limjm900202@gmail.com";
 }

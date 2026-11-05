@@ -12,8 +12,8 @@ const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "�
 /** POST — 내 기관 정보 수정 (CRO 담당자) */
 export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
-  if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
-  if (s.profile.org_role !== "owner") return NextResponse.json({ error: "기관 정보는 기관 대표 담당자만 수정할 수 있습니다." }, { status: 403 });
+  if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
+  if (s.profile.org_role !== "owner") return NextResponse.json({ error: "기관 정보는 기관 대표 담당자만 수정할 수 있어요." }, { status: 403 });
   if (await rateLimited("cro-org", s.userId, 20, 600)) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const v = (k: string, max = 120) => (typeof b[k] === "string" ? (b[k] as string).trim().slice(0, max) || null : null);
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const org = s.org;
   const bizNo = v("businessNo", 40);
   if (org?.status === "approved" && (name.trim().toLowerCase() !== org.name.trim().toLowerCase() || (bizNo ?? "").replace(/[^0-9]/g, "") !== (org.business_no ?? "").replace(/[^0-9]/g, ""))) {
-    return NextResponse.json({ error: "승인된 기관의 기관명·사업자등록번호 변경은 운영자(hello@danchu.kr)에게 요청해 주세요." }, { status: 400 });
+    return NextResponse.json({ error: "승인된 기관의 기관명·사업자등록번호 변경은 운영자(limjm900202@gmail.com)에게 요청해 주세요." }, { status: 400 });
   }
 
   const { error } = await getSupabaseAdmin()!
@@ -47,8 +47,8 @@ export async function POST(req: Request) {
       auto_reply: b.autoReply === true,
     })
     .eq("id", s.profile.cro_org_id);
-  if (error?.code === "23505") return NextResponse.json({ error: "같은 기관명 또는 사업자등록번호의 기관이 이미 있습니다. 운영자에게 문의해 주세요." }, { status: 409 });
-  if (error) return NextResponse.json({ error: "저장하지 못했습니다." }, { status: 500 });
+  if (error?.code === "23505") return NextResponse.json({ error: "같은 기관명 또는 사업자등록번호의 기관이 이미 있어요. 운영자에게 문의해 주세요." }, { status: 409 });
+  if (error) return NextResponse.json({ error: "저장하지 못했어요." }, { status: 500 });
   // 수행 분야가 바뀌었으면 새로 맞는 요청을 바로 받는다
   try {
     await distributeOpenRfqs(s.profile.cro_org_id, s.userId);

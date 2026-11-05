@@ -5,10 +5,10 @@ import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "./portal.css";
-import { ArrowUpRight, Question } from "@phosphor-icons/react/dist/ssr";
+import { ArrowUpRight, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
 export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean };
-export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings";
+export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt";
 
 // 화면에서는 "기관"으로 통일한다 (의뢰자 화면의 "선택한 기관"과 같은 말)
 const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관", admin: "운영자" };
@@ -38,7 +38,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
         <nav className="pt__nav" aria-label="주요 메뉴">
           <NavLinks items={nav} variant="side" />
         </nav>
-        <a href="/guide" className="pt__guide"><Question size={20} aria-hidden="true" /><span>시험 가이드</span><ArrowUpRight size={15} aria-hidden="true" /></a>
+        <a href="/guide/library" className="pt__guide"><BookOpenText size={20} aria-hidden="true" /><span>가이드라인 자료실</span><ArrowUpRight size={15} aria-hidden="true" /></a>
         <div className="pt__user">
           <Link href={profileHref} className="pt__identity" aria-label={`프로필 · ${who}`}><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
             <b>{who}</b>
@@ -68,7 +68,11 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
               <span className="pt__role">{ROLE_LABEL[role]}</span>
             </Link>
             <span className="pt__workspace-title">{ROLE_LABEL[role]} 워크스페이스</span>
-            <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
+            <div className="pt__topr">
+              {/* 좁은 화면에는 사이드바가 없어 자료실 링크를 위 바에 둔다 */}
+              <a href="/guide/library" className="pt__toplib only-narrow" aria-label="가이드라인 자료실"><BookOpenText size={22} aria-hidden="true" /></a>
+              <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
+            </div>
           </div>
         </header>
         <main className="pt__main" id="main-content">{children}</main>

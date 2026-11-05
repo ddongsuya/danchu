@@ -22,7 +22,7 @@ export default function ResetPassword() {
       const me = await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({ to: "/app" }));
       router.push(me.to || "/app");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "변경하지 못했습니다.");
+      setError(err instanceof Error ? err.message : "변경하지 못했어요.");
       setBusy(false);
     }
   };
@@ -31,13 +31,13 @@ export default function ResetPassword() {
     <div className="auth__card">
       <div>
         <h1 className="auth__title">새 비밀번호</h1>
-        <p className="auth__sub">8자 이상으로 정해 주세요. 저장하면 바로 로그인 상태로 이동합니다.</p>
+        <p className="auth__sub">8자 이상으로 정해 주세요. 저장하면 바로 로그인 상태로 이동해요.</p>
       </div>
       <form className="auth__form" onSubmit={submit}>
         <Field id="pw" label="새 비밀번호" required>
           <PasswordInput id="pw" value={pw} onChange={setPw} />
         </Field>
-        <Field id="pw2" label="새 비밀번호 확인" required help={pw2 && pw !== pw2 ? "두 비밀번호가 다릅니다." : undefined}>
+        <Field id="pw2" label="새 비밀번호 확인" required help={pw2 && pw !== pw2 ? "두 비밀번호가 달라요." : undefined}>
           <PasswordInput id="pw2" value={pw2} onChange={setPw2} placeholder="다시 입력" />
         </Field>
         <ErrorBox>{error}</ErrorBox>

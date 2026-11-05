@@ -2,23 +2,69 @@ import { seoulMonthRange } from "./request-policy";
 import type { BillingAdjustmentRow, BillingReferenceRow, ReferenceSource } from "./db-types";
 
 /**
- * 청구 기준 (2026-10-18 결정). DB 함수(supabase/migrations/0020_billing_rules.sql)와 같은 값이다.
+ * 요금표 (2026-11-03 결정). DB 함수(supabase/migrations/0031_fee_schedule.sql)와 같은 값이다. 모든 금액은 부가세 별도.
+ * - 일정: 사전예약 2027-01-01 ~ 2027-05-31, 시범 운영 2027-06-01 ~ 2027-12-31(기관도 무료), 정식 서비스 2028-01-01.
+ *   청구 시작일(PAID_FROM) 전에 참여한 요청은 끝까지 청구하지 않는다.
  * - 의뢰자는 비용을 내지 않는다.
- * - 청구 단위는 기관이 실제로 제출한 견적 1건. 견적을 내지 않은 기관에는 청구하지 않는다. 재제출·수정은 다시 청구하지 않는다.
- * - 그 초대에 기관 본인의 참여 기록이 있어야 청구한다 (0023_opt_in.sql). 참여 기록이 있으면 운영자 대리 입력도 같다.
- * - 견적 총액(부가세 별도) 1,000만 원 미만: 월 구독료에 포함 / 1,000만 원 이상: 건당 이용료 /
- *   5,000만 원 이상: 건당 이용료 + 단추를 통해 계약이 체결되면 성사수수료(계약 금액 × 요율).
- *   성사수수료는 의뢰자가 확인했거나 7일 뒤 자동 확정된 계약만, 확인된 달에 정산한다 (0025_flow_redesign.sql)
- * 두 기준 금액은 tests/billing-rules.test.ts 가 SQL 과 같은지 확인한다.
+ * - 월 구독료 1,000,000원: 견적서 생성 툴, 견적서 디자인 리뉴얼권, 5,000만 원 미만 견적서 무제한 발송.
+ * - 5,000만 원 이상 견적서: 송부 비용(견적 1건, 재제출·수정은 다시 청구하지 않음) + 단추를 통해 계약이 확정되면 성사 수수료.
+ *     5,000만 ~ 9,999만 원: 30,000원 · 2% / 1억 ~ 4억 9,999만 원: 50,000원 · 5% / 5억 원 이상: 50,000원 · 7%
+ *   성사 수수료율은 선정 견적 금액의 구간으로 정하고 확정된 계약 금액에 곱한다.
+ * - 그 초대에 기관 본인의 참여 기록이 있어야 청구한다 (0023). 운영자 대리 입력도 기관이 참여했으면 같다.
+ * - 기관별 값(per_request_fee·fee_rate)은 요금표 대신 쓰는 특별 조건이다. 비어 있으면 요금표.
+ * 기준 값은 tests/billing-rules.test.ts 가 SQL 과 같은지 확인한다.
  */
-/** 이 금액 미만 견적은 월 구독료 구간 (건당 이용료 없음) */
-export const SUBSCRIPTION_MAX_EXCL = 10_000_000;
-/** 이 금액 이상 견적은 성사수수료 대상 */
+/** 시범 운영 시작 (서울) */
+export const PILOT_FROM = "2027-06-01";
+/** 청구 시작 (서울). 이 날 전에 참여한 요청은 청구하지 않는다 */
+export const PAID_FROM = "2028-01-01";
+/** 월 구독료 기준 금액 (원) */
+export const SUBSCRIPTION_FEE = 1_000_000;
+/** 이 금액 미만 견적은 월 구독료 구간 (송부 비용 없음) */
+export const SUBSCRIPTION_MAX_EXCL = 50_000_000;
+/** 이 금액 이상 견적은 송부 비용 + 성사 수수료 대상 */
 export const SUCCESS_FEE_MIN = 50_000_000;
 
+/** 5,000만 원 이상 구간 (아래쪽 경계 오름차순). 송부 비용(원)과 성사 수수료율 */
+export const FEE_BANDS: readonly { min: number; sendFee: number; rate: number; label: string }[] = [
+  { min: 50_000_000, sendFee: 30_000, rate: 0.02, label: "5,000만 ~ 9,999만 원" },
+  { min: 100_000_000, sendFee: 50_000, rate: 0.05, label: "1억 ~ 4억 9,999만 원" },
+  { min: 500_000_000, sendFee: 50_000, rate: 0.07, label: "5억 원 이상" },
+];
+
+function bandOf(amount: number | null | undefined) {
+  if (amount == null || !Number.isFinite(amount)) return null;
+  let hit: (typeof FEE_BANDS)[number] | null = null;
+  for (const b of FEE_BANDS) if (amount >= b.min) hit = b;
+  return hit;
+}
+
+/** 견적서 송부 비용 (요금표). 5,000만 원 미만·금액 없음은 0. SQL billing_send_fee 와 같다 */
+export function sendFee(amount: number | null | undefined): number {
+  return bandOf(amount)?.sendFee ?? 0;
+}
+
+/** 성사 수수료율 (요금표). 기준은 선정 견적 금액. 5,000만 원 미만은 0. SQL billing_success_rate 와 같다 */
+export function successRate(basisAmount: number | null | undefined): number {
+  return bandOf(basisAmount)?.rate ?? 0;
+}
+
+/** 기관 특별 조건이 있으면 그 값, 없으면 요금표 */
+export function effectiveSendFee(amount: number | null | undefined, orgFee: number | null | undefined): number {
+  return orgFee ?? sendFee(amount);
+}
+export function effectiveRate(basisAmount: number | null | undefined, orgRate: number | null | undefined): number {
+  return orgRate ?? successRate(basisAmount);
+}
+
+/** 서울 날짜(YYYY-MM-DD)의 참여가 청구 시작일 전(무료)인지 */
+export function joinedBeforePaid(seoulDate: string | null | undefined): boolean {
+  return !!seoulDate && seoulDate < PAID_FROM;
+}
+
 /**
- * 참여 기록에 따른 청구 여부 (0023). 기관 본인이 참여한(joined) 초대의 견적만 청구한다. 운영자 대리 입력도 기관이 참여했으면 같다.
- * legacy: 참여 기능 전에 작성 중·제출이던 견적. not_joined: 참여 기록 없음. 둘 다 청구하지 않는다
+ * 참여 기록에 따른 청구 여부 (0023, 0031). 기관 본인이 청구 시작일 뒤에 참여(joined)한 초대의 견적만 청구한다.
+ * legacy: 참여 기능 전에 작성 중·제출이던 견적. not_joined: 참여 기록 없음. pilot: 시범 판이거나 청구 시작일 전 참여. 모두 청구하지 않는다
  */
 export const JOIN_STATUS_NOTE: Record<"legacy" | "not_joined" | "pilot", string> = {
   legacy: "참여 기능 도입 전 견적, 청구하지 않음",
@@ -30,14 +76,17 @@ export function joinStatusNote(status: string | null | undefined): string {
   return status === "legacy" || status === "not_joined" || status === "pilot" ? JOIN_STATUS_NOTE[status] : "";
 }
 
-/** 견적 총액의 청구 구간. no_amount: 금액 미입력(아직 청구하지 않음) */
+/**
+ * 견적 총액의 청구 구간. no_amount: 금액 미입력(아직 청구하지 않음).
+ * per_quote 는 0020(1,000만 ~ 5,000만 원) 구간으로, 0031 뒤로는 나오지 않는다. 0031 전 마감 저장본을 읽을 때만 쓴다
+ */
 export type BillingTier = "no_amount" | "subscription" | "per_quote" | "per_quote_success";
 
 export const TIER_LABEL: Record<BillingTier, string> = {
   no_amount: "금액 미입력",
-  subscription: "1,000만 원 미만 (구독)",
-  per_quote: "건당 이용료",
-  per_quote_success: "건당 이용료 + 성사수수료 대상",
+  subscription: "5,000만 원 미만 (구독)",
+  per_quote: "건당 이용료 (옛 기준)",
+  per_quote_success: "송부 비용 + 성사 수수료 대상",
 };
 
 export function billingTier(amount: number | null | undefined): BillingTier {
@@ -47,7 +96,7 @@ export function billingTier(amount: number | null | undefined): BillingTier {
   return "per_quote_success";
 }
 
-/** 건당 이용료 대상인지 (1,000만 원 이상) */
+/** 송부 비용 대상인지 (5,000만 원 이상) */
 export function chargesPerQuote(amount: number | null | undefined): boolean {
   const t = billingTier(amount);
   return t === "per_quote" || t === "per_quote_success";
@@ -97,17 +146,19 @@ export function successFee(amount: number, feeRate: number | null | undefined): 
  */
 export function successFeeView(a: { quoteAmount: number | null | undefined; contractAmount: number | null | undefined; contractStatus: string | null | undefined; feeRate: number | null | undefined; confirmed?: boolean }): {
   eligible: boolean;
-  /** 예상. 요율 미정이면 null */
+  /** 예상 (0031부터 요율 미정 없음) */
   expected: number | null;
-  /** 정산. 체결·확인 전이면 0 (아직 없음), 요율 미정이면 null */
+  /** 정산. 체결·확인 전이면 0 (아직 없음) */
   settled: number | null;
   signed: boolean;
 } {
   const eligible = successFeeEligible(a.quoteAmount);
   const signed = a.contractStatus === "signed" && a.contractAmount != null;
   if (!eligible) return { eligible, expected: 0, settled: 0, signed };
-  const expected = a.contractStatus === "not_signed" ? 0 : successFee(a.quoteAmount ?? 0, a.feeRate);
-  const settled = signed && a.confirmed !== false ? successFee(a.contractAmount ?? 0, a.feeRate) : 0;
+  // 요율은 기관 특별 조건, 없으면 선정 견적 금액 구간의 요금표 요율 (0031 billing_awards 와 같다)
+  const rate = effectiveRate(a.quoteAmount, a.feeRate);
+  const expected = a.contractStatus === "not_signed" ? 0 : successFee(a.quoteAmount ?? 0, rate);
+  const settled = signed && a.confirmed !== false ? successFee(a.contractAmount ?? 0, rate) : 0;
   return { eligible, expected, settled, signed };
 }
 
@@ -195,32 +246,22 @@ export function signedWon(n: number, won: (n: number) => string): string {
 }
 
 /**
- * 시범 기간 참고 수치 (2026-10-20 결정, 0024 billing_reference 와 같은 계산).
- * 시범 판(pilot-…)·legacy 참여라 청구하지 않는 견적과 체결을 "유료였다면"으로 센다. 합계·청구에는 넣지 않는다.
- * 기관 약정 값(건당 이용료·성사수수료율)이 있으면 그 값을, 없으면 아래 참고 단가를 쓴다.
- * 두 값은 tests/billing-close-lock.test.ts 가 SQL(billing_reference_per_quote_fee·billing_reference_success_rate)과 같은지 본다.
+ * 시범 기간 참고 수치 (0024, 0031 부터 요금표로 계산. billing_reference 와 같은 계산).
+ * 시범(청구 시작일 전 또는 시범 판)·legacy 참여라 청구하지 않는 견적과 체결을 "유료였다면"으로 센다. 합계·청구에는 넣지 않는다.
+ * 기관 특별 조건(송부 비용·성사 수수료율)이 있으면 그 값을, 없으면 요금표를 쓴다.
  */
-export const REFERENCE_PER_QUOTE_FEE = 30_000;
-export const REFERENCE_SUCCESS_RATE = 0.03;
 /** 참고 단가 이름표 */
-export const REFERENCE_UNIT_LABEL = "참고 단가(예시, 시장 검증 전)";
+export const REFERENCE_UNIT_LABEL = "요금표";
 /** 참고 수치 이름표 */
 export const REFERENCE_LABEL = "참고 (시범 기간, 청구 안 함)";
 
-/** 참고 수치에 세는 견적인지: 운영자가 제외하지 않았고, 시범 판 또는 legacy 참여 */
+/** 참고 수치에 세는 견적인지: 운영자가 제외하지 않았고, 시범 또는 legacy 참여 */
 export function countsForReference(line: { billable: boolean; join_status?: string | null }): boolean {
   return line.billable && (line.join_status === "pilot" || line.join_status === "legacy");
 }
 
-/** 참고 건당 단가: 기관 약정 값이 있으면 그 값 */
-export function referenceUnit(orgFee: number | null | undefined): { unit: number; source: ReferenceSource } {
-  return orgFee == null ? { unit: REFERENCE_PER_QUOTE_FEE, source: "reference" } : { unit: orgFee, source: "org" };
-}
-
-/** 참고 성사수수료율: 기관 약정 값이 있으면 그 값 */
-export function referenceRate(orgRate: number | null | undefined): { rate: number; source: ReferenceSource } {
-  return orgRate == null ? { rate: REFERENCE_SUCCESS_RATE, source: "reference" } : { rate: orgRate, source: "org" };
-}
+/** 단가·요율 출처 이름 */
+export const REFERENCE_SOURCE_LABEL: Record<ReferenceSource, string> = { org: "기관 특별 조건", schedule: "요금표", reference: "옛 참고 단가" };
 
 /** 요율 표시 (0.03 → "3%") */
 export function rateLabel(rate: number): string {
@@ -228,31 +269,29 @@ export function rateLabel(rate: number): string {
 }
 
 /**
- * 기관 1곳의 참고 수치. lines 는 그 기관의 그 달 견적(billing_lines), settlements 는 시범·legacy 초대의 체결 확인 수주(계약 금액).
- * DB(billing_reference)가 같은 값을 계산해 저장본에 남긴다. 이 함수는 같은 규칙을 코드로 확인하는 데 쓴다
+ * 기관 1곳의 참고 수치. lines 는 그 기관의 그 달 견적(billing_lines), settlements 는 시범·legacy 초대의 체결 확인 수주
+ * (계약 금액과 선정 견적 금액). DB(billing_reference)가 같은 값을 계산해 저장본에 남긴다. 이 함수는 같은 규칙을 코드로 확인하는 데 쓴다
  */
 export function referenceForOrg(a: {
-  lines: { billable: boolean; join_status?: string | null; tier: BillingTier }[];
-  settlements: { contract_amount: number }[];
+  lines: { billable: boolean; join_status?: string | null; tier: BillingTier; total_amount?: number | null }[];
+  settlements: { contract_amount: number; quote_amount?: number | null }[];
   perRequestFee: number | null | undefined;
   feeRate: number | null | undefined;
 }): Omit<BillingReferenceRow, "org_id" | "org_name"> {
   const counted = a.lines.filter(countsForReference);
   const subscription = counted.filter((l) => l.tier === "subscription").length;
-  const perQuote = counted.filter((l) => l.tier === "per_quote" || l.tier === "per_quote_success").length;
-  const u = referenceUnit(a.perRequestFee);
-  const r = referenceRate(a.feeRate);
+  const sendLines = counted.filter((l) => l.tier === "per_quote" || l.tier === "per_quote_success");
   return {
     subscription_count: subscription,
-    per_quote_count: perQuote,
-    per_quote_unit: u.unit,
-    per_quote_unit_source: u.source,
-    per_quote_fee: perQuote * u.unit,
+    per_quote_count: sendLines.length,
+    per_quote_unit: a.perRequestFee ?? 0,
+    per_quote_unit_source: a.perRequestFee == null ? "schedule" : "org",
+    per_quote_fee: sendLines.reduce((t, l) => t + effectiveSendFee(l.total_amount, a.perRequestFee), 0),
     success_count: a.settlements.length,
     success_contract_amount: a.settlements.reduce((t, s) => t + s.contract_amount, 0),
-    success_rate: r.rate,
-    success_rate_source: r.source,
-    success_fee: a.settlements.reduce((t, s) => t + Math.round(s.contract_amount * r.rate), 0),
+    success_rate: a.feeRate ?? 0,
+    success_rate_source: a.feeRate == null ? "schedule" : "org",
+    success_fee: a.settlements.reduce((t, s) => t + Math.round(s.contract_amount * effectiveRate(s.quote_amount, a.feeRate)), 0),
   };
 }
 

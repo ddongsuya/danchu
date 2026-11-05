@@ -146,7 +146,7 @@ describe("전환 실행", () => {
     expect(m.to).toEqual(["bd@managed.example.com"]);
     expect(m.replyTo).toBe("hello@danchu.kr");
     expect(m.subject).toContain("참여 안내 DC-2099-0001");
-    expect(m.html).toContain("앞서 견적 요청으로 안내드린 요청입니다");
+    expect(m.html).toContain("앞서 견적 요청으로 안내드린 요청이에요");
     expect(m.html).toContain("참여하기");
     expect(m.html).toContain("참여 결정 기한 2099-01-14");
     expect(m.html).toContain("https://danchu.kr/q/tok_a_xxxxxxxx");

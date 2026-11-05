@@ -104,14 +104,14 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
           <div>
             <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>가이드라인 찾아보기</p>
             <h1 ref={heading} tabIndex={-1} style={{ textWrap: "balance", scrollMarginTop: 24 }}>답하신 상황에 해당하는 시험이에요</h1>
-            <p>가이드라인 근거와 함께 보여드립니다. 체크를 풀어 빼거나, 다음 단계에서 더할 수 있습니다.</p>
+            <p>가이드라인 근거를 함께 확인하세요. 체크를 풀어 빼거나, 다음 단계에서 더할 수 있어요.</p>
           </div>
         </div>
 
         <details className="advisor__review"><summary>답변 확인 · 수정</summary>{summary(qs)}</details>
         <div className="stack" style={{ gap: 14 }}>
           <section className="dcard">
-            {sec(`필요한 시험 ${selected.size}`, "체크된 항목이 요청서에 들어갑니다.")}
+            {sec(`필요한 시험 ${selected.size}`, "체크된 항목이 요청서에 들어가요.")}
             {cats.map((c) => (
               <div key={c} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)" }}>{c}</span>
@@ -134,7 +134,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.owned.length > 0 && (
             <section className="dcard">
-              {sec("이미 가진 시험", "목록에서 뺐어요. 제출용으로 쓸 수 있는지는 GLP 여부와 시험 조건에 달려 있습니다.")}
+              {sec("이미 가진 시험", "목록에서 뺐어요. 제출용으로 쓸 수 있는지는 GLP 여부와 시험 조건에 달려 있어요.")}
               <div className="chips">{advice.owned.map((o) => <span key={o} className="tag">{o}</span>)}</div>
             </section>
           )}
@@ -169,7 +169,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.askCro.length > 0 && (
             <section className="dcard">
-              {sec("기관마다 다른 부분", "가이드라인이 정하지 않아 기관의 방식이 서로 다릅니다. 단추가 기준을 정하지 않고, 기관에 설명을 요청해 비교표에 나란히 보여드립니다.")}
+              {sec("기관마다 다른 부분", "가이드라인이 정하지 않아 기관의 방식이 서로 달라요. 단추가 기준을 정하지 않고, 기관에 설명을 요청해 비교표에 나란히 보여요.")}
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4, fontSize: 14, color: "var(--body)" }}>
                 {advice.askCro.map((x) => <li key={x}>{x}</li>)}
               </ul>
@@ -178,7 +178,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.later.length > 0 && (
             <section className="dcard">
-              {sec("나중 단계에 필요한 시험", "지금 요청서에는 넣지 않았습니다.")}
+              {sec("나중 단계에 필요한 시험", "지금 요청서에는 넣지 않았어요.")}
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8, fontSize: 14, color: "var(--body)" }}>
                 {advice.later.map((l) => (
                   <li key={l.label}><b style={{ color: "var(--ink)", fontWeight: 600 }}>{l.label}</b>: {l.when}<Cite basis={l.basis} /></li>
@@ -193,7 +193,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
             <button type="button" className="b1 blg bfull" disabled={selected.size === 0} onClick={() => onApply(toRequestValues(a, advice, selected))}>
               이 구성으로 요청서 만들기
             </button>
-            <p className="cta__note">다음 단계에서 시험물질명, 일정, 세부 조건을 입력합니다</p>
+            <p className="cta__note">다음 단계에서 시험물질명, 일정, 세부 조건을 입력해요</p>
           </div>
         </div>
       </div>
@@ -212,7 +212,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
       <span className="tnum">{STEP_TITLES[current.step - 1]} · {index + 1} / {qs.length}</span>
     </div>
     <div className="advisor__progress" aria-hidden="true"><div style={{ transform: `scaleX(${done.filter((id) => qs.some((q) => q.id === id)).length / qs.length})` }} /></div>
-    <div className="ph"><div><h1>필요한 시험 찾기</h1><p>한 질문씩 답해 주세요. 이전 답변은 언제든 수정할 수 있습니다.</p></div></div>
+    <div className="ph"><div><h1>필요한 시험 찾기</h1><p>한 질문씩 답해 주세요. 이전 답변은 언제든 수정할 수 있어요.</p></div></div>
     {summary(previous)}
     <section key={current.id} className="dcard advisor__question" role="group" aria-labelledby="advisor-question">
       <div>
@@ -227,6 +227,6 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
       </div>}
     </section>
     {index > 0 && <button type="button" className="btxt advisor__back" onClick={() => edit(qs[index - 1].id)}><Caret size={14} /> 이전 질문</button>}
-    <p className="advisor__hint">{current.multi ? "여러 답을 고른 뒤 ‘다음’을 눌러 주세요." : "답을 선택하면 다음 질문으로 이동합니다."}</p>
+    <p className="advisor__hint">{current.multi ? "여러 답을 고른 뒤 ‘다음’을 눌러 주세요." : "답을 선택하면 다음 질문으로 이동해요."}</p>
   </div>;
 }

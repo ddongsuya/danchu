@@ -5,7 +5,6 @@ import { BUSINESS } from "@/lib/business";
 export function LegalLayout({
   title,
   effectiveDate,
-  version,
   current,
   notice,
   noticeSummary,
@@ -13,7 +12,6 @@ export function LegalLayout({
 }: {
   title: string;
   effectiveDate: string;
-  version: string;
   current?: string;
   /** 개정 공지 (시행 전 공지 기간에 바뀌는 내용과 이전 판의 적용 기간을 알린다) */
   notice?: React.ReactNode;
@@ -27,7 +25,7 @@ export function LegalLayout({
         <article className="legal">
           <h1 className="legal__title">{title}</h1>
           <p className="legal__meta">
-            시행일 {effectiveDate} · {version}
+            시행일 {effectiveDate}
           </p>
           {notice &&
             (noticeSummary ? (

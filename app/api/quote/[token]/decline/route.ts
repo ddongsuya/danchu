@@ -17,18 +17,18 @@ export const runtime = "nodejs";
 /** 화면이 본 상태. 다르면(그 사이 같은 기관 다른 담당자가 참여한 경우 등) 처리하지 않고 다시 보게 한다 */
 type DeclineMode = "decline" | "withdraw";
 
-const STALE = "요청 상태가 바뀌었습니다. 화면을 새로 고친 뒤 다시 확인해 주세요.";
+const STALE = "요청 상태가 바뀌었어요. 화면을 새로 고친 뒤 다시 확인해 주세요.";
 
 const WITHDRAW_DENIED: Record<string, { error: string; status: number }> = {
   closed: { error: closedMessage(null), status: 403 },
-  revoked: { error: "유효하지 않거나 만료된 링크입니다.", status: 404 },
-  not_found: { error: "유효하지 않거나 만료된 링크입니다.", status: 404 },
-  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 처리할 수 없습니다.", status: 403 },
+  revoked: { error: "유효하지 않거나 만료된 링크예요.", status: 404 },
+  not_found: { error: "유효하지 않거나 만료된 링크예요.", status: 404 },
+  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 처리할 수 없어요.", status: 403 },
   not_joined: { error: STALE, status: 409 },
-  submitted: { error: "이미 제출한 견적은 철회할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 400 },
-  declined: { error: "이미 불참으로 처리한 요청입니다.", status: 409 },
-  withdrawn: { error: "이미 참여를 철회한 요청입니다.", status: 409 },
-  expired: { error: "링크가 만료되었습니다.", status: 403 },
+  submitted: { error: "이미 제출한 견적은 철회할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 400 },
+  declined: { error: "이미 불참으로 처리한 요청이에요.", status: 409 },
+  withdrawn: { error: "이미 참여를 철회한 요청이에요.", status: 409 },
+  expired: { error: "링크가 만료됐어요.", status: 403 },
 };
 
 /**
@@ -41,11 +41,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const { token } = await ctx.params;
   const s = await sessionOrNull();
   const got = await loadQuote(token, loadOptsFor(s?.profile.role));
-  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
-  if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 견적은 철회할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요." }, { status: 400 });
+  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
+  if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 견적은 철회할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요." }, { status: 400 });
   if (got.declined) return NextResponse.json({ ok: true, already: true });
-  if (got.expired) return NextResponse.json({ error: "링크가 만료되었습니다." }, { status: 403 });
-  if (got.closed) return NextResponse.json({ error: closedMessage(got.closedReason) }, { status: 403 });
+  if (got.expired) return NextResponse.json({ error: "링크가 만료됐어요." }, { status: 403 });
+  if (got.closed) return NextResponse.json({ error: closedMessage(got.closedReason, { submitted: false }) }, { status: 403 });
   const b = (await req.json().catch(() => ({}))) as { reason?: unknown; mode?: unknown };
   const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 500) : "";
   const mode: DeclineMode = got.joined ? "withdraw" : "decline";
@@ -60,7 +60,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (mode === "withdraw") {
     const r = await withdrawOffer(got.inviteId, got.token, s?.userId ?? null, reason || null);
     if (!r.ok) {
-      const d = WITHDRAW_DENIED[r.code] ?? { error: "처리하지 못했습니다.", status: 500 };
+      const d = WITHDRAW_DENIED[r.code] ?? { error: "처리하지 못했어요.", status: 500 };
       return NextResponse.json({ error: d.error }, { status: d.status });
     }
     if (r.already) return NextResponse.json({ ok: true, already: true });
@@ -68,7 +68,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   } else {
     // 참여 전 초대만: 상태가 sent 이고 참여 기록이 없을 때만 바꾼다. 그 사이 참여했으면 바뀌는 행이 없다
     const { data, error } = await sb.from("rfq_invites").update({ status: "declined", declined_at: new Date().toISOString(), decline_reason: reason || null }).eq("id", got.inviteId).eq("status", "sent").is("joined_at", null).select("id");
-    if (error) return NextResponse.json({ error: "처리하지 못했습니다." }, { status: 500 });
+    if (error) return NextResponse.json({ error: "처리하지 못했어요." }, { status: 500 });
     if (!data?.length) return NextResponse.json({ error: STALE }, { status: 409 });
   }
 
@@ -87,7 +87,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
     // 의뢰자는 참여한 기관을 보므로 철회는 알린다. 기관명과 사유는 넣지 않는다
     const { data: rq } = await sb.from("rfq_requests").select("user_id, status").eq("id", got.rfqId).maybeSingle();
     if (rq?.user_id && !["closed", "cancelled"].includes(rq.status)) {
-      await notifyUsers([rq.user_id], { kind: "견적", title: `${got.rfq.no} 참여한 기관 1곳이 참여를 철회했습니다`, body: "빈 자리에는 참여 안내를 받은 다른 기관이 참여할 수 있습니다. 다른 기관의 견적은 그대로 받습니다.", href: `/app/r/${got.rfq.no}` });
+      await notifyUsers([rq.user_id], { kind: "견적", title: `${got.rfq.no} 참여한 기관 1곳이 참여를 철회했어요`, body: "빈 자리에는 참여 안내를 받은 다른 기관이 참여할 수 있어요. 다른 기관의 견적은 그대로 받아요.", href: `/app/r/${got.rfq.no}` });
     }
   }
   // 철회나 지명 기관 불참으로 자리가 비었으면 바로 재안내한다 (cron 과 같은 판정, 한 번만. 자리를 비우지 않는 불참이면 아무것도 하지 않는다)

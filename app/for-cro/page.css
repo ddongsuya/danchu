@@ -72,6 +72,11 @@
 .a details.terms summary::after{content:"+";font-size:22px;font-weight:400;transition:transform 200ms var(--eo)}
 .a details.terms[open] summary::after{transform:rotate(45deg)}
 .a details.terms ol{margin:0 0 20px;padding-left:1.2em;display:grid;gap:12px;font-size:14.5px;line-height:1.7;color:var(--ink2)}
+.a details.terms .tm{display:grid;gap:20px;margin:0 0 24px}
+.a details.terms .tm section{border-top:1px solid var(--line);padding-top:14px}
+.a details.terms .tm h3{margin:0 0 8px;font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.a details.terms .tm p{margin:0;font-size:14.5px;line-height:1.7;color:var(--ink2)}
+
 @media (max-width:860px){
  .a .ph.vis{grid-template-columns:1fr;padding:40px 0 48px}
  .a .free{grid-template-columns:1fr;gap:24px}
@@ -248,3 +253,10 @@
 /* 2026-10-25 품질 3차: 영상 무대의 회색 상자·점 격자를 걷고 종이 위에 바로 (랜딩 아래 섹션과 같은 방식) */
 .a .fst{background-color:transparent;box-shadow:none}
 .a .fst .grid{display:none}
+.a details.terms .tm strong{font-weight:600;color:var(--ink)}
+.a details.terms .tm-fee{width:100%;margin:12px 0;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.a details.terms .tm-fee th,.a details.terms .tm-fee td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.a details.terms .tm-fee thead th{font-size:12.5px;font-weight:600;color:var(--muted);border-bottom-color:var(--ink)}
+.a details.terms .tm-fee tbody th{font-weight:500;color:var(--ink)}
+.a details.terms .tm-fee td{color:var(--ink2)}
+@media (max-width:767px){.a details.terms .tm-fee{font-size:13px}.a details.terms .tm-fee th,.a details.terms .tm-fee td{padding:8px 4px}}

@@ -16,10 +16,10 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ no: string }> }) {
   const s = await sessionOrNull();
-  if (!s) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (!s) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
   const { no } = await ctx.params;
   const rfq = await getRfqByNo(no);
-  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없습니다." }, { status: 404 });
+  if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없어요." }, { status: 404 });
 
   const b = (await req.json().catch(() => ({}))) as { paths?: unknown };
   const paths = Array.isArray(b.paths) ? (b.paths as unknown[]).filter((x): x is string => typeof x === "string" && x.startsWith(`${rfq.rfq_no}/`)).slice(0, 20) : [];
@@ -40,7 +40,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (confirmed && rfq.started_at && !rfq.compared_at && !["closed", "cancelled", "selected", "contracting"].includes(rfq.status)) {
     const { data: open } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status, joined_at, withdrawn_at, revoked_at").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]).is("revoked_at", null);
     const joined = (open ?? []).filter((i) => occupiesSeat(i));
-    await notifyInvitedOrgs(joined, { kind: "견적", title: `${rfq.rfq_no} 첨부가 추가되었습니다`, body: `의뢰자가 첨부 ${confirmed}개를 더 올렸습니다. 견적에 반영할 내용이 있는지 확인해 주세요. 제출한 견적은 비교표가 열리기 전까지 고칠 수 있습니다.`, portalHref: "/cro" }).catch((e) => console.error("file notify", e));
+    await notifyInvitedOrgs(joined, { kind: "견적", title: `${rfq.rfq_no} 첨부가 추가됐어요`, body: `의뢰자가 첨부 ${confirmed}개를 더 올렸어요. 견적에 반영할 내용이 있는지 확인해 주세요. 제출한 견적은 비교표가 열리기 전까지 고칠 수 있어요.`, portalHref: "/cro" }).catch((e) => console.error("file notify", e));
     await logEvent(rfq.id, "files", `첨부 ${confirmed}개 추가`, undefined, s.userId);
   }
   const complete = verified?.length === new Set(paths).size && verified.every((f) => !!f.uploaded_at);

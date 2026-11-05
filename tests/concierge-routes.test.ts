@@ -456,9 +456,9 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
     // 확인 화면이 본 견적 판을 그대로 넘긴다 (0022)
     expect(fx.selectQuote).toHaveBeenCalledWith("rfq-1", QID, expect.any(String), 3);
     const calls = fx.notifyUsers.mock.calls as [string[], { title: string; body?: string; href?: string }, { to: string[]; replyTo?: string } | undefined][];
-    const win = calls.find((c) => c[1].title.startsWith("선정되었습니다"));
+    const win = calls.find((c) => c[1].title.startsWith("선정됐어요"));
     expect(win?.[1].href).toBe("/q/tok_winner1");
-    expect(win?.[1].body).toContain("운영자가 이 메일 주소로 여쭙");
+    expect(win?.[1].body).toContain("운영자가 이 메일 주소로 여쭤");
     expect(win?.[1].body).not.toContain("보고해 주세요");
     expect(win?.[2]?.replyTo).toBe("hello@danchu.kr");
     const lose = calls.find((c) => c[1].title.startsWith("미선정"));
@@ -467,11 +467,11 @@ describe("POST /api/rfq/[no]/select 선정 메일", () => {
     // 기한 전 선정: 아직 회신하지 않은 기관에는 미선정이 아니라 회신 마감을 따로 알린다
     const open = calls.filter((c) => c[2]?.to.includes("open@example.com"));
     expect(open).toHaveLength(1);
-    expect(open[0][1].title).toContain("회신이 마감되었습니다");
+    expect(open[0][1].title).toContain("회신이 마감됐어요");
     // 참여 결정 전 기관에는 시험물질명 없이 참여 안내가 닫혔다는 것만 (0023)
     const undecided = calls.filter((c) => c[2]?.to.includes("undecided@example.com"));
     expect(undecided).toHaveLength(1);
-    expect(undecided[0][1].title).toContain("참여 안내가 마감되었습니다");
+    expect(undecided[0][1].title).toContain("참여 안내가 마감됐어요");
     expect(`${undecided[0][1].title} ${undecided[0][1].body}`).not.toContain("ABC-1");
     expect(calls.filter((c) => c[1].title.startsWith("미선정"))).toHaveLength(1);
     const sponsor = calls.find((c) => c[0][0] === "admin-1" && c[1].title.includes("선정 완료"));

@@ -15,7 +15,7 @@ export default async function Support({ searchParams }: { searchParams: Promise<
       <div className="ph">
         <div>
           <h1>무엇을 도와드릴까요?</h1>
-          <p>문의 내용을 확인하고 이메일로 답변합니다. 관련 요청이 있으면 함께 선택해 주세요.</p>
+          <p>문의 내용을 확인하고 이메일로 답변해요. 관련 요청이 있으면 함께 선택해 주세요.</p>
         </div>
       </div>
       <SupportForm initialRfq={rfq} email={s.email} requests={reqs.map((r) => ({ no: r.rfq_no, substance: r.substance }))} />

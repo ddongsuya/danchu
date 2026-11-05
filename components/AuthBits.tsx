@@ -73,6 +73,6 @@ export function Done({ title, children }: { title: string; children: React.React
 export async function postJson<T = Record<string, unknown>>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new Error(data.error || "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  if (!res.ok) throw new Error(data.error || "처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
   return data;
 }

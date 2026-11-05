@@ -19,7 +19,7 @@ function AfterPicker({ self, value, nodes, disabled, onChange }: { self: number;
         <span>앞 단계</span>
         <span className="rs-after__val">{picked.length ? picked.map((n) => n.name).join(", ") : "없음 · 착수 주에 시작"}</span>
       </summary>
-      <p className="fld__help" style={{ margin: "6px 0" }}>이 시험보다 먼저 끝나야 하는 것을 고르세요. 고른 것이 모두 끝난 주에 시작합니다.</p>
+      <p className="fld__help" style={{ margin: "6px 0" }}>이 시험보다 먼저 끝나야 하는 것을 고르세요. 고른 것이 모두 끝난 주에 시작해요.</p>
       <div className="chips">
         {others.map((n) => {
           const on = value.includes(n.seq);
@@ -72,7 +72,7 @@ export function ScheduleCard({
     <div className="card card--pad stack" style={{ gap: 14 }}>
       <div className="stack" style={{ gap: 4 }}>
         <h2 style={{ fontSize: 16, fontWeight: 700 }}>전체 일정</h2>
-        <p className="fld__help" style={{ margin: 0 }}>항목별 기간·앞 단계·보고서 주수로 그립니다. 의뢰자는 이 일정을 최종보고서 시점과 함께 봅니다.{learned ? " 지난 견적에 적은 값으로 채운 칸이 있으니 이번 시험에 맞는지 확인하세요." : ""}</p>
+        <p className="fld__help" style={{ margin: 0 }}>항목별 기간·앞 단계·보고서 주수로 그려요. 의뢰자는 이 일정을 최종보고서 시점과 함께 봐요.{learned ? " 지난 견적에 적은 값으로 채운 칸이 있으니 이번 시험에 맞는지 확인하세요." : ""}</p>
       </div>
 
       <ScheduleGantt plan={plan} startDate={startDate || null} compact />

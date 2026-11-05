@@ -17,9 +17,9 @@ const FILM_LABEL: Record<FilmId, string> = { mark: "B안 「단추를 채우다�
 const FILM_NOTES: Record<FilmId, string[]> = {
   mark: [],
   lab: [
-    "알려진 위험: 실험실 사진이 이어져 단추가 직접 시험하는 회사로 읽힐 수 있습니다. 첫 문장에 비임상과 견적을 넣고, 컷3 문장은 흐린 플레이트 위로 옮기고, 마크 뒤에 채우기 동작을 붙여 줄였지만 위험은 남아 있습니다.",
-    "함께 볼 첫 문장 대안: \"시험을 맡기기 전, 첫 단추가 있습니다.\" (맡기는 쪽 관점)",
-    "세로(9:16)·정사각 배경은 가로 이미지를 줄여 쓴 임시 구성입니다. 세로 구도 이미지는 대표 검토 뒤 따로 생성합니다.",
+    "알려진 위험: 실험실 사진이 이어져 단추가 직접 시험하는 회사로 읽힐 수 있어요. 첫 문장에 비임상과 견적을 넣고, 컷3 문장은 흐린 플레이트 위로 옮기고, 마크 뒤에 채우기 동작을 붙여 줄였지만 위험은 남아 있어요.",
+    "함께 볼 첫 문장 대안: \"시험을 맡기기 전, 첫 단추가 있어요.\" (맡기는 쪽 관점)",
+    "세로(9:16)·정사각 배경은 가로 이미지를 줄여 쓴 임시 구성이에요. 세로 구도 이미지는 대표 검토 뒤 따로 생성해요.",
   ],
 };
 
@@ -83,7 +83,7 @@ export default async function BrandFilmPreview({ searchParams }: { searchParams:
       </header>
       {/* t 가 있으면 그 장면의 정지 화면만(재생 제어 없음) */}
       <BrandFilm key={`${film}-${ratio ?? "auto"}-${variant ?? ""}`} film={film} ratio={ratio} seek={t} controls={t === undefined} variant={variant} />
-      <p className="bfp__meta">{BRAND_FILMS[film].title} · {BRAND_FILMS[film].durationSec}초 · 화면에 절반 이상 보이면 한 번 재생하고 마지막 장면에서 멈춥니다.</p>
+      <p className="bfp__meta">{BRAND_FILMS[film].title} · {BRAND_FILMS[film].durationSec}초 · 화면에 절반 이상 보이면 한 번 재생하고 마지막 장면에서 멈춰요.</p>
       {FILM_NOTES[film].length > 0 && (
         <ul className="bfp__notes">
           {FILM_NOTES[film].map((n) => <li key={n}>{n}</li>)}

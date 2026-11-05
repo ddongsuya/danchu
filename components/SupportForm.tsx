@@ -21,10 +21,10 @@ export function SupportForm({ email: initialEmail, requests, initialRfq }: { ema
     try {
       const res = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, type, rfqNo: rfq, text }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(d.error || "문의를 보내지 못했습니다.");
+      if (!res.ok) throw new Error(d.error || "문의를 보내지 못했어요.");
       setSent(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "문의를 보내지 못했습니다.");
+      setError(e instanceof Error ? e.message : "문의를 보내지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -34,8 +34,8 @@ export function SupportForm({ email: initialEmail, requests, initialRfq }: { ema
     return (
       <div className="card rise-in" style={{ padding: "36px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 12 }}>
         <CheckDisc size={56} />
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>문의를 보냈습니다</h2>
-        <p style={{ fontSize: 15, color: "var(--body)" }}>내용을 확인한 뒤 {email}로 답변하겠습니다.</p>
+        <h2 style={{ fontSize: 22, fontWeight: 700 }}>문의를 보냈어요</h2>
+        <p style={{ fontSize: 15, color: "var(--body)" }}>내용을 확인한 뒤 {email}로 답변할게요.</p>
         <button type="button" className="btxt" onClick={() => { setSent(false); setText(""); }}>새 문의 작성</button>
       </div>
     );
@@ -67,7 +67,7 @@ export function SupportForm({ email: initialEmail, requests, initialRfq }: { ema
       </div>
       <div className="fld">
         <label className="fld__lab" htmlFor="text">내용<span className="req">*</span></label>
-        <textarea id="text" className="ta" rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder="예: 견적의 조직병리 포함 범위가 비교표와 PDF에서 다르게 보입니다. 확인 부탁드립니다." />
+        <textarea id="text" className="ta" rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder="예: 견적의 조직병리 포함 범위가 비교표와 PDF에서 다르게 보여요. 확인 부탁드려요." />
       </div>
       <div className="fld">
         <label className="fld__lab" htmlFor="email">답변 받을 이메일</label>

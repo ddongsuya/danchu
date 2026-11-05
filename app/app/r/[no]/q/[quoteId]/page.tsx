@@ -1,4 +1,5 @@
 import { quoteSelectable } from "@/lib/quote-policy";
+import { maskedText } from "@/lib/contact-guard";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
@@ -36,6 +37,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const others = scheduled.map((x) => x.final_weeks as number);
   const best = others.length > 1 ? Math.min(...others) : null;
   const plan = hasSchedule(q) ? planOfStored(q) : null;
+  // 선정 전 자유 입력란의 연락처는 가린다 (lib/contact-guard.ts). 이 기관을 선정하면 그대로 보인다
+  const reveal = rfq.selected_quote_id === q.id;
   const selectable = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
 
   return (
@@ -45,13 +48,13 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
         <div>
           <span className="tnum" style={{ fontSize: 13, color: "var(--muted)" }}>{rfq.rfq_no} · 제출 {ymd(q.submitted_at)}</span>
           <h1>{q.cro_name}</h1>
-          {q.auto && <p className="note note--warn">기관 확인 전 예비 견적입니다. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
-          {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었습니다. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려 드립니다.</p>}
+          {q.auto && <p className="note note--warn">기관 확인 전 예비 견적이에요. 정식 견적서와 착수일을 확인한 뒤 기관을 선택하세요.</p>}
+          {!q.auto && q.entry_source === "operator" && <p className="note note--tint">단추 정리 · 기관 PDF 기준. 기관이 보낸 견적서 PDF를 단추가 옮겨 적었어요. 금액·조건이 다르면 견적서 원본(PDF)이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려요.</p>}
           {/* 아직 고를 수 있는 요청에서만 왜 선택할 수 없는지 알린다. 선정이 끝난 뒤에는 보이지 않는다 */}
           {!quoteSelectable(q) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && (
             <p className="note" style={{ marginTop: 10 }}>
               <span>
-                {q.valid_until && dday(q.valid_until).n < 0 ? "견적 유효기간이 지나 바로 선택할 수 없습니다." : "정식 견적서와 착수일이 확인되면 선택할 수 있습니다."}{" "}
+                {q.valid_until && dday(q.valid_until).n < 0 ? "견적 유효기간이 지나 바로 선택할 수 없어요." : "정식 견적서와 착수일이 확인되면 선택할 수 있어요."}{" "}
                 <Link href={`/app/support?rfq=${rfq.rfq_no}`} style={{ textDecoration: "underline", textUnderlineOffset: 3 }}>정식 견적·유효기간 문의하기</Link>
               </span>
             </p>
@@ -93,7 +96,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
                   {/* "가능"은 기본값이라 표시하지 않는다. 조건부·불가만 눈에 띄게 */}
                   {it.avail && it.avail !== "가능" && <span className={`pill ${it.avail === "조건부 가능" ? "pill--warn" : "pill--sf"}`}>{it.avail}</span>}
                   {it.weeks ? <span className="pill pill--sf">{it.weeks}주</span> : null}
-                  {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{it.reason}</span>}
+                  {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{reveal ? it.reason : maskedText(it.reason)}</span>}
                 </div>
               </div>
             ))}
@@ -119,7 +122,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "12px 14px", background: "var(--sf)", borderRadius: 10 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>제외 항목 · 별도 옵션 · 전달 사항</span>
-              <span style={{ fontSize: 14, color: "var(--body)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{q.note || "없음"}</span>
+              <span style={{ fontSize: 14, color: "var(--body)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{(reveal ? q.note : maskedText(q.note)) || "없음"}</span>
             </div>
           </div>
 
@@ -160,12 +163,12 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
       <section id="schedule" className="card card--pad stack" style={{ gap: 16, marginTop: 16, scrollMarginTop: 80 }} aria-labelledby="schedule-title">
         <div className="stack" style={{ gap: 4 }}>
           <h2 id="schedule-title" style={{ fontSize: 18, fontWeight: 700 }}>전체 일정</h2>
-          <p className="fld__help" style={{ margin: 0 }}>기관이 회신에 적은 시험 기간, 앞 단계, 보고서 기간으로 그린 예상 일정입니다. 실제 일정은 계약 때 기관과 확인하세요.</p>
+          <p className="fld__help" style={{ margin: 0 }}>기관이 회신에 적은 시험 기간, 앞 단계, 보고서 기간으로 그린 예상 일정이에요. 실제 일정은 계약 때 기관과 확인하세요.</p>
         </div>
         {plan ? (
           <ScheduleGantt plan={plan} startDate={q.start_date} bestFinal={best} scale={scaleWeeks(...others, q.final_weeks)} />
         ) : (
-          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>이 견적에는 순서와 보고서 기간이 없습니다. 항목별 기간은 위 목록에서 확인하세요.</p>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>이 견적에는 순서와 보고서 기간이 없어요. 항목별 기간은 위 목록에서 확인하세요.</p>
         )}
       </section>
 

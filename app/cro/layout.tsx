@@ -6,7 +6,7 @@ import { Shell, type NavItem } from "@/components/shell/Shell";
 
 export const metadata: Metadata = {
   title: "단추 CRO · 받은 요청",
-  description: "배포된 견적 요청을 확인하고 단추 표준 양식으로 회신합니다.",
+  description: "배포된 견적 요청을 확인하고 단추 표준 양식으로 회신해요.",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추 CRO" },
   robots: { index: false, follow: false },
 };
@@ -22,6 +22,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
     { href: "/cro/notifications", label: "알림", icon: "bell", badge: unread },
     { href: "/cro/org", label: "기관", icon: "org" },
     { href: "/cro/awards", label: "수주", icon: "award" },
+    { href: "/cro/billing", label: "청구", icon: "receipt" },
   ];
   if (session.profile.role === "admin") nav.push({ href: "/admin", label: "운영자 콘솔", icon: "settings" });
   return (

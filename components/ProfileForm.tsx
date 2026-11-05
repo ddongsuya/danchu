@@ -22,11 +22,11 @@ export function ProfileForm({ initial, orgTypes, showCompany }: { initial: P; or
     try {
       const res = await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(d.error || "저장하지 못했습니다.");
-      setMsg({ ok: true, text: "저장했습니다." });
+      if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
+      setMsg({ ok: true, text: "저장했어요." });
       router.refresh();
     } catch (err) {
-      setMsg({ ok: false, text: err instanceof Error ? err.message : "저장하지 못했습니다." });
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "저장하지 못했어요." });
     } finally {
       setBusy(false);
     }

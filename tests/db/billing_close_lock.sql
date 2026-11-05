@@ -37,7 +37,7 @@ declare
   snap0 jsonb;
   res jsonb;
 begin
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-LOCK-1'), o, pg_temp.t_mid(-1)), 20000000, pg_temp.t_mid(-1));
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-LOCK-1'), o, pg_temp.t_mid(-1)), 52500000, pg_temp.t_mid(-1));
   res := public.close_billing_month(m, null, '지난달 마감');
   perform pg_temp.t_eq(res->>'ok', 'true', '지난달 마감');
   select snapshot into snap0 from public.billing_periods where month = m;
@@ -101,7 +101,7 @@ declare
   s record;
 begin
   perform public.close_billing_month(closed_m, null, '');
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ADJ-1'), o), 20000000);
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ADJ-1'), o), 52500000);
 
   res := public.add_billing_adjustment(o, closed_m, -50000, '지난달 중복 청구', null, null);
   perform pg_temp.t_eq(res->>'code', 'closed', '마감한 달에는 조정 항목을 넣을 수 없다');
@@ -142,7 +142,7 @@ declare
   a uuid;
   snap jsonb;
 begin
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ADJ-2'), o, pg_temp.t_mid(-2)), 20000000, pg_temp.t_mid(-2));
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-ADJ-2'), o, pg_temp.t_mid(-2)), 52500000, pg_temp.t_mid(-2));
   a := (public.add_billing_adjustment(o, m, -10000, '처음 사유', null, null)->>'id')::uuid;
   update public.billing_adjustments set amount = -25000, reason = '고친 사유' where id = a;
   perform pg_temp.t_eq((select amount from public.billing_adjustments where id = a), -25000::bigint, '열린 달 조정은 고칠 수 있다');
@@ -175,35 +175,35 @@ declare
 begin
   -- 참고 단가 기관: 시범 판 견적 3건(구독 1, 건당 1, 건당+성사 1) + legacy 견적 1건(건당) + 운영자 제외 시범 견적 1건(세지 않음)
   perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-1'), ref_org, 'portal', 'pilot-2026-10-20b'), 3000000);
-  perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-2'), ref_org, 'token', 'pilot-2026-10-20b'), 20000000);
+  perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-2'), ref_org, 'token', 'pilot-2026-10-20b'), 52500000);
   q := pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-3'), ref_org, 'portal', 'pilot-2026-10-20b'), 60000000);
   a := pg_temp.t_award(q);
-  perform public.report_contract(a, today, 55000000, '');
+  perform public.report_contract(a, today, 55000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
-  perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-4'), ref_org, 'legacy', null), 15000000);
+  perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-4'), ref_org, 'legacy', null), 55000000);
   inv := pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-5'), ref_org, 'portal', 'pilot-2026-10-20b');
-  perform pg_temp.t_quote(inv, 30000000);
+  perform pg_temp.t_quote(inv, 53000000);
   update public.rfq_invites set billable = false, bill_excluded_reason = '동일 요청 중복' where id = inv;
 
   -- 약정 기관: 시범 판 건당 1건 + legacy 수주 체결 1건 + 유료 조건 참여 견적 1건(실제 청구, 참고에는 없음)
-  perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-6'), own_org, 'portal', 'pilot-2026-10-20b'), 12000000);
+  perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-6'), own_org, 'portal', 'pilot-2026-10-20b'), 52000000);
   q := pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-7'), own_org, 'legacy', null), 80000000);
   a := pg_temp.t_award(q);
-  perform public.report_contract(a, today, 70000000, '');
+  perform public.report_contract(a, today, 70000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-REF-8'), own_org), 20000000);
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-REF-8'), own_org), 52500000);
 
   select * into r from public.billing_reference(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = ref_org;
   perform pg_temp.t_eq(r.subscription_count, 1, '참고: 구독 구간 1건');
   perform pg_temp.t_eq(r.per_quote_count, 3, '참고: 건당 대상 3건 (시범 2 + legacy 1, 운영자 제외는 빼고)');
-  perform pg_temp.t_eq(r.per_quote_unit, 30000, '약정 없으면 참고 단가 30,000원');
-  perform pg_temp.t_eq(r.per_quote_unit_source, 'reference', '단가 출처: 참고 단가');
-  perform pg_temp.t_eq(r.per_quote_fee, 90000::bigint, '참고 건당 이용료 = 3 × 30,000');
+  perform pg_temp.t_eq(r.per_quote_unit, 0, '특별 조건 없으면 한 단가로 적지 않음 (0031)');
+  perform pg_temp.t_eq(r.per_quote_unit_source, 'schedule', '단가 출처: 요금표');
+  perform pg_temp.t_eq(r.per_quote_fee, 90000::bigint, '참고 송부 비용 = 3 × 30,000 (5천만 원대 요금표)');
   perform pg_temp.t_eq(r.success_count, 1, '참고: 체결 1건');
   perform pg_temp.t_eq(r.success_contract_amount, 55000000::bigint, '계약 금액');
-  perform pg_temp.t_eq(r.success_rate, 0.03::numeric, '약정 없으면 참고 요율 3%');
-  perform pg_temp.t_eq(r.success_rate_source, 'reference', '요율 출처: 참고 단가');
-  perform pg_temp.t_eq(r.success_fee, 1650000::bigint, '참고 성사수수료 = 55,000,000 × 3%');
+  perform pg_temp.t_eq(r.success_rate, 0::numeric, '특별 조건 없으면 요율 칸 0 (견적마다 요금표)');
+  perform pg_temp.t_eq(r.success_rate_source, 'schedule', '요율 출처: 요금표');
+  perform pg_temp.t_eq(r.success_fee, 1100000::bigint, '참고 성사 수수료 = 55,000,000 × 2% (선정 견적 6천만 원 구간)');
 
   select * into r from public.billing_reference(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = own_org;
   perform pg_temp.t_eq(r.per_quote_count, 2, '약정 기관: 시범 1건 + legacy 1건 (유료 조건 견적은 참고에 없음)');
@@ -242,7 +242,7 @@ declare
   o uuid := pg_temp.t_org('재적용조정기관', 300000);
   m date := pg_temp.t_month(-1);
 begin
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-LOCK-RE'), o, pg_temp.t_mid(-1)), 20000000, pg_temp.t_mid(-1));
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-LOCK-RE'), o, pg_temp.t_mid(-1)), 52500000, pg_temp.t_mid(-1));
   perform public.close_billing_month(m, null, '재적용 전');
   perform public.add_billing_adjustment(o, pg_temp.t_month(0), -5000, '재적용 전 조정', m, null);
   drop table t_lock_before;

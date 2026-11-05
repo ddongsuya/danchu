@@ -84,12 +84,14 @@ export function countsTowardLimit(status: string): boolean {
  *   운영 배포(main) 전에 바꿨으므로 앞 판으로 참여한 운영 기록은 없다
  * - pilot-2026-10-21: 의뢰자 요청에 따른 기한 전 회신 마감을 없애고(약관 제4조 제7항), 비교표가 열린 뒤에는 회신을 다시 열거나 회신 기한을 늘리지 않으며
  *   제출한 견적을 고치거나 다시 제출할 수 없다는 것을 더했다 (2026-10-21 대표 결정 2·3, 0026). 이것도 운영 배포(main) 전에 바꿨다
+ * - pilot-2026-11-05: 정식 요금표(0031)를 조건에 적었다. 2027-12-31까지 참여한 요청은 무료, 2028-01-01 뒤 참여부터 송부 비용·성사 수수료·월 구독료,
+ *   청구 시작 30일 전 고지와 약관 개정, 조건이 바뀌면 다시 동의. 용어를 약관과 같게 "회사·기관"으로. JOIN_CONSENT 의 청구 문장도 바꿨다 (2026-11-05 대표 확인)
  * 판 이름이 pilot- 으로 시작하면 청구 함수(0023 billing_lines·billing_awards)가 시범 참여로 보고 청구하지 않는다. 유료 조건 판은 pilot- 이 아닌 이름으로 만든다.
  */
-export const CRO_TERMS_VERSION = "pilot-2026-10-21";
+export const CRO_TERMS_VERSION = "pilot-2026-11-05";
 
 /** 참여 버튼 옆에 그대로 보여 주는 동의 문장 (설계 규칙표 "참여 버튼 문구"). 이 문장을 보고 누른 것이 참여 기록이다 */
-export const JOIN_CONSENT = "이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 그 1건이 이용 조건에 따른 청구 단위가 됩니다(시범 운영 중 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.";
+export const JOIN_CONSENT = "이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 이용 조건의 요금표에 따라 청구 대상이 됩니다(2027년 12월 31일까지 참여한 요청은 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.";
 
 /** 참여 단계 판정에 쓰는 초대 열 */
 export type JoinFields = { status: string; joined_at?: string | null; withdrawn_at?: string | null; revoked_at?: string | null };
@@ -144,7 +146,7 @@ export function seatsLabel(s: SeatInfo | null | undefined): string {
   if (s.cap == null) return "자리 제한 없음";
   const open = s.open ?? Math.max(0, s.cap - s.used - s.reserved);
   const reserved = s.reserved > 0 ? " (일부 자리는 참여 결정 기한까지 지명 기관 몫)" : "";
-  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼습니다${reserved}`;
+  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼어요${reserved}`;
 }
 
 /** 운영자 화면용 자리 표시: 참여 수와 지명 기관 몫 수까지 적는다 */
@@ -153,7 +155,7 @@ export function seatsDetailLabel(s: SeatInfo | null | undefined): string {
   if (s.cap == null) return `자리 제한 없음 · 지금 ${s.used}곳 참여`;
   const open = s.open ?? Math.max(0, s.cap - s.used - s.reserved);
   const reserved = s.reserved > 0 ? ` (지명 기관 몫 ${s.reserved}곳 별도)` : "";
-  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼습니다${reserved}`;
+  return open > 0 ? `자리 ${s.cap}곳 중 ${open}곳 남음${reserved}` : `자리 ${s.cap}곳 모두 찼어요${reserved}`;
 }
 
 /**

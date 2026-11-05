@@ -23,7 +23,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
       <div className="ph">
         <div>
           <h1>알림</h1>
-          <p>{unread ? `읽지 않은 알림 ${unread}건` : "모두 읽었습니다"}</p>
+          <p>{unread ? `읽지 않은 알림 ${unread}건` : "모두 읽었어요"}</p>
         </div>
         {unread > 0 && (
           <div className="ph__actions">
@@ -40,8 +40,8 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
       )}
       {list.length === 0 ? (
         <div className="empty">
-          <b>알림이 없습니다</b>
-          견적 도착, 회신 마감, 계약 진행 소식이 여기에 쌓입니다.
+          <b>알림이 없어요</b>
+          견적 도착, 회신 마감, 계약 진행 소식이 여기에 쌓여요.
         </div>
       ) : (
         <div className="stack" style={{ gap: 8 }}>

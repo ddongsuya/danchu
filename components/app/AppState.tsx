@@ -1,5 +1,6 @@
 "use client";
 
+import { isKind, type Kind } from "@/lib/study-kinds";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 type Settings = { theme: "light" | "dark" | "system"; push: boolean; mail: boolean };
@@ -77,6 +78,8 @@ export type Draft = {
   values: Record<string, string | string[] | boolean | undefined>;
   files: { name: string; size: number }[];
   pendingNo?: string;
+  /** 네 갈래 중 고른 갈래 (tox·pd·pk·other). 이 값이 없던 예전 초안은 갈래를 모른다 */
+  kind?: Kind;
   /** 로그인 전 요청서: 보내기 직전 확인 창에서 받은 담당자 정보 */
   contact?: GuestContact;
   /** 로그인 전 요청서: 인증번호를 받은 뒤 서버에 맡겨 둔 요청서 */
@@ -97,7 +100,7 @@ export function loadDraft(userId: string): Draft | null {
     const d = JSON.parse(localStorage.getItem(draftKey(userId)) || "null");
     if (!d || d.version !== 2 || !Number.isInteger(d.q) || d.q < 0 || d.q > 3 || !d.values || typeof d.values !== "object" || Array.isArray(d.values)) return null;
     if (!Object.values(d.values).every((v) => typeof v === "string" || typeof v === "boolean" || (Array.isArray(v) && v.every((x) => typeof x === "string")))) return null;
-    return { ...d, files: Array.isArray(d.files) ? d.files.filter((f: { name?: unknown; size?: unknown }) => typeof f?.name === "string" && typeof f?.size === "number") : [], pendingNo: /^DC-\d{4}-\d{4,}$/.test(d.pendingNo || "") ? d.pendingNo : undefined, contact: cleanContact(d.contact), pendingToken: typeof d.pendingToken === "string" && /^[\w-]{24,64}$/.test(d.pendingToken) ? d.pendingToken : undefined };
+    return { ...d, files: Array.isArray(d.files) ? d.files.filter((f: { name?: unknown; size?: unknown }) => typeof f?.name === "string" && typeof f?.size === "number") : [], pendingNo: /^DC-\d{4}-\d{4,}$/.test(d.pendingNo || "") ? d.pendingNo : undefined, kind: isKind(d.kind) ? d.kind : undefined, contact: cleanContact(d.contact), pendingToken: typeof d.pendingToken === "string" && /^[\w-]{24,64}$/.test(d.pendingToken) ? d.pendingToken : undefined };
   } catch { return null; }
 }
 export function saveDraft(userId: string, d: Draft): boolean {

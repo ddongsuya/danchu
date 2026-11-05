@@ -7,8 +7,8 @@ declare
   i2 uuid := pg_temp.t_invite(pg_temp.t_rfq('T-EX-2'), o);
   s record;
 begin
-  perform pg_temp.t_quote(i1, 30000000);
-  perform pg_temp.t_quote(i2, 30000000);
+  perform pg_temp.t_quote(i1, 53000000);
+  perform pg_temp.t_quote(i2, 53000000);
   update public.rfq_invites set billable = false, bill_excluded_reason = '중복 요청' where id = i2;
 
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
@@ -20,7 +20,7 @@ begin
   perform pg_temp.t_eq((select bill_excluded_reason from public.billing_lines(pg_temp.t_month(0), pg_temp.t_month(1)) where invite_id = i2), '중복 요청', '제외 사유');
 
   -- 운영자 관리 기관, 운영자 대리 입력 견적
-  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-MG'), m), 15000000, now(), 'operator');
+  perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-MG'), m), 55000000, now(), 'operator');
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = m;
   perform pg_temp.t_eq(s.managed, true, '관리 기관 표시');
   perform pg_temp.t_eq(s.per_quote, 1, '관리 기관도 건당 대상');

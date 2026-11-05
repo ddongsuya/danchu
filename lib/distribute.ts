@@ -74,10 +74,10 @@ export function inviteMailTo(inv: { cro_org_id: string | null; cro_email: string
  */
 export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: string[] }> {
   const sb = getSupabaseAdmin();
-  if (!sb) throw new Error("배포 대상 기관을 조회하지 못했습니다: Supabase 환경변수가 없습니다.");
+  if (!sb) throw new Error("배포 대상 기관을 조회하지 못했어요: Supabase 환경변수가 없어요.");
   await assertSchemaReady(sb);
   const { data, error } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).order("id");
-  if (error) throw new Error(`배포 대상 기관을 조회하지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`배포 대상 기관을 조회하지 못했어요: ${error.message}`);
   const all = (data ?? []) as Org[];
   const cats = rfq.categories;
   const candidates = all.filter((o) => (o.categories ?? []).some((c) => cats.includes(c)));
@@ -86,7 +86,7 @@ export async function matchOrgs(rfq: RfqRow): Promise<{ orgs: Org[]; skipped: st
   const rows = quoteRowsFromPayload(rfq.payload);
   const keys = rows.map(rowKey);
   const { data: cat, error: catError } = await sb.from("cro_catalog").select("org_id, item_key, available").in("org_id", candidates.map((o) => o.id)).in("item_key", keys);
-  if (catError) throw new Error(`기관 카탈로그를 조회하지 못했습니다: ${catError.message}`);
+  if (catError) throw new Error(`기관 카탈로그를 조회하지 못했어요: ${catError.message}`);
   // 항목마다 조합이 여러 개: 켜진 조합이 하나라도 있으면 그 항목은 수행
   const on = new Map<string, Set<string>>();
   const has = new Map<string, Set<string>>();
@@ -149,7 +149,7 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
   // 기관별 월 전달 한도는 없다 (0020). 청구는 기관이 제출한 견적 기준이라 전달 자체에는 요금이 붙지 않는다
 
   const { data: existing, error: existingError } = await sb.from("rfq_invites").select("cro_org_id, status").eq("rfq_id", rfq.id);
-  if (existingError) throw new Error("기존 배포 현황을 확인하지 못했습니다.");
+  if (existingError) throw new Error("기존 배포 현황을 확인하지 못했어요.");
   // 같은 기관에는 두 번 안내하지 않는다 (불참·철회한 기관도 다시 안내하지 않는다)
   const already = new Set((existing ?? []).map((e) => e.cro_org_id));
   const expiresAt = inviteExpiresAt(replyBy);
@@ -205,7 +205,12 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
       } else console.warn("[danchu] 배포 메일 미발송", rfq.rfq_no, o.id);
     }
     // 참여 전에는 시험물질명을 알리지 않는다 (요약에 없는 정보, 0023)
-    await notifyUsers(memberIds, { kind: "배포", title: `새 참여 안내 · ${rfq.rfq_no}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy} · 요약을 보고 참여를 결정해 주세요.`, href: `/cro/r/${inv.id}` });
+    await notifyUsers(
+      memberIds,
+      { kind: "배포", title: `새 참여 안내 · ${rfq.rfq_no}`, body: `${rfq.categories.join(" · ")} · 회신 기한 ${replyBy} · 요약을 보고 참여를 결정해 주세요.`, href: `/cro/r/${inv.id}` },
+      undefined,
+      { kind: "invite", text: `새 참여 안내 ${rfq.rfq_no} (${rfq.categories.join(", ")}). 요약을 보고 참여를 정해 주세요. ${siteUrl()}/cro/r/${inv.id}`, dedupeKey: `invite:${inv.id}` },
+    );
   }
 
   if (res.sent) {
@@ -233,9 +238,9 @@ export async function distributeTo(rfqIn: RfqRow, orgs: Org[], replyBy: string, 
       const mail = notice === "mail" ? { to: [rfq.email] } : undefined;
       const capNote = rfq.cro_count === "전체" ? "참여한 기관" : `먼저 참여한 기관 ${rfq.cro_count}`;
       if (rfq.user_id) {
-        await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈습니다`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보냅니다. 견적이 도착하면 알려 드립니다.`, href: `/app/r/${rfq.rfq_no}` }, mail);
+        await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈어요`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보내요. 견적이 도착하면 알려요.`, href: `/app/r/${rfq.rfq_no}` }, mail);
       } else if (mail) {
-        await notifyUsers([], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈습니다`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보냅니다. 견적이 도착하면 이메일로 알려 드립니다. 진행 상황은 ${siteUrl()}/signup 에서 같은 이메일로 가입하면 볼 수 있습니다.` }, { to: [rfq.email] });
+        await notifyUsers([], { kind: "배포", title: `${rfq.rfq_no} 분야가 맞는 기관에 참여 안내를 보냈어요`, body: `${capNote}이 회신 기한 ${replyBy}까지 견적을 보내요. 견적이 도착하면 이메일로 알려요. 진행 상황은 ${siteUrl()}/signup 에서 같은 이메일로 가입하면 볼 수 있어요.` }, { to: [rfq.email] });
       }
     }
   }
@@ -272,24 +277,24 @@ export function inviteMailHtml(rfq: Pick<RfqRow, "rfq_no" | "categories" | "inte
   const cda = needsCda(rfq.confidentiality);
   const items = rfq.payload ? quoteRowsFromPayload(rfq.payload).length : 0;
   const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : "";
-  const seats = rfq.cro_count === "전체" ? "참여한 기관은 모두 견적을 쓸 수 있습니다." : `견적 자리는 ${rfq.cro_count || "3곳"}이며 먼저 참여한 순서로 찹니다.`;
-  const how = `링크에서 요약을 보고 <b>참여하기</b> 또는 <b>이번 요청 불참</b>을 눌러 주세요. 참여하시면 시험물질명, 의뢰자 설명, 첨부${opts.managed ? "" : ", 카탈로그로 채운 회신 초안"}이 열립니다. ${esc(seats)} 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다(시범 운영 중 무료). 불참해도 다음 안내에 영향이 없습니다.`;
+  const seats = rfq.cro_count === "전체" ? "참여한 기관은 모두 견적을 쓸 수 있어요." : `견적 자리는 ${rfq.cro_count || "3곳"}이며 먼저 참여한 순서로 차요.`;
+  const how = `링크에서 요약을 보고 <b>참여하기</b> 또는 <b>이번 요청 불참</b>을 눌러 주세요. 참여하시면 시험물질명, 의뢰자 설명, 첨부${opts.managed ? "" : ", 카탈로그로 채운 회신 초안"}이 열려요. ${esc(seats)} 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않아요(2027년 12월 31일까지 참여한 요청은 무료). 불참해도 다음 안내에 영향이 없어요.`;
   const guide = opts.managed
-    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 안내를 받았습니다.<br>참여는 귀 기관이 위 링크에서 직접 눌러 주셔야 합니다. 단추가 대신 참여할 수 없습니다. 참여하신 뒤에는 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시합니다. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선합니다. 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 회신 기한 전에도 비교표가 열려 회신이 닫히니 견적서는 되도록 일찍 보내 주십시오.<br>다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 안내를 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했습니다. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있습니다.`
-    : `${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보입니다.` : "로그인 없이 위 링크로 바로 열립니다."}<br>제출한 견적은 비교표가 열리기 전까지 회신 기한 안에서 수정할 수 있습니다. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열리고, 그때 회신이 닫힙니다. 의뢰자는 비교표가 열린 뒤에 기관을 선택합니다. 다른 기관은 귀 기관의 견적을 볼 수 없습니다. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
+    ? `단추는 비임상 시험 의뢰자가 여러 기관의 견적을 한곳에서 받아 비교하는 서비스이며, 귀 기관은 단추 운영자가 등록해 이 안내를 받았어요.<br>참여는 귀 기관이 위 링크에서 직접 눌러 주셔야 해요. 단추가 대신 참여할 수 없어요. 참여하신 뒤에는 링크로 로그인 없이 회신하시거나, 정식 견적서 PDF를 이 메일에 회신으로 보내 주시면 단추가 견적서 내용을 같은 양식으로 옮겨 정리하고 "단추 정리 · 기관 PDF 기준"으로 표시해요. 비교표에서는 귀 기관의 견적서 원본이 기준 문서로 함께 전달되며, 옮겨 적은 내용과 PDF가 다르면 PDF가 우선해요. 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 회신 기한 전에도 비교표가 열려 회신이 닫히니 견적서는 되도록 일찍 보내 주십시오.<br>다른 기관은 귀 기관의 견적을 볼 수 없어요. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오. 앞으로 안내를 받지 않으시려면 이 메일에 "수신 거부"라고 회신해 주세요.<br>이 메일 주소는 단추 운영자가 귀 기관이 공개한 대표 연락처를 확인해 등록했어요. 개인정보 처리 안내는 <a href="${esc(siteUrl())}/privacy">개인정보처리방침</a>에서 볼 수 있어요.`
+    : `${portal ? `로그인 없이 위 링크로 바로 열리며, 계정이 있으면 <a href="${esc(portal)}">CRO 포털</a>에서도 보여요.` : "로그인 없이 위 링크로 바로 열려요."}<br>제출한 견적은 비교표가 열리기 전까지 회신 기한 안에서 수정할 수 있어요. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열리고, 그때 회신이 닫혀요. 의뢰자는 비교표가 열린 뒤에 기관을 선택해요. 다른 기관은 귀 기관의 견적을 볼 수 없어요. 요청 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.`;
   const transition = opts.transition
-    ? `<p style="font-size:14px;padding:12px 14px;background:#F5F5F4;border-radius:6px">앞서 견적 요청으로 안내드린 요청입니다. 단추는 이제 기관이 요약을 보고 직접 참여한 요청에서만 견적을 받습니다. 견적을 보내시려면 아래 링크에서 참여하기를 먼저 눌러 주세요. 링크는 이전과 같습니다.</p>`
+    ? `<p style="font-size:14px;padding:12px 14px;background:#f4f4f0;border-radius:2px">앞서 견적 요청으로 안내드린 요청이에요. 단추는 이제 기관이 요약을 보고 직접 참여한 요청에서만 견적을 받아요. 견적을 보내시려면 아래 링크에서 참여하기를 먼저 눌러 주세요. 링크는 이전과 같아요.</p>`
     : "";
   return mailWrap(`
       <h2 style="margin:0 0 12px;font-size:20px">[단추] 견적 요청 참여 안내 · ${esc(rfq.rfq_no)}</h2>${transition}
       <p><b>${esc(maskedClientLabel(rfq.org_type))}</b><br>
       시험 분야: ${esc(rfq.categories.join(", "))}${items ? ` · 시험 항목 ${items}건` : ""}<br>
       요청 성격: ${esc(rfq.intent || "-")} · 기밀 등급: ${esc(rfq.confidentiality || "일반")}${cda ? " (첨부는 CDA 체결 확인 후)" : ""}</p>
-      <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b>${joinBy ? ` · 참여 결정 기한 ${esc(joinBy)}` : ""} · 링크는 회신 기한 +7일까지 열립니다.</p>
-      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#246457;color:#fcfdfb;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">${INVITE_MAIL_ACTION}</a></p>
+      <p style="font-size:15px"><b>회신 기한 ${esc(replyBy)}</b>${joinBy ? ` · 참여 결정 기한 ${esc(joinBy)}` : ""} · 링크는 회신 기한 +7일까지 열려요.</p>
+      <p style="margin:24px 0"><a href="${esc(link)}" style="display:inline-block;background:#1b1b19;color:#f4f4f0;text-decoration:none;padding:13px 22px;border-radius:2px;font-weight:600">${INVITE_MAIL_ACTION}</a></p>
       <p style="font-size:14px">${how}</p>
-      <p style="font-size:13px;color:#6F6A63">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개됩니다.</p>
-      <p style="font-size:13px;color:#6F6A63">${guide}</p>`);
+      <p style="font-size:13px;color:#61615c">의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 귀 기관을 선정하면 공개돼요.</p>
+      <p style="font-size:13px;color:#61615c">${guide}</p>`);
 }
 
 /**
@@ -338,9 +343,9 @@ export async function autoDistribute(rfq: RfqRow, opts: { notifyRequester?: bool
   if (nominees.length) {
     const sb = getSupabaseAdmin();
     // 지명 목록(/api/orgs)에 운영자 관리 기관은 나오지 않는다. 이름이 같아도 여기서 다시 거른다
-    if (!sb) throw new Error("지명 기관을 조회하지 못했습니다: Supabase 환경변수가 없습니다.");
+    if (!sb) throw new Error("지명 기관을 조회하지 못했어요: Supabase 환경변수가 없어요.");
     const { data, error } = await sb.from("cro_orgs").select(ORG_COLUMNS).eq("status", "approved").eq("managed", false).in("name", nominees);
-    if (error) throw new Error(`지명 기관을 조회하지 못했습니다: ${error.message}`);
+    if (error) throw new Error(`지명 기관을 조회하지 못했어요: ${error.message}`);
     nominated = (data ?? []) as Org[];
     if (nominated.length) first = await distributeTo(rfq, nominated, replyBy, null, true, "nominated", notice);
   }
@@ -375,19 +380,19 @@ export async function distributeOpenRfqs(orgId?: string, actorId: string | null 
   if (!sb) return out;
   const today = nowSeoul().toLocaleDateString("sv-SE");
   const { data, error } = await sb.from("rfq_requests").select("*").in("status", ["received", "distributed", "quoted"]).order("created_at");
-  if (error) throw new Error(`열린 요청을 조회하지 못했습니다: ${error.message}`);
+  if (error) throw new Error(`열린 요청을 조회하지 못했어요: ${error.message}`);
   // 아직 배포된 적 없는 요청은 접수 후 30일 이내인 것만 살린다 (기관이 없어 기다리던 요청)
   const fresh = new Date(Date.now() - 30 * 864e5).toISOString();
   let list = (data ?? []).filter((r) => (r.status === "received" ? r.created_at >= fresh : true));
   if (orgId) {
     // 화면을 열 때마다 불리므로, 이 기관이 받을 것이 있는지부터 가볍게 거른다
     const { data: org, error: orgError } = await sb.from("cro_orgs").select("status, categories, managed").eq("id", orgId).maybeSingle();
-    if (orgError) throw new Error(`기관을 조회하지 못했습니다: ${orgError.message}`);
+    if (orgError) throw new Error(`기관을 조회하지 못했어요: ${orgError.message}`);
     // 운영자 관리 기관은 자동 보충하지 않는다 (matchOrgs 와 같은 규칙)
     if (!org || org.status !== "approved" || org.managed) return out;
     const cats = (org.categories ?? []) as string[];
     const { data: inv, error: invError } = await sb.from("rfq_invites").select("rfq_id").eq("cro_org_id", orgId);
-    if (invError) throw new Error(`기관의 기존 배포를 조회하지 못했습니다: ${invError.message}`);
+    if (invError) throw new Error(`기관의 기존 배포를 조회하지 못했어요: ${invError.message}`);
     const invited = new Set((inv ?? []).map((i) => i.rfq_id as string));
     list = list.filter((r) => !invited.has(r.id) && r.categories.some((c) => cats.includes(c)));
   }

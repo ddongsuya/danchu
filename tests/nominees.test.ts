@@ -34,7 +34,7 @@ vi.mock("@/lib/supabase", () => {
   return {
     getSupabaseAdmin: () => ({
       from: builder,
-      rpc: async (name: string) => (name === "next_rfq_no" ? { data: "DC-2026-0100", error: null } : name === "danchu_schema_version" ? { data: 29, error: null } : { data: null, error: null }),
+      rpc: async (name: string) => (name === "next_rfq_no" ? { data: "DC-2026-0100", error: null } : name === "danchu_schema_version" ? { data: 34, error: null } : { data: null, error: null }),
       storage: { from: () => ({ createSignedUploadUrl: async () => ({ data: { signedUrl: "https://x" }, error: null }) }) },
     }),
   };
@@ -90,8 +90,8 @@ describe("받을 견적 수와 지명 안내 문구 (0023)", () => {
     expect(validateRequired({ ...DEFAULT_VALUES, company: "의뢰사", name: "김담당", email: "x@example.com", croCount: "10곳" })).toBe("받을 견적 수를 선택해 주세요.");
   });
   it("지명 안내는 참여 결정 기한까지 자리를 비워 두고, 불참·미결정이면 다른 기관에 돌아간다고 적는다", () => {
-    expect(nomineeStep.sub).toContain("참여 결정 기한까지 비워 둡니다");
-    expect(nomineeStep.sub).toContain("먼저 참여한 다른 기관에 돌아갑니다");
+    expect(nomineeStep.sub).toContain("참여 결정 기한까지 비워 둬요");
+    expect(nomineeStep.sub).toContain("먼저 참여한 다른 기관에 돌아가요");
     expect(nomineeStep.sub).not.toContain("먼저 전달");
   });
   it("'지명 기관에만 안내'는 지명 단계의 선택 체크박스이고 기본은 꺼져 있다", () => {

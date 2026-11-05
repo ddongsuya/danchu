@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
-import { adjustmentsByOrg, CLOSED_MONTH_NOTE, CONFIRM_VIA_LABEL, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_PER_QUOTE_FEE, REFERENCE_SUCCESS_RATE, REFERENCE_UNIT_LABEL, referenceTotals, signedWon, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
+import { adjustmentsByOrg, CLOSED_MONTH_NOTE, CONFIRM_VIA_LABEL, monthRangeOf, rateLabel, PAID_FROM, PILOT_FROM, REFERENCE_LABEL, REFERENCE_SOURCE_LABEL, referenceTotals, SUBSCRIPTION_FEE, signedWon, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
 import { BillingClose } from "@/components/admin/BillingClose";
 import { BillingAdjustmentForm } from "@/components/admin/BillingAdjustmentForm";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -18,7 +18,7 @@ const cardHead = { padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, colo
 
 /**
  * 월별 청구 명세 (0020 기준). 청구 단위는 기관이 제출한 견적 1건이고, 그 견적을 처음 제출한 달에 한 번 센다.
- * 1,000만 원 미만은 월 구독료, 1,000만 원 이상은 건당 이용료, 선정 견적 5,000만 원 이상이 체결되면 계약 금액 기준 성사수수료.
+ * 요금표(0031): 5,000만 원 미만은 월 구독료, 5,000만 원 이상은 견적서 송부 비용, 선정 견적 5,000만 원 이상이 계약 확정되면 계약 금액 × 구간 요율의 성사 수수료.
  * 마감한 달은 마감 때 저장한 명세(billing_periods.snapshot)를 보여 준다. 마감한 달은 다시 열 수 없고(0024), 돌려드릴 금액은
  * 다음 열린 달에 조정 항목으로 넣는다. 시범 기간 참고 수치("유료였다면")는 따로 보여 주고 합계에 넣지 않는다.
  * 아래 표는 우회 거래의 신호도 보여 준다: 기관별 선정률이 유독 낮거나, 의뢰자가 선정 없이 마무리한 요청이 특정 기관에 몰리면 확인한다.
@@ -87,17 +87,17 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <BillingClose month={r.from.slice(0, 7)} closed={closed} ended={ended} />
         </div>
       </div>
-      <div className="note note--tint" style={{ marginBottom: 12 }}>시범운영 기간에는 기관에 청구하지 않습니다(이용약관 제5조3항). 이 화면의 금액은 참고 집계이며, 금액은 기관과 서면으로 합의한 뒤에 적용합니다.</div>
+      <div className="note note--tint" style={{ marginBottom: 12 }}>{`청구는 ${PAID_FROM}부터 시작합니다. 그 전에 참여한 요청(시범 운영 ${PILOT_FROM} ~ 2027-12-31 포함)은 끝까지 청구하지 않으며, 아래 참고 수치로만 셉니다(이용약관 제5조3항).`}</div>
       {/* 청구 규칙 전문은 접어 둔다 (2026-10-31, 휴대폰에서 첫 화면을 다 덮던 문단) */}
       <details className="cat-more" style={{ marginBottom: 16 }}>
       <summary>청구 규칙 보기</summary>
       <p style={{ ...muted, fontSize: 13, lineHeight: 1.6, margin: "8px 0 0", maxWidth: "75ch" }}>
-        기관이 직접 참여한 요청에 제출한 견적만 청구합니다. 참여 기록이 없는 견적, 시범 운영 조건 판으로 참여한 요청의 견적과 성사수수료, 요청을 받고 견적을 내지 않은 기관, 금액이 입력되지 않은 견적은 청구하지 않습니다. 기관이 참여한 뒤 운영자가 옮겨 적은 견적은 기관이 직접 낸 견적과 같게 셉니다. 금액 없이 제출된 견적은 나중에 금액이 들어온 달에 청구합니다. 견적 총액(부가세 별도) 1,000만 원 미만은 월 구독료에 포함되고, 1,000만 원 이상은 건당 이용료, 선정 견적이 5,000만 원 이상이고 단추를 통해 계약이 체결되면 계약 금액 기준 성사수수료를 더합니다. 같은 초대의 재제출·수정은 처음 제출한 달에 한 번만 셉니다. 월 구독료는 구독 시작 월부터 이번 달까지만 나옵니다.
+        기관이 직접 참여한 요청에 제출한 견적만 청구합니다. 참여 기록이 없는 견적, 시범 운영 조건 판으로 참여한 요청의 견적과 성사 수수료, 요청을 받고 견적을 내지 않은 기관, 금액이 입력되지 않은 견적은 청구하지 않습니다. 기관이 참여한 뒤 운영자가 옮겨 적은 견적은 기관이 직접 낸 견적과 같게 셉니다. 금액 없이 제출된 견적은 나중에 금액이 들어온 달에 청구합니다. 견적 총액(부가세 별도) 5,000만 원 미만은 월 구독료에 포함됩니다. 5,000만 원 이상은 견적서 송부 비용(5,000만 ~ 9,999만 원 30,000원, 1억 원 이상 50,000원)을 받고, 단추를 통해 계약이 확정되면 선정 견적 구간의 요율(2%, 5%, 5억 원 이상 7%)을 계약 금액에 곱한 성사 수수료를 더합니다. 기관에 특별 조건을 넣었으면 그 값을 씁니다. 같은 초대의 재제출·수정은 처음 제출한 달에 한 번만 셉니다. 월 구독료(기준 {comma(SUBSCRIPTION_FEE)}원)는 구독 시작 월부터, 청구 시작 월 이후 이번 달까지만 나옵니다.
       </p>
       </details>
       {closed && (
         <div className="note note--ok" style={{ marginBottom: 12 }}>
-          {snap ? `이 달은 마감되었습니다. ${ymd(snap.taken_at)} 마감 때 저장한 명세를 보여 줍니다.` : "이 달은 마감되었습니다."} {CLOSED_MONTH_NOTE}
+          {snap ? `이 달은 마감되었습니다. ${ymd(snap.taken_at)} 마감 때 저장한 명세를 보여 줍니다.` : "이 달은 마감되었습니다."} {CLOSED_MONTH_NOTE} <Link href={`/admin/invoices?month=${r.from.slice(0, 7)}`}>이 달 청구서 보기</Link>
         </div>
       )}
       {drifted && <div className="note note--warn" style={{ marginBottom: 12 }}>마감 뒤 바뀐 값이 있습니다(단가, 견적 금액, 체결 정정 등). 마감한 명세는 바꾸지 않습니다. 바로잡을 금액은 다음 달 명세에 조정 항목으로 넣습니다.</div>}
@@ -114,11 +114,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               <tr>
                 <th>기관</th>
                 <th className="tnum">회신 견적 (청구 대상)</th>
-                <th className="tnum">1,000만 원 미만 (구독)</th>
-                <th className="tnum">건당 이용료 대상</th>
-                <th className="tnum">건당 이용료 합계</th>
-                <th className="tnum">성사수수료 예상 (견적 기준)</th>
-                <th className="tnum">성사수수료 정산 (계약 기준, 계약 확정분)</th>
+                <th className="tnum">5,000만 원 미만 (구독)</th>
+                <th className="tnum">송부 비용 대상</th>
+                <th className="tnum">송부 비용 합계</th>
+                <th className="tnum">성사 수수료 예상 (견적 기준)</th>
+                <th className="tnum">성사 수수료 정산 (계약 기준, 계약 확정분)</th>
                 <th className="tnum">월 구독료</th>
                 <th className="tnum">조정</th>
                 <th className="tnum">합계</th>
@@ -202,7 +202,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <p className="empty">이 달에 처음 제출된 견적이 없습니다.</p>
         ) : (
           <table className="tbl tbl--stack">
-            <thead><tr><th>요청</th><th>처음 제출</th><th>기관</th><th className="tnum">견적 금액</th><th>구간</th><th className="tnum">건당 이용료</th><th>청구</th></tr></thead>
+            <thead><tr><th>요청</th><th>처음 제출</th><th>기관</th><th className="tnum">견적 금액</th><th>구간</th><th className="tnum">송부 비용</th><th>청구</th></tr></thead>
             <tbody>
               {view.lines.map((l) => (
                 <tr key={l.quote_id}>
@@ -211,7 +211,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td data-label="기관">{l.org_name}{l.entry_source === "operator" && <span style={{ ...muted, display: "block" }}>운영자 대리 입력</span>}{l.auto && <span style={{ ...muted, display: "block" }}>예비 견적 (자동 회신)</span>}{joinStatusNote(l.join_status) && <span style={{ ...muted, display: "block" }}>{joinStatusNote(l.join_status)}</span>}</td>
                   <td className="tnum" data-label="견적 금액">{l.total_amount ? won(l.total_amount) : <span style={muted}>금액 미입력</span>}</td>
                   <td data-label="구간" style={{ fontSize: 12 }}>{TIER_LABEL[l.tier] ?? l.tier}</td>
-                  <td className="tnum" data-label="건당 이용료">{l.chargeable ? wonOrPending(l.fee_due, comma, "단가 미정") : "-"}</td>
+                  <td className="tnum" data-label="송부 비용">{l.chargeable ? wonOrPending(l.fee_due, comma, "단가 미정") : "-"}</td>
                   <td data-label="청구" className="tbl__act"><BillableToggle inviteId={l.invite_id} billable={l.billable} reason={l.bill_excluded_reason} locked={closed} /></td>
                 </tr>
               ))}
@@ -221,9 +221,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="card tbl-wrap" style={{ marginBottom: 20 }}>
-        <div style={cardHead}>성사수수료 · 선정 견적 5,000만 원 이상만. 예상은 이 달 선정분(선정 견적 × 요율, 안내용), 정산은 이 달 계약 확정분(확정된 계약 금액 × 요율. 의뢰자 확인 또는 보고 7일 뒤 자동 확정)</div>
+        <div style={cardHead}>성사 수수료 · 선정 견적 5,000만 원 이상만. 예상은 이 달 선정분(선정 견적 × 요율, 안내용), 정산은 이 달 계약 확정분(확정된 계약 금액 × 요율. 의뢰자 확인 또는 보고 7일 뒤 자동 확정)</div>
         {guidance.length + settled.length === 0 ? (
-          <p className="empty">이 달에 해당하는 성사수수료가 없습니다.</p>
+          <p className="empty">이 달에 해당하는 성사 수수료가 없습니다.</p>
         ) : (
           <table className="tbl tbl--stack">
             <thead><tr><th>요청</th><th>구분</th><th>기관</th><th className="tnum">선정 견적</th><th className="tnum">계약 금액</th><th>계약 상태</th><th className="tnum">요율</th><th className="tnum">수수료</th></tr></thead>
@@ -249,7 +249,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <h2 id="ref-head" style={{ ...cardHead, margin: 0 }}>{REFERENCE_LABEL} · 유료였다면</h2>
         <p className="billref__lead">
           시범 판이나 참여 기능 도입 전(legacy)에 참여해 청구하지 않은 견적과 체결을, 유료였다면 얼마였을지 셉니다. 합계, 명세, 청구서에는 넣지 않습니다.
-          기관 약정 값이 없으면 {REFERENCE_UNIT_LABEL}를 씁니다: 건당 {comma(REFERENCE_PER_QUOTE_FEE)}, 성사수수료 {rateLabel(REFERENCE_SUCCESS_RATE)}. 월 구독료는 정하지 않아 1,000만 원 미만 견적은 건수만 셉니다.
+          기관 특별 조건이 없으면 요금표로 셉니다. 5,000만 원 미만 견적은 월 구독료에 들어가므로 건수만 셉니다.
           {referenceLive ? " 이 달 저장본에는 참고 수치가 없어(0024 전 마감) 지금 집계로 보여 줍니다." : ""}
         </p>
         {refFailed ? (
@@ -261,25 +261,25 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             <thead>
               <tr>
                 <th>기관</th>
-                <th className="tnum">1,000만 원 미만 (구독 구간)</th>
-                <th className="tnum">건당 이용료 대상</th>
-                <th className="tnum">건당 이용료 (참고)</th>
+                <th className="tnum">5,000만 원 미만 (구독 구간)</th>
+                <th className="tnum">송부 비용 대상</th>
+                <th className="tnum">송부 비용 (참고)</th>
                 <th className="tnum">체결 (5,000만 원 이상)</th>
-                <th className="tnum">성사수수료 (참고)</th>
+                <th className="tnum">성사 수수료 (참고)</th>
               </tr>
             </thead>
             <tbody>
               {reference.map((x) => (
                 <tr key={x.org_id}>
                   <td><Link href={`/admin/cros/${x.org_id}`}>{x.org_name}</Link></td>
-                  <td className="tnum" data-label="1,000만 원 미만 (구독 구간)">{x.subscription_count ? `${x.subscription_count}건` : "-"}</td>
-                  <td className="tnum" data-label="건당 이용료 대상">{x.per_quote_count ? `${x.per_quote_count}건` : "-"}</td>
-                  <td className="tnum" data-label="건당 이용료 (참고)">
-                    {x.per_quote_count ? <>{comma(x.per_quote_fee)}<span style={{ ...muted, display: "block" }}>{x.per_quote_unit_source === "org" ? "기관 단가" : "참고 단가"} {comma(x.per_quote_unit)} × {x.per_quote_count}</span></> : "-"}
+                  <td className="tnum" data-label="5,000만 원 미만 (구독 구간)">{x.subscription_count ? `${x.subscription_count}건` : "-"}</td>
+                  <td className="tnum" data-label="송부 비용 대상">{x.per_quote_count ? `${x.per_quote_count}건` : "-"}</td>
+                  <td className="tnum" data-label="송부 비용 (참고)">
+                    {x.per_quote_count ? <>{comma(x.per_quote_fee)}<span style={{ ...muted, display: "block" }}>{x.per_quote_unit_source === "schedule" ? `요금표 · ${x.per_quote_count}건` : `${REFERENCE_SOURCE_LABEL[x.per_quote_unit_source]} ${comma(x.per_quote_unit)} × ${x.per_quote_count}`}</span></> : "-"}
                   </td>
                   <td className="tnum" data-label="체결 (5,000만 원 이상)">{x.success_count ? <>{x.success_count}건<span style={{ ...muted, display: "block" }}>계약 {won(x.success_contract_amount)}</span></> : "-"}</td>
-                  <td className="tnum" data-label="성사수수료 (참고)">
-                    {x.success_count ? <>{comma(x.success_fee)}<span style={{ ...muted, display: "block" }}>{x.success_rate_source === "org" ? "기관 요율" : "참고 요율"} {rateLabel(x.success_rate)}</span></> : "-"}
+                  <td className="tnum" data-label="성사 수수료 (참고)">
+                    {x.success_count ? <>{comma(x.success_fee)}<span style={{ ...muted, display: "block" }}>{x.success_rate_source === "schedule" ? "요금표 구간 요율" : `${REFERENCE_SOURCE_LABEL[x.success_rate_source]} ${rateLabel(x.success_rate)}`}</span></> : "-"}
                   </td>
                 </tr>
               ))}

@@ -36,7 +36,7 @@ export const KINDS: Record<Kind, KindInfo> = {
     lead: "시험물질을 투여했을 때 나타나는 독성을 확인해요. 알고 있는 조건만 입력하세요.",
     cats: TOX_CATS,
     paths: [
-      { title: "필요한 시험 찾아보기", desc: "개발 상황을 고르면 해당하는 가이드라인 기준을 보여드려요.", ex: "개발 단계, 자료 제출처, 임상 투여경로와 기간", href: "/request/new?start=advisor" },
+      { title: "필요한 시험 찾아보기", desc: "개발 상황을 고르면 해당하는 가이드라인 기준을 보여요.", ex: "개발 단계, 자료 제출처, 임상 투여경로와 기간", href: "/request/new?start=advisor" },
       { title: "시험 직접 고르기", desc: "필요한 시험을 알고 계시면 바로 요청서를 쓰세요.", ex: TOX_CATS.join(" · "), href: "/request/new?start=manual&kind=tox" },
     ],
     elsewhere: [

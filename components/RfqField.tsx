@@ -239,13 +239,13 @@ function FileDrop({
     if (!list || !onFiles) return;
     const incoming = Array.from(list);
     const tooBig = incoming.filter((f) => f.size > MAX_FILE_MB * 1024 * 1024);
-    setWarn(tooBig.length ? `${MAX_FILE_MB}MB를 넘는 파일은 제외했습니다: ${tooBig.map((f) => f.name).join(", ")}` : "");
+    setWarn(tooBig.length ? `${MAX_FILE_MB}MB를 넘는 파일은 제외했어요: ${tooBig.map((f) => f.name).join(", ")}` : "");
     const ok = incoming.filter((f) => f.size > 0 && f.size <= MAX_FILE_MB * 1024 * 1024 && /\.(pdf|png|jpe?g|docx?|xlsx?|hwp)$/i.test(f.name));
-    if (ok.length !== incoming.length) setWarn("지원하지 않는 형식, 빈 파일 또는 20MB 초과 파일은 제외했습니다.");
+    if (ok.length !== incoming.length) setWarn("지원하지 않는 형식, 빈 파일 또는 20MB 초과 파일은 제외했어요.");
     const merged = [...files, ...ok].filter(
       (f, i, a) => a.findIndex((x) => x.name === f.name && x.size === f.size) === i
     );
-    if (merged.length > 10) setWarn("첨부는 최대 10개입니다. 초과한 파일은 제외했습니다.");
+    if (merged.length > 10) setWarn("첨부는 최대 10개예요. 초과한 파일은 제외했어요.");
     onFiles(merged.slice(0, 10));
   };
 

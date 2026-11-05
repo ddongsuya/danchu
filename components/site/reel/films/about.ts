@@ -66,7 +66,7 @@ export function about(cv: HTMLDivElement, P: boolean): Tl {
       box(el(d, "rl-hd", "RE: 견적 회신드립니다", { fontSize: px(P ? 13 : 14) }), 12, 12);
       box(el(d, "rl-rule"), 12, 38, dw - 24);
       bars(d, 12, [52, 70], [dw - 50, dw - 80], 7);
-      box(el(d, "rl-num", "총 3.45억 원입니다", { fontSize: px(P ? 13 : 14) }), 12, 90);
+      box(el(d, "rl-num", "총 3.45억 원이에요", { fontSize: px(P ? 13 : 14) }), 12, 90);
       bars(d, 12, [118], [dw - 100], 7);
     }
     return d;

@@ -98,7 +98,8 @@ declare
   core text[] := array[
     'public.save_quote(uuid, jsonb, jsonb, boolean, uuid, text)',
     'public.select_quote(uuid, uuid, uuid, integer)',
-    'public.report_contract(uuid, date, bigint, text, boolean)',
+    'public.report_contract(uuid, date, bigint, text, boolean, text)',
+    'public.sponsor_report_contract(uuid, uuid, text, bigint, date, text)',
     'public.revoke_invite(uuid, text)',
     'public.rotate_org_invite_tokens(uuid)',
     'public.claim_rfqs_by_email(uuid, text)',
@@ -187,5 +188,5 @@ begin
   v := public.danchu_schema_version();
   reset role;
   perform pg_temp.t_eq(res->>'code', 'not_found', 'service_role 은 select_quote 를 실행한다');
-  perform pg_temp.t_eq(v, 29, 'service_role 은 스키마 판을 읽는다');
+  perform pg_temp.t_eq(v, 34, 'service_role 은 스키마 판을 읽는다');
 end $$;

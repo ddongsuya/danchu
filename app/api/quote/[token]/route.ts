@@ -35,7 +35,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
   const { token } = await ctx.params;
   const a = await actorOf();
   const got = await load(token, loadOptsFor(a?.role));
-  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
+  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
   // 참여 전(joined false)에는 rfq 가 요약이고 draft 는 null 이다 (lib/quote-load.ts rfqSummaryOf)
   // canRejoin: 참여 전 불참을 참여 결정 기한 전에 되돌릴 수 있는지 (2026-10-20 결정 3). 철회(withdrawn)는 되돌릴 수 없다
   return NextResponse.json({
@@ -45,7 +45,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
     locked: got.locked,
     declined: got.declined,
     closed: got.closed,
-    closedMessage: got.closed ? closedMessage(got.closedReason) : "",
+    closedMessage: got.closed ? closedMessage(got.closedReason, { submitted: got.draft?.status === "submitted" }) : "",
     joined: got.joined,
     withdrawn: got.withdrawn,
     canRejoin: got.canRejoin,
@@ -53,19 +53,19 @@ export async function GET(_req: Request, ctx: { params: Promise<{ token: string 
   });
 }
 
-const LINK_GONE = "유효하지 않거나 만료된 링크입니다.";
+const LINK_GONE = "유효하지 않거나 만료된 링크예요.";
 
 /** save_quote 가 잠금 뒤 재검사에서 거절한 이유 (0021, 0023, 0025). closed 는 지금 닫힌 이유로 따로 안내한다 */
 const SAVE_DENIED: Record<string, { error: string; status: number }> = {
-  revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(hello@danchu.kr)에서 새 링크를 받아 주세요.`, status: 403 },
-  expired: { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 },
-  declined: { error: "불참으로 처리한 요청이라 저장할 수 없습니다. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있습니다.", status: 403 },
-  org_inactive: { error: "기관 참여가 중지되어 저장할 수 없습니다. 단추(hello@danchu.kr)에 문의해 주세요.", status: 403 },
-  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관 견적을 저장할 수 없습니다. 이 기관의 견적이라면 로그아웃한 뒤 메일의 링크로 다시 열어 회신해 주세요.", status: 403 },
+  revoked: { error: `${LINK_GONE} 받은 요청 화면이나 단추(limjm900202@gmail.com)에서 새 링크를 받아 주세요.`, status: 403 },
+  expired: { error: "링크가 만료됐어요. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 },
+  declined: { error: "불참으로 처리한 요청이라 저장할 수 없어요. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있어요.", status: 403 },
+  org_inactive: { error: "기관 참여가 중지되어 저장할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 403 },
+  not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관 견적을 저장할 수 없어요. 이 기관의 견적이라면 로그아웃한 뒤 메일의 링크로 다시 열어 회신해 주세요.", status: 403 },
   // 0023: 기관 본인이 참여하기를 누르기 전에는 기관도 운영자(대리 입력)도 저장할 수 없다
-  not_joined: { error: "기관이 이 요청에 참여한 뒤에 견적을 저장할 수 있습니다. 요청 화면에서 참여하기를 먼저 눌러 주세요.", status: 409 },
+  not_joined: { error: "기관이 이 요청에 참여한 뒤에 견적을 저장할 수 있어요. 요청 화면에서 참여하기를 먼저 눌러 주세요.", status: 409 },
   // 철회는 되돌릴 수 없다 (2026-10-20 결정 3)
-  withdrawn: { error: "참여를 철회한 요청입니다. 철회한 요청에는 다시 참여하거나 견적을 낼 수 없습니다.", status: 403 },
+  withdrawn: { error: "참여를 철회한 요청이에요. 철회한 요청에는 다시 참여하거나 견적을 낼 수 없어요.", status: 403 },
 };
 
 /**
@@ -74,14 +74,14 @@ const SAVE_DENIED: Record<string, { error: string; status: number }> = {
  * DB(save_quote)도 같은 규칙으로 다시 거절한다. 여기서는 화면 검사와 문구를 맡는다
  */
 function blocked(got: Loaded): { error: string; status: number } | null {
-  if (got.expired) return { error: "링크가 만료되었습니다. 단추(hello@danchu.kr)에 연장을 요청해 주세요.", status: 403 };
-  if (got.locked) return { error: "회신 기한이 지나 제출한 견적을 수정할 수 없습니다.", status: 403 };
+  if (got.expired) return { error: "링크가 만료됐어요. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 };
+  if (got.locked) return { error: "회신 기한이 지나 제출한 견적을 수정할 수 없어요.", status: 403 };
   if (got.closed) return { error: closedMessage(got.closedReason), status: 403 };
   if (got.withdrawn) return SAVE_DENIED.withdrawn;
   if (got.declined) {
     return got.canRejoin
-      ? { error: "불참으로 처리한 요청입니다. 다시 참여하면 견적을 쓸 수 있습니다. 요청 화면에서 참여하기를 눌러 주세요.", status: 409 }
-      : { error: "불참으로 처리한 요청입니다. 참여 결정 기한이 지나 다시 참여할 수 없습니다.", status: 403 };
+      ? { error: "불참으로 처리한 요청이에요. 다시 참여하면 견적을 쓸 수 있어요. 요청 화면에서 참여하기를 눌러 주세요.", status: 409 }
+      : { error: "불참으로 처리한 요청이에요. 참여 결정 기한이 지나 다시 참여할 수 없어요.", status: 403 };
   }
   if (!proxyEntryAllowed(got)) return got.operator ? { error: PROXY_BEFORE_JOIN, status: 409 } : SAVE_DENIED.not_joined;
   return null;
@@ -120,29 +120,29 @@ function cleanDesign(d: Record<string, unknown>): Record<string, unknown> {
 function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   const b = (raw ?? {}) as { items?: unknown; note?: unknown; common?: unknown; pdf?: unknown; steps?: unknown };
   const items = Array.isArray(b.items) ? (b.items as ReplyItem[]) : [];
-  if (items.length !== rows.length) return "항목 수가 요청서와 다릅니다.";
+  if (items.length !== rows.length) return "항목 수가 요청서와 달라요.";
   const seqs = new Set(rows.map((r) => r.seq));
   // 일정 단계 (0029): 101부터, 이름·주수·앞 단계만
   const rawSteps = Array.isArray(b.steps) ? (b.steps as unknown[]) : [];
-  if (rawSteps.length > MAX_STEPS) return `일정 단계는 ${MAX_STEPS}개까지 넣을 수 있습니다.`;
+  if (rawSteps.length > MAX_STEPS) return `일정 단계는 ${MAX_STEPS}개까지 넣을 수 있어요.`;
   const steps: ScheduleStep[] = [];
   for (const x of rawSteps) {
     const st = (x ?? {}) as Partial<ScheduleStep>;
-    if (typeof st.seq !== "number" || !Number.isInteger(st.seq) || st.seq < STEP_SEQ_BASE || st.seq >= STEP_SEQ_BASE + 100 || steps.some((y) => y.seq === st.seq)) return "일정 단계 번호가 올바르지 않습니다.";
+    if (typeof st.seq !== "number" || !Number.isInteger(st.seq) || st.seq < STEP_SEQ_BASE || st.seq >= STEP_SEQ_BASE + 100 || steps.some((y) => y.seq === st.seq)) return "일정 단계 번호가 올바르지 않아요.";
     const name = typeof st.name === "string" ? st.name.trim().slice(0, 60) : "";
     const weeks = typeof st.weeks === "string" ? st.weeks.trim() : "";
-    if (weeks && !/^\d{1,3}$/.test(weeks)) return "일정 단계 기간은 주 단위 숫자만 입력합니다.";
+    if (weeks && !/^\d{1,3}$/.test(weeks)) return "일정 단계 기간은 주 단위 숫자만 입력해요.";
     steps.push({ seq: st.seq, name, weeks, after: Array.isArray(st.after) ? st.after.filter((n): n is number => typeof n === "number") : [] });
   }
   const known = new Set([...seqs, ...steps.map((st) => st.seq)]);
   const cleanAfter = (self: number, v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((n): n is number => typeof n === "number" && known.has(n) && n !== self))].slice(0, 20) : []);
   for (const st of steps) st.after = cleanAfter(st.seq, st.after);
   for (const it of items) {
-    if (!it || typeof it !== "object" || !seqs.has(it.seq)) return "항목 번호가 요청서와 다릅니다.";
-    if (!["", "가능", "조건부 가능", "불가"].includes(it.avail)) return "수행 가능 여부 값이 올바르지 않습니다.";
-    if (it.amount && !/^\d{1,13}$/.test(it.amount)) return "금액은 숫자만 입력합니다.";
-    if (it.weeks && !/^\d{1,3}$/.test(it.weeks)) return "기간은 주 단위 숫자만 입력합니다.";
-    if (it.reason != null && typeof it.reason !== "string") return "사유 형식이 올바르지 않습니다.";
+    if (!it || typeof it !== "object" || !seqs.has(it.seq)) return "항목 번호가 요청서와 달라요.";
+    if (!["", "가능", "조건부 가능", "불가"].includes(it.avail)) return "수행 가능 여부 값이 올바르지 않아요.";
+    if (it.amount && !/^\d{1,13}$/.test(it.amount)) return "금액은 숫자만 입력해요.";
+    if (it.weeks && !/^\d{1,3}$/.test(it.weeks)) return "기간은 주 단위 숫자만 입력해요.";
+    if (it.reason != null && typeof it.reason !== "string") return "사유 형식이 올바르지 않아요.";
     if (typeof it.reason === "string") it.reason = it.reason.slice(0, 500);
     // 설계·출처·단가 (카탈로그 초안에서 오거나 CRO가 수정)
     it.design = it.design && typeof it.design === "object" && !Array.isArray(it.design) ? cleanDesign(it.design) : {};
@@ -153,8 +153,8 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
     if (it.unit === "per_sample" && it.unitPrice && it.sampleCount) it.amount = String(Number(it.unitPrice) * Number(it.sampleCount));
     it.checks = Array.isArray(it.checks) ? it.checks.filter((x): x is string => typeof x === "string").slice(0, 30).map((x) => x.slice(0, 200)) : [];
     it.design.reviewChecks = it.checks;
-    if (it.reportWeeks && !/^\d{1,3}$/.test(it.reportWeeks)) return "최종보고서까지 기간은 주 단위 숫자만 입력합니다.";
-    if (it.translationWeeks && !/^\d{1,3}$/.test(it.translationWeeks)) return "번역 기간은 주 단위 숫자만 입력합니다.";
+    if (it.reportWeeks && !/^\d{1,3}$/.test(it.reportWeeks)) return "최종보고서까지 기간은 주 단위 숫자만 입력해요.";
+    if (it.translationWeeks && !/^\d{1,3}$/.test(it.translationWeeks)) return "번역 기간은 주 단위 숫자만 입력해요.";
     it.reportWeeks = typeof it.reportWeeks === "string" ? it.reportWeeks : "";
     it.translationWeeks = typeof it.translationWeeks === "string" ? it.translationWeeks : "";
     it.afterSeqs = cleanAfter(it.seq, it.afterSeqs);
@@ -172,8 +172,8 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   let pdf: PdfRef | undefined;
   if (b.pdf && typeof b.pdf === "object") {
     const p = b.pdf as Partial<PdfRef>;
-    if (typeof p.path !== "string" || typeof p.name !== "string" || typeof p.size !== "number") return "PDF 정보가 올바르지 않습니다.";
-    if (p.size > MAX_PDF) return "PDF는 20MB 이하만 첨부할 수 있습니다.";
+    if (typeof p.path !== "string" || typeof p.name !== "string" || typeof p.size !== "number") return "PDF 정보가 올바르지 않아요.";
+    if (p.size > MAX_PDF) return "PDF는 20MB 이하만 첨부할 수 있어요.";
     pdf = { path: p.path, name: p.name.slice(0, 200), size: p.size };
   }
   return { items, note: typeof b.note === "string" ? b.note.slice(0, 2000) : "", common, pdf, steps: steps.filter((st) => st.name) };
@@ -211,10 +211,10 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
 
   if (pdf) {
     const dir = `${got.rfq.no}/${got.inviteId}`;
-    if (!pdf.path.startsWith(`${dir}/`)) return { error: "PDF 경로가 올바르지 않습니다.", status: 400 };
+    if (!pdf.path.startsWith(`${dir}/`)) return { error: "PDF 경로가 올바르지 않아요.", status: 400 };
     const file = pdf.path.slice(dir.length + 1);
     const { data: objs, error: le } = await sb.storage.from("cro-files").list(dir, { search: file, limit: 10 });
-    if (le || !objs?.some((o) => o.name === file)) return { error: "PDF 업로드가 완료되지 않았습니다. 다시 첨부해 주세요.", status: 400 };
+    if (le || !objs?.some((o) => o.name === file)) return { error: "PDF 업로드가 완료되지 않았어요. 다시 첨부해 주세요.", status: 400 };
     header.pdf_path = pdf.path;
     header.pdf_name = pdf.name;
     header.pdf_size = pdf.size;
@@ -251,7 +251,7 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
       const now = await load(got.token).catch(() => null);
       return { error: closedMessage(now?.closedReason ?? null), status: 409 };
     }
-    return SAVE_DENIED[r.code] ?? { error: "저장에 실패했습니다.", status: 500 };
+    return SAVE_DENIED[r.code] ?? { error: "저장에 실패했어요.", status: 500 };
   }
   if (r.skipped) return { ok: true, skipped: true };
 
@@ -288,8 +288,8 @@ async function upsert(got: Loaded, p: Parsed, submit: boolean, actor: Actor, who
         const mailWorthy = done === 1;
         await notifyUsers(
           [rq.user_id],
-          { kind: "견적", title: `견적이 도착했습니다 · ${got.rfq.no}`, body: `참여 ${joinedCount}곳 중 ${done}곳 제출. 기관 이름과 금액은 비교표가 열리면 함께 보입니다. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열립니다.`, href: `/app/r/${got.rfq.no}` },
-          mailWorthy && rq.email ? { to: [rq.email], subject: `[단추] ${got.rfq.no} 첫 견적이 도착했습니다` } : undefined,
+          { kind: "견적", title: `견적이 도착했어요 · ${got.rfq.no}`, body: `참여 ${joinedCount}곳 중 ${done}곳 제출. 기관 이름과 금액은 비교표가 열리면 함께 보여요. 비교표는 회신 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열려요.`, href: `/app/r/${got.rfq.no}` },
+          mailWorthy && rq.email ? { to: [rq.email], subject: `[단추] ${got.rfq.no} 첫 견적이 도착했어요` } : undefined,
         );
       }
     }
@@ -304,7 +304,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
   const { token } = await ctx.params;
   const a = await actorOf();
   const got = await load(token, loadOptsFor(a?.role));
-  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
+  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
   const why = blocked(got);
   if (why) return NextResponse.json({ error: why.error }, { status: why.status });
   const parsed = parseBody(await req.json().catch(() => null), got.rfq.rows);
@@ -320,7 +320,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const { token } = await ctx.params;
   const a = await actorOf();
   const got = await load(token, loadOptsFor(a?.role));
-  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크입니다." }, { status: 404 });
+  if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
   const why = blocked(got);
   if (why) return NextResponse.json({ error: why.error }, { status: why.status });
 
@@ -332,11 +332,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (incomplete) return NextResponse.json({ error: "모든 항목의 가능 여부·금액·기간을 채워 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "가능" && it.avail !== "" && !it.reason)) return NextResponse.json({ error: "조건부 가능·불가 항목에는 사유를 적어 주세요." }, { status: 400 });
   if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 견적 대신 요청 화면에서 '참여 철회'로 처리해 주세요." }, { status: 400 });
-  if (parsed.items.some((it) => it.avail !== "불가" && Number(it.amount) < 1)) return NextResponse.json({ error: "가능·조건부 가능 항목의 금액은 1원 이상이어야 합니다." }, { status: 400 });
+  if (parsed.items.some((it) => it.avail !== "불가" && Number(it.amount) < 1)) return NextResponse.json({ error: "가능·조건부 가능 항목의 금액은 1원 이상이어야 해요." }, { status: 400 });
   if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
   const today = todaySeoul();
-  if (parsed.common.startDate < today) return NextResponse.json({ error: "착수 가능일은 오늘 이후 날짜여야 합니다." }, { status: 400 });
-  if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났습니다. 날짜를 확인해 주세요." }, { status: 400 });
+  if (parsed.common.startDate < today) return NextResponse.json({ error: "착수 가능일은 오늘 이후 날짜여야 해요." }, { status: 400 });
+  if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났어요. 날짜를 확인해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
   const r = await upsert(got, parsed, true, a, { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
