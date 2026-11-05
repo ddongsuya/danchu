@@ -9,6 +9,7 @@ import { isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
 import { daysSince, reminderStage } from "@/lib/contract-reminder";
+import { shouldAskSponsor } from "@/lib/contract-gap";
 import { contractFollowupMail, esc, mailWrap, sendMail } from "@/lib/mail";
 import { notificationRecipients } from "@/lib/mail-preferences";
 import { needsContractReminder, replyPath } from "@/lib/concierge";
@@ -230,7 +231,7 @@ export async function GET(req: Request) {
     const horizon = new Date(Date.now() - 60 * 864e5).toISOString();
     const { data: awards } = await sb
       .from("rfq_awards")
-      .select("id, rfq_id, cro_org_id, invite_id, cro_name, awarded_at, contract_reported_at, contract_status")
+      .select("id, rfq_id, cro_org_id, invite_id, cro_name, awarded_at, contract_reported_at, contract_status, sponsor_reported_at")
       .is("contract_reported_at", null)
       .neq("contract_status", "not_signed")
       .lt("awarded_at", since)
@@ -245,11 +246,25 @@ export async function GET(req: Request) {
       if (!stage) continue;
       const { data: rfq } = await sb.from("rfq_requests").select("rfq_no, substance, user_id, email, status").eq("id", a.rfq_id).maybeSingle();
       if (!rfq || ["closed", "cancelled"].includes(rfq.status)) continue;
+      // 21일: 의뢰자에게도 계약 결과를 묻는다 (0034, 우회 계약 방지). 기관 보고와 따로 남아 서로 다르면 운영자가 확인한다.
+      // 단계 리마인더와 따로 한 번만 (sponsor_asked)
+      if (rfq.user_id && shouldAskSponsor({ awardedAt: a.awarded_at, contractReportedAt: a.contract_reported_at, contractStatus: a.contract_status, sponsorReportedAt: a.sponsor_reported_at ?? null })) {
+        const { data: asked } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", "sponsor_asked").maybeSingle();
+        if (!asked) {
+          await notifyUsers(
+            [rfq.user_id],
+            { kind: "계약", title: `${rfq.rfq_no} 선정한 기관과 계약은 어떻게 됐나요?`, body: `${rfq.substance} · ${a.cro_name}. 계약했는지, 협의 중인지, 진행하지 않기로 했는지 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}#contract-result` },
+            { to: [rfq.email] },
+            { kind: "contract", text: `${rfq.rfq_no} 선정한 기관과 계약은 어떻게 됐나요? 요청 화면에서 알려 주세요. ${siteUrl()}/app/r/${rfq.rfq_no}`, dedupeKey: `sponsor_asked:${a.id}` },
+          );
+          await logEvent(a.rfq_id, "sponsor_asked", "의뢰자에게 계약 결과 확인 요청", `선정 ${days}일 경과`, null);
+        }
+      }
       const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", stage).maybeSingle();
       if (ev) continue;
       if (stage === "contract_asked") {
         await notifyUsers(await adminUserIds(), { kind: "계약", title: `${rfq.rfq_no} 선정 45일 경과 · 계약 보고 없음`, body: `${a.cro_name} 이 계약 체결을 보고하지 않았어요. 기관과 의뢰자에게 진행 여부를 확인하고 요청 화면의 계약 결과 기록에 남겨 주세요.`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
-        if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약이 진행되고 있나요?`, body: `${rfq.substance} · ${a.cro_name} 을 선정한 지 45일이 지났어요. 계약이 끝났거나 진행하지 않기로 했다면 요청 화면의 문의하기로 알려 주세요.`, href: `/app/r/${rfq.rfq_no}` }, { to: [rfq.email] });
+        if (rfq.user_id && !a.sponsor_reported_at) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약이 진행되고 있나요?`, body: `${rfq.substance} · ${a.cro_name} 을 선정한 지 45일이 지났어요. 계약했는지, 진행하지 않기로 했는지 요청 화면에서 알려 주세요.`, href: `/app/r/${rfq.rfq_no}#contract-result` }, { to: [rfq.email] });
         await logEvent(a.rfq_id, stage, "계약 진행 여부 확인 요청", "선정 45일 경과", null);
       } else {
         const [{ data: org }, { data: members }] = a.cro_org_id

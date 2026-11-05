@@ -278,6 +278,7 @@ export const WIZ: WizStep[] = [
         id: "notes",
         type: "textarea",
         placeholder: "개발 단계, 예상 임상 설계, 참고할 선행 시험, 특이 요구사항 등 자유롭게 적어 주세요.",
+        help: "이메일·전화번호·링크는 기관을 선정하기 전까지 기관 화면에서 가려져요.",
       },
     ],
   },

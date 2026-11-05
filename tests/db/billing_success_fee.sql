@@ -27,9 +27,9 @@ begin
   perform pg_temp.t_eq(s.total_due, 0::bigint, '예상은 합계에 넣지 않는다');
 
   -- 체결 보고(실제 함수): 계약 금액 5,500만. 이번 달에 확인
-  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false);
+  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false, 'scope');
   perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고');
-  res := public.report_contract(a_small, (now() at time zone 'Asia/Seoul')::date, 49999999, '', false);
+  res := public.report_contract(a_small, (now() at time zone 'Asia/Seoul')::date, 49999999, '', false, 'scope');
   -- 확인 전에는 정산하지 않는다 (0025)
   perform pg_temp.t_eq(coalesce((select settled_count from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 0), 0, '확인 전 정산 없음');
   perform pg_temp.t_confirm(a_big);
@@ -50,7 +50,7 @@ begin
   -- 정정(운영자)은 보고·확인 시각을 바꾸지 않는다: 정산 월이 옮겨 가지 않는다
   update public.rfq_awards set contract_reported_at = pg_temp.t_mid(0) where id = a_big;
   select contract_confirmed_at into v_conf from public.rfq_awards where id = a_big;
-  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 70000000, '정정', true);
+  res := public.report_contract(a_big, (now() at time zone 'Asia/Seoul')::date, 70000000, '정정', true, 'scope');
   perform pg_temp.t_eq(res->>'corrected', 'true', '정정');
   perform pg_temp.t_eq(res->>'confirmed', 'true', '확인된 계약의 정정');
   perform pg_temp.t_eq((select contract_reported_at from public.rfq_awards where id = a_big), pg_temp.t_mid(0), '처음 보고 시각 유지');
@@ -66,7 +66,7 @@ declare
   a uuid := pg_temp.t_award(q, pg_temp.t_mid(-2));
   res jsonb;
 begin
-  res := public.report_contract(a, pg_temp.t_month(-1) + 3, 50000000, '', false);
+  res := public.report_contract(a, pg_temp.t_month(-1) + 3, 50000000, '', false, 'scope');
   perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고');
   perform pg_temp.t_confirm(a);
   perform pg_temp.t_eq((select settled_fee from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o), 1500000::bigint, '확인한 이번 달에 정산');
@@ -82,7 +82,7 @@ declare
   res jsonb;
   s record;
 begin
-  res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false);
+  res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.settled_count, 1, '정산 대상 1건');

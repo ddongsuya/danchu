@@ -5,13 +5,15 @@ import { adminEmails, adminUserIds, logEvent, notifyUsers, siteUrl } from "@/lib
 import { won } from "@/lib/format";
 import { REPORT_CONTRACT_ERRORS, reportContract } from "@/lib/rpc";
 import { audit } from "@/lib/audit";
+import { GAP_LOW_SIGNAL_RATIO, GAP_REASON_LABEL, gapLabel, gapOf, isGapReason } from "@/lib/contract-gap";
 
 export const runtime = "nodejs";
 
 /**
- * POST { date, amount, note? } — 선정된 CRO가 계약 체결을 보고한다 → 상태 contracting → 의뢰자 확인 또는 이의 → 확정·종료.
+ * POST { date, amount, note?, gapReason? } — 선정된 CRO가 계약 체결을 보고한다 → 상태 contracting → 의뢰자 확인 또는 이의 → 확정·종료.
  * 7일 안에 이의가 없으면 예약 작업이 보고대로 확정한다 (0025 auto_confirm_contracts). 성사수수료는 확정한 달에 정산한다.
  * 운영자는 기관에 확인해 대신 기록하거나 정정할 수 있다 (감사 기록). 확인 열은 DB 함수만 쓴다 (rfq_awards_guard_confirm).
+ * 0034: 계약 금액이 선정 견적과 10% 이상 다르면 gapReason(scope·price·schedule·other)이 있어야 저장된다. 기타면 비고 필수
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await sessionOrNull();
@@ -28,18 +30,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const date = typeof b.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(b.date) ? b.date : "";
   const amount = typeof b.amount === "string" && /^\d{1,13}$/.test(b.amount) ? Number(b.amount) : NaN;
   const note = typeof b.note === "string" ? b.note.trim().slice(0, 300) : "";
+  // 선정 견적과 10% 이상 다르면 사유를 받는다 (0034 report_contract 가 다시 확인한다)
+  const gapReason = isGapReason(b.gapReason) ? b.gapReason : null;
   if (!date || !Number.isFinite(amount)) return NextResponse.json({ error: "체결일과 계약금액을 입력해 주세요." }, { status: 400 });
   if (amount < 1) return NextResponse.json({ error: REPORT_CONTRACT_ERRORS.amount.message }, { status: 400 });
   const isAdmin = s.profile.role === "admin";
 
   // award 갱신과 요청 상태 contracting 을 한 트랜잭션으로. 금액·날짜·중복 보고는 DB 함수가 막는다 (0016)
-  const rc = await reportContract(id, date, amount, note, isAdmin);
+  const rc = await reportContract(id, date, amount, note, isAdmin, gapReason);
   if (!rc.ok) {
     const known = REPORT_CONTRACT_ERRORS[rc.code];
     return NextResponse.json({ error: known?.message ?? "저장하지 못했어요." }, { status: known?.status ?? 500 });
   }
   const r = { rfq_no: rc.rfq_no, user_id: rc.user_id, substance: rc.substance };
   const corrected = rc.corrected === true;
+  // 선정 견적 대비 차이. 의뢰자 확인 알림과 운영자 알림에 함께 적는다
+  const gap = gapOf(rc.quote_amount ?? null, amount);
+  const gapText = gap && gap.diff !== 0 ? ` · ${gapLabel(gap, won)}${rc.gap_reason && isGapReason(rc.gap_reason) ? ` (사유 ${GAP_REASON_LABEL[rc.gap_reason]})` : ""}` : "";
+  const lowSignal = !!gap && gap.ratio <= -GAP_LOW_SIGNAL_RATIO;
 
   // 운영자가 기관에 확인해 대신 남긴 기록은 기관의 보고가 아니다. 성사수수료의 근거라 처음 기록부터 감사 로그를 남긴다
   const what = `계약 체결 ${corrected ? "정정" : isAdmin ? "확인" : "보고"}${isAdmin ? " (운영자 기록)" : ""}`;
@@ -53,7 +61,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (corrected) {
     // 확인 전 정정이면 의뢰자가 바뀐 내용을 다시 확인한다 (새 기한). 확정 뒤 정정은 운영자 정정이라 의뢰자 확인을 다시 받지 않는다
     if (!confirmed && r.user_id) {
-      await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용이 정정됐어요`, body: `체결일 ${date} · ${won(amount)}. 맞는지 요청 화면에서 다시 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 이 내용대로 확정해요.` : ""}`, href: `/app/r/${r.rfq_no}` });
+      await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용이 정정됐어요`, body: `체결일 ${date} · ${won(amount)}${gapText}. 맞는지 요청 화면에서 다시 확인해 주세요.${due ? ` ${due}까지 이의가 없으면 이 내용대로 확정해요.` : ""}`, href: `/app/r/${r.rfq_no}` });
     }
     return NextResponse.json({ ok: true, corrected: true, confirmDueAt: rc.confirm_due_at ?? null });
   }
@@ -64,14 +72,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await notifyUsers(
       [r.user_id],
       isAdmin
-        ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. 단추가 기관에 확인해 기록했어요. ${tail}`, href: `/app/r/${r.rfq_no}` }
-        : { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}. ${tail}`, href: `/app/r/${r.rfq_no}` },
+        ? { kind: "계약", title: `${award.cro_name} 계약 체결 확인 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}${gapText}. 단추가 기관에 확인해 기록했어요. ${tail}`, href: `/app/r/${r.rfq_no}` }
+        : { kind: "계약", title: `${award.cro_name} 계약 체결 보고 · ${r.rfq_no}`, body: `체결일 ${date} · ${won(amount)}${gapText}. ${tail}`, href: `/app/r/${r.rfq_no}` },
       rq?.email ? { to: [rq.email] } : undefined,
       { kind: "contract", text: `${r.rfq_no} ${award.cro_name}에서 계약 체결(${won(amount)})을 알렸어요. 내용이 맞는지 확인해 주세요. ${siteUrl()}/app/r/${r.rfq_no}`, dedupeKey: `contract:${award.id}:${date}:${amount}` },
     );
   }
   // 의뢰자 계정이 없는 요청(계정 삭제 등)은 의뢰자가 확인·이의를 할 수 없다. 자동 확정 전에 운영자가 의뢰자 연락처로 확인하도록 알린다
   const orphan = !r?.user_id ? ` · 의뢰자 계정이 없어 확인 요청을 보내지 못했어요. ${due ? `${due}에 자동 확정되기 전에 ` : ""}의뢰자 연락처로 확인하고, 다르면 수주·계약 화면에서 체결 정보를 정정해 주세요` : "";
-  await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} ${what} · ${award.cro_name}`, body: `체결일 ${date} · ${won(amount)}${note ? ` · ${note}` : ""}${orphan}`, href: `/admin/awards` }, { to: adminEmails() });
+  await notifyUsers(await adminUserIds(), { kind: "계약", title: `${r?.rfq_no} ${what} · ${award.cro_name}${lowSignal ? " · 금액 확인 필요" : ""}`, body: `체결일 ${date} · ${won(amount)}${gapText}${note ? ` · ${note}` : ""}${orphan}`, href: `/admin/awards` }, { to: adminEmails() });
   return NextResponse.json({ ok: true, confirmDueAt: rc.confirm_due_at ?? null });
 }

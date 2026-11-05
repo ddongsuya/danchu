@@ -133,14 +133,19 @@ export async function getInviteById(id: string): Promise<InviteRow | null> {
   return data ?? null;
 }
 
-export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "company" | "contact_name" | "email" | "phone" | "status"> | null })[]> {
+export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "company" | "contact_name" | "email" | "phone" | "status"> | null; quoteAmount: number | null })[]> {
   const c = sb();
   const { data: aws } = await c.from("rfq_awards").select("*").eq("cro_org_id", orgId).order("awarded_at", { ascending: false });
   const list = aws ?? [];
   if (!list.length) return [];
-  const { data: rs } = await c.from("rfq_requests").select("id, rfq_no, substance, categories, company, contact_name, email, phone, status").in("id", list.map((a) => a.rfq_id));
+  const [{ data: rs }, { data: qs }] = await Promise.all([
+    c.from("rfq_requests").select("id, rfq_no, substance, categories, company, contact_name, email, phone, status").in("id", list.map((a) => a.rfq_id)),
+    c.from("cro_quotes").select("id, total_amount").in("id", list.map((a) => a.quote_id)),
+  ]);
   const rBy = new Map((rs ?? []).map((r) => [r.id, r]));
-  return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null }));
+  const qBy = new Map((qs ?? []).map((q) => [q.id, q.total_amount as number | null]));
+  // 선정 견적 금액: 성사 수수료 판정과 같은 값 (선정 때 고정한 fee_basis_amount, 없으면 견적 총액)
+  return list.map((a) => ({ ...a, rfq: rBy.get(a.rfq_id) ?? null, quoteAmount: a.fee_basis_amount ?? qBy.get(a.quote_id) ?? null }));
 }
 
 export type MemberRow = { id: string; name: string | null; email: string; phone: string | null; created_at: string; org_role?: string };

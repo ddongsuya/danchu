@@ -178,7 +178,7 @@ begin
   perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-2'), ref_org, 'token', 'pilot-2026-10-20b'), 52500000);
   q := pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-3'), ref_org, 'portal', 'pilot-2026-10-20b'), 60000000);
   a := pg_temp.t_award(q);
-  perform public.report_contract(a, today, 55000000, '');
+  perform public.report_contract(a, today, 55000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
   perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-4'), ref_org, 'legacy', null), 55000000);
   inv := pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-5'), ref_org, 'portal', 'pilot-2026-10-20b');
@@ -189,7 +189,7 @@ begin
   perform pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-6'), own_org, 'portal', 'pilot-2026-10-20b'), 52000000);
   q := pg_temp.t_quote(pg_temp.t_invite_as(pg_temp.t_rfq('T-REF-7'), own_org, 'legacy', null), 80000000);
   a := pg_temp.t_award(q);
-  perform public.report_contract(a, today, 70000000, '');
+  perform public.report_contract(a, today, 70000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
   perform pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-REF-8'), own_org), 52500000);
 
