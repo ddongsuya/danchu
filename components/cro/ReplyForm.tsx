@@ -478,7 +478,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
             )}
             <div className="fld">
               <label className="fld__lab" htmlFor="note">제외 항목 · 별도 옵션 · 의뢰자 전달 사항</label>
-              <textarea id="note" className="ta" rows={4} disabled={readOnly || busy} value={note} onChange={(e) => { setNote(e.target.value); queueSave(items, e.target.value, common); }} placeholder="예: 영문 보고서 별도 +8,000,000원, 시험물질 보관 비용 미포함, 조직병리 판독 +18,000,000원" />
+              <textarea id="note" className="ta" rows={4} disabled={readOnly || busy} value={note} onChange={(e) => { setNote(e.target.value); queueSave(items, e.target.value, common); }} placeholder="예: 영문 보고서 별도 +8,000,000원, 시험물질 보관 비용 미포함, 조직병리 판독 +18,000,000원" aria-describedby="note-help" />
+              <span id="note-help" className="fld__help">이메일·전화번호·링크는 선정 전까지 의뢰자 화면에서 가려져요. 연락처는 선정되면 서로 공개돼요.</span>
             </div>
           </div>
 

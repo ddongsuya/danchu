@@ -5,6 +5,7 @@ import { ContractReport } from "@/components/cro/ContractReport";
 import { SubstanceForm } from "@/components/cro/SubstanceForm";
 import { ymd, won } from "@/lib/format";
 import { contractConfirmState } from "@/lib/status";
+import { GAP_REASON_LABEL, isGapReason } from "@/lib/contract-gap";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,9 @@ export default async function CroAwards() {
                 </span>
               </div>
 
+              {!a.contract_reported_at && a.sponsor_contract_status === "signed" && (
+                <p className="note note--warn" role="status">의뢰자가 계약했다고 알려 왔어요. 체결일과 계약금액을 보고해 주세요.</p>
+              )}
               {!a.contract_reported_at && (
                 <div className="grid2" style={{ alignItems: "start" }}>
                   <div className="stack" style={{ gap: 10 }}>
@@ -67,7 +71,7 @@ export default async function CroAwards() {
                       </div>
                     ))}
                   </div>
-                  <ContractReport awardId={a.id} />
+                  <ContractReport awardId={a.id} quoteAmount={a.quoteAmount} />
                 </div>
               )}
               <SubstanceForm awardId={a.id} qty={a.substance_qty ?? ""} when={a.substance_when ?? ""} note={a.substance_note ?? ""} updatedAt={a.substance_updated_at} />
@@ -75,7 +79,7 @@ export default async function CroAwards() {
                 <div className="kv" style={{ padding: 0, fontSize: 13 }}>
                   <span className="kv__k">보고</span>
                   <span className="kv__v" style={{ fontWeight: 500 }}>
-                    체결일 {a.contract_date} · {won(a.contract_amount ?? 0)}{a.contract_note ? ` · ${a.contract_note}` : ""}
+                    체결일 {a.contract_date} · {won(a.contract_amount ?? 0)}{a.contract_gap_reason && isGapReason(a.contract_gap_reason) ? ` · 차이 사유 ${GAP_REASON_LABEL[a.contract_gap_reason]}` : ""}{a.contract_note ? ` · ${a.contract_note}` : ""}
                     {contractConfirmState(a, { includeNote: false }) && <span style={{ display: "block", color: "var(--muted)" }}>{contractConfirmState(a, { includeNote: false })!.label}</span>}
                   </span>
                 </div>

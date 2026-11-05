@@ -1,3 +1,4 @@
+import { maskedText } from "./contact-guard";
 import { anonymousFileLabel, confidentialAccess, CRO_TERMS_VERSION, identityVisible, isJoined, maskedClientLabel, needsCda, seatsLabel, type SeatInfo } from "./request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import { quoteRowsFromPayload } from "./quote-items";
@@ -179,7 +180,8 @@ export function rfqViewOf(r: RfqRow, inv: InviteRow, files: { id: string; file_n
       ["자료 보관기간", s("archive")],
       ["잔여 시험물질", s("residual")],
       ["다지점시험", s("multisite")],
-      ["추가 내용", s("notes")],
+      // 선정 전에는 요청서 자유 입력의 연락처를 가린다 (lib/contact-guard.ts)
+      ["추가 내용", awarded ? s("notes") : maskedText(s("notes"))],
     ] as [string, string][]
   ).filter(([, v]) => v && v !== "-");
 

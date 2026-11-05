@@ -182,7 +182,7 @@ declare
   raised text;
 begin
   update public.rfq_requests set user_id = sponsor, status = 'selected', selected_quote_id = q where id = rq;
-  res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false);
+  res := public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 55000000, '', false, 'scope');
   perform pg_temp.t_eq((res->>'ok')::boolean, true, '체결 보고');
   perform pg_temp.t_eq((select contract_confirm_due_at from public.rfq_awards where id = a), now() + interval '7 days', '확인 기한 = 보고 + 7일');
   -- 보고한 달이 지난달이어도(아래) 정산은 확인한 달
@@ -227,7 +227,7 @@ begin
   -- 선정 견적 5,000만 원 미만은 확인해도 정산 대상 아님 (대상 판정은 선정 견적)
   q := pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-FR-K2'), o), 49999999);
   a := pg_temp.t_award(q);
-  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false);
+  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
   perform pg_temp.t_eq((select count(*)::int from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a), 0, '5,000만 미만 선정 견적은 대상 아님');
 end $$;
@@ -247,7 +247,7 @@ declare
   res jsonb;
 begin
   update public.rfq_requests set user_id = sponsor where id in (rq, rq2);
-  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 65000000, '', false);
+  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 65000000, '', false, 'scope');
   perform pg_temp.t_eq(public.dispute_contract(a, sponsor, '')->>'code', 'note', '사유 없는 이의 거절');
   res := public.dispute_contract(a, sponsor, '계약 금액이 다릅니다');
   perform pg_temp.t_eq((res->>'ok')::boolean, true, '의뢰자 이의');
@@ -272,14 +272,14 @@ begin
   perform pg_temp.t_eq(public.resolve_contract_dispute(a, admin, 'confirm', '다시')->>'code', 'no_dispute', '두 번 정리 불가');
 
   -- 보고 취소(reject): 체결 보고가 지워지고 기관이 다시 보고한다. 새 보고는 새 확인 기한을 받는다
-  perform public.report_contract(a2, (now() at time zone 'Asia/Seoul')::date, 75000000, '', false);
+  perform public.report_contract(a2, (now() at time zone 'Asia/Seoul')::date, 75000000, '', false, 'scope');
   perform public.dispute_contract(a2, sponsor, '아직 계약하지 않았습니다');
   res := public.resolve_contract_dispute(a2, admin, 'reject', '기관 확인 결과 서명 전');
   perform pg_temp.t_eq((res->>'ok')::boolean, true, '보고 취소');
   perform pg_temp.t_assert((select contract_status = 'pending' and contract_reported_at is null and contract_amount is null and contract_confirmed_at is null from public.rfq_awards where id = a2), '보고가 지워짐');
   perform pg_temp.t_eq((select (before->>'contract_amount')::bigint from public.admin_audit where target_id = a2), 75000000::bigint, '감사 기록에 이전 값');
   perform pg_temp.t_eq(public.confirm_contract(a2, sponsor)->>'code', 'not_reported', '보고 없으면 확인 불가');
-  perform pg_temp.t_eq((public.report_contract(a2, (now() at time zone 'Asia/Seoul')::date, 78000000, '', false)->>'ok')::boolean, true, '다시 보고');
+  perform pg_temp.t_eq((public.report_contract(a2, (now() at time zone 'Asia/Seoul')::date, 78000000, '', false, 'scope')->>'ok')::boolean, true, '다시 보고');
   perform pg_temp.t_eq((public.confirm_contract(a2, sponsor)->>'ok')::boolean, true, '정리된 이의 뒤에는 확인 가능');
 end $$;
 
@@ -295,13 +295,13 @@ declare
   rec record;
 begin
   update public.rfq_requests set user_id = sponsor, status = 'selected', selected_quote_id = q where id = rq;
-  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 60000000, '', false);
+  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 60000000, '', false, 'scope');
   perform pg_temp.t_eq((select status from public.rfq_requests where id = rq), 'contracting', '보고하면 계약 진행');
   perform pg_temp.t_eq((select count(*)::int from public.auto_confirm_contracts() x where x.award_id = a), 0, '7일 전에는 자동 확정 없음');
 
   -- 확인 전 정정(운영자)은 기한을 다시 잡는다
   perform pg_temp.due_past(a);
-  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 61000000, '정정', true);
+  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 61000000, '정정', true, 'scope');
   perform pg_temp.t_eq((select contract_confirm_due_at from public.rfq_awards where id = a), now() + interval '7 days', '정정하면 확인 기한 다시 7일');
   perform pg_temp.t_eq((select count(*)::int from public.auto_confirm_contracts() x where x.award_id = a), 0, '정정 뒤 기한 전');
 
@@ -381,7 +381,7 @@ declare
 begin
   update public.rfq_requests set distributed_at = now() - interval '3 days', created_at = now() - interval '4 days' where id = rq_d;
   update public.rfq_requests set status = 'received', distributed_at = null, created_at = now() - interval '2 days' where id = rq_r;
-  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 60000000, '', false);
+  perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 60000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
   insert into t_fr values ('d', rq_d), ('r', rq_r), ('a', a);
   -- 0025 전 상태 흉내: 열이 없던 DB

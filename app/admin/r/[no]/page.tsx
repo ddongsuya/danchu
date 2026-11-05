@@ -178,7 +178,7 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
             />
             {d.award && (
               <div style={{ marginTop: 12 }}>
-                <ContractRecord awardId={d.award.id} status={d.award.contract_status} reported={!!d.award.contract_reported_at} today={today} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} note={d.award.contract_note} />
+                <ContractRecord awardId={d.award.id} status={d.award.contract_status} reported={!!d.award.contract_reported_at} today={today} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} note={d.award.contract_note} quoteAmount={d.award.fee_basis_amount ?? d.quotes.find((x) => x.id === d.award!.quote_id)?.total_amount ?? null} />
                 {d.award.contract_reported_at && (() => {
                   // 계약 확인 (2026-10-20 결정 2, 0025): 의뢰자 확인·이의·7일 뒤 자동 확정
                   const cs = contractConfirmState(d.award);
