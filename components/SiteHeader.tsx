@@ -13,7 +13,7 @@ export function SiteHeader() {
         <SiteNav />
         <div className="right">
           <HeaderAuth className="si" />
-          <RfqLink className="btn solid sm">견적 요청하기 <span className="ar">→</span></RfqLink>
+          <RfqLink className="btn solid sm" preregLabel={<>사전예약하기 <span className="ar">→</span></>}>견적 요청하기 <span className="ar">→</span></RfqLink>
         </div>
       </nav>
     </>

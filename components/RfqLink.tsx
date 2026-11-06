@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMe } from "@/lib/use-me";
+import { preregActive } from "@/lib/prereg";
 
 /**
  * 견적 요청 진입점.
@@ -14,8 +15,14 @@ export const REQUEST_HREF = "/app/new";
 export const GUEST_REQUEST_HREF = "/request";
 
 
-export function RfqLink({ className, children }: { className?: string; children: React.ReactNode }) {
+/** 사전예약 기간에 로그인 전 방문자가 보는 진입점 (lib/prereg.ts) */
+export const PREREG_HREF = "/early";
+
+export function RfqLink({ className, children, preregLabel }: { className?: string; children: React.ReactNode; preregLabel?: React.ReactNode }) {
   const { me, loading } = useMe();
+  if (preregLabel && (loading || !me) && preregActive()) {
+    return <Link href={PREREG_HREF} className={className}>{preregLabel}</Link>;
+  }
   const href = loading || !me || me.role === "requester" ? GUEST_REQUEST_HREF : me.to;
   return (
     <Link href={href} className={className}>

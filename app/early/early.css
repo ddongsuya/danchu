@@ -1,81 +1,110 @@
-/* 사전예약 (/early). 한 화면 + 두 단계 양식. 토큰은 site.css 의 .a 변수만 쓴다 */
+/* 사전예약 (/early). 2026-11-06 시안 판 15: 흰 바탕·검은 글씨, 가로 줄 없음.
+   모서리 규칙: 사이트 공통은 2px. 사전예약 흐름(갈래·카드·입력·선택지·버튼)만 승인 시안대로 10~16px 로 둔다.
+   휴대폰(860px 이하)은 한 화면에 제목·안내·갈래·"사전예약하기"만 두고, 설문은 화면 전체로 연다 (긴 스크롤 금지). */
 
-/* 세 줄 */
-.a .ea-pts{list-style:none;margin:32px 0 0;padding:0;display:grid;gap:0;max-width:30em}
-.a .ea-pts li{padding:14px 0;border-top:1px solid var(--line);font-size:17px;line-height:1.55;color:var(--ink2)}
-.a .ea-pts li:last-child{border-bottom:1px solid var(--line)}
+.a:has(.ea2){--paper:#FCFCFA;--soft:#EFEFEB;--edge:#DEDED8;--field:#C9C9C2;background:var(--paper)}
 
-/* 양식 */
-.a .ef{display:grid;gap:16px;padding:24px 28px;background:var(--white);border:1px solid var(--line);border-radius:2px;box-shadow:0 18px 40px -28px rgba(27,27,25,.3)}
-.a .ef-f{display:grid;gap:6px;margin:0;padding:0;border:0;min-width:0}
-.a .ef-f > label,.a .ef-f > legend{font-size:14px;font-weight:500;color:var(--ink);padding:0;margin-bottom:6px}
-.a .ef-f > label{margin-bottom:0}
-.a .ef input[type=email],.a .ef input:not([type]),.a .ef select{height:44px;padding:0 12px;border:1px solid var(--faint);border-radius:2px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;width:100%}
-.a .ef input:focus-visible,.a .ef select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.a .ef-chips{display:flex;flex-wrap:wrap;gap:8px}
-.a .ef-chips label,.a .ef-list label{position:relative;cursor:pointer;touch-action:manipulation}
-.a .ef-chips input,.a .ef-list input{position:absolute;opacity:0;width:1px;height:1px}
-.a .ef-chips span{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border:1px solid var(--faint);border-radius:2px;font-size:14.5px;color:var(--ink2);background:var(--paper);transition:background-color 160ms ease,border-color 160ms ease,transform 160ms var(--eo)}
-.a .ef-chips span b{font-weight:400;color:var(--muted)}
-.a .ef-chips input:checked + span b{color:inherit}
-.a .ef textarea{padding:10px 12px;border:1px solid var(--faint);border-radius:2px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;width:100%;resize:vertical}
-.a .ef textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.a .ef-f > label small{font-weight:400;color:var(--muted);margin-left:4px}
-.a .ef-chips label:active span,.a .ef-list label:active span{transform:scale(.97)}
-.a .ef-chips input:checked + span{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.a .ef-chips input:focus-visible + span,.a .ef-list input:focus-visible + span{outline:2px solid var(--acc);outline-offset:2px}
-.a .ef-list{display:grid;gap:0;border-top:1px solid var(--line)}
-.a .ef-list span{display:flex;align-items:center;gap:12px;min-height:38px;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink2)}
-.a .ef-list span::before{content:"";width:16px;height:16px;border:1px solid var(--faint);border-radius:50%;flex:none;transition:border-width 160ms ease,border-color 160ms ease}
-.a .ef-list input:checked + span{color:var(--ink)}
-.a .ef-list input:checked + span::before{background:var(--ink);border-color:var(--ink);box-shadow:inset 0 0 0 3px var(--paper)}
-.a .ef-agree{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.55;color:var(--muted);cursor:pointer}
-.a .ef-agree input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--ink);flex:none}
-.a .ef-err{margin:0;font-size:14px;color:var(--warn)}
-.a .ef-go{width:100%;height:48px;font-size:16px}
-.a .ef-s{display:grid;gap:16px}
-.a .ef-s[hidden]{display:none}
-.a .ef-step{display:flex;align-items:center;gap:10px;margin:0;font-size:12.5px;color:var(--muted)}
-.a .ef-step span{display:inline-flex;gap:4px}
-.a .ef-step b{width:20px;height:3px;background:var(--line)}
-.a .ef-step b[data-on]{background:var(--ink)}
-.a .ef-row{display:grid;grid-template-columns:auto 1fr;gap:8px}
-.a .ef-back{height:48px;padding:0 18px}
-.a .ef-go:disabled,.a .ef-back:disabled{opacity:.55;cursor:default}
-.a .ef-agree a{color:var(--ink);text-underline-offset:3px}
-.a .ef-f > legend small{font-weight:400;color:var(--muted);margin-left:4px}
-.a .ef-done{padding:32px 28px;background:var(--white);border:1px solid var(--line);border-radius:2px}
-.a .ef-done b{display:block;font-size:22px;font-weight:500;letter-spacing:-.02em}
-.a .ef-done p{margin:10px 0 0;color:var(--muted);font-size:15px;line-height:1.6}
+.a .ea2{padding:56px 0 72px}
+.a .ea2-hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:64px;align-items:end}
+.a .ea2-live{margin:0 0 22px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.a .ea2 h1{font-size:clamp(44px,4.6vw,68px);line-height:1.08;letter-spacing:-.04em;font-weight:800}
+.a .ea2 h1 span{white-space:nowrap;color:inherit}
+.a .ea2-sub{margin:22px 0 0;font-size:19px;line-height:1.6;color:var(--muted)}
 
-/* B: 한 화면 */
-.a .eb{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,30rem);gap:72px;align-items:center;padding:32px 0;border-bottom:1px solid var(--line)}
-.a .eb-date{margin:0 0 20px;font-size:13px;color:var(--ink)}
-.a .eb-date::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;background:var(--accfill);border:1px solid var(--ink);vertical-align:1px}
-.a .eb-seg{display:inline-grid;grid-auto-flow:column;margin-top:32px;border:1px solid var(--ink);border-radius:2px}
-.a .eb-seg a{display:grid;align-content:center;gap:2px;min-height:64px;padding:8px 22px;font-size:18px;font-weight:500;letter-spacing:-.01em;text-decoration:none;color:var(--ink);transition:background-color 160ms ease}
-.a .eb-seg a small{font-size:12.5px;font-weight:400;color:var(--muted)}
-.a .eb-seg a[aria-current=page]{background:var(--ink);color:var(--paper)}
-.a .eb-seg a[aria-current=page] small{color:var(--faint)}
-.a .eb-seg a:active{transform:scale(.98)}
-.a .eb .ea-pts{margin-top:28px}
+.a .ea2-low{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:80px;align-items:start;margin-top:72px}
+.a .ea2-seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:12px;overflow:hidden}
+.a .ea2-seg a{display:flex;align-items:center;min-height:56px;padding:0 20px;font-size:17px;font-weight:700;color:var(--ink);text-decoration:none;transition:background-color 160ms ease}
+.a .ea2-seg a[aria-current=page]{background:var(--soft)}
+.a .ea2-seg a:focus-visible{outline-offset:-3px}
+.a .ea2-pts{list-style:none;margin:20px 0 0;padding:0}
+.a .ea2-pts li{padding:18px 0;font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.45}
+
+/* 설문 카드 (넓은 화면) */
+.a .ef2{display:flex;flex-direction:column;min-height:600px;padding:20px 32px 32px;background:var(--paper);border:1px solid var(--edge);border-radius:16px}
+.a .ef2-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.a .ef2-back,.a .ef2-x{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:-12px;border:0;border-radius:12px;background:transparent;color:var(--ink);font:inherit;font-size:26px;line-height:1;cursor:pointer;transition:transform 160ms var(--eo)}
+.a .ef2-x{display:none;margin:0 -12px 0 0;font-size:24px}
+.a .ef2-back:active,.a .ef2-x:active{transform:scale(.94)}
+.a .ef2-who{margin:0;font-size:13px;color:var(--muted)}
+.a .ef2-n{margin-left:auto;padding:4px 10px;border-radius:999px;background:#E9E9E3;color:var(--ink2);font-size:12px;font-variant-numeric:tabular-nums}
+.a .ef2-body,.a .ef2-done{display:flex;flex-direction:column;flex:1;min-height:0}
+.a .ef2-body .ef2-who{margin-top:8px}
+.a .ef2 h2{margin:8px 0 0;font-size:26px;line-height:1.3;letter-spacing:-.03em;font-weight:700;text-wrap:balance}
+.a .ef2 h2:focus{outline:none}
+.a .ef2-note{margin:8px 0 0;font-size:14px;color:var(--muted)}
+
+.a .ef2-fields{display:flex;flex-direction:column;gap:18px;margin-top:24px}
+.a .ef2-f{display:flex;flex-direction:column;gap:8px}
+.a .ef2-f label{font-size:14px;font-weight:600;color:var(--ink)}
+.a .ef2-f input{height:48px;width:100%;padding:0 14px;border:1px solid var(--field);border-radius:10px;background:#FEFEFC;color:var(--ink);font:inherit;font-size:16px;transition:border-color 160ms ease}
+.a .ef2-f input::placeholder{color:#8A8A84}
+.a .ef2-f input:focus-visible{outline:2px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
+
+.a .ef2-opts{display:flex;flex-direction:column;gap:8px;margin-top:24px}
+.a .ef2-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:0 16px;border:1px solid var(--edge);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;font-size:16px;text-align:left;cursor:pointer;touch-action:manipulation;transition:border-color 160ms ease,box-shadow 160ms ease,transform 160ms var(--eo)}
+.a .ef2-opt small{margin-left:4px;font-size:13px;font-weight:400;color:var(--muted)}
+.a .ef2-opt i{display:grid;place-items:center;width:20px;height:20px;flex:none;border:1.5px solid var(--muted);border-radius:50%;transition:background-color 160ms ease,border-color 160ms ease}
+.a .ef2-opt[data-multi] i{border-radius:6px}
+.a .ef2-opt[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 .5px var(--ink);font-weight:600}
+.a .ef2-opt[aria-pressed=true] i{background:var(--ink);border-color:var(--ink)}
+.a .ef2-opt[aria-pressed=true] i::after{content:"";width:5px;height:10px;margin-top:-2px;border:solid var(--paper);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.a .ef2-opt:active{transform:scale(.98)}
+.a .ef2-opt:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.a .ef2-agree{display:flex;flex-direction:column;gap:12px;margin-top:22px;padding:16px;border-radius:12px;background:var(--soft);font-size:12.5px;line-height:1.55;color:var(--muted)}
+.a .ef2-agree label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.a .ef2-agree label:focus-within{outline:none}
+.a .ef2-agree input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--ink);flex:none}
+.a .ef2-agree input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.a .ef2-agree b{display:block;margin-bottom:2px;font-size:14px;font-weight:600;color:var(--ink)}
+.a .ef2-agree a{color:var(--ink);text-underline-offset:3px}
+.a .ef2-all{font-size:15px;font-weight:700;color:var(--ink)}
+
+.a .ef2-err{margin:16px 0 0;font-size:14px;line-height:1.5;color:var(--warn)}
+.a .ef2-foot{margin-top:auto;padding-top:24px}
+.a .ef2 .ef2-go{width:100%;height:52px;border-radius:12px;font-size:17px;font-weight:600}
+.a .ef2 .ef2-go:disabled{opacity:.55;cursor:default}
+.a .ef2-hint{margin:0;min-height:52px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.a .ef2-done h2{margin-top:auto;font-size:32px}
+.a .ef2-done > p:not(.ef2-who){margin:12px 0 0;font-size:16px;line-height:1.6;color:var(--muted)}
+.a .ef2-done .ef2-go{margin-top:auto}
+.a .ef2-done > .ef2-go{margin-top:40px}
+.a .ef2-start{display:none}
 
 @media (hover:hover) and (pointer:fine){
- .a .ef-chips label:hover span{border-color:var(--ink)}
- .a .eb-seg a:not([aria-current]):hover{background:var(--band)}
+ .a .ea2-seg a:not([aria-current]):hover{background:#F4F4F0}
+ .a .ef2-opt:not([aria-pressed=true]):hover{border-color:#9A9A94}
+ .a .ef2-back:hover,.a .ef2-x:hover{background:var(--soft)}
 }
 
+/* 휴대폰: 한 화면 (--vhpx 실측 높이, 위 바 60px) */
 @media (max-width:860px){
- .a .eb{grid-template-columns:1fr;gap:28px;padding:40px 0}
- .a .ea-pts{margin-top:20px}
- .a .ea-pts li{font-size:16px;padding:11px 0}
- .a .ef{padding:20px;gap:16px}
- .a .eb-seg{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:row}
- .a .eb-seg a{padding:8px 14px;font-size:16px}
- .a .ef-chips{display:grid;grid-template-columns:1fr 1fr}
- .a .ef-chips span{width:100%;justify-content:center}
+ .a .ea2{display:flex;flex-direction:column;min-height:calc(var(--vhpx,100svh) - 60px);padding:24px 0 calc(20px + env(safe-area-inset-bottom))}
+ .a .ea2-hero{grid-template-columns:1fr;gap:24px}
+ .a .ea2-live{margin-bottom:14px;font-size:13px}
+ .a .ea2 h1{font-size:clamp(34px,9.6vw,44px);line-height:1.12}
+ .a .ea2 h1 span{white-space:normal}
+ .a .ea2-sub{margin-top:14px;font-size:16px}
+ .a .es div{grid-template-columns:76px minmax(0,1fr);font-size:14.5px;padding:5px 0}
+ .a .ea2-low{display:flex;flex-direction:column;align-items:stretch;gap:14px;margin-top:auto;padding-top:24px}
+ .a .ea2-pts{display:none}
+ .a .ea2-seg a{min-height:48px;justify-content:center;font-size:16px}
+ .a .ef2-start{display:inline-flex;width:100%;height:52px;border-radius:12px;font-size:17px;font-weight:600}
+
+ /* 설문은 화면 전체로 */
+ .a .ef2{display:none}
+ .a .ef2[data-open]{display:flex;position:fixed;inset:0;z-index:var(--z-modal);min-height:0;height:var(--vhpx,100dvh);padding:8px 16px calc(16px + env(safe-area-inset-bottom));border:0;border-radius:0;overflow-y:auto;overscroll-behavior:contain;animation:ef2-in 240ms var(--eo)}
+ .a .ef2-x{display:inline-flex}
+ .a .ef2-n{margin-left:auto}
+ .a .ef2 h2{font-size:24px}
+ .a .ef2-opts,.a .ef2-fields{margin-top:20px}
+ .a .ef2-agree{margin-top:16px;padding:12px 14px;gap:10px}
 }
+@keyframes ef2-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 
 @media (prefers-reduced-motion:reduce){
- .a .ef-chips span{transition:background-color 160ms ease}
+ .a .ef2[data-open]{animation:ef2-fade 200ms ease}
+ .a .ef2-opt,.a .ef2-back,.a .ef2-x{transition:border-color 160ms ease,background-color 160ms ease}
+ .a .ef2-opt:active,.a .ef2-back:active,.a .ef2-x:active{transform:none}
 }
+@keyframes ef2-fade{from{opacity:0}to{opacity:1}}

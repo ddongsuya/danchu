@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { IconName, NavItem } from "./Shell";
 
-import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Notepad } from "@phosphor-icons/react";
+import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad } from "@phosphor-icons/react";
 
-const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, quote: Notepad };
+const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad };
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const Glyph = ICONS[name];
   return <Glyph size={size} weight="regular" aria-hidden="true" />;
@@ -29,7 +29,12 @@ export function NavLinks({ items, variant }: { items: NavItem[]; variant: "side"
   void variant;
   return (
     <>
-      {items.map((it) => (
+      {items.map((it) => it.soon ? (
+        <span key={it.href} className="pt__navi pt__soon" aria-disabled="true">
+          <Icon name={it.icon} size={20} />
+          <span>{it.label} <small>· {it.soon}</small></span>
+        </span>
+      ) : (
         <Link key={it.href} href={it.href} className="pt__navi" aria-current={active === it.href ? "page" : undefined} data-on={active === it.href ? "1" : "0"}>
           <Icon name={it.icon} size={20} />
           <span>{it.label}</span>
@@ -45,7 +50,12 @@ export function TabLinks({ items }: { items: NavItem[] }) {
   const active = activeHref(pathname, items);
   return (
     <>
-      {items.slice(0, 5).map((it) => (
+      {items.slice(0, 5).map((it) => it.soon ? (
+        <span key={it.href} className="pt__tab pt__soon" aria-disabled="true">
+          <Icon name={it.icon} />
+          <span>{it.label} <small>{it.soon}</small></span>
+        </span>
+      ) : (
         <Link key={it.href} href={it.href} className="pt__tab" aria-current={active === it.href ? "page" : undefined} data-on={active === it.href ? "1" : "0"}>
           <Icon name={it.icon} />
           <span>{it.label}</span>

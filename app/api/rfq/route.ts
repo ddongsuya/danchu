@@ -7,6 +7,8 @@ import { nowSeoul } from "@/lib/dates";
 import { sessionOrNull } from "@/lib/auth";
 import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 import { cleanFiles, createRfq, prepareValues, type FileMeta } from "@/lib/rfq-create";
+import { PREREG_BLOCKED } from "@/lib/prereg";
+import { sessionInPrereg } from "@/lib/prereg-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +26,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const sess = await sessionOrNull();
   if (!sess) return NextResponse.json({ error: "로그인이 필요해요." }, { status: 401 });
+  // 사전예약 기간의 새 계정은 요청을 보낼 수 없다 (lib/prereg.ts)
+  if (await sessionInPrereg(sess)) return NextResponse.json({ error: PREREG_BLOCKED, early: "/early" }, { status: 403 });
   const ip = clientIp(req);
   if ((await rateLimited("rfq:user", sess.userId, 5, 10 * 60)) || (await rateLimited("rfq:ip", ip, 10, 10 * 60))) {
     return NextResponse.json({ error: TOO_MANY }, { status: 429 });

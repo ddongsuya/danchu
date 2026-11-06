@@ -4,6 +4,8 @@ import { EMAIL_RE } from "@/lib/auth-links";
 import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 import { cleanFiles, prepareValues, type FileMeta } from "@/lib/rfq-create";
 import { createPending } from "@/lib/rfq-pending";
+import { inPrereg, preregActive, PREREG_BLOCKED } from "@/lib/prereg";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,10 +38,22 @@ export async function POST(req: Request) {
   // 로그인 없이 계정·메일·업로드 주소를 만드는 경로라 IP 는 하루 한도도 둔다
   if ((await rateLimited("pending:ip", ip, 8, 60 * 60)) || (await rateLimited("pending:ip-day", ip, 20, 24 * 60 * 60)) || (await rateLimited("pending:email", email, 5, 60 * 60))) return NextResponse.json({ error: TOO_MANY }, { status: 429 });
 
+  // 사전예약 기간: 이 이메일로 미리 만든 계정(사전예약 모드가 아닌 계정)만 보낼 수 있다. 새 이메일은 사전예약으로 안내한다
+  if (preregActive() && !(await canSendDuringPrereg(email))) {
+    return NextResponse.json({ error: PREREG_BLOCKED, early: "/early" }, { status: 403 });
+  }
+
   const err = prepareValues(values, files);
   if (err) return NextResponse.json({ error: err }, { status: 400 });
 
   const r = await createPending({ email, values, files, ip });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json(r);
+}
+
+async function canSendDuringPrereg(email: string): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return true; // DB 가 없으면 어차피 접수되지 않는다
+  const { data } = await sb.from("profiles").select("role, email, created_at").eq("email", email).maybeSingle();
+  return !!data && !inPrereg(data);
 }

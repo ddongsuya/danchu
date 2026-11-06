@@ -48,7 +48,7 @@ export function croHero(cv: HTMLDivElement, P: boolean): Tl {
     head("우리 기관 요청함"),
     head('<span>고객 <span class="rl-hlx">7곳</span>에서 새 요청 7건</span>'),
     head("참여할 요청을 정해요"),
-    head("참여한 요청에 견적서 회신"),
+    head("참여한 요청에 견적서를 보내요"),
     head('<span>연구소에서 <span class="rl-hlx">선정</span>, 계약 진행</span>'),
   ];
   box(el(inbox, "rl-rule"), 0, f.hh - 1, ibW);
@@ -198,7 +198,7 @@ export const croHeroDims = dims([600, 640], [600, 614]);
 /* ================================================================
  * 참여부터 계약까지: 카메라가 책상 위 여섯 장면을 옮겨 다닌다. 단계 버튼 = 장면.
  * ================================================================ */
-export const CRO_STEPS = ["참여 신청", "표준 가격 등록", "참여 안내 수신", "참여 결정", "견적서 회신", "선정 및 계약"];
+export const CRO_STEPS = ["참여", "등록", "수신", "결정", "송부", "선정 및 계약"];
 const CATALOG = ["반복투여독성 4주", "복귀돌연변이(Ames)", "체내 소핵", "안전성약리 hERG"];
 const CAT_W = [0.92, 0.38, 0.5, 0.62];
 

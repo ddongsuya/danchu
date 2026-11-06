@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useMe } from "@/lib/use-me";
-import { GUEST_REQUEST_HREF } from "@/components/RfqLink";
+import { GUEST_REQUEST_HREF, PREREG_HREF } from "@/components/RfqLink";
+import { preregActive } from "@/lib/prereg";
 
 export const SITE_LINKS: [string, string][] = [
   ["/about", "서비스 소개"],
@@ -56,6 +57,7 @@ export function SiteNav() {
   };
 
   const requestHref = loading || !me || me.role === "requester" ? GUEST_REQUEST_HREF : me.to;
+  const guestPrereg = (loading || !me) && preregActive();
   const on = (href: string) => pathname === href;
 
   return (
@@ -90,7 +92,7 @@ export function SiteNav() {
               ))}
             </nav>
             <div className="mnav__foot" onClick={closeOnLink}>
-              <a href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></a>
+              {guestPrereg ? <a href={PREREG_HREF} className="btn solid">사전예약하기 <span className="ar">→</span></a> : <a href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></a>}
               <a href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</a>
               <div className="mnav__sub">
                 <a href="/privacy"><strong>개인정보처리방침</strong></a>

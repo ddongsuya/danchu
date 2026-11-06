@@ -7,8 +7,9 @@ import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "./portal.css";
 import { ArrowUpRight, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
-export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean };
-export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt" | "quote";
+/** soon: 아직 열리지 않은 메뉴 (사전예약 기간). 누를 수 없고 옆에 열리는 날을 적는다 */
+export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean; soon?: string };
+export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt" | "explore" | "book" | "quote";
 
 // 화면에서는 "기관"으로 통일한다 (의뢰자 화면의 "선택한 기관"과 같은 말)
 const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관", admin: "운영자" };

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckDisc } from "@/components/app/ui";
-import { won, md } from "@/lib/format";
+import { won } from "@/lib/format";
 
 /** 제출 완료 화면. closed 면(마지막 제출로 비교표가 열렸거나 회신이 닫혔다) 수정하기를 숨기고 수정할 수 없다고 안내한다 */
 export function ReplyDone({ no, replyBy, total, weeks, editHref, backHref, backLabel, closed = false }: { no: string; replyBy?: string; total: number; weeks?: string; editHref: string; backHref: string; backLabel: string; closed?: boolean }) {
@@ -13,7 +13,7 @@ export function ReplyDone({ no, replyBy, total, weeks, editHref, backHref, backL
           {no}{total ? ` · 총 ${won(total)}` : ""}{weeks && weeks !== "0" ? ` · 최종보고서 ${weeks}주차` : ""}
         </p>
         <p style={{ fontSize: 13, color: "var(--muted)" }}>
-          {closed ? "이 요청은 회신이 닫혀 제출한 견적을 수정하거나 다시 제출할 수 없어요. 비교표가 열렸으면 의뢰자에게 견적이 보여요. " : <>제출한 견적은 비교표가 열릴 때 의뢰자에게 보여요. {replyBy ? `비교표가 열리기 전이면 회신 기한(${md(replyBy)})까지 수정할 수 있고, 열린 뒤에는 수정하거나 다시 제출할 수 없어요. ` : "비교표가 열리기 전까지 수정할 수 있고, 열린 뒤에는 수정하거나 다시 제출할 수 없어요. "}</>}다른 기관은 귀 기관의 견적을 볼 수 없어요.
+          {closed ? "회신이 닫혀 더 고칠 수 없어요." : "비교표가 열리기 전까지 고칠 수 있어요. 열린 뒤에는 고치거나 다시 제출할 수 없어요."} 다른 기관은 볼 수 없어요.
         </p>
         <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
           {!closed && <Link href={editHref} className="b2 bsm">수정하기</Link>}

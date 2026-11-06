@@ -8,6 +8,8 @@ import { captureError } from "@/lib/observe";
 import { isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
+import { EARLY_OPEN_DATE, earlyOpenSms, type EarlyRole } from "@/lib/early";
+import { smsPhone } from "@/lib/sms";
 import { daysSince, reminderStage } from "@/lib/contract-reminder";
 import { shouldAskSponsor } from "@/lib/contract-gap";
 import { contractFollowupMail, esc, mailWrap, sendMail } from "@/lib/mail";
@@ -92,6 +94,7 @@ export async function GET(req: Request) {
     extendAsked: 0,
     reoffered: 0,
     pendingCleaned: 0,
+    earlyOpenSms: 0,
     digest: false,
     retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 },
     errors: [] as string[],
@@ -379,6 +382,19 @@ export async function GET(req: Request) {
   await step("pending-cleanup", out.errors, async () => {
     out.pendingCleaned = (await cleanupPending()).pending;
   });
+
+  // 4-9) 시범 운영 시작 문자 (0035): 2027-06-01 부터 사전예약한 번호에 한 번씩. 솔라피 개인 계정 하루 한도가 있어 하루 300건씩 나눠 보낸다
+  if (today >= EARLY_OPEN_DATE) {
+    await step("early-open-sms", out.errors, async () => {
+      const { data } = await sb.from("early_signups").select("id, role, phone").is("open_sms_at", null).not("phone", "is", null).order("created_at").limit(300);
+      for (const r of (data ?? []) as { id: string; role: EarlyRole; phone: string }[]) {
+        const st = await smsPhone(r.phone, { kind: "early", text: earlyOpenSms(r.role) });
+        if (st === "skipped") break; // 키가 없으면 그만 (다음 실행 때 다시)
+        await sb.from("early_signups").update({ open_sms_at: new Date().toISOString() }).eq("id", r.id);
+        if (st === "sent") out.earlyOpenSms++;
+      }
+    });
+  }
 
   // 5) 보존기간 정리: 접속 기록 90일, 요청서 3년, 읽은 알림 180일 (개인정보처리방침 3항)
   await step("retention", out.errors, async () => {

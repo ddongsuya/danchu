@@ -3,6 +3,11 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, unreadCount } from "@/lib/data";
 import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
+import { PreregGate } from "@/components/app/Prereg";
+import { PREREG_NAV_REQ } from "@/components/app/prereg-nav";
+import { daysToPilot } from "@/lib/prereg";
+import { sessionInPrereg } from "@/lib/prereg-server";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const metadata: Metadata = {
   title: "단추 · 내 견적 요청",
@@ -23,8 +28,9 @@ export const viewport: Viewport = {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession("requester", "/app");
-  const unread = dbReady() ? await unreadCount(session.userId) : 0;
-  const nav: NavItem[] = [
+  const prereg = await sessionInPrereg(session);
+  const unread = dbReady() && !prereg ? await unreadCount(session.userId) : 0;
+  const nav: NavItem[] = prereg ? [...PREREG_NAV_REQ] : [
     { href: "/app", label: "홈", icon: "home", exact: true },
     { href: "/app/new", label: "새 요청", icon: "plus" },
     { href: "/app/notifications", label: "알림", icon: "bell", badge: unread },
@@ -41,8 +47,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         }}
       />
       <Shell session={session} nav={nav}>
-        {children}
+        {prereg ? <PreregGate role="req" days={daysToPilot()} reserved={await reserved(session.email, "req")}>{children}</PreregGate> : children}
       </Shell>
     </AppState>
   );
+}
+
+
+/** 이 이메일로 사전예약했는가 */
+async function reserved(email: string, role: "req" | "cro"): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { data } = await sb.from("early_signups").select("id").eq("role", role).eq("email", email.toLowerCase()).maybeSingle();
+  return !!data;
 }

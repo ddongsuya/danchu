@@ -11,7 +11,7 @@ import { captureError } from "./observe";
  * 실패해도 던지지 않는다. 사이트 알림·이메일을 막지 않게
  */
 
-export type SmsKind = "invite" | "selected" | "compare" | "contract" | "invoice";
+export type SmsKind = "invite" | "selected" | "compare" | "contract" | "invoice" | "early";
 
 /** 휴대전화 번호를 숫자 11자리(또는 10자리)로. 휴대전화가 아니면 null */
 export function normalizeMobile(raw: string | null | undefined): string | null {
@@ -102,4 +102,22 @@ export async function smsUsers(userIds: string[], m: { kind: SmsKind; text: stri
     else if (r.reason !== "not_configured") captureError(new Error(`sms: ${r.reason}`), "sms:send", { kind: m.kind });
   }
   return sent;
+}
+
+/**
+ * 계정이 없는 번호 한 곳에 문자 (사전예약 완료·시범 운영 시작, 0035). text 앞에 "[단추] " 를 붙인다.
+ * 기록은 sms_log 에 user_id 없이 남긴다. 키가 없으면 skipped. 던지지 않는다
+ */
+export async function smsPhone(phone: string, m: { kind: SmsKind; text: string }): Promise<"sent" | "skipped" | "failed"> {
+  const to = normalizeMobile(phone);
+  if (!to) return "failed";
+  const r = await sendViaSolapi(to, `[단추] ${m.text}`);
+  const status = r.ok ? ("sent" as const) : r.reason === "not_configured" ? ("skipped" as const) : ("failed" as const);
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    const { error } = await sb.from("sms_log").insert({ user_id: null, phone_masked: maskPhone(to), kind: m.kind, status, reason: r.ok ? null : r.reason, provider_id: r.ok ? r.id : null });
+    if (error) console.warn("[danchu] 문자 기록 실패", error.message);
+  }
+  if (status === "failed") captureError(new Error(`sms: ${r.ok ? "" : r.reason}`), "sms:send", { kind: m.kind });
+  return status;
 }

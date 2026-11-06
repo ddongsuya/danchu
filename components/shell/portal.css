@@ -992,3 +992,9 @@
 .pt__demo nav { display: flex; gap: 10px; margin-left: auto; }
 .pt__demo nav a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .pt__demo nav a[aria-current="page"] { font-weight: 700; text-decoration: none; }
+
+/* 사전예약 기간에 아직 열리지 않은 메뉴 (NavItem.soon) */
+.pt__soon { cursor: default; color: var(--muted); }
+.pt__soon small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.pt__tab.pt__soon small { display: block; font-size: 10px; }
+@media (min-width: 960px) { .pt__navi.pt__soon:hover { background: none; } }
