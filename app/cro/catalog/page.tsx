@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { loadCatalog, loadOrgPresets } from "@/lib/catalog-db";
 import { catalogItems } from "@/lib/catalog";
@@ -22,7 +23,10 @@ export default async function CroCatalogPage() {
             자주 하는 시험의 조건·기간·단가를 적어 두면, 요청에 참여할 때 가장 가까운 조합으로 회신 초안이 채워져요. 비워 둬도 되고, 회신에서 제출한 값은 여기에 저절로 쌓여요. 적은 값은 이 기관의 초안에만 쓰여요.
           </p>
         </div>
-        <span className="pill pill--tint">항목 {filled} / {items.length} · 조합 {rows.length}</span>
+        <div className="ph__actions">
+          <span className="pill pill--tint">항목 {filled} / {items.length} · 조합 {rows.length}</span>
+          <Link href="/cro/catalog/prices" className="b2 bsm">견적서 단가</Link>
+        </div>
       </div>
       <CatalogEditor items={items} initialRows={rows} orgCategories={org.categories} orgPresets={presets} />
     </>

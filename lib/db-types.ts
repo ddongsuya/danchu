@@ -463,6 +463,8 @@ export type Database = {
           translation_weeks: number | null;
           /** 0029: 최근 제출한 앞 단계 (항목 키 또는 step::단계 이름) */
           after_keys: string[];
+          /** 0035: 견적서 표준가 (표준 설계 금액, 원, VAT 별도) */
+          std_price: number | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_catalog"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_catalog"]["Row"], "org_id" | "item_key" | "category" | "item">>;
         Update: Partial<Database["public"]["Tables"]["cro_catalog"]["Row"]>;
@@ -473,6 +475,34 @@ export type Database = {
         Insert: Ins<Database["public"]["Tables"]["cro_schedule_steps"]["Row"], "id" | "weeks" | "after_keys" | "updated_at">;
         Update: Partial<Database["public"]["Tables"]["cro_schedule_steps"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_schedule_steps_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_quote_rates: {
+        Row: { org_id: string; item_key: string; rates: Json; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_quote_rates"]["Row"], "rates" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_quote_rates"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_quote_rates_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_quote_docs: {
+        Row: {
+          id: string; org_id: string; doc_no: string; title: string; client: string; substance: string;
+          issued_on: string; valid_until: string | null; invite_id: string | null; rfq_no: string | null;
+          status: string; data: Obj; supply: number; memo: string; created_by: string | null; created_at: string; updated_at: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["cro_quote_docs"]["Row"], "id" | "title" | "client" | "substance" | "issued_on" | "valid_until" | "invite_id" | "rfq_no" | "status" | "data" | "supply" | "memo" | "created_by" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_quote_docs"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_quote_docs_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_quote_style: {
+        Row: { org_id: string; brand_color: string | null; logo_data: string | null; logo_pos: string; supplier: Obj; terms: Obj; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_quote_style"]["Row"], "brand_color" | "logo_data" | "logo_pos" | "supplier" | "terms" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_quote_style"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_quote_style_org_id_fkey"; columns: ["org_id"]; isOneToOne: true; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_quote_design_requests: {
+        Row: { id: string; org_id: string; status: string; note: string; files: Json; reply: string; created_by: string | null; created_at: string; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_quote_design_requests"]["Row"], "id" | "status" | "note" | "files" | "reply" | "created_by" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_quote_design_requests"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_quote_design_requests_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
       cro_org_presets: {
         Row: { org_id: string; preset_key: string; offered: boolean; package_price: number | null; note: string | null; updated_at: string };

@@ -128,7 +128,10 @@ type Loaded = {
  * 견적 회신 폼 - 항목별 3칸(+사유) · 공통 조건 · 전달 사항 · 견적서 원본(PDF).
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
-export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: string; backHref: string; doneHref: string; orgCerts?: string[] }) {
+/** 견적서 생성 툴(0035)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
+export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null }[] };
+
+export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string } }) {
   const router = useRouter();
   const [data, setData] = useState<Loaded | null>(null);
   const [items, setItems] = useState<ReplyItem[]>([]);
@@ -166,6 +169,27 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
       })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했어요."));
   }, [token, backHref, router]);
+
+  // 견적서에서 "회신 보내기"로 왔으면 시험별 금액·기간을 한 번 채운다 (요청 행 번호가 같은 시험만)
+  const filledFromDoc = useRef(false);
+  const [docApplied, setDocApplied] = useState(0);
+  useEffect(() => {
+    if (!docFill || !data || filledFromDoc.current || data.expired || data.locked || data.closed || data.declined) return;
+    filledFromDoc.current = true;
+    const by = new Map(docFill.lines.map((l) => [l.seq, l]));
+    let count = 0;
+    const next = items.map((it) => {
+      const l = by.get(it.seq);
+      if (!l) return it;
+      count++;
+      return { ...it, avail: it.avail === "조건부 가능" ? it.avail : "가능" as const, amount: String(l.amount), weeks: l.weeks ? String(l.weeks) : it.weeks, unit: "total" as const, unitPrice: "", sampleCount: "", source: "manual" as const, checks: [] };
+    });
+    if (!count) return;
+    setItems(next);
+    setDocApplied(count);
+    queueSave(next, note, common);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docFill, data]);
 
   // 화면을 떠날 때 대기 중인 자동 저장을 정리한다
   useEffect(() => () => { window.clearTimeout(timer.current); saveAbort.current?.abort(); }, []);
@@ -334,6 +358,21 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts }: { token: stri
         </div>
       </div>
 
+      {docFill && docApplied > 0 && !readOnly && (
+        <div className="note note--tint" style={{ marginBottom: 16 }}>
+          <span>
+            <b>견적서 {docFill.docNo}의 금액으로 시험 {docApplied}개를 채웠어요.</b>{" "}
+            견적서 PDF를 저장해 아래에 첨부하세요.{" "}
+            <Link href={docFill.printHref} style={{ color: "var(--brand)", fontWeight: 600 }}>PDF 저장</Link>{" · "}
+            <Link href={docFill.href} style={{ color: "var(--brand)", fontWeight: 600 }}>견적서 고치기</Link>
+          </span>
+        </div>
+      )}
+      {docLink && !docFill && !readOnly && (
+        <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+          표준가와 추가 비용으로 견적서를 만들어 금액을 채울 수 있어요. <Link href={docLink.href} style={{ color: "var(--brand)", fontWeight: 600 }}>{docLink.label}</Link>
+        </p>
+      )}
       {data.draft?.prefilled && !readOnly && (
         <div className="note" style={{ marginBottom: 16 }}>
           <b>카탈로그로 초안을 채웠어요.</b>{" "}

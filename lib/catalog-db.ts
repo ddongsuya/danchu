@@ -27,6 +27,7 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     report_weeks: (r.report_weeks as number | null) ?? null,
     translation_weeks: (r.translation_weeks as number | null) ?? null,
     after_keys: Array.isArray(r.after_keys) ? (r.after_keys as string[]) : [],
+    std_price: (r.std_price as number | null) ?? null,
   };
 }
 

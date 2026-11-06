@@ -16,6 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/awards", label: "수주·계약", icon: "award" },
     { href: "/admin/billing", label: "청구 명세", icon: "doc" },
     { href: "/admin/invoices", label: "청구서", icon: "receipt" },
+    { href: "/admin/quote-design", label: "견적서 양식 요청", icon: "doc" },
     { href: "/admin/notifications", label: "알림", icon: "bell", badge: unread },
     { href: "/admin/users", label: "사용자", icon: "user" },
     { href: "/admin/early", label: "사전예약", icon: "list" },
