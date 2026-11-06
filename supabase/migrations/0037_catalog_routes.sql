@@ -1,4 +1,4 @@
--- 단추(Danchu) 37차: 시험 목록에서 시험 하나에 가능한 투여 경로를 여러 개 (2026-11-06)
+-- 단추(Danchu) 37차: 시험 목록에서 시험 하나에 가능한 투여 경로 여러 개 · 동물종·경로별 표준가 (2026-11-06)
 -- 0036_quote_docs.sql 실행 후 적용. 두 번 실행해도 안전합니다.
 --
 -- 배경
@@ -14,6 +14,16 @@ end $$;
 alter table public.cro_catalog add column if not exists routes text[] not null default '{}';
 update public.cro_catalog set routes = array[route] where route is not null and route <> '' and routes = '{}';
 comment on column public.cro_catalog.routes is '가능한 투여 경로. 첫 번째가 표준가 기준 경로이며 route 와 같다';
+
+-- 기준이 아닌 동물종·경로일 때 표준가. [{"species":"비글","price":180000000}, {"route":"정맥(IV)","price":70000000}]
+-- 동물종 금액은 기준 경로일 때, 경로 금액은 기준 동물종일 때 금액이다
+alter table public.cro_catalog add column if not exists cond_prices jsonb not null default '[]'::jsonb;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'cro_catalog_cond_prices_check') then
+    alter table public.cro_catalog add constraint cro_catalog_cond_prices_check check (jsonb_typeof(cond_prices) = 'array');
+  end if;
+end $$;
+comment on column public.cro_catalog.cond_prices is '기준이 아닌 동물종·투여 경로일 때 표준가 목록 (동물종은 기준 경로, 경로는 기준 동물종 기준)';
 
 create or replace function public.danchu_schema_version()
 returns int

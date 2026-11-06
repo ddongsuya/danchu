@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { TablesInsert, TablesUpdate } from "./db-types";
 import { orderToKeys } from "./schedule";
-import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type Glp } from "./catalog";
+import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type CondPrice, type Glp } from "./catalog";
 
 /** 0037 전 행은 routes 가 없다. 그때는 route 하나를 목록으로 본다 */
 function routesOf(r: Record<string, unknown>): { route: string | null; routes: string[] } {
@@ -36,6 +36,7 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     translation_weeks: (r.translation_weeks as number | null) ?? null,
     after_keys: Array.isArray(r.after_keys) ? (r.after_keys as string[]) : [],
     std_price: (r.std_price as number | null) ?? null,
+    cond_prices: Array.isArray(r.cond_prices) ? (r.cond_prices as CondPrice[]) : [],
   };
 }
 
@@ -79,12 +80,25 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
         .filter((o): o is { name: string; amount: number | null } => !!o && !!o.name)
         .slice(0, 20)
     : [];
+  const routesPart = cleanRoutes(r);
+  const species = arr(r.species, SPECIES);
+  // 기준이 아닌(두 번째부터) 체크한 동물종·경로의 금액만 남긴다
+  const cond_prices: CondPrice[] = [];
+  for (const x of Array.isArray(r.cond_prices) ? (r.cond_prices as unknown[]) : []) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const price = big(o.price);
+    if (price == null) continue;
+    if (typeof o.species === "string" && species.indexOf(o.species) > 0 && !cond_prices.some((c) => c.species === o.species)) cond_prices.push({ species: o.species, price });
+    else if (typeof o.route === "string" && routesPart.routes.indexOf(o.route) > 0 && !cond_prices.some((c) => c.route === o.route)) cond_prices.push({ route: o.route, price });
+  }
   return {
     org_id: orgId, item_key: String(r.item_key), category: it.category, item: it.item,
     available: r.available !== false,
     glp: ["GLP", "Non-GLP", "both"].includes(String(r.glp)) ? String(r.glp) : "both",
-    species: arr(r.species, SPECIES),
-    ...cleanRoutes(r),
+    species,
+    ...routesPart,
+    cond_prices,
     method: str(r.method, 120),
     groups_ctrl: int(r.groups_ctrl, 20), groups_test: int(r.groups_test, 20), per_sex: int(r.per_sex, 200),
     recovery_weeks: int(r.recovery_weeks, 52), recovery_per_sex: int(r.recovery_per_sex, 100),

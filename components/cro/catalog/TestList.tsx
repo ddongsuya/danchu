@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CaretRight, CheckSquare, MagnifyingGlass, Plus, Square, X } from "@phosphor-icons/react";
 import { RfqField } from "@/components/RfqField";
 import { Chevron } from "@/components/Chevron";
-import { EXTRA_FIELDS, INCLUDE_KEYS, OPTION_SUGGEST, PER_SAMPLE_CATS, ROUTES, SPECIES, isNewId, methodOptions, newVariant, type CatalogItem, type CatalogRow } from "@/lib/catalog";
+import { EXTRA_FIELDS, INCLUDE_KEYS, OPTION_SUGGEST, PER_SAMPLE_CATS, ROUTES, SPECIES, isNewId, methodOptions, newVariant, type CatalogItem, type CatalogRow, type CondPrice } from "@/lib/catalog";
 import { PRESETS, presetItems } from "@/lib/presets";
 import { defaultRates, standardGroups, uid, type Rate } from "@/lib/quote-doc";
 import type { Cat, Values } from "@/lib/rfq-schema";
@@ -393,10 +393,40 @@ function CondPick({ row, onChange, k, small }: { row: CatalogRow; onChange: (p: 
               </div>
             )}
           </div>
-          <span className="fld__help">표준가는 이 조건 금액이에요. 다른 동물종이나 경로로 요청이 오면 초안 금액은 비워 두고 &quot;금액 확인&quot; 표시를 붙여요.</span>
+          <span className="fld__help">표준가는 이 조건 금액이에요. 다른 동물종·경로 금액은 표준가 아래에 따로 적어요. 비워 두면 그 조건 요청은 초안 금액을 비우고 &quot;금액 확인&quot; 표시를 붙여요.</span>
         </div>
       )}
     </>
+  );
+}
+
+/** 기준이 아닌 동물종·경로일 때 표준가. 동물종은 기준 경로, 경로는 기준 동물종일 때 금액 */
+function CondPrices({ row, onChange, k, perSample }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string; perSample: boolean }) {
+  const routes = routesOf(row);
+  const list = row.cond_prices ?? [];
+  const lines = [
+    ...row.species.slice(1).map((x) => ({ key: { species: x }, label: x, base: routes[0] })),
+    ...routes.slice(1).map((x) => ({ key: { route: x }, label: x, base: row.species[0] })),
+  ];
+  if (!lines.length) return null;
+  const same = (c: CondPrice, key: { species?: string; route?: string }) => ("species" in key ? c.species === key.species : c.route === key.route);
+  const setPrice = (key: { species?: string; route?: string }, v: number | null) => {
+    const rest = list.filter((c) => !same(c, key));
+    onChange({ cond_prices: v == null ? rest : [...rest, { ...key, price: v }] });
+  };
+  return (
+    <div className="tc__prices">
+      <span className="fld__lab">다른 조건일 때 {perSample ? "검체당 단가" : "표준가"} <em className="tc__n">선택</em></span>
+      {lines.map((l, i) => (
+        <div key={l.label} className="tc__price">
+          <label htmlFor={`${k}-cp${i}`}><b>{l.label}</b>{l.base ? <span>{l.base} 기준</span> : null}</label>
+          <div className="numin">
+            <input id={`${k}-cp${i}`} type="text" inputMode="numeric" autoComplete="off" placeholder="비우면 확인 표시" value={(() => { const c = list.find((x) => same(x, l.key)); return c ? c.price.toLocaleString("ko-KR") : ""; })()} onChange={(e) => { const v = digits(e.target.value); setPrice(l.key, v ? Number(v) : null); }} />
+            <span>원</span>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -569,13 +599,14 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
               </div>
             )}
             <div className="tf__grid">
-              <Money id={`${k}-price`} label={perSample ? "검체당 단가" : "표준가"} value={d.std_price ?? null} onChange={(v) => set({ std_price: v })} help={perSample ? "VAT 별도" : "위 설계 그대로일 때 금액, VAT 별도"} />
+              <Money id={`${k}-price`} label={`${perSample ? "검체당 단가" : "표준가"}${multi(d) ? ` (${baseLabel(d)})` : ""}`} value={d.std_price ?? null} onChange={(v) => set({ std_price: v })} help={perSample ? "VAT 별도" : "위 설계 그대로일 때 금액, VAT 별도"} />
               <div className="fld">
                 <label className="fld__lab" htmlFor={`${k}-wk`}>소요 기간</label>
                 <div className="numin"><input id={`${k}-wk`} type="text" inputMode="numeric" value={d.weeks != null ? String(d.weeks) : ""} onChange={(e) => { const v = digits(e.target.value, 3); set({ weeks: v ? Math.min(200, Number(v)) : null }); }} /><span>주</span></div>
                 <span className="fld__help">동물 입고부터 보고서(안)까지</span>
               </div>
             </div>
+            <CondPrices row={d} onChange={set} k={k} perSample={perSample} />
           </section>
 
           {(hasGroups || list.length > 0) && (
@@ -680,8 +711,9 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
       {step === 2 && (
         <>
           <h1>{baseLabel(d) ? `${baseLabel(d)} 기준 ` : "이 조건의 "}{perSample ? "검체당 단가" : "표준가"}를 적어 주세요</h1>
-          <p className="tw__lead">앞에서 고른 설계 그대로일 때 금액이에요. {multi(d) ? "다른 동물종이나 경로로 요청이 오면 초안 금액은 비워 두고 확인 표시를 붙여요." : "회신 초안과 견적서에 이 금액이 먼저 들어가요."}</p>
+          <p className="tw__lead">앞에서 고른 설계 그대로일 때 금액이에요. {multi(d) ? "다른 동물종·경로 금액도 아래에 적어 두면 그 조건 요청에 그대로 들어가요." : "회신 초안과 견적서에 이 금액이 먼저 들어가요."}</p>
           <div className="tw__q"><Money id={`${k}-wp`} label={`${perSample ? "검체당 단가" : "표준가"} (VAT 별도)`} value={d.std_price ?? null} onChange={(v) => set({ std_price: v })} big /></div>
+          {multi(d) && <div className="tw__q"><CondPrices row={d} onChange={set} k={`${k}-w`} perSample={perSample} /></div>}
           <div className="tw__q tw__weeks">
             <Int id={`${k}-ww`} label="소요 기간" value={d.weeks} onChange={(v) => set({ weeks: v })} unit="주" max={200} />
             <span className="fld__help">동물 입고부터 보고서(안)까지</span>

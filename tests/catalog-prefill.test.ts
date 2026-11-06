@@ -43,6 +43,15 @@ describe("시험 하나에 가능한 동물종·경로가 여럿 (0037)", () => 
     expect(p.amount).toBe("");
     expect(p.design.route).toBe("정맥(IV)");
   });
+  it("그 동물종 금액을 적어 두었으면 그 금액으로 채운다", () => {
+    const w = { ...v, cond_prices: [{ species: "비글", price: 9_000_000 }] };
+    const picked = pickVariant([w], row, { "일반독성.species": "비글", route: "경구(PO)" });
+    expect(picked?.mismatch).not.toContain(PRICE_CHECK_SPECIES);
+    expect(prefillRow(row, picked, {}).amount).toBe("9000000");
+    // 동물종·경로가 둘 다 기준이 아니면 기관이 확인한다
+    const both = pickVariant([w], row, { "일반독성.species": "비글", route: "정맥(IV)" });
+    expect(prefillRow(row, both, {}).amount).toBe("");
+  });
   it("체크하지 않은 경로면 투여경로 불일치", () => {
     const picked = pickVariant([v], row, { route: "흡입" });
     expect(picked?.mismatch).toContain("투여경로");

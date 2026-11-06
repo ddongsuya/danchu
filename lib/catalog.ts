@@ -25,6 +25,8 @@ export type CatalogRow = {
   route: string | null;
   /** 0037: 가능한 투여 경로. 첫 번째가 표준가 기준 */
   routes: string[];
+  /** 0037: 기준이 아닌 동물종·경로일 때 표준가. 동물종 금액은 기준 경로, 경로 금액은 기준 동물종일 때 */
+  cond_prices?: CondPrice[];
   /** 조합 축 3: 시험법·가이드라인 */
   method: string | null;
   groups_ctrl: number | null;
@@ -55,6 +57,8 @@ export type CatalogRow = {
   /** 0036: 표준가 (표준 설계 금액). 시험 목록에서 바꾸고, 저장할 때 price_min 에도 같은 값이 들어간다 */
   std_price?: number | null;
 };
+
+export type CondPrice = { species?: string; route?: string; price: number };
 
 export type CatalogItem = { key: string; category: Cat; item: string };
 
@@ -349,7 +353,17 @@ export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: 
     if (mm === true) score += 2; else if (mm === false) mismatch.push(eff ? "질환 모델" : "시험법");
     if (typeof reqGlp === "string" && (reqGlp === "GLP" || reqGlp === "Non-GLP") && v.glp !== "both") { if (v.glp === reqGlp) score += 1; else mismatch.push(`${reqGlp} 수행`); }
     if (v.source === "manual") score += 0.5;
-    if (!best || score > best.score) best = { row: { ...v, species, route }, score, mismatch };
+    // 기준이 아닌 동물종·경로면 그 조건 금액을 쓴다. 둘 다 기준이 아니거나 금액이 없으면 기관이 확인한다
+    let picked: CatalogRow = { ...v, species, route };
+    const offSp = mismatch.includes(PRICE_CHECK_SPECIES), offRt = mismatch.includes(PRICE_CHECK_ROUTE);
+    if (offSp !== offRt) {
+      const cp = (v.cond_prices ?? []).find((x) => (offSp ? x.species === species[0] : x.route === route));
+      if (cp) {
+        picked = { ...picked, std_price: cp.price, price_min: cp.price, price_max: null };
+        mismatch.splice(mismatch.indexOf(offSp ? PRICE_CHECK_SPECIES : PRICE_CHECK_ROUTE), 1);
+      }
+    }
+    if (!best || score > best.score) best = { row: picked, score, mismatch };
   }
   return best && { row: best.row, mismatch: best.mismatch };
 }

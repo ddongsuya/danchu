@@ -174,3 +174,9 @@
 .tc__baserow { display: flex; flex-wrap: wrap; gap: 8px; }
 .tc__baserow .selwrap { min-width: 0; flex: 1 1 180px; }
 .td .tc__base { background: var(--sf); }
+.tc__prices { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.tc__price { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 220px); align-items: center; gap: 12px; }
+.tc__price label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; color: var(--ink); }
+.tc__price label b { font-weight: 600; }
+.tc__price label span { font-size: 13px; color: var(--muted); }
+@media (max-width: 759px) { .tc__price { grid-template-columns: minmax(0, 1fr) minmax(0, 170px); } }
