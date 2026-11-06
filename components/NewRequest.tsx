@@ -17,6 +17,7 @@ import {
 } from "@/lib/rfq-schema";
 import { RfqField } from "@/components/RfqField";
 import { Advisor } from "@/components/Advisor";
+import { ChatRequest } from "@/components/ChatRequest";
 import {
   clearDraft,
   loadDraft,
@@ -89,7 +90,7 @@ export function NewRequest({
   guest?: boolean;
 }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<"start" | "advisor" | "edit">("start");
+  const [phase, setPhase] = useState<"start" | "advisor" | "edit" | "chat">("start");
   /** 네 갈래 첫 화면에서 고른 갈래. 있으면 시험 항목을 그 갈래 것만 보여 준다 (이미 고른 항목은 남긴다) */
   const [kind, setKind] = useState<Kind | null>(null);
   /** 주소에 갈래 없이 들어왔을 때(앱의 "새 요청" 등) 시작 화면에서 고른 갈래. Tox는 길이 둘이라 한 번 더 고른다 */
@@ -150,7 +151,7 @@ export function NewRequest({
     };
   }, [userId, guest]);
   useEffect(() => {
-    if (!ready || phase !== "edit") return;
+    if (!ready || (phase !== "edit" && phase !== "chat")) return;
     const ok = saveDraft(userId, {
       version: 2,
       q: step,
@@ -419,6 +420,26 @@ export function NewRequest({
       setBusy(false);
     }
   };
+  const verifyModal = guest && (verifyOpen || pendingToken) && (
+        <GuestVerify
+          open={verifyOpen}
+          values={{ ...values, source: "app", submittedStep: "2" }}
+          files={files}
+          contact={guestContact}
+          onContact={setGuestContact}
+          token={pendingToken && tokenSig === sig ? pendingToken : undefined}
+          onToken={(t) => {
+            setPendingToken(t);
+            setTokenSig(sig);
+          }}
+          onClose={() => setVerifyOpen(false)}
+          onDone={(no) => {
+            clearDraft(GUEST);
+            // 새 로그인 세션으로 화면 전체를 다시 그린다
+            window.location.assign(`/app/new/done?no=${encodeURIComponent(no)}`);
+          }}
+        />
+      );
   if (!ready) return <p role="status">작성 중인 요청을 확인하고 있어요.</p>;
   if (phase === "advisor")
     return (
@@ -433,9 +454,9 @@ export function NewRequest({
             go(0);
           }}
           onApply={(patch) => {
-            setValues((old) => ({ ...old, ...patch }));
-            setPhase("edit");
-            go(0);
+            // 설문 뒤에는 대화형 빠른 견적으로. 요청 성격은 빠른 견적이라 비교 견적으로 둔다
+            setValues((old) => ({ ...old, ...patch, intent: old.intent || "비교 견적" }));
+            setPhase("chat");
           }}
         />
       </div>
@@ -485,7 +506,7 @@ export function NewRequest({
                     setGuestContact(resume.contact ?? EMPTY_CONTACT);
                     setPendingToken(resume.pendingToken);
                   } else if (resume.contact) clearDraft(GUEST);
-                  setPhase("edit");
+                  setPhase(resume.values.advisorUsed === "예" && !resume.pendingNo ? "chat" : "edit");
                 }}
               >
                 이어서 쓰기
@@ -539,6 +560,22 @@ export function NewRequest({
           </div>
         )}
       </div>
+    );
+  if (phase === "chat")
+    return (
+      <>
+        <ChatRequest
+          values={values}
+          onChange={set}
+          onSubmit={submit}
+          busy={busy}
+          error={error}
+          saveState={saveState.startsWith("이 브라우저") ? "임시 저장됨" : saveState}
+          closeHref={guest ? "/request" : "/app"}
+          preview={preview}
+        />
+        {verifyModal}
+      </>
     );
   const labels = labelMap();
   return (
@@ -970,26 +1007,7 @@ export function NewRequest({
           </button>
         )}
       </div>
-      {guest && (verifyOpen || pendingToken) && (
-        <GuestVerify
-          open={verifyOpen}
-          values={{ ...values, source: "app", submittedStep: "2" }}
-          files={files}
-          contact={guestContact}
-          onContact={setGuestContact}
-          token={pendingToken && tokenSig === sig ? pendingToken : undefined}
-          onToken={(t) => {
-            setPendingToken(t);
-            setTokenSig(sig);
-          }}
-          onClose={() => setVerifyOpen(false)}
-          onDone={(no) => {
-            clearDraft(GUEST);
-            // 새 로그인 세션으로 화면 전체를 다시 그린다
-            window.location.assign(`/app/new/done?no=${encodeURIComponent(no)}`);
-          }}
-        />
-      )}
+      {verifyModal}
     </div>
   );
 }
