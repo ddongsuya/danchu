@@ -13,7 +13,7 @@ const OK_TYPE = /^(application\/pdf|image\/(png|jpeg|webp)|application\/vnd\.ope
 const OK_EXT = /\.(pdf|png|jpe?g|webp|xlsx?|docx?)$/i;
 
 /**
- * 견적서 양식 제작 요청 (0035).
+ * 견적서 양식 제작 요청 (0036).
  * POST { action: "upload-url", name, size, type } → 첨부를 올릴 서명 URL (cro-files/quote-design/<기관>/…)
  * POST { action: "create", note, files: [{path, name, size}] } → 요청 접수, 운영자에게 메일
  * 진행 중인 요청(접수·제작 중·검토)이 있으면 새 요청을 받지 않는다.

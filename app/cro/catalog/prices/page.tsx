@@ -9,7 +9,7 @@ import "@/components/cro/quote/quote.css";
 
 export const dynamic = "force-dynamic";
 
-/** 견적서 단가 (0035): 조건별 표준가 + 시험별 추가 비용 단가 */
+/** 견적서 단가 (0036): 조건별 표준가 + 시험별 추가 비용 단가 */
 export default async function CatalogPrices({ searchParams }: { searchParams: Promise<{ item?: string }> }) {
   const s = await requireSession("cro");
   const org = s.org;

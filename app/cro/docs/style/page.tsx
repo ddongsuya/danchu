@@ -10,7 +10,7 @@ import "@/components/cro/quote/quote.css";
 
 export const dynamic = "force-dynamic";
 
-/** 견적서 양식 (0035): 로고·브랜드 색·공급자 정보·거래 조건 기본 문구 + 양식 제작 요청 */
+/** 견적서 양식 (0036): 로고·브랜드 색·공급자 정보·거래 조건 기본 문구 + 양식 제작 요청 */
 export default async function QuoteStylePage() {
   const s = await requireSession("cro");
   const org = s.org;

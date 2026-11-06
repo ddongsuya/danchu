@@ -8,7 +8,7 @@ import "@/components/cro/quote/quote.css";
 
 export const dynamic = "force-dynamic";
 
-/** 견적서 목록 (0035). 단추 요청 회신용과 단추 밖 의뢰자용을 함께 둔다 */
+/** 견적서 목록 (0036). 단추 요청 회신용과 단추 밖 의뢰자용을 함께 둔다 */
 export default async function CroDocs() {
   const s = await requireSession("cro");
   const org = s.org;

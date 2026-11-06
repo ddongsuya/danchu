@@ -463,7 +463,7 @@ export type Database = {
           translation_weeks: number | null;
           /** 0029: 최근 제출한 앞 단계 (항목 키 또는 step::단계 이름) */
           after_keys: string[];
-          /** 0035: 견적서 표준가 (표준 설계 금액, 원, VAT 별도) */
+          /** 0036: 견적서 표준가 (표준 설계 금액, 원, VAT 별도) */
           std_price: number | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_catalog"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_catalog"]["Row"], "org_id" | "item_key" | "category" | "item">>;

@@ -23,7 +23,7 @@ export default async function CroReply({ params, searchParams }: { params: Promi
     const got = await loadQuote(inv.token, await viewerLoadOpts());
     return <ReplyDone no={inv.rfq_no} replyBy={inv.reply_by} total={Number(sp.t || 0)} weeks={sp.w} editHref={`/cro/r/${id}/reply`} backHref="/cro/quotes" backLabel="제출한 견적" closed={!!got?.closed} />;
   }
-  // 견적서 생성 툴(0035): ?doc= 로 오면 그 견적서의 시험별 금액·기간을 채운다. 아니면 이 요청으로 만든 견적서를 열거나 새로 만드는 링크
+  // 견적서 생성 툴(0036): ?doc= 로 오면 그 견적서의 시험별 금액·기간을 채운다. 아니면 이 요청으로 만든 견적서를 열거나 새로 만드는 링크
   let docFill: DocFill | undefined;
   let docLink: { href: string; label: string } | undefined;
   const orgId = inv.cro_org_id;

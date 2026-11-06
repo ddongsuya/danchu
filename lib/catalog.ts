@@ -50,7 +50,7 @@ export type CatalogRow = {
   translation_weeks?: number | null;
   /** 0029: 최근 제출한 앞 단계 (항목 키 또는 step::단계 이름) */
   after_keys?: string[];
-  /** 0035: 견적서 표준가 (표준 설계 금액). 견적서 단가 화면에서만 바꾼다 */
+  /** 0036: 견적서 표준가 (표준 설계 금액). 견적서 단가 화면에서만 바꾼다 */
   std_price?: number | null;
 };
 

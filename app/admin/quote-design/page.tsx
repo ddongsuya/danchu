@@ -7,7 +7,7 @@ import { DesignRequestRow } from "@/components/admin/DesignRequestRow";
 
 export const dynamic = "force-dynamic";
 
-/** 운영자: 기관의 견적서 양식 제작 요청 (0035). 첨부를 내려받아 양식을 만들고 단계를 바꾼다 */
+/** 운영자: 기관의 견적서 양식 제작 요청 (0036). 첨부를 내려받아 양식을 만들고 단계를 바꾼다 */
 export default async function AdminQuoteDesign() {
   await requireSession("admin");
   const list = dbReady() ? await listDesignRequests(null) : [];

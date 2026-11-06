@@ -128,7 +128,7 @@ type Loaded = {
  * 견적 회신 폼 - 항목별 3칸(+사유) · 공통 조건 · 전달 사항 · 견적서 원본(PDF).
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
-/** 견적서 생성 툴(0035)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
+/** 견적서 생성 툴(0036)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
 export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null }[] };
 
 export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string } }) {
