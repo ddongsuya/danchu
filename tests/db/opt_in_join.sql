@@ -338,8 +338,8 @@ begin
   update public.rfq_invites set status = 'draft' where id = old_draft;
   alter table public.cro_quotes enable trigger cro_quotes_require_join;
   -- 전환 전 선정·체결된 legacy 수주 (성사수수료 대상 금액)
-  perform public.report_contract(pg_temp.t_award(q_old), (now() at time zone 'Asia/Seoul')::date, 70000000, '');
-  perform public.report_contract(pg_temp.t_award((select id from public.cro_quotes where invite_id = j_op)), (now() at time zone 'Asia/Seoul')::date, 80000000, '');
+  perform public.report_contract(pg_temp.t_award(q_old), (now() at time zone 'Asia/Seoul')::date, 70000000, '', false, 'scope');
+  perform public.report_contract(pg_temp.t_award((select id from public.cro_quotes where invite_id = j_op)), (now() at time zone 'Asia/Seoul')::date, 80000000, '', false, 'scope');
   -- 0025: 체결 보고 뒤 확인해야 정산된다
   perform pg_temp.t_confirm(a.id) from public.rfq_awards a where a.contract_reported_at is not null and a.contract_confirmed_at is null;
 
@@ -510,7 +510,7 @@ begin
   perform pg_temp.t_eq(pg_temp.t_save(p, pg_temp.tok(p), true), 'ok', '시범 참여 제출');
   perform pg_temp.t_eq(pg_temp.t_save(paid, pg_temp.tok(paid), true), 'ok', '유료 참여 제출');
   update public.cro_quotes set total_amount = 60000000, pdf_path = 'x/q.pdf', start_date = current_date, valid_until = current_date + 30 where invite_id in (p, paid);
-  perform public.report_contract(pg_temp.t_award((select id from public.cro_quotes where invite_id = p)), (now() at time zone 'Asia/Seoul')::date, 70000000, '');
+  perform public.report_contract(pg_temp.t_award((select id from public.cro_quotes where invite_id = p)), (now() at time zone 'Asia/Seoul')::date, 70000000, '', false, 'scope');
   perform pg_temp.t_confirm(a.id) from public.rfq_awards a where a.contract_reported_at is not null and a.contract_confirmed_at is null;
 
   select * into l from public.billing_lines(pg_temp.t_month(0), pg_temp.t_month(1)) where invite_id = p;

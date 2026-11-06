@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { GapReasonField, gapReady } from "@/components/GapReasonField";
+import type { GapReason } from "@/lib/contract-gap";
 
-export function ContractReport({ awardId }: { awardId: string }) {
+export function ContractReport({ awardId, quoteAmount = null }: { awardId: string; quoteAmount?: number | null }) {
   const router = useRouter();
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [gapReason, setGapReason] = useState<GapReason | "">("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const ok = !!date && /^\d{1,13}$/.test(amount);
+  const ok = !!date && /^\d{1,13}$/.test(amount) && gapReady(quoteAmount, amount, gapReason, note);
 
   return (
     <form
@@ -22,7 +25,7 @@ export function ContractReport({ awardId }: { awardId: string }) {
         setBusy(true);
         setError("");
         try {
-          const res = await fetch(`/api/awards/${awardId}/contract`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, amount, note }) });
+          const res = await fetch(`/api/awards/${awardId}/contract`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, amount, note, gapReason: gapReason || undefined }) });
           const d = (await res.json().catch(() => ({}))) as { error?: string };
           if (!res.ok) throw new Error(d.error || "저장하지 못했어요. 다시 눌러 주세요.");
           router.refresh();
@@ -46,8 +49,9 @@ export function ContractReport({ awardId }: { awardId: string }) {
           </div>
         </div>
       </div>
+      <GapReasonField id={`g-${awardId}`} quoteAmount={quoteAmount} amount={amount} reason={gapReason} onReason={setGapReason} />
       <div className="fld">
-        <label className="fld__lab" htmlFor={`n-${awardId}`}>비고</label>
+        <label className="fld__lab" htmlFor={`n-${awardId}`}>비고{gapReason === "other" && <span className="req">*</span>}</label>
         <input id={`n-${awardId}`} className="inp" style={{ height: 44 }} value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder="예: 항목 일부 조정, 착수 예정일" />
       </div>
       {error && <p className="note note--err" role="alert">{error}</p>}

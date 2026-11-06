@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { cache } from "react";
+import { DEMO_COOKIE, demoEnabled, isDemoRole } from "./demo";
 import { createSessionClient } from "./supabase-server";
 import { getSupabaseAdmin } from "./supabase";
 import { loadOptsFor } from "./concierge";
@@ -58,7 +60,16 @@ export type CroOrg = {
   managed?: boolean;
 };
 
-export type Session = { userId: string; email: string; profile: Profile; org: CroOrg | null; /** 합류 신청 중인 기관 */ pendingOrg: CroOrg | null };
+export type Session = {
+  userId: string;
+  email: string;
+  profile: Profile;
+  org: CroOrg | null;
+  /** 합류 신청 중인 기관 */
+  pendingOrg: CroOrg | null;
+  /** 로그인 없이 보는 임시 세션 (lib/demo.ts). 저장은 막힌다 */
+  demo?: true;
+};
 
 /** 역할별 홈 */
 export function homeOf(role: Role): string {
@@ -74,6 +85,8 @@ export const getSession = cache(async (): Promise<Session | null> => {
   if (!sb) return null;
   const { data } = await sb.auth.getUser();
   const user = data.user;
+  // 로그인하지 않았고 미리보기 쿠키가 있으면 그 역할의 기존 계정으로 본다 (개발 단계 임시, lib/demo.ts)
+  if ((!user || !user.email) && demoEnabled()) return demoSession();
   if (!user || !user.email) return null;
   // 이메일 확인이 끝나지 않은 계정은 세션 쿠키가 있어도 로그인하지 않은 것으로 본다 (보호된 화면·API 모두 이 함수를 거친다)
   if (!user.email_confirmed_at) return null;
@@ -108,6 +121,41 @@ export const getSession = cache(async (): Promise<Session | null> => {
   }
   return { userId: user.id, email: user.email, profile: profile as Profile, org, pendingOrg };
 });
+
+/**
+ * 미리보기 세션 (lib/demo.ts). 쿠키의 역할에 맞는 기존 계정을 하나 고른다.
+ * 의뢰자는 요청서가 있는 계정, 기관은 승인된 기관의 담당자, 운영자는 운영자 계정. 없으면 null (로그인 화면으로).
+ */
+async function demoSession(): Promise<Session | null> {
+  const store = await cookies();
+  const role = store.get(DEMO_COOKIE)?.value;
+  if (!isDemoRole(role)) return null;
+  const admin = getSupabaseAdmin();
+  if (!admin) return null;
+
+  let profile: Profile | null = null;
+  if (role === "requester") {
+    // 가장 최근에 요청서를 낸 의뢰자
+    const { data: rfq } = await admin.from("rfq_requests").select("user_id").not("user_id", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (rfq?.user_id) profile = (await admin.from("profiles").select("*").eq("id", rfq.user_id).eq("role", "requester").maybeSingle()).data as Profile | null;
+  } else if (role === "cro") {
+    // 승인된 기관(운영자 관리 기관 제외)의 담당자
+    const { data: orgs } = await admin.from("cro_orgs").select("id").eq("status", "approved").eq("managed", false).order("approved_at", { ascending: false }).limit(10);
+    for (const o of orgs ?? []) {
+      const { data: p } = await admin.from("profiles").select("*").eq("cro_org_id", o.id).eq("role", "cro").order("created_at").limit(1).maybeSingle();
+      if (p) {
+        profile = p as Profile;
+        break;
+      }
+    }
+  }
+  if (!profile) profile = (await admin.from("profiles").select("*").eq("role", role).order("created_at").limit(1).maybeSingle()).data as Profile | null;
+  if (!profile) return null;
+
+  let org: CroOrg | null = null;
+  if (profile.cro_org_id) org = ((await admin.from("cro_orgs").select("*").eq("id", profile.cro_org_id).maybeSingle()).data as CroOrg | null) ?? null;
+  return { userId: profile.id, email: profile.email, profile, org, pendingOrg: null, demo: true };
+}
 
 /**
  * 로그인 필수 (+ 역할 제한). 아니면 로그인 화면으로, 역할이 다르면 그 역할의 홈으로 보낸다.

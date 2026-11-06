@@ -49,6 +49,18 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
       </aside>
 
       <div className="pt__body">
+        {session.demo && (
+          <div className="pt__demo" role="status">
+            <b>미리보기</b>
+            <span>{ROLE_LABEL[role]} 화면을 기존 계정으로 보는 중이에요. 저장은 되지 않아요.</span>
+            <nav aria-label="미리보기 역할">
+              {(["requester", "cro", "admin"] as Role[]).map((r) => (
+                <a key={r} href={`/demo?as=${r}`} aria-current={r === role ? "page" : undefined}>{ROLE_LABEL[r]}</a>
+              ))}
+              <a href="/demo?off=1">끝내기</a>
+            </nav>
+          </div>
+        )}
         <header className="pt__top">
           <div className="pt__topin">
             <Link href={nav[0]?.href ?? "/"} className="pt__brand">
@@ -56,7 +68,11 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
               <span className="pt__role">{ROLE_LABEL[role]}</span>
             </Link>
             <span className="pt__workspace-title">{ROLE_LABEL[role]} 워크스페이스</span>
-            <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
+            <div className="pt__topr">
+              {/* 좁은 화면에는 사이드바가 없어 자료실 링크를 위 바에 둔다 */}
+              <a href="/guide/library" className="pt__toplib only-narrow" aria-label="가이드라인 자료실"><BookOpenText size={22} aria-hidden="true" /></a>
+              <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>
+            </div>
           </div>
         </header>
         <main className="pt__main" id="main-content">{children}</main>

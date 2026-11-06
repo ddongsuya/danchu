@@ -1,4 +1,5 @@
 import { quoteSelectable } from "@/lib/quote-policy";
+import { maskedText } from "@/lib/contact-guard";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
@@ -36,6 +37,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const others = scheduled.map((x) => x.final_weeks as number);
   const best = others.length > 1 ? Math.min(...others) : null;
   const plan = hasSchedule(q) ? planOfStored(q) : null;
+  // 선정 전 자유 입력란의 연락처는 가린다 (lib/contact-guard.ts). 이 기관을 선정하면 그대로 보인다
+  const reveal = rfq.selected_quote_id === q.id;
   const selectable = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
 
   return (
@@ -93,7 +96,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
                   {/* "가능"은 기본값이라 표시하지 않는다. 조건부·불가만 눈에 띄게 */}
                   {it.avail && it.avail !== "가능" && <span className={`pill ${it.avail === "조건부 가능" ? "pill--warn" : "pill--sf"}`}>{it.avail}</span>}
                   {it.weeks ? <span className="pill pill--sf">{it.weeks}주</span> : null}
-                  {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{it.reason}</span>}
+                  {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{reveal ? it.reason : maskedText(it.reason)}</span>}
                 </div>
               </div>
             ))}
@@ -119,7 +122,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "12px 14px", background: "var(--sf)", borderRadius: 10 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>제외 항목 · 별도 옵션 · 전달 사항</span>
-              <span style={{ fontSize: 14, color: "var(--body)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{q.note || "없음"}</span>
+              <span style={{ fontSize: 14, color: "var(--body)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{(reveal ? q.note : maskedText(q.note)) || "없음"}</span>
             </div>
           </div>
 

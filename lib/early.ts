@@ -12,9 +12,9 @@ export const EARLY_WHEN = ["3개월 안", "6개월 안", "1년 안", "아직 미
 export const EARLY_GLP = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "없음"];
 export const EARLY_INTENT = ["오픈 전에 먼저 등록할게요", "요청서를 한번 받아보고 정할게요", "오픈 소식만 받을게요", "아직 잘 모르겠어요"];
 
-/** 정식 오픈일. 예약 정보는 이날부터 6개월 뒤 지운다 (개인정보처리방침 3항, lib/retention.ts) */
-export const EARLY_OPEN_DATE = "2027-01-01";
-export const EARLY_DELETE_AFTER = "2027-07-01";
+/** 시범 운영 시작일. 예약 정보는 이날부터 6개월 뒤 지운다 (개인정보처리방침 3항, lib/retention.ts) */
+export const EARLY_OPEN_DATE = "2027-06-01";
+export const EARLY_DELETE_AFTER = "2027-12-01";
 
 export const EARLY_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

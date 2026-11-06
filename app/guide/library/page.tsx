@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { Site } from "@/components/site/Site";
+import { TocSpy } from "@/components/guide/TocSpy";
 import { LIBRARY, PRODUCTS, TOPICS } from "@/lib/guideline-library";
 import "./page.css";
 
@@ -66,6 +67,7 @@ export default function Page() {
             })}
             <p className="ldisc">가이드라인은 개정될 수 있어요. 제출 전에는 원문 사이트에서 최신 개정판을 확인하세요. 최종 설계는 규제기관, 담당 기관과 함께 논의하세요.</p>
           </div>
+          <TocSpy />
         </div>
       </section>
     </Site>

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/concierge";
 import type { ContractStatus } from "@/lib/db-types";
+import { GapReasonField, gapReady } from "@/components/GapReasonField";
+import type { GapReason } from "@/lib/contract-gap";
 
 type Mode = "signed" | "negotiating" | "not_signed" | "pending";
 const MODES: [Mode, string][] = [
@@ -16,17 +18,18 @@ const MODES: [Mode, string][] = [
  * 선정된 수주의 계약 결과를 운영자가 기록한다 (기관이 보고하지 않거나 계정이 없을 때).
  * 체결은 체결일·금액과 함께 기관 보고와 같은 경로(report_contract)로 저장하고, 협의 중·미체결·확인 전은 상태만 남긴다.
  */
-export function ContractRecord({ awardId, status, reported, today, minDate, note: initialNote }: { awardId: string; status: ContractStatus; reported: boolean; today: string; minDate: string; note: string | null }) {
+export function ContractRecord({ awardId, status, reported, today, minDate, note: initialNote, quoteAmount = null }: { awardId: string; status: ContractStatus; reported: boolean; today: string; minDate: string; note: string | null; quoteAmount?: number | null }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(reported ? "signed" : status === "signed" ? "signed" : status);
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState(reported ? "" : initialNote ?? "");
+  const [gapReason, setGapReason] = useState<GapReason | "">("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const signedReady = !!date && /^\d{1,13}$/.test(amount) && Number(amount) > 0;
+  const signedReady = !!date && /^\d{1,13}$/.test(amount) && Number(amount) > 0 && gapReady(quoteAmount, amount, gapReason, note);
   const ready = mode === "signed" ? signedReady : mode === "not_signed" ? !!note.trim() : true;
 
   const save = async (e: React.FormEvent) => {
@@ -37,7 +40,7 @@ export function ContractRecord({ awardId, status, reported, today, minDate, note
     try {
       const r =
         mode === "signed"
-          ? await fetch(`/api/awards/${awardId}/contract`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, amount, note }) })
+          ? await fetch(`/api/awards/${awardId}/contract`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, amount, note, gapReason: gapReason || undefined }) })
           : await fetch(`/api/admin/awards/${awardId}/contract-status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: mode, note }) });
       const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!r.ok) throw new Error(d.error || "저장하지 못했습니다.");
@@ -89,6 +92,7 @@ export function ContractRecord({ awardId, status, reported, today, minDate, note
               </div>
             </div>
           )}
+          {mode === "signed" && <GapReasonField id={`cr-g-${awardId}`} quoteAmount={quoteAmount} amount={amount} reason={gapReason} onReason={setGapReason} formal />}
           <div className="fld">
             <label className="fld__lab" htmlFor={`cr-n-${awardId}`}>{mode === "not_signed" ? <>미체결 사유<span className="req">*</span></> : "메모"}</label>
             <input id={`cr-n-${awardId}`} className="inp" value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} />

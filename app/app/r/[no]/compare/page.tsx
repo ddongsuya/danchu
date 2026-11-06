@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { maskedText } from "@/lib/contact-guard";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { requireSession } from "@/lib/auth";
@@ -94,13 +95,14 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       valid: q.valid_until,
       pay: q.pay_terms,
       includes: q.includes ?? [],
-      note: q.note,
+      // 선정 전 자유 입력란의 연락처는 가린다 (lib/contact-guard.ts). 선정한 기관 것만 그대로
+      note: rfq.selected_quote_id === q.id ? q.note : maskedText(q.note),
       glpOk: cov.ok,
       glpMissing: cov.missing,
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · ") || undefined, explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,

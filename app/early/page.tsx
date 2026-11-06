@@ -7,7 +7,7 @@ import "./early.css";
 
 export const metadata: Metadata = {
   title: "사전예약 · 단추",
-  description: "2027년 1월 1일 정식 오픈 전에 단추를 미리 예약하세요. 의뢰자는 무료로 여러 기관의 견적을 비교하고, 기관은 분야에 맞는 요청서를 받아요.",
+  description: "2027년 6월 1일 시범 운영 전에 단추를 미리 예약하세요. 의뢰자는 무료로 여러 기관의 견적을 비교하고, 기관은 분야에 맞는 요청서를 받아요.",
   robots: { index: false },
 };
 
@@ -29,7 +29,7 @@ function OneScreen({ role }: { role: "req" | "cro" }) {
     <Site current="/early" cue={false}>
       <section className="eb" aria-labelledby="eb-t">
         <div className="eb-copy">
-          <p className="eb-date mono lab">2027.01.01 정식 오픈</p>
+          <p className="eb-date mono lab">2027.06.01 시범 운영 시작</p>
           <h1 id="eb-t">{req ? <>비임상 시험 견적,<br /><span>단추에서 먼저 받아보세요.</span></> : <>더 다양한 고객,<br /><span>단추에서 먼저 만나보세요.</span></>}</h1>
           <nav className="eb-seg" aria-label="예약 갈래">
             <a href="/early" aria-current={req ? "page" : undefined}><small>의뢰자</small>견적을 받을게요</a>

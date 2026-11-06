@@ -6,7 +6,7 @@
 .a .lk{font-size:13px;color:var(--muted);margin:0 0 8px}
 .a .lk + .lf,.a .lk + .lt{margin-bottom:28px}
 .a .lf,.a .lt{display:grid;gap:2px}
-.a .lf label,.a .lt a{padding:7px 0 7px 16px;border-left:2px solid var(--line);color:var(--muted);font-size:15px;cursor:pointer;text-decoration:none;transition:color 160ms ease,border-color 160ms ease}
+.a .lf label,.a .lt a{padding:6px 0 6px 16px;border-left:2px solid var(--line);color:var(--muted);font-size:15px;cursor:pointer;text-decoration:none;transition:color 160ms ease,border-color 160ms ease}
 .a #p-all:checked ~ .lside label[for=p-all],.a #p-drug:checked ~ .lside label[for=p-drug],.a #p-bio:checked ~ .lside label[for=p-bio],.a #p-cgt:checked ~ .lside label[for=p-cgt],.a #p-hf:checked ~ .lside label[for=p-hf],.a #p-cos:checked ~ .lside label[for=p-cos],.a #p-dev:checked ~ .lside label[for=p-dev],.a #p-chem:checked ~ .lside label[for=p-chem]{color:var(--ink);font-weight:500;border-left-color:var(--ink)}
 .a #p-all:focus-visible ~ .lside label[for=p-all],.a #p-drug:focus-visible ~ .lside label[for=p-drug],.a #p-bio:focus-visible ~ .lside label[for=p-bio],.a #p-cgt:focus-visible ~ .lside label[for=p-cgt],.a #p-hf:focus-visible ~ .lside label[for=p-hf],.a #p-cos:focus-visible ~ .lside label[for=p-cos],.a #p-dev:focus-visible ~ .lside label[for=p-dev],.a #p-chem:focus-visible ~ .lside label[for=p-chem]{outline:2px solid var(--acc);outline-offset:2px}
 .a .lt a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
@@ -17,7 +17,12 @@
 .a .lib:has(#p-cos:checked) .ldoc:not(.p-cos),.a .lib:has(#p-cos:checked) .ltopic:not(.has-cos),.a .lib:has(#p-cos:checked) .lt a:not(.has-cos){display:none}
 .a .lib:has(#p-dev:checked) .ldoc:not(.p-dev),.a .lib:has(#p-dev:checked) .ltopic:not(.has-dev),.a .lib:has(#p-dev:checked) .lt a:not(.has-dev){display:none}
 .a .lib:has(#p-chem:checked) .ldoc:not(.p-chem),.a .lib:has(#p-chem:checked) .ltopic:not(.has-chem),.a .lib:has(#p-chem:checked) .lt a:not(.has-chem){display:none}
-.a .ltopic{scroll-margin-top:96px}
+.a .ltopic{scroll-margin-top:108px}
+/* 목차: 지금 읽는 주제 표시. 사이드바가 화면보다 길면 안에서 스크롤 */
+.a .lside{max-height:calc(100svh - 128px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.a .lt a[aria-current]{color:var(--ink);font-weight:500;border-left-color:var(--ink)}
+/* 마지막 주제도 목차를 누르면 화면 위까지 올라오도록 목록 아래에 여유를 둔다(넓은 화면만) */
+@media (min-width:861px){.a .lbody{padding-bottom:max(0px,calc(100svh - 300px))}}
 .a .ltopic + .ltopic{margin-top:56px}
 .a .ltopic h2{font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.3;margin:0 0 14px;text-wrap:balance}
 .a .ltopic ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--ink)}
@@ -36,7 +41,7 @@
 @media (max-width:860px){
  .a .libs .ph{padding:28px 0 20px}
  .a .lib{grid-template-columns:1fr;gap:24px;padding:20px 0 64px}
- .a .lside{position:static}
+ .a .lside{position:static;max-height:none;overflow:visible}
  .a .lt,.a #lk-t{display:none}
  .a .lk + .lf{margin-bottom:0}
  .a .lf{display:flex;flex-wrap:wrap;gap:8px}
@@ -47,3 +52,4 @@
  .a .ltopic + .ltopic{margin-top:40px}
  .a .ltopic h2{font-size:19px}
 }
+.a .lib{scroll-margin-top:72px}

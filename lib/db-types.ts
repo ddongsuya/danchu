@@ -327,6 +327,14 @@ export type Database = {
           substance_when: string | null;
           substance_note: string | null;
           substance_updated_at: string | null;
+          /** 계약 금액이 선정 견적과 10% 이상 다를 때 기관이 고른 사유 (0034). 0034 전이면 없음 */
+          contract_gap_reason?: string | null;
+          /** 의뢰자가 알린 계약 결과 (0034). sponsor_report_contract 로만 쓴다 */
+          sponsor_contract_status?: "signed" | "negotiating" | "not_signed" | null;
+          sponsor_contract_amount?: number | null;
+          sponsor_contract_date?: string | null;
+          sponsor_contract_note?: string | null;
+          sponsor_reported_at?: string | null;
         };
         /** 확인·이의 열(ContractConfirmColumn)은 DB 함수만 쓴다 (0025 트리거) */
         Insert: Ins<Omit<Database["public"]["Tables"]["rfq_awards"]["Row"], ContractConfirmColumn>, "id" | "awarded_at" | "contract_date" | "contract_amount" | "invite_id" | "cro_org_id" | "selected_by" | "contract_reported_at" | "contract_note" | "fee_basis_amount" | "invite_source" | "contract_status" | "quote_revision" | "substance_qty" | "substance_when" | "substance_note" | "substance_updated_at">;
@@ -518,7 +526,7 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["rfq_pending"]["Row"]>;
         Relationships: [];
       };
-      /** 사전예약 (0030). 서비스 키로만 읽고 쓴다. 같은 갈래·이메일은 한 행. 2027-07-01 뒤 정리 작업이 지운다 */
+      /** 사전예약 (0030). 서비스 키로만 읽고 쓴다. 같은 갈래·이메일은 한 행. 2027-12-01 뒤 정리 작업이 지운다 */
       early_signups: {
         Row: {
           id: string;
@@ -599,7 +607,9 @@ export type Database = {
       /** 0021: 운영자 초대 취소 (철회 표식 + 토큰 재발급). { ok, already?, status } 또는 { ok: false, code } */
       revoke_invite: { Args: { p_invite_id: string; p_reason: string | null }; Returns: Json };
       /** 0025: 첫 보고면 confirm_due_at(+7일)을 잡고, 확인 전 정정이면 다시 잡는다. { ok, rfq_id, rfq_no, user_id, substance, corrected, confirm_due_at } */
-      report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string; p_force?: boolean }; Returns: Json };
+      report_contract: { Args: { p_award_id: string; p_date: string; p_amount: number; p_note: string; p_force?: boolean; p_gap_reason?: string | null }; Returns: Json };
+      /** 0034: 의뢰자(요청 주인)가 계약 결과를 알린다. 확정 뒤에는 confirmed */
+      sponsor_report_contract: { Args: { p_award_id: string; p_actor: string; p_status: string; p_amount: number | null; p_date: string | null; p_note: string }; Returns: Json };
       /** 0025: 의뢰자(요청 주인) 또는 운영자가 계약 보고를 확인. { ok, already?, rfq_id, rfq_no, cro_org_id, contract_amount, contract_date } 또는 { ok: false, code: not_found·forbidden·not_reported·disputed } */
       confirm_contract: { Args: { p_award_id: string; p_actor: string }; Returns: Json };
       /** 0025: 의뢰자 이의. 정산을 멈춘다. { ok, already?, ... } 또는 { ok: false, code: not_found·forbidden·not_reported·confirmed·note } */
