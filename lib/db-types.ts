@@ -543,8 +543,17 @@ export type Database = {
           agreed_at: string;
           created_at: string;
           updated_at: string;
+          /** 0035: 이름·휴대폰(숫자만)·설문·문자 보낸 시각 */
+          name: string | null;
+          phone: string | null;
+          yearly: string | null;
+          quote_count: string | null;
+          monthly: string | null;
+          ad_agreed_at: string | null;
+          done_sms_at: string | null;
+          open_sms_at: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at">;
+        Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at" | "name" | "phone" | "yearly" | "quote_count" | "monthly" | "ad_agreed_at" | "done_sms_at" | "open_sms_at">;
         Update: Partial<Database["public"]["Tables"]["early_signups"]["Row"]>;
         Relationships: [];
       };

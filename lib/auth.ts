@@ -25,6 +25,8 @@ export type Profile = {
   /** 로그인 이메일 변경 대기 (새 주소에서 확인 전) */
   pending_email?: string | null;
   pending_email_expires_at?: string | null;
+  /** 가입 시각. 사전예약 기간 판단에 쓴다 (lib/prereg.ts) */
+  created_at?: string | null;
 };
 
 export type CroOrg = {

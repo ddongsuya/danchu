@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Site } from "@/components/site/Site";
 import { StudyFork } from "@/components/site/StudyFork";
+import { preregActive } from "@/lib/prereg";
 import "./page.css";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "견적 요청 시작 · 단추",
@@ -13,6 +16,12 @@ export default function Page() {
   return (
     <Site cue={false}>
       <section className="rqf" aria-labelledby="t">
+        {preregActive() && (
+          <p className="rq-pre" role="note">
+            <span>지금은 사전예약 기간이에요. 새 계정의 견적 요청은 2027년 6월 1일부터 열려요.</span>
+            <a href="/early">사전예약하기</a>
+          </p>
+        )}
         <h1 id="t">어떤 시험의 견적을 받을까요?</h1>
         <StudyFork />
       </section>

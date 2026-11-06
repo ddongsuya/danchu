@@ -1,0 +1,68 @@
+/* 사전예약 안내 네 줄 + 메인 팝업. 흰 바탕·검은 글씨, 가로 줄 없음 (2026-11-06 시안 판 15)
+   모서리: 사전예약 흐름만 승인 시안대로 12~20px (사이트 공통은 2px) */
+.es{margin:0;display:grid}
+.es div{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;padding:7px 0;font-size:16px;line-height:1.5}
+.es dt{color:var(--muted,#61615C)}
+.es dd{margin:0;font-weight:600;color:var(--ink,#1B1B19)}
+
+.epop{--pp:#FCFCFA;width:min(880px,calc(100vw - 48px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:0;border:0;border-radius:16px;background:var(--pp);color:#1B1B19;font-family:var(--font-sans);box-shadow:0 30px 80px -20px rgba(20,20,18,.45);overflow:hidden;z-index:var(--z-modal)}
+.epop::backdrop{background:rgba(27,27,25,.62)}
+.epop[open]{animation:epop-in 240ms cubic-bezier(.23,1,.32,1)}
+.epop[open]::backdrop{animation:epop-fade 240ms ease}
+@keyframes epop-in{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+@keyframes epop-fade{from{opacity:0}to{opacity:1}}
+.epop-in{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:460px}
+.epop-l{display:flex;flex-direction:column;gap:24px;padding:48px 44px;border-right:1px solid #E4E4DE}
+.epop-live{margin:0;font-size:13px;color:#61615C}
+.epop-dm,.epop-subm{display:none}
+.epop .epop-l h2{margin:0;font-size:46px;line-height:1.14;letter-spacing:-.035em;font-weight:800;text-wrap:balance}
+.epop-d{display:flex;align-items:baseline;gap:14px;margin:auto 0 0;padding-top:20px}
+.epop-d b{font-size:40px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.epop-d span{font-size:14px;color:#61615C}
+.epop-r{position:relative;display:flex;flex-direction:column;gap:24px;padding:72px 40px 20px}
+.epop-x{position:absolute;right:12px;top:12px;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#1B1B19;cursor:pointer;transition:transform 160ms cubic-bezier(.23,1,.32,1)}
+.epop-x:active{transform:scale(.94)}
+.epop-sub{margin:0;font-size:18px;line-height:1.6;color:#33332F}
+.epop-spec div{grid-template-columns:76px minmax(0,1fr);font-size:15px}
+.epop-foot{display:flex;flex-direction:column;gap:4px;margin-top:auto}
+.epop-cta{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.epop-go{display:flex;flex-direction:column;gap:2px;padding:14px 18px;border:1px solid #1B1B19;border-radius:12px;color:#1B1B19;text-decoration:none;transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 160ms ease}
+.epop-go small{font-size:12px;color:#61615C}
+.epop-go b{font-size:17px;font-weight:700}
+.epop-go.solid{background:#1B1B19;color:#EFEFEA}
+.epop-go.solid small{color:#C4C4BE}
+.epop-go:active{transform:scale(.97)}
+.epop-hide{align-self:center;min-height:44px;padding:0 8px;border:0;background:transparent;font:inherit;font-size:13px;color:#61615C;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.epop:focus{outline:none}
+.epop :focus-visible{outline:2px solid #1B1B19;outline-offset:2px}
+@media (hover:hover) and (pointer:fine){
+ .epop-x:hover{background:#EFEFEB}
+ .epop-go:not(.solid):hover{background:#EFEFEB}
+ .epop-go.solid:hover{background:#33332F}
+ .epop-hide:hover{color:#1B1B19}
+}
+
+/* 휴대폰: 아래에서 올라오는 시트 */
+@media (max-width:860px){
+ .epop{width:100%;max-height:calc(100dvh - 24px);margin:auto 0 0;border-radius:20px 20px 0 0;box-shadow:none}
+ .epop[open]{animation:epop-up 280ms cubic-bezier(.32,.72,0,1)}
+ .epop-in{grid-template-columns:1fr;min-height:0}
+ .epop-l{gap:14px;padding:28px 20px 20px;border:0}
+ .epop-live{font-size:12px}
+ .epop-dm{display:inline}
+ .epop-br{display:none}
+ .epop .epop-l h2{font-size:32px;line-height:1.18}
+ .epop-subm{display:block;margin:0;font-size:14px;line-height:1.6;color:#61615C}
+ .epop-d,.epop-sub{display:none}
+ .epop-r{position:static;gap:14px;padding:4px 20px calc(8px + env(safe-area-inset-bottom))}
+ .epop-x{right:8px;top:8px}
+ .epop-spec div{grid-template-columns:72px minmax(0,1fr);font-size:14px}
+ .epop-spec div:last-child{display:none}
+ .epop-cta{grid-template-columns:1fr}
+ .epop-go{padding:14px 18px}
+}
+@keyframes epop-up{from{transform:translateY(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){
+ .epop[open]{animation:epop-fade 200ms ease}
+ .epop-go:active,.epop-x:active{transform:none}
+}

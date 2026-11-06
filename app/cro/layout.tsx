@@ -3,6 +3,11 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, unreadCount } from "@/lib/data";
 import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
+import { PreregGate } from "@/components/app/Prereg";
+import { PREREG_NAV_CRO } from "@/components/app/prereg-nav";
+import { daysToPilot } from "@/lib/prereg";
+import { sessionInPrereg } from "@/lib/prereg-server";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const metadata: Metadata = {
   title: "단추 CRO · 받은 요청",
@@ -14,8 +19,9 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default async function CroLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession("cro", "/cro");
-  const unread = dbReady() ? await unreadCount(session.userId) : 0;
-  const nav: NavItem[] = [
+  const prereg = await sessionInPrereg(session);
+  const unread = dbReady() && !prereg ? await unreadCount(session.userId) : 0;
+  const nav: NavItem[] = prereg ? [...PREREG_NAV_CRO] : [
     { href: "/cro", label: "받은 요청", icon: "inbox", exact: true },
     { href: "/cro/quotes", label: "제출한 견적", icon: "doc" },
     { href: "/cro/catalog", label: "카탈로그", icon: "list" },
@@ -34,8 +40,16 @@ export default async function CroLayout({ children }: { children: React.ReactNod
         }}
       />
       <Shell session={session} nav={nav}>
-        {children}
+        {prereg ? <PreregGate role="cro" days={daysToPilot()} reserved={await reserved(session.email)} hasOrg={!!(session.org || session.pendingOrg)}>{children}</PreregGate> : children}
       </Shell>
     </AppState>
   );
+}
+
+
+async function reserved(email: string): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { data } = await sb.from("early_signups").select("id").eq("role", "cro").eq("email", email.toLowerCase()).maybeSingle();
+  return !!data;
 }

@@ -9,6 +9,8 @@ import type { Role } from "./auth";
  * - 끄려면 /demo?off=1. 출시 전에 이 파일과 /demo 경로를 지운다.
  */
 export const DEMO_COOKIE = "danchu_demo";
+/** 미리보기에서 사전예약 대기 화면으로 보기 (/demo?as=requester&prereg=1) */
+export const DEMO_PREREG_COOKIE = "danchu_demo_prereg";
 export const DEMO_ROLES: Role[] = ["requester", "cro", "admin"];
 
 export function demoEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
