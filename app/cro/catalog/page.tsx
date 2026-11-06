@@ -1,34 +1,24 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { requireSession } from "@/lib/auth";
-import { loadCatalog, loadOrgPresets } from "@/lib/catalog-db";
+import { dbReady } from "@/lib/data";
+import { loadCatalog } from "@/lib/catalog-db";
 import { catalogItems } from "@/lib/catalog";
+import { loadRates } from "@/lib/quote-doc-db";
 import { PendingOrg } from "@/components/cro/PendingOrg";
-import { CatalogEditor } from "@/components/cro/CatalogEditor";
+import { TestList } from "@/components/cro/catalog/TestList";
+import "@/components/cro/catalog/catalog.css";
 
 export const dynamic = "force-dynamic";
 
+/** 시험 목록 (기관 카탈로그). 조건·표준가·추가 비용 단가를 한 화면에서 고친다 */
 export default async function CroCatalogPage() {
   const s = await requireSession("cro");
   const org = s.org;
   if (!org) return <PendingOrg org={null} pendingOrg={s.pendingOrg} />;
-  const [rows, presets] = await Promise.all([loadCatalog(org.id), loadOrgPresets(org.id)]);
-  const items = catalogItems();
-  const filled = new Set(rows.map((r) => r.item_key)).size;
+  const [rows, rates] = dbReady() ? await Promise.all([loadCatalog(org.id), loadRates(org.id)]) : [[], new Map()];
   return (
-    <>
-      <div className="ph">
-        <div>
-          <h1>역량 카탈로그</h1>
-          <p>
-            자주 하는 시험의 조건·기간·단가를 적어 두면, 요청에 참여할 때 가장 가까운 조합으로 회신 초안이 채워져요. 비워 둬도 되고, 회신에서 제출한 값은 여기에 저절로 쌓여요. 적은 값은 이 기관의 초안에만 쓰여요.
-          </p>
-        </div>
-        <div className="ph__actions">
-          <span className="pill pill--tint">항목 {filled} / {items.length} · 조합 {rows.length}</span>
-          <Link href="/cro/catalog/prices" className="b2 bsm">견적서 단가</Link>
-        </div>
-      </div>
-      <CatalogEditor items={items} initialRows={rows} orgCategories={org.categories} orgPresets={presets} />
-    </>
+    <Suspense>
+      <TestList items={catalogItems()} initialRows={rows} initialRates={Object.fromEntries(rates)} orgCategories={org.categories} readOnly={!!s.demo} />
+    </Suspense>
   );
 }

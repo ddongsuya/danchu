@@ -40,7 +40,7 @@ export default async function NewDocPage({ searchParams }: { searchParams: Promi
       <div className="ph">
         <div>
           <h1>새 견적서</h1>
-          <p>단추 밖 의뢰자에게 보낼 견적서예요. 시험을 고르면 카탈로그의 표준가와 포함 범위로 채워져요. 단추 요청에 회신할 견적서는 그 요청의 회신 화면에서 만들어요.</p>
+          <p>단추 밖 의뢰자에게 보낼 견적서예요. 시험을 고르면 시험 목록의 표준가와 포함 범위로 채워져요. 단추 요청에 회신할 견적서는 그 요청의 회신 화면에서 만들어요.</p>
         </div>
       </div>
       <NewDoc catalog={catalog} />

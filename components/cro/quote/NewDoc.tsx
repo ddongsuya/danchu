@@ -51,13 +51,13 @@ export function NewDoc({ catalog }: { catalog: CatalogRow[] }) {
       <section className="qnew__tests">
         <div className="qnew__head">
           <h2>시험 고르기</h2>
-          <input className="inp qnew__search" type="search" aria-label="카탈로그 검색" placeholder="시험 이름, 동물종, 투여경로로 찾기" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="inp qnew__search" type="search" aria-label="시험 찾기" placeholder="시험 이름, 동물종, 투여경로로 찾기" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {catalog.length === 0 ? (
           <div className="empty">
-            <b>카탈로그에 등록한 시험이 없어요</b>
-            카탈로그에 시험 조건을 등록하고 표준가를 정하면 견적서가 그 값으로 채워져요. 시험 없이 만들어 직접 적어도 돼요.
-            <div style={{ marginTop: 14 }}><Link href="/cro/catalog" className="b2 bsm">카탈로그 열기</Link></div>
+            <b>시험 목록에 담은 시험이 없어요</b>
+            시험 목록에 조건과 표준가를 적어 두면 견적서가 그 값으로 채워져요. 시험 없이 만들어 직접 적어도 돼요.
+            <div style={{ marginTop: 14 }}><Link href="/cro/catalog" className="b2 bsm">시험 목록 열기</Link></div>
           </div>
         ) : (
           [...groups.entries()].map(([cat, items]) => (

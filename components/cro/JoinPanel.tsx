@@ -39,7 +39,7 @@ export function JoinPanel({ token, seats, afterDeclineHref, operator = false, de
         <h2 id="join-title">{rejoinBy ? "불참을 취소하고 다시 참여할까요?" : "이 요청에 참여할까요?"}</h2>
         <p className="join__lead">
           {rejoinBy ? `이 요청에는 불참으로 처리했어요. 참여 결정 기한(${rejoinBy})까지는 남은 자리가 있으면 다시 참여할 수 있어요. ` : "지금은 요약만 보여요. "}
-          참여하면 시험물질명, 의뢰자 설명, 첨부가 열리고, 카탈로그를 등록해 두셨다면 회신 초안이 채워져요.
+          참여하면 시험물질명, 의뢰자 설명, 첨부가 열리고, 시험 목록을 채워 두셨다면 회신 초안이 채워져요.
         </p>
       </div>
       {operator ? (

@@ -83,7 +83,8 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
     dosing: str(r.dosing, 120), weeks: int(r.weeks, 200),
     includes: arr(r.includes, INCLUDE_KEYS), options,
     unit: r.unit === "per_sample" || (r.unit == null && PER_SAMPLE_CATS.includes(it.category)) ? "per_sample" : "total",
-    price_min: big(r.price_min), price_max: big(r.price_max),
+    // 표준가 한 칸 (2026-11-06): 견적서(std_price)와 회신 초안(price_min)이 같은 값을 쓴다. 범위(상한)는 더 받지 않는다
+    std_price: big(r.std_price) ?? big(r.price_min), price_min: big(r.std_price) ?? big(r.price_min), price_max: null,
     extra, note: str(r.note, 500),
     source: "manual",
     sort,

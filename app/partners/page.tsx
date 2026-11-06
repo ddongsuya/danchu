@@ -18,7 +18,7 @@ export default function Partners() {
         <div className="sh"><h2 id="h">함께할 수 있는 일</h2><p className="lead">제휴 문의는 <a href="mailto:limjm900202@gmail.com?subject=%ED%98%91%EB%A0%A5%EA%B8%B0%EA%B4%80%20%EC%A0%9C%ED%9C%B4%20%EB%AC%B8%EC%9D%98">limjm900202@gmail.com</a>로 보내주세요.</p></div>
         <dl className="rows">
           <div><dt>입주 기업 안내</dt><dd>입주 기업 안내 자료를 함께 만들어요.</dd></div>
-          <div><dt>기관 참여 연결</dt><dd>지역 기관의 참여 신청과 카탈로그 등록을 도와요.</dd></div>
+          <div><dt>기관 참여 연결</dt><dd>지역 기관의 참여 신청과 시험 목록 등록을 도와요.</dd></div>
           <div><dt>교육</dt><dd>시험 구성과 가이드라인 설명회를 함께 열어요.</dd></div>
         </dl>
       </section>

@@ -375,9 +375,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
       )}
       {data.draft?.prefilled && !readOnly && (
         <div className="note" style={{ marginBottom: 16 }}>
-          <b>카탈로그로 초안을 채웠어요.</b>{" "}
+          <b>시험 목록으로 초안을 채웠어요.</b>{" "}
           {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
-          <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
+          <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>
         </div>
       )}
 
@@ -409,7 +409,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
             const needReason = it.avail === "불가" || it.avail === "조건부 가능";
             const perSample = it.unit === "per_sample";
             const checks = it.checks ?? [];
-            const src = it.source === "catalog" ? "카탈로그" : it.source === "learned" ? "최근 회신" : "";
+            const src = it.source === "catalog" ? "시험 목록" : it.source === "learned" ? "최근 회신" : "";
             return (
               <div id={`reply-item-${r.seq}`} tabIndex={-1} key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, borderColor: checks.length ? "var(--warn, #C98A1B)" : undefined }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
