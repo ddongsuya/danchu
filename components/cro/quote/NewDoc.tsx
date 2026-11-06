@@ -18,7 +18,7 @@ export function NewDoc({ catalog }: { catalog: CatalogRow[] }) {
   const groups = useMemo(() => {
     const m = new Map<string, Map<string, CatalogRow[]>>();
     for (const c of catalog) {
-      if (q && !`${c.category} ${c.item} ${c.species.join(" ")} ${c.route ?? ""} ${c.dosing ?? ""}`.toLowerCase().includes(q.toLowerCase())) continue;
+      if (q && !`${c.category} ${c.item} ${c.species.join(" ")} ${(c.routes ?? []).join(" ") || (c.route ?? "")} ${c.dosing ?? ""}`.toLowerCase().includes(q.toLowerCase())) continue;
       const cat = m.get(c.category) ?? new Map<string, CatalogRow[]>();
       cat.set(c.item, [...(cat.get(c.item) ?? []), c]);
       m.set(c.category, cat);
@@ -71,7 +71,7 @@ export function NewDoc({ catalog }: { catalog: CatalogRow[] }) {
                     return (
                       <label key={c.id} className="qnew__row" data-on={on ? "1" : undefined}>
                         <input type="checkbox" checked={on} onChange={() => toggle(c.id)} />
-                        <span>{[c.species.join("·"), c.route, c.dosing, c.method].filter(Boolean).join(" · ") || "조건 미입력"}</span>
+                        <span>{[c.species.join("·"), (c.routes?.length ? c.routes.join("·") : c.route), c.dosing, c.method].filter(Boolean).join(" · ") || "조건 미입력"}</span>
                         <b className="tnum">{c.std_price != null ? `${c.std_price.toLocaleString("ko-KR")}원` : <span className="qnew__none">표준가 없음</span>}</b>
                         {on && <em className="tnum">{picked.indexOf(c.id) + 1}</em>}
                       </label>

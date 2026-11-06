@@ -19,10 +19,12 @@ export type CatalogRow = {
   item: string;
   available: boolean;
   glp: Glp;
-  /** 조합 축 1: 동물종·계통 (설계·단가가 같으면 여러 종을 한 조합에 둘 수 있다) */
+  /** 가능한 동물종·계통. 첫 번째가 표준가 기준(대표) 동물종 */
   species: string[];
-  /** 조합 축 2: 투여 경로 */
+  /** 표준가 기준(대표) 투여 경로 = routes[0]. 이전 코드 호환용 */
   route: string | null;
+  /** 0037: 가능한 투여 경로. 첫 번째가 표준가 기준 */
+  routes: string[];
   /** 조합 축 3: 시험법·가이드라인 */
   method: string | null;
   groups_ctrl: number | null;
@@ -231,7 +233,7 @@ export function newVariant(it: CatalogItem, init: Partial<CatalogRow> = {}): Cat
   return {
     id: `new-${Date.now()}-${seq}`,
     item_key: it.key, category: it.category, item: it.item,
-    available: true, glp: "both", species: [], route: null, method: null,
+    available: true, glp: "both", species: [], route: null, routes: [], method: null,
     groups_ctrl: null, groups_test: null, per_sex: null, recovery_weeks: null, recovery_per_sex: null, dosing: null, weeks: null,
     includes: [], options: [], unit: PER_SAMPLE_CATS.includes(it.category) ? "per_sample" : "total",
     price_min: null, price_max: null, extra: {}, note: null,
@@ -305,7 +307,14 @@ function modelMatch(req: string[], m: string | null): boolean | null {
   return req.some((r) => [...words(r)].some((w) => mine.has(w)));
 }
 
-/** 요청 조건과 가장 가까운 조합을 고른다. 없으면 undefined */
+/** 표준가가 대표(첫 번째) 동물종·경로 기준이라, 다른 동물종·경로로 맞으면 금액을 기관이 확인한다 */
+export const PRICE_CHECK_SPECIES = "동물종별 금액 확인";
+export const PRICE_CHECK_ROUTE = "투여경로별 금액 확인";
+
+/**
+ * 요청 조건과 가장 가까운 시험을 고른다. 없으면 undefined.
+ * 시험 하나에 가능한 동물종·경로가 여럿이면, 돌려주는 row 는 요청에 맞는 동물종·경로 하나로 좁힌 사본이다.
+ */
 export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: Values): { row: CatalogRow; mismatch: string[] } | undefined {
   if (!variants.length) return undefined;
   const c = row.category;
@@ -317,16 +326,30 @@ export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: 
   for (const v of variants) {
     let score = v.available ? 0 : -100;
     const mismatch: string[] = [];
+    const routes = v.routes?.length ? v.routes : v.route ? [v.route] : [];
+    let species = v.species.slice(0, 1);
+    let route = routes[0] ?? null;
     const sm = speciesMatch(reqSpecies, v.species);
-    if (sm === true) score += 4; else if (sm === false) mismatch.push("동물종");
-    if (reqRoute && v.route) { if (v.route === reqRoute) score += 2; else mismatch.push("투여경로"); }
+    if (sm === true) {
+      score += 4;
+      const hit = v.species.filter((cs) => speciesMatch(reqSpecies, [cs]));
+      species = hit;
+      if (!hit.includes(v.species[0])) mismatch.push(PRICE_CHECK_SPECIES);
+    } else if (sm === false) mismatch.push("동물종");
+    if (reqRoute && routes.length) {
+      if (routes.includes(reqRoute)) {
+        score += 2;
+        route = reqRoute;
+        if (reqRoute !== routes[0]) mismatch.push(PRICE_CHECK_ROUTE);
+      } else mismatch.push("투여경로");
+    }
     // 효력시험은 시험법 자리에 질환 모델이 있다. 이름 표기가 기관마다 달라 핵심어가 겹치면 같은 모델로 본다
     const eff = c === EFFICACY_CAT;
     const mm = eff ? modelMatch(reqMethod, v.method) : methodMatch(reqMethod, v.method);
     if (mm === true) score += 2; else if (mm === false) mismatch.push(eff ? "질환 모델" : "시험법");
     if (typeof reqGlp === "string" && (reqGlp === "GLP" || reqGlp === "Non-GLP") && v.glp !== "both") { if (v.glp === reqGlp) score += 1; else mismatch.push(`${reqGlp} 수행`); }
     if (v.source === "manual") score += 0.5;
-    if (!best || score > best.score) best = { row: v, score, mismatch };
+    if (!best || score > best.score) best = { row: { ...v, species, route }, score, mismatch };
   }
   return best && { row: best.row, mismatch: best.mismatch };
 }

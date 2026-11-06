@@ -3,7 +3,7 @@
  */
 import { getSupabaseAdmin } from "./supabase";
 import { loadCatalog } from "./catalog-db";
-import { pickVariant, rowKey, type CatalogRow } from "./catalog";
+import { pickVariant, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
   addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog,
@@ -181,7 +181,10 @@ export async function createDocFromRequest(orgId: string, orgName: string, userI
   for (const line of a.rows) {
     const picked = pickVariant(byKey.get(rowKey(line)) ?? [], line, a.payload);
     if (!picked || !picked.row.available) continue;
-    data.tests.push({ ...testFromCatalog(picked.row, rates.get(picked.row.item_key) ?? []), rfqSeq: line.seq });
+    // 대표가 아닌 동물종·경로로 맞으면 표준가를 그대로 쓰지 않는다 (기관이 금액을 적는다)
+    const other = picked.mismatch.includes(PRICE_CHECK_SPECIES) || picked.mismatch.includes(PRICE_CHECK_ROUTE);
+    const base = other ? { ...picked.row, std_price: null } : picked.row;
+    data.tests.push({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? []), rfqSeq: line.seq });
   }
   return insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
 }

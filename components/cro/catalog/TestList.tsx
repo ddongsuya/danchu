@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CaretRight, CheckSquare, MagnifyingGlass, Plus, Square, X } from "@phosphor-icons/react";
 import { RfqField } from "@/components/RfqField";
@@ -25,6 +25,8 @@ type View = { kind: "list" } | { kind: "pick" } | { kind: "wizard"; queue: strin
 const priceOf = (r: CatalogRow) => r.std_price ?? r.price_min ?? null;
 const digits = (s: string, n = 13) => s.replace(/[^\d]/g, "").slice(0, n);
 const COMMON_SPECIES = ["SD 랫드", "Wistar 랫드", "ICR 마우스", "C57BL/6 마우스", "비글", "NZW 토끼", "원숭이(영장류)", "in vitro(동물 없음)"];
+const COMMON_ROUTES = ["경구(PO)", "정맥(IV)", "피하(SC)", "근육(IM)", "복강(IP)", "경피·피부", "흡입", "해당 없음"];
+const routesOf = (r: CatalogRow) => (r.routes?.length ? r.routes : r.route ? [r.route] : []);
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 /** 설계 한 줄 (목록·서랍 요약) */
@@ -38,7 +40,7 @@ function designLine(r: CatalogRow): string {
   return p.join(", ");
 }
 function condLine(r: CatalogRow): string {
-  return [r.species.join(", "), r.route, designLine(r)].filter(Boolean).join(", ");
+  return [r.species.join(", "), routesOf(r).join(", "), designLine(r)].filter(Boolean).join(", ");
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T & { error?: string; ok?: boolean }> {
@@ -150,7 +152,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
   function ListView() {
     const shownCats = [...new Set(rows.map((r) => r.category))];
     const term = q.trim().toLowerCase();
-    const list = rows.filter((r) => (!cat || r.category === cat) && (!term || `${r.item} ${r.method ?? ""} ${r.species.join(" ")} ${r.route ?? ""}`.toLowerCase().includes(term)));
+    const list = rows.filter((r) => (!cat || r.category === cat) && (!term || `${r.item} ${r.method ?? ""} ${r.species.join(" ")} ${routesOf(r).join(" ")}`.toLowerCase().includes(term)));
     const groups = shownCats.filter((c) => !cat || c === cat).map((c) => ({ cat: c, rows: list.filter((r) => r.category === c) })).filter((g) => g.rows.length);
     const open = rows.find((r) => r.id === openId) ?? null;
     return (
@@ -217,13 +219,6 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
             onClose={() => setOpenId(null)}
             onSave={async (draft, r) => { await saveRow(draft, r); setOpenId(null); setToast("저장했어요."); }}
             onRemove={() => removeRow(open)}
-            onAnother={(base) => {
-              const it = items.find((x) => x.key === base.item_key);
-              if (!it) return;
-              const v = newVariant(it, { source: "manual", route: base.route, method: base.method, glp: base.glp });
-              setRows((s) => [...s, v]);
-              setOpenId(v.id);
-            }}
           />
         )}
         {toast && <div className="tl__toast" role="status">{toast}</div>}
@@ -259,7 +254,7 @@ function Pick({ items, rows, orgCategories, first, readOnly, onBack, onAdd }: {
     for (const pi of presetItems(p)) {
       if (have.has(pi.key)) continue;
       keys.push(pi.key);
-      m.set(pi.key, { species: pi.species ?? [], route: pi.route ?? null, method: pi.method ?? null, note: pi.note ?? null });
+      m.set(pi.key, { species: pi.species ?? [], route: pi.route ?? null, routes: pi.route ? [pi.route] : [], method: pi.method ?? null, note: pi.note ?? null });
     }
     setPreset(m);
     setPicked((s) => [...new Set([...s, ...keys])]);
@@ -347,6 +342,64 @@ function Int({ id, label, value, onChange, unit, max, placeholder }: { id: strin
   );
 }
 
+/** 표준가 기준(대표) 조건: 첫 번째 동물종 · 첫 번째 경로 */
+function baseLabel(r: CatalogRow): string {
+  return [r.species[0], routesOf(r)[0]].filter(Boolean).join(", ");
+}
+const multi = (r: CatalogRow) => r.species.length > 1 || routesOf(r).length > 1;
+const front = (list: string[], v: string) => [v, ...list.filter((x) => x !== v)];
+
+/** 가능한 동물종·투여 경로 (여러 개 체크). 2개 이상이면 표준가 기준을 고른다 */
+function CondPick({ row, onChange, k, small }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string; small?: boolean }) {
+  const [allSpecies, setAllSpecies] = useState(false);
+  const [allRoutes, setAllRoutes] = useState(false);
+  const routes = routesOf(row);
+  const setRoutes = (list: string[]) => onChange({ routes: list, route: list[0] ?? null });
+  const chip = small ? "chip chip--md" : "chip";
+  const speciesList = allSpecies ? SPECIES : [...new Set([...row.species, ...COMMON_SPECIES])];
+  const routeList = allRoutes ? ROUTES : [...new Set([...routes, ...COMMON_ROUTES])];
+  return (
+    <>
+      <div className="fld">
+        <span className="fld__lab" id={`${k}-sp`}>가능한 동물종 <em className="tc__n">{row.species.length ? `${row.species.length}개` : ""}</em></span>
+        <div className="chips" role="group" aria-labelledby={`${k}-sp`}>
+          {speciesList.map((x) => <button key={x} type="button" className={chip} aria-pressed={row.species.includes(x)} onClick={() => onChange({ species: toggle(row.species, x) })}>{x}</button>)}
+          {!allSpecies && <button type="button" className={`${chip} tc__more`} onClick={() => setAllSpecies(true)}>다른 동물종</button>}
+        </div>
+      </div>
+      <div className="fld">
+        <span className="fld__lab" id={`${k}-rt`}>가능한 투여 경로 <em className="tc__n">{routes.length ? `${routes.length}개` : ""}</em></span>
+        <div className="chips" role="group" aria-labelledby={`${k}-rt`}>
+          {routeList.map((x) => <button key={x} type="button" className={chip} aria-pressed={routes.includes(x)} onClick={() => setRoutes(toggle(routes, x))}>{x}</button>)}
+          {!allRoutes && <button type="button" className={`${chip} tc__more`} onClick={() => setAllRoutes(true)}>다른 경로</button>}
+        </div>
+      </div>
+      {multi(row) && (
+        <div className="tc__base">
+          <span className="fld__lab">표준가 기준</span>
+          <div className="tc__baserow">
+            {row.species.length > 1 && (
+              <div className="selwrap">
+                <select className="sel" aria-label="표준가 기준 동물종" value={row.species[0]} onChange={(e) => onChange({ species: front(row.species, e.target.value) })}>
+                  {row.species.map((x) => <option key={x} value={x}>{x}</option>)}
+                </select><Chevron size={16} className="" />
+              </div>
+            )}
+            {routes.length > 1 && (
+              <div className="selwrap">
+                <select className="sel" aria-label="표준가 기준 투여 경로" value={routes[0]} onChange={(e) => setRoutes(front(routes, e.target.value))}>
+                  {routes.map((x) => <option key={x} value={x}>{x}</option>)}
+                </select><Chevron size={16} className="" />
+              </div>
+            )}
+          </div>
+          <span className="fld__help">표준가는 이 조건 금액이에요. 다른 동물종이나 경로로 요청이 오면 초안 금액은 비워 두고 &quot;금액 확인&quot; 표시를 붙여요.</span>
+        </div>
+      )}
+    </>
+  );
+}
+
 function MethodField({ id, row, onChange, chips }: { id: string; row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; chips?: boolean }) {
   const methods = methodOptions(row.category, row.item);
   const custom = !!row.method && !methods.includes(row.method);
@@ -396,9 +449,9 @@ function DesignFields({ row, onChange, k }: { row: CatalogRow; onChange: (p: Par
 
 /* ── A. 서랍 한 장 ─────────────────────────────────────── */
 
-function Drawer({ row, rates, readOnly, onClose, onSave, onRemove, onAnother }: {
+function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
   row: CatalogRow; rates?: Rate[]; readOnly: boolean;
-  onClose: () => void; onSave: (draft: CatalogRow, rates?: Rate[]) => Promise<void>; onRemove: () => Promise<void>; onAnother: (base: CatalogRow) => void;
+  onClose: () => void; onSave: (draft: CatalogRow, rates?: Rate[]) => Promise<void>; onRemove: () => Promise<void>;
 }) {
   const [d, setD] = useState<CatalogRow>({ ...row, std_price: priceOf(row) });
   const [rs, setRs] = useState<Rate[] | null>(rates ?? null);
@@ -406,7 +459,6 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove, onAnother }: 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [askRemove, setAskRemove] = useState(false);
-  const [allSpecies, setAllSpecies] = useState(false);
   const [dirty, setDirty] = useState(false);
   const set = (p: Partial<CatalogRow>) => { setD((s) => ({ ...s, ...p })); setDirty(true); };
   const perSample = d.unit === "per_sample";
@@ -448,24 +500,9 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove, onAnother }: 
           )}
 
           <section className="td__blk">
-            <h3>자주 하는 조건</h3>
-            <div className="fld">
-              <span className="fld__lab">동물종</span>
-              <div className="chips">
-                {(allSpecies ? SPECIES : [...new Set([...d.species, ...COMMON_SPECIES])]).map((s) => <button key={s} type="button" className="chip chip--md" aria-pressed={d.species.includes(s)} onClick={() => set({ species: toggle(d.species, s) })}>{s}</button>)}
-                {!allSpecies && <button type="button" className="chip chip--md" onClick={() => setAllSpecies(true)}>다른 동물종</button>}
-              </div>
-            </div>
+            <h3>가능한 조건</h3>
+            <CondPick row={d} onChange={set} k={k} small />
             <div className="tf__grid">
-              <div className="fld">
-                <label className="fld__lab" htmlFor={`${k}-route`}>투여 경로</label>
-                <div className="selwrap">
-                  <select id={`${k}-route`} className="sel" value={d.route ?? ""} onChange={(e) => set({ route: e.target.value || null })}>
-                    <option value="">고르지 않음</option>
-                    {ROUTES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select><Chevron size={16} className="" />
-                </div>
-              </div>
               <MethodField id={`${k}-method`} row={d} onChange={set} />
               <div className="fld">
                 <label className="fld__lab" htmlFor={`${k}-glp`}>GLP</label>
@@ -560,7 +597,6 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove, onAnother }: 
               <label className="fld__lab" htmlFor={`${k}-note`}>비고</label>
               <input id={`${k}-note`} className="inp" value={d.note ?? ""} onChange={(e) => set({ note: e.target.value.slice(0, 500) || null })} placeholder="초안에 함께 적을 말 (예: 표준품은 의뢰자 제공)" />
             </div>
-            <button type="button" className="td__link" onClick={() => onAnother(d)}>같은 시험, 다른 동물종으로 하나 더</button>
           </section>
         </div>
 
@@ -609,8 +645,6 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
   const [err, setErr] = useState("");
   const set = (p: Partial<CatalogRow>) => setD((s) => ({ ...s, ...p }));
   const perSample = d.unit === "per_sample";
-  const commonSpecies = useMemo(() => [...new Set([...d.species, ...COMMON_SPECIES])], [d.species]);
-  const commonRoutes = ["경구(PO)", "정맥(IV)", "피하(SC)", "근육(IM)", "복강(IP)", "경피·피부", "흡입", "해당 없음"];
   const k = d.id;
   const steps = ["조건", "설계", "금액"];
 
@@ -630,16 +664,9 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
 
       {step === 0 && (
         <>
-          <h1>{d.item}는 보통 어떤 조건으로 하세요?</h1>
-          <p className="tw__lead">가장 자주 하는 조건 하나만 고르면 돼요. 다른 조건은 나중에 추가해요.</p>
-          <div className="tw__q">
-            <span className="fld__lab">동물종</span>
-            <div className="chips">{commonSpecies.map((s) => <button key={s} type="button" className="chip" aria-pressed={d.species.includes(s)} onClick={() => set({ species: toggle(d.species, s) })}>{s}</button>)}</div>
-          </div>
-          <div className="tw__q">
-            <span className="fld__lab">투여 경로</span>
-            <div className="chips">{commonRoutes.map((r) => <button key={r} type="button" className="chip" aria-pressed={d.route === r} onClick={() => set({ route: d.route === r ? null : r })}>{r}</button>)}</div>
-          </div>
+          <h1>{d.item}, 가능한 조건을 모두 골라 주세요</h1>
+          <p className="tw__lead">할 수 있는 동물종과 투여 경로를 모두 체크해요. 시험은 한 줄로 남고, 요청 조건에 맞춰 회신 초안이 채워져요.</p>
+          <div className="tw__q tw__cond"><CondPick row={d} onChange={set} k={`${k}-w`} /></div>
           {methodOptions(d.category, d.item).length > 0 && <div className="tw__q"><MethodField id={`${k}-wm`} row={d} onChange={set} chips /></div>}
         </>
       )}
@@ -652,8 +679,8 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
       )}
       {step === 2 && (
         <>
-          <h1>이 조건의 {perSample ? "검체당 단가" : "표준가"}를 적어 주세요</h1>
-          <p className="tw__lead">앞에서 고른 설계 그대로일 때 금액이에요. 회신 초안과 견적서에 이 금액이 먼저 들어가요.</p>
+          <h1>{baseLabel(d) ? `${baseLabel(d)} 기준 ` : "이 조건의 "}{perSample ? "검체당 단가" : "표준가"}를 적어 주세요</h1>
+          <p className="tw__lead">앞에서 고른 설계 그대로일 때 금액이에요. {multi(d) ? "다른 동물종이나 경로로 요청이 오면 초안 금액은 비워 두고 확인 표시를 붙여요." : "회신 초안과 견적서에 이 금액이 먼저 들어가요."}</p>
           <div className="tw__q"><Money id={`${k}-wp`} label={`${perSample ? "검체당 단가" : "표준가"} (VAT 별도)`} value={d.std_price ?? null} onChange={(v) => set({ std_price: v })} big /></div>
           <div className="tw__q tw__weeks">
             <Int id={`${k}-ww`} label="소요 기간" value={d.weeks} onChange={(v) => set({ weeks: v })} unit="주" max={200} />

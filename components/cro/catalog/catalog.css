@@ -164,3 +164,13 @@
   .tw__nav { position: fixed; left: 0; right: 0; bottom: calc(64px + var(--bot)); z-index: var(--z-nav, 30); padding: 12px 16px; margin: 0; background: var(--wh); box-shadow: 0 -8px 24px rgba(27, 27, 25, .06); flex-direction: row-reverse; gap: 12px; }
   .tw__nav .b1 { flex: 1; height: 52px; justify-content: center; }
 }
+
+/* 가능한 동물종·투여 경로 (여러 개 체크, 2026-11-06) */
+.tw__cond { gap: 24px; }
+.tw__cond .fld { gap: 10px; }
+.tc__n { font-style: normal; font-weight: 400; color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.pt .chip.tc__more { border-style: dashed; color: var(--body); }
+.tc__base { display: flex; flex-direction: column; gap: 8px; background: var(--wh); border-radius: var(--r-md); padding: 12px 14px; }
+.tc__baserow { display: flex; flex-wrap: wrap; gap: 8px; }
+.tc__baserow .selwrap { min-width: 0; flex: 1 1 180px; }
+.td .tc__base { background: var(--sf); }

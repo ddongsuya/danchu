@@ -25,10 +25,10 @@ function sample(): CatalogRow[] {
   const items = new Map(catalogItems().map((it) => [it.key, it]));
   const mk = (cat: string, item: string, id: string, p: Partial<CatalogRow>) => ({ ...newVariant(items.get(itemKey(cat, item))!, p), id });
   return [
-    mk("일반독성", "반복투여 4주", "00000000-0000-4000-8000-000000000001", { source: "manual", species: ["SD 랫드"], route: "경구(PO)", method: "OECD TG 407 (설치류 28일)", groups_ctrl: 1, groups_test: 3, per_sex: 10, recovery_weeks: 2, recovery_per_sex: 5, weeks: 14, std_price: 60_000_000, includes: ["임상병리", "조직병리(검경 포함)", "조제물분석", "통계분석", "QA 점검"] }),
-    mk("일반독성", "반복투여 4주", "00000000-0000-4000-8000-000000000002", { source: "learned", species: ["비글"], route: "경구(PO)", method: "OECD TG 409 (비설치류 90일)", groups_ctrl: 1, groups_test: 3, per_sex: 3, weeks: 16, std_price: 180_000_000, last_amount: 180_000_000, last_weeks: 16, last_quoted_at: "2026-10-28T00:00:00Z" }),
-    mk("일반독성", "단회(급성)투여독성", "00000000-0000-4000-8000-000000000003", { source: "manual", species: ["SD 랫드"], route: "경구(PO)", method: "OECD TG 423 급성독성등급법", dosing: "단회, 관찰 14일", weeks: 6 }),
-    mk("일반독성", "반복투여 13주", "00000000-0000-4000-8000-000000000004", { source: "manual", available: false, species: ["SD 랫드"], route: "경구(PO)", groups_ctrl: 1, groups_test: 3, per_sex: 10, weeks: 26 }),
+    mk("일반독성", "반복투여 4주", "00000000-0000-4000-8000-000000000001", { source: "manual", species: ["SD 랫드", "Wistar 랫드"], route: "경구(PO)", routes: ["경구(PO)", "정맥(IV)", "피하(SC)"], method: "OECD TG 407 (설치류 28일)", groups_ctrl: 1, groups_test: 3, per_sex: 10, recovery_weeks: 2, recovery_per_sex: 5, weeks: 14, std_price: 60_000_000, includes: ["임상병리", "조직병리(검경 포함)", "조제물분석", "통계분석", "QA 점검"] }),
+    mk("일반독성", "반복투여 2주", "00000000-0000-4000-8000-000000000002", { source: "learned", species: ["비글"], route: "경구(PO)", routes: ["경구(PO)"], method: "OECD TG 409 (비설치류 90일)", groups_ctrl: 1, groups_test: 3, per_sex: 3, weeks: 16, std_price: 180_000_000, last_amount: 180_000_000, last_weeks: 16, last_quoted_at: "2026-10-28T00:00:00Z" }),
+    mk("일반독성", "단회(급성)투여독성", "00000000-0000-4000-8000-000000000003", { source: "manual", species: ["SD 랫드", "ICR 마우스"], route: "경구(PO)", routes: ["경구(PO)"], method: "OECD TG 423 급성독성등급법", dosing: "단회, 관찰 14일", weeks: 6 }),
+    mk("일반독성", "반복투여 13주", "00000000-0000-4000-8000-000000000004", { source: "manual", available: false, species: ["SD 랫드"], route: "경구(PO)", routes: ["경구(PO)"], groups_ctrl: 1, groups_test: 3, per_sex: 10, weeks: 26 }),
     mk("유전독성", "복귀돌연변이(Ames, TG 471)", "00000000-0000-4000-8000-000000000005", { source: "manual", species: ["in vitro(동물 없음)"], method: "OECD TG 기준", glp: "GLP", weeks: 6, std_price: 8_000_000 }),
   ];
 }

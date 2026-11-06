@@ -186,8 +186,9 @@ export function defaultPhases(weeks: number | null, dosing: string | null, recov
   return out;
 }
 
+// 시험 하나에 가능한 동물종·경로가 여럿이면 견적서에는 첫 번째(표준가 기준) 하나만 적는다
 const condOfRow = (c: CatalogRow): TestCond => ({
-  species: c.species.join(", "),
+  species: c.species[0] ?? "",
   route: c.route ?? "",
   dosing: c.dosing ?? "",
   recovery: c.recovery_weeks ? `${c.recovery_weeks}주` : "없음",
@@ -209,7 +210,7 @@ export function testFromCatalog(c: CatalogRow, rates: Rate[]): DocTest {
     ...allRates.filter((r) => r.kind === "flat").map((r) => ({ name: r.label, on: false, base: false, rateId: r.id })),
   ];
   const cond = condOfRow(c);
-  const subtitle = [c.species.join("·"), c.route, cond.glp].filter(Boolean).join(" · ");
+  const subtitle = [cond.species, cond.route, cond.glp].filter(Boolean).join(" · ");
   const weeks = c.weeks ?? c.last_weeks ?? null;
   return {
     uid: uid("t"),

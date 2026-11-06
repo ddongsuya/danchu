@@ -586,7 +586,7 @@ export function TestPicker({ catalog, rates, onAdd, onClose }: { catalog: Catalo
   const ref = useRef<HTMLDialogElement>(null);
   const [q, setQ] = useState("");
   useEffect(() => { ref.current?.showModal(); }, []);
-  const rows = catalog.filter((c) => c.available && (!q || `${c.category} ${c.item} ${c.species.join(" ")} ${c.route ?? ""} ${c.dosing ?? ""}`.toLowerCase().includes(q.toLowerCase())));
+  const rows = catalog.filter((c) => c.available && (!q || `${c.category} ${c.item} ${c.species.join(" ")} ${(c.routes ?? []).join(" ") || (c.route ?? "")} ${c.dosing ?? ""}`.toLowerCase().includes(q.toLowerCase())));
   const byItem = new Map<string, CatalogRow[]>();
   for (const r of rows) byItem.set(r.item_key, [...(byItem.get(r.item_key) ?? []), r]);
   return (
@@ -602,7 +602,7 @@ export function TestPicker({ catalog, rates, onAdd, onClose }: { catalog: Catalo
             <p><b>{list[0].item}</b><span>{list[0].category}</span></p>
             {list.map((c) => (
               <button key={c.id} type="button" onClick={() => onAdd(testFromCatalog(c, rates[c.item_key] ?? []))}>
-                <span>{[c.species.join("·"), c.route, c.dosing, c.method].filter(Boolean).join(" · ") || "조건 미입력"}</span>
+                <span>{[c.species.join("·"), (c.routes?.length ? c.routes.join("·") : c.route), c.dosing, c.method].filter(Boolean).join(" · ") || "조건 미입력"}</span>
                 <b className="tnum">{c.std_price != null ? `${n(c.std_price)}원` : "표준가 없음"}</b>
               </button>
             ))}
