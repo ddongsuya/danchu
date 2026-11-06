@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listAwardsForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
@@ -32,7 +33,8 @@ export default async function CroAwards() {
       {list.length === 0 ? (
         <div className="empty">
           <b>아직 수주가 없어요</b>
-          의뢰자가 선택하면 알림과 함께 여기에 연락처가 표시돼요.
+          의뢰자가 우리 기관을 고르면 알림으로 알려요.
+          <div style={{ marginTop: 14 }}><Link href="/cro" className="b2 bsm">받은 요청 보기</Link></div>
         </div>
       ) : (
         <div className="stack" style={{ gap: 16 }}>

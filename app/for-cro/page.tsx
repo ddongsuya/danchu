@@ -32,7 +32,19 @@ export default function Page() {
 <p className="lead">그리고 단추가 마음에 든다면 협업을 결정해주세요.</p>
 <div className="act"><div><p className="actk">이것만 있으면 시작할 수 있어요.</p><div className="chk"><label><input type="checkbox" />기관명</label><label><input type="checkbox" />보유 GLP 인증</label><label><input type="checkbox" />수행 가능 분야</label><label><input type="checkbox" />담당자 연락처</label></div></div>
 <div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a></div><p className="gatehint">네가지 모두 확인하면 신청할 수 있어요.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
-<details className="terms"><summary>이용 조건과 요금표 보기</summary>
+<div className="fee" aria-labelledby="fee-h">
+<h3 id="fee-h">이용 요금</h3>
+<p className="fee-s">2027년 12월 31일까지 참여한 요청은 무료예요. 2028년 1월 1일부터 아래 요금이 적용돼요.</p>
+<table className="fee-t"><thead><tr><th scope="col">견적 총액</th><th scope="col">견적서 송부</th><th scope="col">계약 성사</th></tr></thead><tbody>
+<tr><th scope="row">5,000만 원 미만</th><td colSpan={2}>월 구독료 100만 원에 포함</td></tr>
+<tr><th scope="row">5,000만~9,999만 원</th><td>3만 원</td><td>2%</td></tr>
+<tr><th scope="row">1억~4억 9,999만 원</th><td>5만 원</td><td>5%</td></tr>
+<tr><th scope="row">5억 원 이상</th><td>5만 원</td><td>7%</td></tr>
+<tr className="none"><th scope="row">참여하지 않은 요청</th><td>없음</td><td>없음</td></tr>
+</tbody></table>
+<p className="fee-c">부가가치세 별도</p>
+</div>
+<details className="terms"><summary>꼭 알아두세요</summary>
 <div className="tm">
 <section><h3>이용 조건 동의 및 참여 기록</h3>
 <p>단추를 운영하는 회사(이하 &ldquo;회사&rdquo;)의 견적 요청에 기관이 &lsquo;참여하기&rsquo;를 누르면 본 이용 조건에 동의하는 것입니다. 회사는 누른 시각, 경로(포털 또는 회신 링크), 누른 담당자 계정(회신 링크로 참여한 경우 링크 식별값), 적용된 조건의 판을 참여 기록으로 보관합니다. 접속 IP 주소와 브라우저 정보도 함께 기록하며, 이 두 가지는 개인정보처리방침에 따라 3개월이 지나면 삭제합니다.</p></section>

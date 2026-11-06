@@ -118,7 +118,7 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
           <p className="sr-only" role="status">{filtered.length}건의 요청</p>
           {filtered.length === 0 ? (
             <div className="rs-empty">
-              <b>일치하는 요청이 없어요</b>
+              <b>조건에 맞는 요청이 없어요</b>
               <span>다른 검색어를 넣거나 필터를 바꿔 보세요.</span>
               <button type="button" className="b2" onClick={() => { setSearch(""); setFilter("전체"); }}>전체 요청 보기</button>
             </div>

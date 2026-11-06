@@ -15,7 +15,8 @@ export default function Home() {
 <div>
 <h1><span className="h1l" style={{ color: "inherit" }}>비임상 시험 견적<br />단추에 요청하세요.</span></h1>
 <p className="sub">요청서 한 장이면, 여러 기관의 견적이 모여요.</p>
-<div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a><a className="btn ghost" href="/#fields">어떤 시험을 비교할 수 있나요?</a></div>
+<div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a><a className="btn ghost" href="/#fields">시험 종류 보기</a></div>
+<p className="micro">의뢰자는 무료예요.</p>
 </div>
 
 <div className="fd fo" aria-hidden="true"><Orbit /></div>
@@ -29,41 +30,21 @@ export default function Home() {
 <div className="gm-cmp-grid">
 <div className="gm-copy">
 <h2 id="cmp-h">같지만 달라요.<br /><span>다양한 항목들을 비교하세요.</span></h2>
-<ol className="gm-ph">
-<li><span className="mono lab">금액으로만 확인하면</span><p>B가 더 저렴해 보여요</p></li>
-<li><span className="mono lab">자세하게 비교하면</span><p>B 기관의 견적서에는 <b>TK 분석</b>이 빠져 있어요. 여기서 발생한 차이에요.</p></li>
-<li><span className="mono lab">같은 항목으로 보면</span><p>실제 차이는 <b>100만원</b>이에요.</p></li>
-</ol>
+<p className="gm-lead">총액만 보면 B가 싸 보여요. 같은 항목끼리 보면 달라요.</p>
 </div>
 <figure className="gm-sheet" aria-label="예시 기관 A와 B의 견적 비교">
-<header><b>반복투여독성 4주 · 설치류</b></header>
-<div className="gm-plot">
-<div className="gm-r gm-scale mono" aria-hidden="true"><span></span><div className="gm-tr"><span style={{ left: "0" }}>0</span><span style={{ left: "25%" }}>300</span><span style={{ left: "50%" }}>600</span><span style={{ left: "75%" }}>900</span><span style={{ left: "100%" }}>1,200</span></div><span></span></div>
-<div className="gm-guides" aria-hidden="true"><div className="gm-tr"><i style={{ left: "75%" }}></i><i style={{ left: "83.333%" }}></i></div></div>
-<div className="gm-r gm-bar" data-r="a"><span className="g-who">기관 A</span>
-<div className="gm-tr"><span className="g-seg g-main" style={{ left: "0", width: "83.333%" }}><em>반복투여 4주</em></span><span className="g-seg g-tk" style={{ left: "83.333%", width: "16.667%" }}><em>TK</em></span></div>
-<span className="g-sum"><b data-to="1200">1,200</b>만 원</span></div>
-<div className="gm-r gm-bar" data-r="b"><span className="g-who">기관 B</span>
-<div className="gm-tr"><span className="g-seg g-main" style={{ left: "0", width: "75%" }}><em>반복투여 4주</em></span>
-<span className="g-seg g-ghost" style={{ left: "83.333%", width: "16.667%" }}><svg preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100%" height="100%" pathLength="100"></rect></svg><em>TK 없음</em></span></div>
-<span className="g-sum"><b data-to="900">900</b>만 원</span></div>
-<div className="gm-r gm-brks" aria-hidden="true"><span></span>
-<div className="gm-tr">
-<div className="g-brk g-tot" style={{ left: "75%", width: "25%" }}><i></i><span>총액 차이 300만 원</span></div>
-<div className="g-brk g-tkb" style={{ left: "83.333%", width: "16.667%" }}><i></i><span>TK 200만 원</span></div>
-<div className="g-brk g-same" style={{ left: "75%", width: "8.333%" }}><i></i><span>같은 시험 100만 원</span></div>
-</div><span></span></div>
-</div>
+<header><b>B 기관 견적에는 TK 분석이 빠져 있어요.</b><small>반복투여독성 4주 · 설치류</small></header>
 <table className="gm-items">
 <thead><tr><th scope="col">항목</th><th scope="col">기관 A</th><th scope="col">기관 B</th></tr></thead>
 <tbody>
-<tr className="g-r1"><th scope="row">반복투여독성 4주</th><td><span className="g-v"><i className="g-mk"></i>1,000만 원</span></td><td><span className="g-v"><i className="g-mk"></i>900만 원</span></td></tr>
-<tr className="g-r2"><th scope="row">TK 분석</th><td>200만 원</td><td><span className="g-v g-flag"><i className="g-mk"></i>미포함 · 기관 확인</span></td></tr>
-<tr className="g-r3"><th scope="row">영문 보고서</th><td>별도 견적</td><td><span className="g-v g-flag"><i className="g-mk"></i>미포함</span></td></tr>
-<tr className="g-r4 g-total"><th scope="row">합계</th><td>1,200만 원</td><td>900만 원</td></tr>
+<tr className="g-r1"><th scope="row">반복투여독성 4주</th><td>1,000만 원</td><td>900만 원</td></tr>
+<tr className="g-r2"><th scope="row">TK 분석</th><td>200만 원</td><td><span className="g-v"><i className="g-mk"></i>빠짐</span></td></tr>
+<tr className="g-r3"><th scope="row">영문 보고서</th><td>별도 견적</td><td>미포함</td></tr>
+<tr className="g-total"><th scope="row">합계</th><td><b data-to="1200">1,200</b>만 원</td><td><b data-to="900">900</b>만 원</td></tr>
 </tbody>
 </table>
-<figcaption className="mono lab">최종 견적서는 각 기관의 견적서로 확인해요.</figcaption>
+<p className="gm-gap">차이 <s className="g-old">300만 원</s> <span className="g-chip">같은 항목 기준 100만 원</span></p>
+<figcaption>최종 견적서는 각 기관의 견적서로 확인해요.</figcaption>
 </figure>
 </div>
 </section>

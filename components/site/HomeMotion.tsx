@@ -27,47 +27,22 @@ export function HomeMotion() {
       return { x: r.left - b.left + r.width * ax, y: r.top - b.top + r.height * ay };
     };
 
-    /* ---- 1. 금액만 비교: 총액이 먼저, 막대가 갈라지며 차이가 설명된다 ---- */
+    /* ---- 1. 금액 비교: 표가 차례로 들어오고, 총액 차이에 취소선이 그어진 뒤 같은 항목 기준 차이만 형광펜 칩으로 ---- */
     function cmp(s: HTMLElement) {
       const tl = gsap.timeline({ paused: true, defaults: { ease: "expo.out" } });
-      const ph = $$(".gm-ph li", s), list = $(".gm-ph", s);
-      const [A, B] = $$(".gm-bar", s);
-      const step = (i: number, at: number) => {
-        tl.to(ph, { opacity: (k: number) => (k === i ? 1 : 0.32), duration: 0.35, ease: "power2.out" }, at)
-          .to(list, { "--pr": (i + 1) / 3, duration: 0.5, ease: "power3.inOut" }, at);
-      };
-      tl.set(ph, { opacity: 0.32 }, 0).set(list, { "--pr": 0 }, 0);
-      tl.fromTo([$(".g-main", A), $(".g-main", B)], { scaleX: 0 }, { scaleX: 1, duration: 0.9, stagger: 0.08 }, 0.1)
-        .fromTo($(".g-tk", A), { scaleX: 0, backgroundColor: "#1B1B19", borderLeftWidth: 0 }, { scaleX: 1, duration: 0.5, ease: "expo.out" }, 0.55)
-        .fromTo($$(".g-seg em", s), { opacity: 0 }, { opacity: 0, duration: 0.01 }, 0)
-        .fromTo($(".g-ghost", B), { opacity: 0 }, { opacity: 0, duration: 0.01 }, 0);
-      count(tl, $(".g-sum b", A), 1200, 0.15);
-      count(tl, $(".g-sum b", B), 900, 0.2);
-      tl.fromTo($(".g-brk.g-tot", s), { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.75)
-        .fromTo($(".g-brk.g-tot i", s), { scaleX: 0 }, { scaleX: 1, duration: 0.5 }, 0.75)
-        .fromTo($(".g-brk.g-tot span", s), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, 0.9);
-      step(0, 0.1);
-      const p2 = 2.0;
-      tl.to($(".g-tk", A), { backgroundColor: "#5C5C57", borderLeftWidth: 2, duration: 0.25, ease: "power2.out" }, p2)
-        .fromTo($(".g-tk", A), { y: 0 }, { y: -7, duration: 0.18, ease: "power2.out", yoyo: true, repeat: 1 }, p2)
-        .to($$(".g-seg em", s), { opacity: 1, duration: 0.3, stagger: 0.05 }, p2 + 0.15)
-        .to($(".g-ghost", B), { opacity: 1, duration: 0.01 }, p2 + 0.1)
-        .fromTo($(".g-ghost rect", B), { strokeDashoffset: 100, strokeDasharray: "100 100" }, { strokeDashoffset: 0, duration: 0.45, ease: "power2.inOut" }, p2 + 0.1)
-        .fromTo($(".g-ghost", B), { backgroundColor: "rgba(237,239,92,0)" }, { backgroundColor: "rgba(237,239,92,1)", duration: 0.3, ease: "power2.out" }, p2 + 0.5)
-        .set($(".g-ghost rect", B), { strokeDasharray: "4 3", strokeDashoffset: 0 }, p2 + 0.55)
-        .to($(".g-brk.g-tot", s), { opacity: 0, duration: 0.25, ease: "power2.out" }, p2 + 0.3)
-        .fromTo($(".g-brk.g-tkb i", s), { scaleX: 0 }, { scaleX: 1, duration: 0.45 }, p2 + 0.45)
-        .fromTo($(".g-brk.g-tkb span", s), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, p2 + 0.55)
-        .fromTo($$(".gm-items tr", s), { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, stagger: 0.06, ease: "power3.out" }, p2 + 0.2)
-        .fromTo($$(".g-r2 .g-mk, .g-r3 .g-mk", s), { scaleX: 0 }, { scaleX: 1, duration: 0.35, stagger: 0.12, ease: "power2.inOut" }, p2 + 0.8);
-      step(1, p2);
-      const p3 = 3.9;
-      tl.fromTo($(".gm-guides", s), { "--go": 0 }, { "--go": 0.55, duration: 0.3, ease: "power2.out" }, p3)
-        .fromTo($$(".gm-guides i", s), { scaleY: 0, transformOrigin: "top" }, { scaleY: 1, duration: 0.5, stagger: 0.08 }, p3)
-        .fromTo($(".g-brk.g-same i", s), { scaleX: 0 }, { scaleX: 1, duration: 0.45 }, p3 + 0.25)
-        .fromTo($(".g-brk.g-same span", s), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, p3 + 0.35)
-        .fromTo($$(".g-r1 .g-mk", s), { scaleX: 0 }, { scaleX: 1, duration: 0.35, stagger: 0.1, ease: "power2.inOut" }, p3 + 0.3);
-      step(2, p3);
+      const rows = $$(".gm-items tr", s), sums = $$(".g-total b", s);
+      const old = $(".gm-gap .g-old", s), chip = $(".gm-gap .g-chip", s);
+      tl.fromTo($(".gm-sheet header", s), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3 }, 0)
+        .fromTo(rows, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, stagger: 0.06, ease: "power3.out" }, 0.15);
+      count(tl, sums[0], 1200, 0.45, 0.7);
+      count(tl, sums[1], 900, 0.5, 0.7);
+      tl.fromTo($(".g-r2 .g-mk", s), { scaleX: 0 }, { scaleX: 1, duration: 0.28, ease: "power2.inOut" }, 1.0)
+        .fromTo($(".gm-gap", s), { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power2.out" }, 1.2)
+        .fromTo(chip, { opacity: 0, scale: 0.95 }, { opacity: 0, scale: 0.95, duration: 0.01 }, 0)
+        .fromTo(old, { "--st": 0 }, { "--st": 1, duration: 0.28, ease: "power2.out" }, 1.5)
+        .to(chip, { opacity: 1, scale: 1, duration: 0.22, ease: "power2.out" }, 1.85)
+        // 엔드카드 전에 완성된 표를 읽을 시간
+        .to({}, { duration: 3.2 }, 2.1);
       return tl;
     }
 
@@ -190,7 +165,7 @@ export function HomeMotion() {
         if (tl) tl.progress(0).kill();
         endEls.forEach((e) => e.remove());
         endEls = [];
-        gsap.set(s.querySelectorAll("*"), { clearProps: "transform,opacity,clipPath,backgroundColor,color,borderLeftWidth" });
+        gsap.set(s.querySelectorAll("*"), { clearProps: "transform,opacity,clipPath,backgroundColor,color,borderLeftWidth,--st" });
         tl = build[kind](s);
         // 마무리 로고 엔드카드: 그림 영역을 덮고 가운데 로고만 남긴다. 예시가 바뀌며 반복되는 장면은 한 바퀴(마지막 예시) 끝에만
         if (host && (cycle.length < 2 || idx === cycle.length - 1)) {

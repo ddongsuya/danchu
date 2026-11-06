@@ -16,6 +16,7 @@
 .a .h1l + .h1l{animation-delay:70ms}
 .a .sub{font-size:18px;line-height:1.7;color:var(--muted);max-width:30em;margin:28px 0 36px;animation:lineIn 640ms var(--eo) 140ms both}
 .a .hero .ctas{animation:lineIn 640ms var(--eo) 200ms both}
+.a .hero .micro{margin:12px 0 0;font-size:13px;color:var(--muted);animation:lineIn 640ms var(--eo) 240ms both}
 @keyframes lineIn{from{transform:translateY(14px)}}
 .a .iso svg{width:100%;height:auto;display:block;overflow:visible}
 .a .iso .layer{transform-box:fill-box;animation:layIn 760ms var(--eo) both}
@@ -557,57 +558,28 @@
 .a .gm .btn.g-ghost{color:var(--ink)}
 /* compare */
 .a .gm-cmp-grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:64px;align-items:center}
-.a .gm-ph{list-style:none;margin:40px 0 0;padding:0 0 0 20px;display:grid;gap:22px;border-left:1px solid var(--line);position:relative}
-.a .gm-ph::before{content:"";position:absolute;left:-1px;top:0;width:1px;height:100%;background:var(--ink);transform-origin:top;transform:scaleY(var(--pr,1))}
-.a .gm-ph li .mono{display:block;margin-bottom:6px}
-.a .gm-ph p{margin:0;font-size:16px;line-height:1.65;color:var(--ink2);max-width:28em}
-.a .gm-ph b{font-weight:600}
+.a .gm-lead{margin:24px 0 0;font-size:17px;line-height:1.7;color:var(--ink2);max-width:28em}
 .a .gm-sheet{margin:0;background:var(--sheet);border-radius:2px;padding:28px 28px 22px;box-shadow:0 1px 2px rgba(27,27,25,.05),0 24px 48px -28px rgba(27,27,25,.3),0 0 0 1px rgba(27,27,25,.06);font-variant-numeric:tabular-nums}
-.a .gm-sheet header{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:1px solid var(--ink);font-size:15px}
-.a .gm-sheet header b{font-weight:600}
-.a .gm-plot{position:relative;padding:18px 0 4px}
-.a .gm-r{display:grid;grid-template-columns:64px minmax(0,1fr) 92px;gap:14px;align-items:center}
-.a .gm-tr{position:relative}
-.a .gm-scale{height:22px}
-.a .gm-scale .gm-tr{height:100%}
-.a .gm-scale .gm-tr span{position:absolute;top:0;transform:translateX(-50%);font-size:11px;color:var(--faint)}
-.a .gm-scale .gm-tr span:first-child{transform:none}
-.a .gm-scale .gm-tr span:last-child{transform:translateX(-100%)}
-.a .gm-guides{position:absolute;inset:40px 106px 78px 78px;pointer-events:none}
-.a .gm-guides .gm-tr{height:100%}
-.a .gm-guides i{position:absolute;top:0;bottom:0;border-left:1px dashed var(--ink2);opacity:var(--go,0)}
-.a .gm-bar{height:56px}
-.a .gm-bar .g-who{font-size:14px;color:var(--muted)}
-.a .gm-bar .gm-tr{height:36px}
-.a .gm-bar .g-seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding:0 10px;overflow:hidden;transform-origin:left}
-.a .gm-bar .g-seg em{font-style:normal;font-size:12.5px;white-space:nowrap}
-.a .gm-bar .g-main{background:var(--ink);color:var(--paper)}
-.a .gm-bar .g-tk{background:#5C5C57;color:var(--paper);border-left:2px solid var(--sheet)}
-.a .gm-bar .g-ghost{background:var(--accfill);color:var(--ink);justify-content:center}
-.a .gm-bar .g-ghost svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.a .gm-bar .g-ghost rect{fill:none;stroke:var(--ink);stroke-width:1.5;stroke-dasharray:4 3}
-.a .gm-bar .g-ghost em{position:relative;font-weight:500}
-.a .gm-bar .g-sum{font-size:16px;text-align:right;white-space:nowrap}
-.a .gm-bar .g-sum b{font-weight:600}
-.a .gm-brks{height:74px;align-items:start}
-.a .gm-brks .gm-tr{height:100%}
-.a .g-brk{position:absolute;top:6px;height:100%}
-.a .g-brk i{display:block;height:8px;border:1.5px solid var(--ink);border-top:0;transform-origin:left}
-.a .g-brk span{position:absolute;right:0;top:14px;white-space:nowrap;font-size:13px;font-weight:500}
-.a .g-brk.g-tkb span{background:var(--accfill);padding:2px 6px;top:14px}
-.a .g-brk.g-same{top:6px}
-.a .g-brk.g-same span{top:44px;right:0}
-.a .g-brk.g-tot{opacity:0}
-.a .gm-items{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
-.a .gm-items th,.a .gm-items td{text-align:left;padding:11px 0;border-bottom:1px solid var(--line);font-weight:400}
-.a .gm-items thead th{font-size:12px;color:var(--muted);padding-top:0}
+.a .gm-sheet header{display:grid;gap:4px;padding-bottom:18px}
+.a .gm-sheet header b{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.a .gm-sheet header small{font-size:13px;color:var(--muted)}
+/* 표: 가로 줄 대신 행 바탕 톤으로 나눈다 */
+.a .gm-items{width:100%;border-collapse:separate;border-spacing:0 2px;font-size:14px}
+.a .gm-items th,.a .gm-items td{text-align:left;padding:11px 12px;font-weight:400;border:0}
+.a .gm-items thead th{font-size:12px;color:var(--muted);padding-top:0;padding-bottom:6px}
 .a .gm-items td{text-align:right;white-space:nowrap}
 .a .gm-items thead th:not(:first-child){text-align:right}
-.a .gm-items .g-total th,.a .gm-items .g-total td{font-weight:600;border-bottom:1px solid var(--ink)}
-.a .gm-items .g-v{position:relative;isolation:isolate;padding:2px 4px;margin:-2px -4px}
+.a .gm-items .g-r1 > *,.a .gm-items .g-r3 > *{background:var(--paper)}
+.a .gm-items .g-total th,.a .gm-items .g-total td{font-weight:700;font-size:15px}
+.a .gm-items .g-total b{font-weight:700}
+.a .gm-items .g-v{position:relative;isolation:isolate;padding:2px 5px;margin:-2px -5px}
 .a .gm-items .g-mk,.a .gm-ev .g-mk{position:absolute;inset:0;background:var(--accfill);z-index:-1;transform-origin:left;border-radius:1px}
-.a .gm-items .g-r1 .g-mk{background:var(--accsoft)}
-.a .gm-sheet figcaption{margin-top:14px;font-size:11.5px;color:var(--muted)}
+/* 차이: 총액 차이에 취소선, 같은 항목 기준 차이만 형광펜 칩 */
+.a .gm-gap{margin:16px 0 0;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;font-size:14px;color:var(--muted)}
+.a .gm-gap .g-old{position:relative;text-decoration:none;color:var(--faint)}
+.a .gm-gap .g-old::after{content:"";position:absolute;left:-2px;right:-2px;top:52%;height:1.5px;background:var(--ink);transform-origin:left;transform:scaleX(var(--st,1))}
+.a .gm-gap .g-chip{background:var(--accfill);color:var(--ink);font-weight:700;font-size:15px;padding:4px 9px;border-radius:2px}
+.a .gm-sheet figcaption{margin-top:12px;font-size:12px;color:var(--muted)}
 /* flow */
 .a .gm-fl h2{max-width:20em}
 .a .gm-dia{position:relative;margin-top:56px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);gap:88px;align-items:center}
@@ -666,20 +638,7 @@
 @media (max-width:860px){
  .a .gm{padding:72px 0}
  .a .gm-cmp-grid,.a .gm-ev-grid{grid-template-columns:minmax(0,1fr);gap:36px}
- .a .gm-ph{margin-top:28px;gap:16px}
- .a .gm-ph p{font-size:15px}
  .a .gm-sheet{padding:20px 16px 16px;margin:0 -4px}
- .a .gm-r{grid-template-columns:44px minmax(0,1fr) 66px;gap:8px}
- .a .gm-guides{inset:40px 74px 78px 52px}
- .a .gm-bar .g-ghost{padding:0;overflow:visible}
- .a .gm-bar .g-ghost em{font-size:10px}
- .a .gm-scale .gm-tr span:nth-child(2),.a .gm-scale .gm-tr span:nth-child(4){display:none}
- .a .gm-bar .g-who{font-size:12.5px}
- .a .gm-bar .g-sum{font-size:14px}
- .a .gm-bar .g-seg{padding:0 6px}
- .a .gm-bar .g-seg em{font-size:11px}
- .a .gm-bar .g-tk em{display:none}
- .a .g-brk span{font-size:12px}
  .a .gm-items{font-size:13px}
  .a .gm-dia{grid-template-columns:minmax(0,1fr);gap:40px;margin-top:36px}
  .a .gm-wires .w{display:none}
@@ -703,7 +662,7 @@
 }
 
 /* 첫 화면 글은 어떤 환경에서도 등장 효과에 기대지 않는다 */
-@media (max-width:860px){.a .h1l,.a .sub,.a .hero .ctas{animation:none}}
+@media (max-width:860px){.a .h1l,.a .sub,.a .hero .ctas,.a .hero .micro{animation:none}}
 
 /* ---- 모바일 첫 화면은 뷰포트 높이 단위에 기대지 않는다. 앱 내 브라우저가 vh 계열을 크게 계산하면 내용이 한참 아래로 밀려 첫 화면이 비어 보인다 ---- */
 @media (max-width:860px){
@@ -727,8 +686,6 @@
    한번 요청은 진행 단계 막대를 위로(다른 영상과 같은 방식), 요청서는 제목만, 간격을 줄인다 ---- */
 @media (max-width:860px){
  .a .gm{padding:48px 0}
- .a .gm-cmp .gm-items,.a .gm-cmp .gm-sheet figcaption{display:none}
- .a .gm-cmp .gm-ph{margin-top:20px}
  .a .gm-fl{display:flex;flex-direction:column}
  .a .gm-fl h2{order:-2}
  .a .gm-fl .gm-steps{order:-1;margin:20px 0 0}
