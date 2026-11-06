@@ -3,7 +3,7 @@ import "./globals.css";
 
 const TITLE = "단추 · 비임상 시험의 시작, 단추를 채우다.";
 const DESC =
-  "필요한 시험부터 기관별 견적 비교까지. 한 번의 요청으로 여러 비임상 CRO의 수행 범위, 금액과 일정을 비교하세요.";
+  "한 번의 요청으로 필요한 시험부터 기관별 견적 비교까지.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://danchu.kr"),

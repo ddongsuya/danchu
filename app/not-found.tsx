@@ -10,7 +10,7 @@ export default function NotFound() {
       <section className="close" aria-labelledby="nf">
         <div>
           <h1 id="nf" style={{ fontSize: "clamp(28px,3.2vw,44px)", margin: 0 }}>페이지를 찾지 못했어요</h1>
-          <p className="lead" style={{ marginTop: 16 }}>주소가 바뀌었거나 잘못 입력됐을 수 있어요. 메일로 받은 링크라면 메일에서 다시 열어 보세요.</p>
+          <p className="lead" style={{ marginTop: 16 }}>주소가 바뀌었거나 잘못 입력된 것 같아요. 메일 속 링크라면 메일에서 다시 눌러 주세요.</p>
         </div>
         <div className="ctas">
           <a className="btn solid" href="/request">견적 요청하기</a>

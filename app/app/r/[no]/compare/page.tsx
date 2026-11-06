@@ -134,7 +134,8 @@ export default async function Compare({ params }: { params: Promise<{ no: string
           </div>
           <div className="empty">
             <b>도착한 견적이 없어요</b>
-            제출한 기관이 없어 비교할 견적이 없어요. 운영자가 기한 연장이나 참여 안내 추가를 안내해요.
+            기한을 늘리거나 다른 기관에 안내하는 일은 운영자가 도와요.
+            <div style={{ marginTop: 14 }}><Link href={`/app/support?rfq=${rfq.rfq_no}`} className="b2 bsm">이 요청 문의하기</Link></div>
           </div>
         </>
       ) : (
