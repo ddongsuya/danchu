@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { cleanDocData, docTotals, testFromCatalog, testKind, testLines, type DocData, type DocTest } from "@/lib/quote-doc";
 import { cleanKd, kindOfCategory, kindStdPrice, parseCount, parseGroups, parseTimes, pdFrom, pdParts, pkSamples, type PdDesign } from "@/lib/kind-design";
-import type { CatalogRow } from "@/lib/catalog";
+import { prefillRow, type CatalogRow } from "@/lib/catalog";
+import { kdExtra } from "@/lib/kind-design";
 
 // 계산 확인용 가상의 값 (어느 기관의 실제 단가도 아니다)
 const base = (p: Partial<CatalogRow>): CatalogRow => ({
@@ -137,5 +138,38 @@ describe("의뢰자 원안 읽기", () => {
   });
   it("시료 수", () => {
     expect(parseCount("랫드 혈청, 40개")).toBe(40);
+  });
+});
+
+describe("변경 수와 회신 칸", () => {
+  it("표준 그대로면 변경 0, 군이 늘면 달라진 칸 수", () => {
+    const t = testFromCatalog(base({ kd: { pd } }), []);
+    expect(testLines(t).changes).toBe(0);
+    const more: DocTest = { ...t, kd: { pd: { ...pd, groups: [...pd.groups, { id: "n1", label: "시험물질군 고", role: "test", treat: "", n: 8, dose: "" }] } } };
+    expect(testLines(more).changes).toBe(2);
+  });
+  it("약동학: 검체 분석 금액만으로는 변경이 아니고, 시점이 줄면 변경", () => {
+    const pk = { types: [], groups: [{ id: "a", label: "경구군", route: "", dose: "", n: 3 }], times: ["1시간", "2시간"], matrix: ["혈장"], method: "" as const, params: [], animal: 1_000_000, perSample: 40_000, dev: null, report: 500_000 };
+    const t = testFromCatalog(base({ category: "PK/TK/ADME·생체시료분석", unit: "per_sample", kd: { pk } }), []);
+    expect(testLines(t).changes).toBe(0);
+    expect(testLines({ ...t, kd: { pk: { ...pk, times: ["1시간"] } } }).changes).toBe(1);
+  });
+  it("효력 회신 칸: 비용 다섯 칸과 군·일정·지표", () => {
+    const x = kdExtra("pd", { pd: { ...pd, lanes: [{ id: "l", name: "투여", start: 1, weeks: 2 }] } });
+    expect(x.cost_path).toBe("4800000");
+    expect(x.exp_groups).toBe("정상군 8, 부형제군 8, 양성대조군 8, 시험물질군 8");
+    expect(x.exp_schedule).toBe("투여 2주");
+    expect(x.exp_endpoints).toBe("DAI");
+  });
+  it("금액 칸이 비어 있으면 0원으로 채우지 않는다", () => {
+    expect(kdExtra("pd", { pd: { ...pd, costs: { cost_animal: null, cost_dosing: null, cost_eval: null, cost_path: null, cost_report: null } } }).cost_animal).toBeUndefined();
+  });
+  it("시험 목록으로 바로 회신할 때도 기관 표준 설계가 초안에 들어간다", () => {
+    const row = { seq: 1, category: "효력시험(약효)", name: "소화기", cond: "" };
+    const p = prefillRow(row, { row: base({ kd: { pd }, std_price: 22_600_000, price_min: 22_600_000 }), mismatch: [] }, {});
+    const ex = p.design.extra as Record<string, string>;
+    expect(ex.cost_animal).toBe("7200000");
+    expect(ex.exp_groups).toContain("양성대조군 8");
+    expect(p.amount).toBe("22600000");
   });
 });

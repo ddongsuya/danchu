@@ -30,7 +30,7 @@ export const modelsOf = (area: string): string[] => AREAS.find(([n]) => n === ar
 
 /** 비용 구분 [저장 키, 이름, 들어가는 것] */
 export const COST_PARTS: [string, string, string][] = [
-  ["cost_animal", "동물·모델 유도", "동물, 순화, 질환 유도"],
+  ["cost_animal", "동물·모델 유발", "동물, 순화, 질환 유발"],
   ["cost_dosing", "투여·관찰", "조제, 투여, 관찰, 사육"],
   ["cost_eval", "평가·분석", "기능 평가, 생화학, 영상"],
   ["cost_path", "병리", "부검, 조직 처리, 판독"],

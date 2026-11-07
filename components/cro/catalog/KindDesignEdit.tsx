@@ -200,7 +200,7 @@ function PkStructure({ pk, set }: { pk: PkDesign; set: (p: PkDesign) => void }) 
       <Chips label="채혈 시점" all={PK_TIMES} on={pk.times} onChange={(times) => set({ ...pk, times })} own="예: 72시간" />
       <Chips label="검체" all={PK_MATRIX} on={pk.matrix} onChange={(matrix) => set({ ...pk, matrix })} />
       <Chips label="받을 파라미터" all={PK_PARAMS} on={pk.params} onChange={(params) => set({ ...pk, params })} />
-      {N > 0 && <p className="tk__calc tnum">표준 설계 검체 수: {pk.groups.reduce((a, g) => a + g.n, 0)}마리 × {pk.times.length}시점{pk.matrix.length > 1 ? ` × ${pk.matrix.length}종` : ""} = <b>{N}검체</b></p>}
+      {N > 0 && <p className="tk__calc tnum">기관 표준 검체 수: {pk.groups.reduce((a, g) => a + g.n, 0)}마리 × {pk.times.length}시점{pk.matrix.length > 1 ? ` × ${pk.matrix.length}종` : ""} = <b>{N}검체</b></p>}
     </>
   );
 }
@@ -258,7 +258,7 @@ export function KindMoney({ row, onChange, k }: { row: CatalogRow; onChange: Set
           <Won id={`${k}-dv`} label="분석법 개발" help="의뢰자 분석법이 없을 때만" value={pk.dev} onChange={(v) => setKd({ pk: { ...pk, dev: v } })} />
           <Won id={`${k}-rp`} label="파라미터 분석·보고서" value={pk.report} onChange={(v) => setKd({ pk: { ...pk, report: v } })} />
         </div>
-        <p className="tk__sum tnum"><span>견적 금액 = 동물 실험 + 보고서 + 검체 수 × 검체당{pk.dev ? " (+ 개발)" : ""}</span><b>{N && pk.perSample != null ? `표준 설계 ${n((pk.animal ?? 0) + (pk.report ?? 0) + N * pk.perSample)}원` : ""}</b></p>
+        <p className="tk__sum tnum"><span>견적 금액 = 동물 실험 + 보고서 + 검체 수 × 검체당{pk.dev ? " (+ 개발)" : ""}</span><b>{N && pk.perSample != null ? `기관 표준 ${n((pk.animal ?? 0) + (pk.report ?? 0) + N * pk.perSample)}원` : ""}</b></p>
       </>
     );
   }

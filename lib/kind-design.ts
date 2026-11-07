@@ -194,6 +194,28 @@ export function kindStdPrice(kind: Kind, kd: KindDesign | undefined): number | n
   return null;
 }
 
+/**
+ * 회신 design.extra 에 넣을 값 (cost_* 다섯 칸, exp_* 설계 설명). 비교 보고서가 이 칸을 읽는다.
+ * 견적서(달라진 설계)와 시험 목록 초안(기관 표준 그대로) 둘 다 쓴다
+ */
+export function kdExtra(kind: Kind, kd: KindDesign | undefined, std?: KindDesign): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (kind === "pd" && kd?.pd) {
+    const pd = kd.pd;
+    if (COST_KEYS.some((c) => (std?.pd ?? pd).costs[c] != null)) for (const p of pdParts(pd, std?.pd)) out[p.key] = String(p.amount);
+    if (pd.groups.length) out.exp_groups = pd.groups.map((g) => `${g.label} ${g.n}`).join(", ").slice(0, 300);
+    if (pd.lanes.length) out.exp_schedule = pd.lanes.map((l) => (l.point ? `${l.name} ${l.start + 1}주차` : `${l.name} ${l.weeks}주`)).join(", ").slice(0, 300);
+    if (pd.endpoints.length) out.exp_endpoints = pd.endpoints.join(", ").slice(0, 300);
+  }
+  if (kind === "pk" && kd?.pk) {
+    const p = kd.pk;
+    const n = pkSamples(p);
+    if (n) out.exp_samples = `${p.groups.map((g) => `${g.label} ${g.n}마리`).join(", ")} × ${p.times.length}시점${p.matrix.length ? ` (${p.matrix.join("·")})` : ""} = ${n}검체`.slice(0, 300);
+    if (p.method) out.exp_val = p.method === "dev" ? "분석법 개발 포함" : "의뢰자 분석법 사용";
+  }
+  return out;
+}
+
 /* ── 저장 값 정리 ───────────────────────────────────── */
 
 const MAX = 99_999_999_999;

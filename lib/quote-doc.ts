@@ -9,7 +9,7 @@
  */
 import type { CatalogRow, CondPrice } from "./catalog";
 import {
-  cleanKd, cleanOrig, EMPTY5, emptyOther, emptyPk, kindOfCategory, kindStdPrice, pdFrom, pdLanes, pdParts, pkSamples,
+  cleanKd, cleanOrig, kdExtra, EMPTY5, emptyOther, emptyPk, kindOfCategory, kindStdPrice, pdFrom, pdLanes, pdParts, pkSamples,
   type Kind, type KindDesign, type Orig,
 } from "./kind-design";
 
@@ -523,20 +523,10 @@ export function replyExtra(t: DocTest): Record<string, string> {
   const out: Record<string, string> = {};
   if (t.why) out.exp_why = t.why.slice(0, 300);
   if (t.asks?.length) out.exp_asks = t.asks.join(" / ").slice(0, 300);
-  if (k === "pd" && t.kd?.pd) {
-    const pd = t.kd.pd;
-    for (const p of pdParts(pd, t.std.kd?.pd)) out[p.key] = String(p.amount);
-    out.exp_groups = pd.groups.map((g) => `${g.label} ${g.n}`).join(", ").slice(0, 300);
-    if (pd.lanes.length) out.exp_schedule = pd.lanes.map((l) => (l.point ? `${l.name} ${l.start + 1}주차` : `${l.name} ${l.weeks}주`)).join(", ").slice(0, 300);
-    if (pd.endpoints.length) out.exp_endpoints = pd.endpoints.join(", ").slice(0, 300);
+  Object.assign(out, kdExtra(k, t.kd, t.std.kd));
+  if (k === "pd") {
     const opts = t.evals.filter((e) => e.on && !e.base).map((e) => e.name);
     if (opts.length) out.exp_options = opts.join(", ").slice(0, 300);
-  }
-  if (k === "pk" && t.kd?.pk) {
-    const p = t.kd.pk;
-    const n = pkSamples(p);
-    if (n) out.exp_samples = `${p.groups.map((g) => `${g.label} ${g.n}마리`).join(", ")} × ${p.times.length}시점${p.matrix.length ? ` (${p.matrix.join("·")})` : ""} = ${n}검체`.slice(0, 300);
-    if (p.method) out.exp_val = p.method === "dev" ? "분석법 개발 포함" : "의뢰자 분석법 사용";
   }
   return out;
 }

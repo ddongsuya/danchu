@@ -8,7 +8,7 @@
 import { CATS, DETAILS, type Cat, type Field, type Values } from "./rfq-schema";
 import type { QuoteLineDef } from "./quote-items";
 import { EFFICACY_CAT, costLines, modelsOf } from "./efficacy";
-import type { KindDesign } from "./kind-design";
+import { kdExtra, kindOfCategory, type KindDesign } from "./kind-design";
 
 export type Glp = "GLP" | "Non-GLP" | "both";
 export type CatalogOption = { name: string; amount: number | null };
@@ -157,7 +157,7 @@ export const EXTRA_FIELDS: Partial<Record<Cat, Field[]>> = {
   동물대체시험: [{ id: "model", type: "text", label: "모델·키트", placeholder: "예: EpiDerm, KeraSkin, SkinEthic" }],
   "의료기기 생물학적 안전성": [{ id: "extract", type: "select", label: "표준 추출 조건", options: ["37℃ 72h", "50℃ 72h", "70℃ 24h", "121℃ 1h", "협의"] }],
   "효력시험(약효)": [
-    { id: "induction", type: "text", label: "유도 방법", placeholder: "예: DSS 음수 투여 7일" },
+    { id: "induction", type: "text", label: "유발 방법", placeholder: "예: DSS 음수 투여 7일" },
     { id: "positiveControl", type: "text", label: "검증된 양성 대조약", placeholder: "이 모델에서 자료를 가진 대조약" },
     { id: "endpoints", type: "text", label: "기본 평가 지표", placeholder: "예: 체중, 질병활성지수, 대장 길이, 조직 점수" },
     { id: "customDev", type: "radio", label: "맞춤 모델 개발", options: ["가능", "불가"] },
@@ -208,8 +208,8 @@ const EXPLAIN: Partial<Record<Cat, [string, string, string][]>> = {
     ["exp_samples", "채혈 시점과 예상 검체 수", "예: 8시점 × 3마리 × 3용량 = 72검체"],
   ],
   "효력시험(약효)": [
-    ["exp_groups", "군 구성 (군 이름·처치·마릿수)", "예: 정상 8, 유도 대조 8, 양성 대조 8, 시험물질 저·중·고 각 8"],
-    ["exp_schedule", "유도·투여·관찰 일정", "예: 유도 7일, 투여 14일(1일 1회 경구), 15일째 종료"],
+    ["exp_groups", "군 구성 (군 이름·처치·마릿수)", "예: 정상 8, 유발 대조 8, 양성 대조 8, 시험물질 저·중·고 각 8"],
+    ["exp_schedule", "유발·투여·관찰 일정", "예: 유발 7일, 투여 14일(1일 1회 경구), 15일째 종료"],
     ["exp_endpoints", "포함한 평가 지표", "총액에 든 지표"],
     ["exp_options", "선택 평가 지표와 금액", "예: 사이토카인 5종 +3,000,000원"],
     ["exp_posdata", "양성 대조약과 자료 보유", "예: 설파살라진, 이 모델에서 자료 보유"],
@@ -387,7 +387,9 @@ export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatc
   const design = {
     species: cat.species, route: cat.route, method: cat.method,
     groups_ctrl: cat.groups_ctrl, groups_test: cat.groups_test, per_sex: cat.per_sex,
-    recovery_weeks: cat.recovery_weeks, recovery_per_sex: cat.recovery_per_sex, dosing: cat.dosing, extra: cat.extra,
+    recovery_weeks: cat.recovery_weeks, recovery_per_sex: cat.recovery_per_sex, dosing: cat.dosing,
+    // 효력·약동학 기관 표준 설계가 있으면 비용 다섯 칸·설계 설명도 초안에 넣는다 (견적서 없이 바로 회신할 때)
+    extra: cat.kd ? { ...cat.extra, ...kdExtra(kindOfCategory(cat.category), cat.kd) } : cat.extra,
   };
   if (!cat.available) return { ...base, avail: "불가", reason: "해당 조합은 수행하지 않아요.", source: "catalog", design };
 
