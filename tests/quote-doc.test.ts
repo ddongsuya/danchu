@@ -9,7 +9,9 @@ import {
   inkOn,
   nextDocNo,
   scheduleWeeks,
+  priceForCond,
   standardGroups,
+  switchCond,
   testFromCatalog,
   testLines,
   type DocData,
@@ -197,5 +199,44 @@ describe("엑셀 파일", () => {
   });
   it("zip 빈 파일도 만든다", () => {
     expect(zip([{ name: "a.txt", data: new Uint8Array() }]).length).toBeGreaterThan(22);
+  });
+});
+
+describe("동물종·경로를 바꾸면 금액도 바뀐다", () => {
+  const multi = { ...row, species: ["SD rat", "Beagle dog"], routes: ["경구", "정맥"], cond_prices: [{ species: "Beagle dog", price: 420_000_000 }, { route: "정맥", price: 190_000_000 }] } as CatalogRow;
+  const sp: Rate[] = rates.map((r) => (r.kind === "animal" ? { ...r, bySpecies: { "Beagle dog": { add: 3_500_000, deduct: null } } } : r));
+
+  it("조건별 표준가: 대표, 하나만 다름, 둘 다 다름", () => {
+    const t = testFromCatalog(multi, sp);
+    const ch = t.std.choices!;
+    expect(priceForCond(ch, "SD rat", "경구")).toBe(168_000_000);
+    expect(priceForCond(ch, "Beagle dog", "경구")).toBe(420_000_000);
+    expect(priceForCond(ch, "SD rat", "정맥")).toBe(190_000_000);
+    expect(priceForCond(ch, "Beagle dog", "정맥")).toBeNull();
+  });
+
+  it("개로 바꾸고 마리를 늘리면 개 단가로 계산", () => {
+    let t = switchCond(testFromCatalog(multi, sp), { species: "Beagle dog" });
+    expect(t.std.price).toBe(420_000_000);
+    expect(t.subtitle).toContain("Beagle dog");
+    t = { ...t, groups: t.groups.map((g) => ({ ...g, m: g.m + 1, f: g.f + 1 })) };
+    const c = testLines(t);
+    expect(c.lines.find((l) => l.kind === "animal")?.amount).toBe(8 * 3_500_000);
+    expect(c.total).toBe(420_000_000 + 8 * 3_500_000);
+  });
+
+  it("동물종 단가가 비어 있으면 대표 단가, 차감도 대표 값", () => {
+    const t0 = switchCond(testFromCatalog(multi, sp), { species: "Beagle dog" });
+    const t = { ...t0, groups: t0.groups.map((g) => ({ ...g, m: g.m - 1, f: g.f - 1 })) };
+    expect(testLines(t).lines.find((l) => l.kind === "animal")?.amount).toBe(-8 * 400_000);
+  });
+
+  it("조건 사본과 동물종 단가는 저장해도 남는다", () => {
+    const t = testFromCatalog(multi, sp);
+    const back = cleanDocData({ tests: [t] }).tests[0];
+    expect(back.std.choices?.species).toEqual(["SD rat", "Beagle dog"]);
+    expect(back.std.choices?.prices).toHaveLength(2);
+    expect(back.rates.find((r) => r.kind === "animal")?.bySpecies?.["Beagle dog"]?.add).toBe(3_500_000);
+    expect(cleanRates([{ kind: "flat", label: "x", bySpecies: { a: { add: 1 } } }])[0].bySpecies).toBeUndefined();
   });
 });

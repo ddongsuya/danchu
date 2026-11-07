@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
 import {
-  blankTest, condChanges, docTitle, docTotals, mainAnimals, recoveryAnimals, scheduleWeeks, testFromCatalog, testLines, uid,
+  blankTest, condChanges, docTitle, docTotals, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testLines, uid,
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
@@ -116,6 +116,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
         <div className="qed__actions">
           <span role="status" className="qed__saved" data-s={saved}>{savedLabel}</span>
           {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          {!readOnly && <Link className="b2 bsm" href={`/cro/docs/${head.id}/fill`}>질문으로 채우기</Link>}
           <a className="b2 bsm" href={`/api/cro/docs/${head.id}/xlsx`}>엑셀</a>
           <Link className="b2 bsm" href={`/cro/docs/${head.id}/print`}>PDF</Link>
           {replyHref && <Link className="b1 bsm" href={replyHref}>회신 보내기</Link>}
@@ -357,9 +358,20 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
 
       <div className="qed__h2row"><h2 className="qd__h2">시험 조건</h2><span>점선 칸을 눌러 수정해요{ch.length ? ` · 변경 ${ch.length}` : ""}</span></div>
       <dl className="qed__cond">
-        {COND_LABEL.map(([k, label]) => (
-          <div key={k}><dt>{label}</dt><dd><Field label={label} value={t.cond[k]} was={t.catalogId ? t.std.cond[k] : undefined} disabled={readOnly} wide onChange={(v) => set({ cond: { ...t.cond, [k]: v.slice(0, 160) } })} /></dd></div>
-        ))}
+        {COND_LABEL.map(([k, label]) => {
+          // 시험 목록에서 여러 개 체크한 동물종·경로는 고르기. 바꾸면 그 조건의 표준가·단가로 다시 계산한다
+          const opts = k === "species" ? t.std.choices?.species : k === "route" ? t.std.choices?.routes : undefined;
+          if (opts && opts.length > 1) {
+            return (
+              <div key={k}><dt>{label}</dt><dd>
+                <select aria-label={label} className="qed__in qed__sel" value={t.cond[k]} disabled={readOnly} onChange={(e) => set(switchCond(t, { [k]: e.target.value }))}>
+                  {(opts.includes(t.cond[k]) ? opts : [t.cond[k], ...opts]).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </dd></div>
+            );
+          }
+          return <div key={k}><dt>{label}</dt><dd><Field label={label} value={t.cond[k]} was={t.catalogId ? t.std.cond[k] : undefined} disabled={readOnly} wide onChange={(v) => set({ cond: { ...t.cond, [k]: v.slice(0, 160) } })} /></dd></div>;
+        })}
       </dl>
 
       {(t.groups.length > 0 || t.std.groups.length > 0) && (
@@ -467,7 +479,7 @@ function TestLedger({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest
         <li>
           <div><span>표준가</span>{manualPrice || t.std.price == null ? <input aria-label="표준가" className="qed__num" inputMode="numeric" disabled={readOnly} value={t.std.price ? n(t.std.price) : ""} placeholder="금액 입력" onChange={(e) => set({ std: { ...t.std, price: e.target.value ? Number(digits(e.target.value)) : null } })} /> : <b className="tnum">{n(c.base)}</b>}</div>
           <small>{[t.subtitle, t.std.summary].filter(Boolean).join(" · ") || (manualPrice ? "시험 목록에 없는 시험이에요" : "")}</small>
-          {!manualPrice && t.std.price == null && <small className="qed__warn">시험 목록에 이 조건의 표준가가 없어요. <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>표준가 정하기</Link></small>}
+          {!manualPrice && t.std.price == null && <small className="qed__warn">시험 목록에 {t.std.choices ? `${[t.cond.species, t.cond.route].filter(Boolean).join(" · ")} 조건의` : "이 조건의"} 표준가가 없어요. <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>표준가 정하기</Link></small>}
         </li>
         {c.lines.filter((l) => l.kind !== "extra").map((l, k) => (
           <li key={k}><div><span>{l.label}</span><b className="tnum">{signed(l.amount)}</b></div><small className="tnum">{l.formula}</small>{l.amount === 0 && <small className="qed__warn">단가가 비어 있어 금액이 0원이에요.</small>}</li>
