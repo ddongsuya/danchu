@@ -6,10 +6,11 @@ import { loadCatalog } from "./catalog-db";
 import { pickVariant, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
-  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog,
-  type DocData, type DocHead, type QuoteStyle, type Rate, type Supplier,
+  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog, testKind,
+  type DocData, type DocTest, type DocHead, type QuoteStyle, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
+import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,8 +42,20 @@ export async function saveRates(orgId: string, itemKey: string, prices: unknown,
     const id = String((p as { id?: unknown }).id ?? "");
     if (!own.has(id)) continue;
     const raw = (p as { std_price?: unknown }).std_price;
-    const v = typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 99_999_999_999 ? Math.round(raw) : null;
-    const { error } = await sb.from("cro_catalog").update({ std_price: v, price_min: v, price_max: null }).eq("id", id).eq("org_id", orgId);
+    let v = typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 99_999_999_999 ? Math.round(raw) : null;
+    // 갈래별 설계(효력 비용 다섯 칸·검체당 단가)를 함께 보내면 extra.kd 에 넣고, 표준가 한 칸도 그 값으로
+    const kd = cleanKd((p as { kd?: unknown }).kd);
+    const patch: Record<string, unknown> = {};
+    if (kd) {
+      const { data: cur } = await sb.from("cro_catalog").select("extra").eq("id", id).eq("org_id", orgId).maybeSingle();
+      const extra = cur?.extra && typeof cur.extra === "object" ? (cur.extra as Record<string, unknown>) : {};
+      patch.extra = { ...extra, kd };
+      const sum = kd.pd && COST_KEYS.some((k) => kd.pd!.costs[k] != null) ? COST_KEYS.reduce((a, k) => a + (kd.pd!.costs[k] ?? 0), 0) : null;
+      const per = kd.pk?.perSample ?? kd.other?.perSample ?? null;
+      if (sum != null) v = sum;
+      else if (per != null) { v = per; patch.unit = "per_sample"; }
+    }
+    const { error } = await sb.from("cro_catalog").update({ ...patch, std_price: v, price_min: v, price_max: null }).eq("id", id).eq("org_id", orgId);
     if (error) return { ok: false, error: "표준가를 저장하지 못했어요." };
   }
   // 표준가만 보낸 경우(견적서 질문 화면의 "시험 목록에도 저장")는 단가를 건드리지 않는다
@@ -158,7 +171,7 @@ function emptyData(style: QuoteStyle): DocData {
 }
 
 /** 카탈로그 조합으로 새 견적서 */
-export async function createDocFromCatalog(orgId: string, orgName: string, userId: string | null, catalogIds: string[], client: string, substance: string, manual: string[] = []): Promise<{ id?: string; error?: string }> {
+export async function createDocFromCatalog(orgId: string, orgName: string, userId: string | null, catalogIds: string[], client: string, substance: string, manual: string[] = [], kind: Kind = "tox"): Promise<{ id?: string; error?: string }> {
   const [rows, rates, style] = await Promise.all([loadCatalog(orgId), loadRates(orgId), loadStyle(orgId, orgName)]);
   const byId = new Map(rows.map((r) => [r.id, r]));
   const data = emptyData(style);
@@ -166,7 +179,7 @@ export async function createDocFromCatalog(orgId: string, orgName: string, userI
     const c = byId.get(id);
     if (c) data.tests.push(testFromCatalog(c, rates.get(c.item_key) ?? []));
   }
-  for (const name of manual) data.tests.push(blankTest(name));
+  for (const name of manual) data.tests.push(blankTest(name, kind));
   return insertDoc(orgId, userId, { client, substance, data });
 }
 
@@ -188,9 +201,59 @@ export async function createDocFromRequest(orgId: string, orgName: string, userI
     const other = picked.mismatch.includes(PRICE_CHECK_SPECIES) || picked.mismatch.includes(PRICE_CHECK_ROUTE);
     const base = other ? { ...picked.row, std_price: null } : picked.row;
     const full = (byKey.get(rowKey(line)) ?? []).find((r) => r.id === picked.row.id) ?? picked.row;
-    data.tests.push({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq });
+    data.tests.push(withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload));
   }
   return insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
+}
+
+/**
+ * 의뢰자 원안을 견적서 시험에 붙인다 (효력·약동학·개별 분석).
+ * 설계는 기관 표준(시험 목록)에서 시작하고, 요청에 적힌 군 수·마릿수·채혈 시점·검체·시료 수만 맞춘다.
+ * 금액은 표준과 달라진 곳만 더하거나 뺀다 (lib/kind-design pdParts)
+ */
+function withRequest(t: DocTest, payload: Values): DocTest {
+  const k = testKind(t);
+  const get = (id: string) => { const v = payload[`${t.category}.${id}`]; return Array.isArray(v) ? v.join(", ") : typeof v === "string" ? v.trim() : ""; };
+  const lines = (pairs: [string, string][]) => pairs.filter(([, v]) => v);
+  if (k === "pd" && t.kd?.pd) {
+    const groupsText = get("groups");
+    const { groups, perGroup } = parseGroups(groupsText);
+    const pd = structuredClone(t.kd.pd);
+    if (perGroup) pd.groups = pd.groups.map((g) => ({ ...g, n: perGroup }));
+    if (groups && groups > pd.groups.length) {
+      for (let i = pd.groups.length; i < groups; i++) pd.groups.push({ ...newPdGroup("test", perGroup ?? pd.groups[0]?.n ?? 0), treat: pd.groups.find((g) => g.role === "test")?.treat ?? "" });
+    } else if (groups && groups < pd.groups.length) {
+      // 줄일 때는 뒤쪽 시험물질군부터 뺀다
+      while (pd.groups.length > groups && pd.groups.some((g) => g.role === "test")) { const i = pd.groups.map((g) => g.role).lastIndexOf("test"); pd.groups.splice(i, 1); }
+    }
+    const ends = get("endpoints").split(/[,·\n]/).map((x) => x.trim()).filter(Boolean);
+    for (const e of ends) if (!pd.endpoints.includes(e)) pd.endpoints.push(e.slice(0, 80));
+    const orig: Orig = { lines: lines([["질환 모델", get("method")], ["동물종", get("species")], ["군 구성", groupsText], ["양성 대조군", get("positive")], ["투여 기간", get("duration")], ["평가 지표", get("endpoints")], ["예비시험", get("pilot")]]), ...(groups ? { groups } : {}), ...(perGroup ? { perGroup } : {}) };
+    return { ...t, kd: { ...t.kd, pd }, orig };
+  }
+  if (k === "pk" && t.kd?.pk) {
+    const pk = structuredClone(t.kd.pk);
+    const sampling = get("sampling");
+    const n = parseTimes(sampling);
+    if (!pk.times.length && sampling) {
+      const unit = /분|min/i.test(sampling) && !/h|시간/i.test(sampling) ? "분" : "시간";
+      pk.times = (sampling.replace(/총.*$/, "").match(/\d+(\.\d+)?/g) ?? []).slice(0, 24).map((x) => `${x}${unit}`);
+    }
+    const mx = (payload[`${t.category}.matrix`] as string[] | undefined) ?? [];
+    if (Array.isArray(mx) && mx.length) pk.matrix = mx.filter((m) => PK_MATRIX.includes(m));
+    const design = get("design");
+    if (design && !pk.types.length) pk.types = design.split(", ").map((d) => (d === "단회" ? "단회 PK" : d === "반복" ? "반복 PK" : d)).filter((d) => PK_TYPES.includes(d));
+    const orig: Orig = { lines: lines([["동물종", get("species")], ["설계", design], ["검체", get("matrix")], ["채혈 시기·횟수", sampling], ["분석 장비", get("instrument")]]), ...(n ? { times: n } : {}) };
+    return { ...t, kd: { ...t.kd, pk }, orig };
+  }
+  if (k === "other" && t.kd?.other) {
+    const samples = get("samples");
+    const n = parseCount(samples);
+    const other = { ...t.kd.other, ...(samples && !t.kd.other.sample ? { sample: samples.slice(0, 120) } : {}), ...(n ? { n } : {}) };
+    const orig: Orig = { lines: lines([["시료 종류와 수", samples], ["받고 싶은 분석", get("desc")]]), ...(n ? { samples: n } : {}) };
+    return { ...t, kd: { ...t.kd, other }, orig };
+  }
+  return t;
 }
 
 export async function saveDoc(orgId: string, id: string, raw: unknown): Promise<{ ok: boolean; updatedAt?: string; error?: string }> {

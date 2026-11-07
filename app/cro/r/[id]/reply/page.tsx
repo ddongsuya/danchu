@@ -4,7 +4,7 @@ import { loadQuote } from "@/lib/quote-load";
 import { getInviteById } from "@/lib/data";
 import { ReplyForm, type DocFill } from "@/components/cro/ReplyForm";
 import { loadDoc } from "@/lib/quote-doc-db";
-import { testLines } from "@/lib/quote-doc";
+import { replyExtra, testLines } from "@/lib/quote-doc";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { ReplyDone } from "@/components/cro/ReplyDone";
 
@@ -32,7 +32,7 @@ export default async function CroReply({ params, searchParams }: { params: Promi
     if (got && got.head.inviteId === inv.id) {
       docFill = {
         docNo: got.head.docNo, href: `/cro/docs/${got.head.id}`, printHref: `/cro/docs/${got.head.id}/print`,
-        lines: got.data.tests.filter((t) => typeof t.rfqSeq === "number").map((t) => ({ seq: t.rfqSeq as number, amount: testLines(t).total, weeks: t.weeks })),
+        lines: got.data.tests.filter((t) => typeof t.rfqSeq === "number").map((t) => ({ seq: t.rfqSeq as number, amount: testLines(t).total, weeks: t.weeks, extra: replyExtra(t) })),
       };
     }
   } else if (orgId && s.profile.role !== "admin") {

@@ -92,4 +92,12 @@ export const KINDS: Record<Kind, KindInfo> = {
   },
 };
 
+/** 대분류 → 갈래. 견적서·시험 목록이 같은 규칙을 쓴다 */
+export function kindOfCategory(cat: string): Kind {
+  if (cat === "효력시험(약효)") return "pd";
+  if (cat === "PK/TK/ADME·생체시료분석") return "pk";
+  if ((OTHER_CATS as string[]).includes(cat)) return "other";
+  return "tox";
+}
+
 export const isKind = (v: unknown): v is Kind => typeof v === "string" && v in KINDS;

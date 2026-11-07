@@ -8,6 +8,7 @@
 import { CATS, DETAILS, type Cat, type Field, type Values } from "./rfq-schema";
 import type { QuoteLineDef } from "./quote-items";
 import { EFFICACY_CAT, costLines, modelsOf } from "./efficacy";
+import type { KindDesign } from "./kind-design";
 
 export type Glp = "GLP" | "Non-GLP" | "both";
 export type CatalogOption = { name: string; amount: number | null };
@@ -56,6 +57,8 @@ export type CatalogRow = {
   after_keys?: string[];
   /** 0036: 표준가 (표준 설계 금액). 시험 목록에서 바꾸고, 저장할 때 price_min 에도 같은 값이 들어간다 */
   std_price?: number | null;
+  /** 2026-11-07: 갈래별 표준 설계 (효력·약동학·개별 분석). DB 에서는 extra.kd */
+  kd?: KindDesign;
 };
 
 export type CondPrice = { species?: string; route?: string; price: number };
@@ -221,6 +224,14 @@ export const EXPLAIN_FIELDS: Partial<Record<Cat, Field[]>> = {};
 for (const [cat, list] of Object.entries(EXPLAIN) as [Cat, [string, string, string][]][]) {
   EXPLAIN_FIELDS[cat] = list.map(([id, label, placeholder]) => ({ id, type: "text", label, placeholder }));
   EXTRA_FIELDS[cat] = [...(EXTRA_FIELDS[cat] ?? []), ...EXPLAIN_FIELDS[cat]!];
+}
+// 회신에만 있는 기관 설명 (2026-11-07): 견적서의 "디자인을 고친 이유"·"의뢰자에게 확인할 것"이 들어온다. 시험 목록에는 두지 않는다
+for (const cat of ["효력시험(약효)", "PK/TK/ADME·생체시료분석", "기타(임상병리·조직병리 등)", "조제물분석"] as Cat[]) {
+  EXPLAIN_FIELDS[cat] = [
+    ...(EXPLAIN_FIELDS[cat] ?? []),
+    { id: "exp_why", type: "text", label: "요청과 다르게 설계한 이유", placeholder: "예: 용량 반응을 보려고 시험물질군을 두 용량으로 했습니다" },
+    { id: "exp_asks", type: "text", label: "의뢰자에게 확인할 것", placeholder: "예: 투여 시작을 유발과 같은 날로 해도 되는지" },
+  ];
 }
 /** design.extra 에서 기관 설명만 뽑아 [라벨, 값] 으로 */
 export function explainOf(category: string, extra: unknown): [string, string][] {

@@ -8,6 +8,10 @@
  * 이 파일은 DB·화면을 모른다. 편집 화면·PDF·엑셀이 같은 계산을 쓴다.
  */
 import type { CatalogRow, CondPrice } from "./catalog";
+import {
+  cleanKd, cleanOrig, EMPTY5, emptyOther, emptyPk, kindOfCategory, kindStdPrice, pdFrom, pdLanes, pdParts, pkSamples,
+  type Kind, type KindDesign, type Orig,
+} from "./kind-design";
 
 /* ── 추가 비용 단가 ─────────────────────────────────── */
 
@@ -128,7 +132,17 @@ export type DocTest = {
   title: string;
   subtitle: string;
   /** 표준가와 표준 설계 (카탈로그 사본). price 는 지금 cond 의 동물종·경로일 때 표준가 */
-  std: { price: number | null; groups: DocGroup[]; cond: TestCond; evals: string[]; summary: string; choices?: Choices };
+  std: { price: number | null; groups: DocGroup[]; cond: TestCond; evals: string[]; summary: string; choices?: Choices; kd?: KindDesign };
+  /** 갈래 (2026-11-07). 없으면 대분류로 정한다 (testKind) */
+  kind?: Kind;
+  /** 갈래별 설계 (효력·약동학·개별 분석). std.kd 가 시험 목록 사본 */
+  kd?: KindDesign;
+  /** 의뢰자 원안 (받은 요청에서 만든 견적서) */
+  orig?: Orig;
+  /** 원안·표준과 다르게 설계한 이유 (의뢰자 비교 보고서에 보인다) */
+  why?: string;
+  /** 의뢰자에게 확인할 것 */
+  asks?: string[];
   cond: TestCond;
   groups: DocGroup[];
   evals: DocEval[];
@@ -241,18 +255,36 @@ export function testFromCatalog(c: CatalogRow, rates: Rate[], full: CatalogRow =
   const cond = condOfRow(c);
   const subtitle = [cond.species, cond.route, cond.glp].filter(Boolean).join(" · ");
   const weeks = c.weeks ?? c.last_weeks ?? null;
+  const kind = kindOfCategory(c.category);
+  const kd = kdFromCatalog(kind, c);
+  const stdPrice = kd ? kindStdPrice(kind, kd) ?? (kind === "pd" ? c.std_price ?? null : null) : c.std_price ?? null;
   return {
     uid: uid("t"),
+    kind,
+    ...(kd ? { kd: structuredClone(kd) } : {}),
     itemKey: c.item_key, category: c.category, item: c.item, catalogId: c.id,
-    title: c.dosing ? `${c.item} (${c.dosing})` : c.item,
+    // 효력은 질환 영역보다 모델 이름이 시험을 가린다 ("대장염(DSS) 효력시험")
+    title: kindOfCategory(c.category) === "pd" ? `${c.method || c.item} 효력시험` : c.dosing ? `${c.item} (${c.dosing})` : c.item,
     subtitle,
-    std: { price: c.std_price ?? null, groups: groups.map((g) => ({ ...g })), cond: { ...cond }, evals: [...c.includes], summary: stdSummary(groups, c.recovery_weeks), ...choicesOf(full) },
-    cond, groups, evals, qty: {}, extras: [], rates: allRates,
+    std: { price: stdPrice, groups: groups.map((g) => ({ ...g })), cond: { ...cond }, evals: [...c.includes], summary: stdSummary(groups, c.recovery_weeks), ...choicesOf(full), ...(kd ? { kd } : {}) },
+    // 효력은 군을 kd.pd.groups 로 센다. 독성 군 구성·단가는 쓰지 않는다
+    cond, groups: kind === "pd" ? [] : groups, evals, qty: {}, extras: [], rates: kind === "tox" ? allRates : allRates.filter((r) => r.kind === "flat" || r.kind === "qty"),
     description: c.note ?? "",
     weeks, startWeek: 0,
-    phases: defaultPhases(weeks, c.dosing, c.recovery_weeks, groups.length > 0),
+    phases: kind === "pd" && kd?.pd?.lanes.length ? kd.pd.lanes.map((l) => ({ id: l.id, name: l.name, start: l.start, weeks: l.weeks, kind: l.point ? "point" as const : "run" as const })) : defaultPhases(weeks, c.dosing, c.recovery_weeks, groups.length > 0),
   };
 }
+
+/** 시험 목록 한 줄 → 갈래별 설계 사본. 독성은 없음 */
+export function kdFromCatalog(kind: Kind, c: CatalogRow): KindDesign | undefined {
+  if (kind === "pd") return { pd: c.kd?.pd ? structuredClone(c.kd.pd) : { ...pdFrom(c), lanes: pdLanes() } };
+  if (kind === "pk") return { pk: c.kd?.pk ? structuredClone(c.kd.pk) : { ...emptyPk(), perSample: c.unit === "per_sample" ? c.std_price ?? c.price_min ?? null : null } };
+  if (kind === "other") return { other: c.kd?.other ? structuredClone(c.kd.other) : emptyOther(c.unit === "per_sample" ? c.std_price ?? c.price_min ?? null : c.std_price ?? null) };
+  return undefined;
+}
+
+/** 시험의 갈래. 예전 견적서는 kind 가 없어 대분류로 정한다 */
+export const testKind = (t: Pick<DocTest, "kind" | "category">): Kind => t.kind ?? kindOfCategory(t.category);
 
 function choicesOf(c: CatalogRow): { choices?: Choices } {
   const routes = c.routes?.length ? c.routes : c.route ? [c.route] : [];
@@ -283,10 +315,14 @@ export function switchCond(t: DocTest, p: { species?: string; route?: string }):
 }
 
 /** 카탈로그에 없는 시험 (직접 적는 시험) */
-export function blankTest(name = "새 시험"): DocTest {
+export function blankTest(name = "새 시험", kind: Kind = "tox"): DocTest {
   const cond: TestCond = { species: "", route: "", dosing: "", recovery: "없음", glp: "GLP", guideline: "" };
   return {
-    uid: uid("t"), itemKey: "", category: "", item: name, catalogId: null,
+    uid: uid("t"), itemKey: "", category: "", item: name, catalogId: null, kind,
+    // 시험 목록에 없는 효력·약동학·개별 분석 시험도 같은 칸으로 적는다 (숫자는 비워 둔다)
+    ...(kind === "pd" ? { kd: { pd: { model: "", induction: "", groups: [], lanes: pdLanes(), endpoints: [], costs: { ...EMPTY5 }, perGroup: { ...EMPTY5 }, perAnimal: null } } } : {}),
+    ...(kind === "pk" ? { kd: { pk: emptyPk() } } : {}),
+    ...(kind === "other" ? { kd: { other: emptyOther() } } : {}),
     title: name, subtitle: "",
     std: { price: null, groups: [], cond: { ...cond }, evals: [], summary: "" },
     cond, groups: [], evals: [], qty: {}, extras: [], rates: [], description: "", weeks: null, startWeek: 0,
@@ -327,6 +363,8 @@ export const recoveryAnimals = (gs: DocGroup[]) => gs.reduce((a, g) => a + n0(g.
  * - 회복군: 회복 동물 차이 (표준에 있던 군은 표준 회복 마릿수, 새 군은 0 기준)
  */
 export function testLines(t: DocTest): { base: number; lines: Line[]; total: number; changes: number } {
+  const k = testKind(t);
+  if (k !== "tox" && t.kd) return kindLines(t, k);
   const base = t.std.price ?? 0;
   const lines: Line[] = [];
   const rate = (kind: RateKind) => { const r = t.rates.find((x) => x.kind === kind); return r && rateFor(r, t.cond.species); };
@@ -391,6 +429,109 @@ export function testLines(t: DocTest): { base: number; lines: Line[]; total: num
   return { base, lines, total, changes: lines.length + condChanges(t).length };
 }
 
+/**
+ * 효력·약동학·개별 분석의 금액. 표준가 자리(base)는 시험 목록 기준가, 줄은 달라진 곳.
+ * - 효력: 비용 다섯 칸 기준가 합 + 칸마다 (군 수·동물 수 차이, 직접 고친 금액)
+ * - 약동학: 동물 실험 + 보고서 + 검체 수 × 검체당 단가 + 분석법 개발
+ * - 개별 분석: 접수 + 보고서 + 검체 수 × 검체당 단가
+ */
+function kindLines(t: DocTest, k: Kind): { base: number; lines: Line[]; total: number; changes: number } {
+  const lines: Line[] = [];
+  let base = 0;
+  if (k === "pd" && t.kd?.pd) {
+    const parts = pdParts(t.kd.pd, t.std.kd?.pd);
+    base = parts.reduce((a, p) => a + (p.base ?? 0), 0);
+    for (const p of parts) {
+      const d = p.amount - (p.base ?? 0);
+      if (d) lines.push({ label: `${p.label} · ${p.adj || "조정"}`, formula: `${fmt(p.base ?? 0)} → ${fmt(p.amount)}`, amount: d, kind: "group" });
+    }
+  } else if (k === "pk" && t.kd?.pk) {
+    const p = t.kd.pk;
+    base = (p.animal ?? 0) + (p.report ?? 0);
+    const n = pkSamples(p);
+    if (n) lines.push({ label: `검체 분석 · ${n}검체`, formula: `${p.groups.reduce((a, g) => a + g.n, 0)}마리 × ${p.times.length}시점${p.matrix.length > 1 ? ` × ${p.matrix.length}종` : ""} = ${n}검체 × ${fmt(p.perSample ?? 0)}`, amount: n * (p.perSample ?? 0), kind: "qty" });
+    if (p.method === "dev") lines.push({ label: "분석법 개발", formula: `1회 × ${fmt(p.dev ?? 0)}`, amount: p.dev ?? 0, kind: "flat" });
+  } else if (k === "other" && t.kd?.other) {
+    const o = t.kd.other;
+    base = (o.setup ?? 0) + (o.report ?? 0);
+    if (o.n) lines.push({ label: `검체 분석 · ${o.n}검체`, formula: `${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), kind: "qty" });
+  }
+  for (const e of t.evals) {
+    if (!e.on || e.base || !e.rateId) continue;
+    const r = t.rates.find((x) => x.id === e.rateId);
+    if (r) lines.push({ label: r.shown || `${r.label} 추가`, formula: `1${r.unit} × ${fmt(r.add ?? 0)}`, amount: r.add ?? 0, kind: "flat" });
+  }
+  for (const x of t.extras) {
+    if (!x.label && !x.amount) continue;
+    lines.push({ label: x.label || "기타", formula: "직접 입력", amount: Math.round(n0(x.amount)), kind: "extra" });
+  }
+  const total = Math.max(0, base + lines.reduce((a, l) => a + l.amount, 0));
+  return { base, lines, total, changes: lines.length };
+}
+
+/**
+ * 견적서에 보일 금액 내역 (효력·약동학·개별 분석). 달라진 곳만이 아니라 칸 전체를 보여 준다.
+ * 합계는 testLines(t).total 과 같다
+ */
+export type KindRow = { label: string; note: string; amount: number; changed: boolean };
+export function kindRows(t: DocTest): KindRow[] | null {
+  const k = testKind(t);
+  if (k === "tox" || !t.kd) return null;
+  const rows: KindRow[] = [];
+  if (k === "pd" && t.kd.pd) for (const p of pdParts(t.kd.pd, t.std.kd?.pd)) rows.push({ label: p.label, note: p.adj, amount: p.amount, changed: p.changed });
+  if (k === "pk" && t.kd.pk) {
+    const p = t.kd.pk, n = pkSamples(p);
+    rows.push({ label: "동물 실험 (투여·채혈)", note: p.groups.length ? `${p.groups.length}군 · ${p.groups.reduce((a, g) => a + g.n, 0)}마리` : "", amount: p.animal ?? 0, changed: false });
+    rows.push({ label: `검체 분석${p.matrix.length ? ` (${p.matrix.join("·")})` : ""}`, note: n ? `${n}검체 × ${fmt(p.perSample ?? 0)}` : "검체 수 미정", amount: n * (p.perSample ?? 0), changed: false });
+    if (p.method === "dev") rows.push({ label: "분석법 개발", note: "의뢰자 분석법 없음", amount: p.dev ?? 0, changed: true });
+    rows.push({ label: "PK 파라미터 분석·보고서", note: "", amount: p.report ?? 0, changed: false });
+  }
+  if (k === "other" && t.kd.other) {
+    const o = t.kd.other;
+    rows.push({ label: "검체 분석", note: `${o.sample ? `${o.sample} · ` : ""}${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), changed: false });
+    if (o.setup != null) rows.push({ label: "시료 접수·보관", note: "", amount: o.setup, changed: false });
+    if (o.report != null) rows.push({ label: "결과 보고서", note: "", amount: o.report, changed: false });
+  }
+  for (const l of testLines(t).lines) if (l.kind === "flat" && !(k === "pk" && l.label === "분석법 개발") || l.kind === "extra") rows.push({ label: l.label, note: "", amount: l.amount, changed: true });
+  return rows.filter((r) => r.amount || r.label);
+}
+
+/** 갈래별 한 줄 요약 (견적서 조건 칸): "5군, 40마리" · "48검체" */
+export function kindSummary(t: DocTest): string {
+  const k = testKind(t);
+  if (k === "pd" && t.kd?.pd) return `${t.kd.pd.groups.length}군, ${t.kd.pd.groups.reduce((a, g) => a + g.n, 0)}마리`;
+  if (k === "pk" && t.kd?.pk) { const n = pkSamples(t.kd.pk); return n ? `${t.kd.pk.groups.length}군 · ${t.kd.pk.times.length}시점 · ${n}검체` : ""; }
+  if (k === "other" && t.kd?.other) return t.kd.other.n ? `${t.kd.other.n}검체` : "";
+  return "";
+}
+
+/**
+ * 회신 화면에 넘길 설계 설명 (design.extra). 의뢰자 비교 보고서에 기관 설명으로 나란히 보인다.
+ * 효력은 비용 다섯 칸(cost_*)도 넘겨 회신의 비용 구분이 채워진다
+ */
+export function replyExtra(t: DocTest): Record<string, string> {
+  const k = testKind(t);
+  const out: Record<string, string> = {};
+  if (t.why) out.exp_why = t.why.slice(0, 300);
+  if (t.asks?.length) out.exp_asks = t.asks.join(" / ").slice(0, 300);
+  if (k === "pd" && t.kd?.pd) {
+    const pd = t.kd.pd;
+    for (const p of pdParts(pd, t.std.kd?.pd)) out[p.key] = String(p.amount);
+    out.exp_groups = pd.groups.map((g) => `${g.label} ${g.n}`).join(", ").slice(0, 300);
+    if (pd.lanes.length) out.exp_schedule = pd.lanes.map((l) => (l.point ? `${l.name} ${l.start + 1}주차` : `${l.name} ${l.weeks}주`)).join(", ").slice(0, 300);
+    if (pd.endpoints.length) out.exp_endpoints = pd.endpoints.join(", ").slice(0, 300);
+    const opts = t.evals.filter((e) => e.on && !e.base).map((e) => e.name);
+    if (opts.length) out.exp_options = opts.join(", ").slice(0, 300);
+  }
+  if (k === "pk" && t.kd?.pk) {
+    const p = t.kd.pk;
+    const n = pkSamples(p);
+    if (n) out.exp_samples = `${p.groups.map((g) => `${g.label} ${g.n}마리`).join(", ")} × ${p.times.length}시점${p.matrix.length ? ` (${p.matrix.join("·")})` : ""} = ${n}검체`.slice(0, 300);
+    if (p.method) out.exp_val = p.method === "dev" ? "분석법 개발 포함" : "의뢰자 분석법 사용";
+  }
+  return out;
+}
+
 /** 표준과 다른 시험 조건 칸 이름 */
 export function condChanges(t: DocTest): (keyof TestCond)[] {
   return (Object.keys(t.cond) as (keyof TestCond)[]).filter((k) => (t.std.cond[k] ?? "") !== (t.cond[k] ?? "") && t.catalogId);
@@ -429,6 +570,7 @@ const num = (v: unknown, min: number, max: number, dflt: number) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : dflt;
 };
 const PHASE_KINDS: PhaseKind[] = ["run", "recovery", "report", "point"];
+const KIND_IDS: Kind[] = ["tox", "pd", "pk", "other"];
 
 function cleanCond(v: unknown): TestCond {
   const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
@@ -481,7 +623,13 @@ export function cleanDocData(raw: unknown): DocData {
         evals: Array.isArray(std.evals) ? std.evals.filter((e): e is string => typeof e === "string").slice(0, 40).map((e) => e.slice(0, 80)) : [],
         summary: text(std.summary, 200),
         ...cleanChoices(std.choices),
+        ...(cleanKd(std.kd) ? { kd: cleanKd(std.kd) } : {}),
       },
+      ...(KIND_IDS.includes(x.kind as Kind) ? { kind: x.kind as Kind } : {}),
+      ...(cleanKd(x.kd) ? { kd: cleanKd(x.kd) } : {}),
+      ...(cleanOrig(x.orig) ? { orig: cleanOrig(x.orig) } : {}),
+      ...(text(x.why, 1000) ? { why: text(x.why, 1000) } : {}),
+      ...(Array.isArray(x.asks) && x.asks.some((a) => typeof a === "string" && a.trim()) ? { asks: x.asks.filter((a): a is string => typeof a === "string" && !!a.trim()).slice(0, 10).map((a) => a.trim().slice(0, 200)) } : {}),
       cond: cleanCond(x.cond),
       groups: cleanGroups(x.groups),
       evals: (Array.isArray(x.evals) ? x.evals : []).slice(0, 40).filter((e) => e && typeof e === "object").map((e) => {

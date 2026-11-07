@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { TablesInsert, TablesUpdate } from "./db-types";
 import { orderToKeys } from "./schedule";
+import { cleanKd, COST_KEYS } from "./kind-design";
 import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type CondPrice, type Glp } from "./catalog";
 
 /** 0037 전 행은 routes 가 없다. 그때는 route 하나를 목록으로 본다 */
@@ -27,7 +28,7 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     options: Array.isArray(r.options) ? (r.options as CatalogRow["options"]) : [],
     unit: r.unit === "per_sample" ? "per_sample" : "total",
     price_min: (r.price_min as number | null) ?? null, price_max: (r.price_max as number | null) ?? null,
-    extra: r.extra && typeof r.extra === "object" ? (r.extra as CatalogRow["extra"]) : {},
+    ...extraOf(r.extra),
     note: (r.note as string | null) ?? null,
     last_amount: (r.last_amount as number | null) ?? null, last_weeks: (r.last_weeks as number | null) ?? null, last_quoted_at: (r.last_quoted_at as string | null) ?? null,
     source: (r.source as CatalogRow["source"]) || "empty",
@@ -38,6 +39,14 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     std_price: (r.std_price as number | null) ?? null,
     cond_prices: Array.isArray(r.cond_prices) ? (r.cond_prices as CondPrice[]) : [],
   };
+}
+
+/** extra 의 kd(갈래별 설계)는 따로 꺼낸다 */
+function extraOf(raw: unknown): { extra: CatalogRow["extra"]; kd?: CatalogRow["kd"] } {
+  if (!raw || typeof raw !== "object") return { extra: {} };
+  const { kd, ...rest } = raw as Record<string, unknown>;
+  const clean = cleanKd(kd);
+  return { extra: rest as CatalogRow["extra"], ...(clean ? { kd: clean } : {}) };
 }
 
 /** 기관의 카탈로그 전체 (조합 행만, 항목·정렬 순) */
@@ -67,9 +76,10 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
   const r = raw as Record<string, unknown>;
   const it = valid.get(String(r.item_key));
   if (!it) return null;
-  const extra: Record<string, string | string[]> = {};
+  const extra: Record<string, unknown> = {};
   if (r.extra && typeof r.extra === "object") {
     for (const [k, v] of Object.entries(r.extra as Record<string, unknown>)) {
+      if (k === "kd") continue;
       if (typeof v === "string") extra[k] = v.slice(0, 300);
       else if (Array.isArray(v)) extra[k] = v.filter((x): x is string => typeof x === "string").slice(0, 20);
     }
@@ -92,6 +102,12 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
     if (typeof o.species === "string" && species.indexOf(o.species) > 0 && !cond_prices.some((c) => c.species === o.species)) cond_prices.push({ species: o.species, price });
     else if (typeof o.route === "string" && routesPart.routes.indexOf(o.route) > 0 && !cond_prices.some((c) => c.route === o.route)) cond_prices.push({ route: o.route, price });
   }
+  // 갈래별 설계가 있으면 표준가 한 칸도 그 값으로 맞춘다: 효력은 비용 다섯 칸 합, 약동학·개별 분석은 검체당 단가
+  const kd = cleanKd(r.kd);
+  const kdPrice = kd?.pd && COST_KEYS.some((k) => kd.pd!.costs[k] != null) ? COST_KEYS.reduce((a, k) => a + (kd.pd!.costs[k] ?? 0), 0)
+    : kd?.pk?.perSample ?? kd?.other?.perSample ?? null;
+  const perSampleKd = kd?.pk?.perSample != null || kd?.other?.perSample != null;
+  if (kdPrice != null) { r.std_price = kdPrice; if (perSampleKd) r.unit = "per_sample"; }
   return {
     org_id: orgId, item_key: String(r.item_key), category: it.category, item: it.item,
     available: r.available !== false,
@@ -107,7 +123,7 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
     unit: r.unit === "per_sample" || (r.unit == null && PER_SAMPLE_CATS.includes(it.category)) ? "per_sample" : "total",
     // 표준가 한 칸 (2026-11-06): 견적서(std_price)와 회신 초안(price_min)이 같은 값을 쓴다. 범위(상한)는 더 받지 않는다
     std_price: big(r.std_price) ?? big(r.price_min), price_min: big(r.std_price) ?? big(r.price_min), price_max: null,
-    extra, note: str(r.note, 500),
+    extra: (kd ? { ...extra, kd } : extra) as TablesInsert<"cro_catalog">["extra"], note: str(r.note, 500),
     source: "manual",
     sort,
   };

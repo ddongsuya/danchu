@@ -2,7 +2,8 @@
  * 견적서 → 엑셀 시트 3장 (견적서 · 시험 상세 · 일정표). PDF 와 같은 계산(lib/quote-doc)과 같은 "의뢰자에게 보이는 항목"을 따른다.
  * 내부 메모는 넣지 않는다.
  */
-import { docTotals, mainAnimals, recoveryAnimals, scheduleWeeks, testLines, type DocData, type DocHead, type QuoteStyle } from "./quote-doc";
+import { docTotals, kindRows, kindSummary, mainAnimals, recoveryAnimals, scheduleWeeks, testKind, testLines, type DocData, type DocHead, type QuoteStyle } from "./quote-doc";
+import { PD_ROLE, pkSamples } from "./kind-design";
 import type { Cell, Sheet } from "./xlsx";
 
 const b = (v: string | number): Cell => ({ v, bold: true });
@@ -28,9 +29,12 @@ export function docSheets(head: DocHead, data: DocData, style: QuoteStyle): Shee
   data.tests.forEach((x, i) => {
     const c = testLines(x);
     const cond = [x.cond.species, x.cond.route, x.cond.glp].filter(Boolean).join(" · ");
-    const animals = x.groups.length ? `${x.groups.length}군, ${mainAnimals(x.groups) + recoveryAnimals(x.groups)}마리` : "";
+    const animals = kindSummary(x) || (x.groups.length ? `${x.groups.length}군, ${mainAnimals(x.groups) + recoveryAnimals(x.groups)}마리` : "");
+    const rows = kindRows(x);
     q.push([i + 1, b(x.title), [cond, animals].filter(Boolean).join(" / "), x.weeks ?? "", ...(v.perTest ? [{ v: c.total, bold: true } as Cell] : [])]);
-    if (v.perTest && v.adjust && c.lines.length) {
+    if (v.perTest && v.adjust && rows) {
+      for (const r of rows) q.push(["", `  ${r.label}`, r.note, "", r.amount]);
+    } else if (v.perTest && v.adjust && c.lines.length) {
       q.push(["", `  표준가${x.std.summary ? ` (${x.std.summary})` : ""}`, "", "", c.base]);
       for (const l of c.lines) q.push(["", `  ${l.label}`, v.formula && l.kind !== "extra" ? l.formula : "", "", l.amount]);
     }
@@ -60,6 +64,33 @@ export function docSheets(head: DocHead, data: DocData, style: QuoteStyle): Shee
       for (const g of x.groups) d.push([g.label, g.dose, g.m, g.f, g.rm, g.rf, g.m + g.f + g.rm + g.rf]);
       d.push([b("합계"), "", x.groups.reduce((a, g) => a + g.m, 0), x.groups.reduce((a, g) => a + g.f, 0), x.groups.reduce((a, g) => a + g.rm, 0), x.groups.reduce((a, g) => a + g.rf, 0), { v: mainAnimals(x.groups) + recoveryAnimals(x.groups), bold: true }]);
     }
+    const k = testKind(x);
+    const pd = k === "pd" ? x.kd?.pd : undefined, pk = k === "pk" ? x.kd?.pk : undefined, ot = k === "other" ? x.kd?.other : undefined;
+    if (pd) {
+      if (pd.model) d.push(["질환 모델", pd.model]);
+      if (pd.induction) d.push(["유발", pd.induction]);
+      if (pd.groups.length) {
+        d.push([], [b("군"), b("역할"), b("처치"), b("용량"), b("군당 수")]);
+        for (const g of pd.groups) d.push([g.label, PD_ROLE[g.role], g.treat, g.dose, g.n]);
+        d.push([b("합계"), "", "", "", { v: pd.groups.reduce((a, g) => a + g.n, 0), bold: true }]);
+      }
+      if (pd.endpoints.length) d.push([], ["평가 지표", pd.endpoints.join(", ")]);
+    }
+    if (pk) {
+      if (pk.types.length) d.push(["시험 종류", pk.types.join(", ")]);
+      if (pk.groups.length) {
+        d.push([], [b("군"), b("투여경로"), b("용량"), b("마리")]);
+        for (const g of pk.groups) d.push([g.label, g.route, g.dose, g.n]);
+      }
+      if (pk.times.length) d.push([], ["채혈 시점", `${pk.times.join(", ")} (${pk.times.length}시점)`]);
+      if (pk.matrix.length) d.push(["검체", pk.matrix.join(", ")]);
+      if (pkSamples(pk)) d.push(["검체 수", pkSamples(pk)]);
+      if (pk.method) d.push(["분석법", pk.method === "dev" ? "분석법 개발 포함" : "의뢰자 분석법 사용"]);
+      if (pk.params.length) d.push(["파라미터", pk.params.join(", ")]);
+    }
+    if (ot) { if (ot.sample) d.push(["시료", ot.sample]); if (ot.n) d.push(["검체 수", ot.n]); }
+    if (x.why) d.push([], ["요청과 다르게 설계한 이유", x.why]);
+    if (x.asks?.length) d.push(["확인이 필요한 사항", x.asks.join(" / ")]);
     const ev = x.evals.filter((e) => e.on).map((e) => e.name);
     if (ev.length) d.push([], ["평가항목", ev.join(", ")]);
     if (x.description) d.push([], ["시험 설명", x.description]);
