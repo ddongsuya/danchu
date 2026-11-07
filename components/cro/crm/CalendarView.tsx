@@ -4,7 +4,7 @@ import {
   EVENT_KIND, EVENT_MODE, addDaysYmd, hmKst, mdW, mondayOf, weekdayKo, wonKo, ymdKst,
   type AgendaItem, type CrmEvent, type CrmQuote,
 } from "@/lib/crm-shape";
-import { ActivityForm, EventForm, SheetButton, type CrmOpts } from "./forms";
+import { EventForm, SheetButton, type CrmOpts } from "./forms";
 import { qs, type CrmPaths } from "./opts";
 
 export type CalView = "week" | "month";
@@ -228,7 +228,7 @@ function EventDetail({ e, paths, opts, companies, quotes, back, today }: { e: Cr
   const mname = new Map(opts.members.map((m) => [m.id, m.name]));
   const theirs = [...new Set([e.contact_id, ...e.attendee_contacts].filter(Boolean) as string[])];
   const q = e.quote_doc_id ? quotes.get(e.quote_doc_id) : null;
-  const canLog = !!e.company_id && !e.done_at && day <= today;
+  const canLog = !!e.deal_id && !e.done_at && day <= today;
   return (
     <article className="cal-det">
       <Link href={back} className="crm-back only-narrow">‹ 목록</Link>
@@ -236,6 +236,7 @@ function EventDetail({ e, paths, opts, companies, quotes, back, today }: { e: Cr
       <h2>{e.title}</h2>
       <dl className="crm-dl">
         {e.location && <div><dt>{e.mode === "video" ? "회의 링크" : e.mode === "phone" ? "연락처" : "장소"}</dt><dd>{/^https?:\/\//.test(e.location) ? <a href={e.location} target="_blank" rel="noreferrer noopener">{e.location}</a> : e.location}</dd></div>}
+        {e.deal_id && <div><dt>안건</dt><dd><Link href={`${paths.deals}/${e.deal_id}`}>{opts.deals.find((d) => d.id === e.deal_id)?.name ?? "안건 열기"}</Link></dd></div>}
         {e.company_id && <div><dt>고객사</dt><dd><Link href={`${paths.clients}/${e.company_id}`}>{companies.get(e.company_id) ?? "고객사"}</Link></dd></div>}
         {theirs.length > 0 && <div><dt>고객사 참석</dt><dd className="crm-names">{theirs.map((id) => <span key={id}>{cname.get(id) ?? "담당자"}</span>)}</dd></div>}
         {e.attendee_members.length > 0 && <div><dt>우리 참석</dt><dd className="crm-names">{e.attendee_members.map((id) => <span key={id}>{mname.get(id) ?? "담당자"}</span>)}</dd></div>}
@@ -246,11 +247,7 @@ function EventDetail({ e, paths, opts, companies, quotes, back, today }: { e: Cr
         {e.done_at && <div><dt>기록</dt><dd>이 일정의 기록을 남겼어요{e.company_id ? <> · <Link href={`${paths.clients}/${e.company_id}`}>고객사에서 보기</Link></> : null}</dd></div>}
       </dl>
       <div className="cal-det__acts">
-        {canLog && e.company_id && (
-          <SheetButton label={e.kind === "call" ? "통화 기록 남기기" : "미팅 기록 남기기"} title={`${e.title} 기록`} className="b1">
-            <ActivityForm opts={opts} companyId={e.company_id} preset={{ event_id: e.id, kind: e.kind === "call" ? "call" : "meeting", date: day, time: e.all_day ? undefined : hmKst(e.starts_at), title: e.title, attendee_contacts: theirs, attendee_members: e.attendee_members, quote_doc_id: e.quote_doc_id }} />
-          </SheetButton>
-        )}
+        {canLog && <Link href={`${paths.log}?deal=${e.deal_id}`} className="b1">{e.kind === "call" ? "통화 기록 남기기" : "미팅 기록 남기기"}</Link>}
         <SheetButton label="고치기" title="일정 고치기" className="b2"><EventForm opts={opts} event={e} /></SheetButton>
         <a href={`${paths.ics}?id=${e.id}`} className="b2"><DownloadSimple size={16} aria-hidden="true" /> 캘린더 파일</a>
       </div>

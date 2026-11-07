@@ -8,7 +8,7 @@ import { dday } from "@/lib/format";
  * 상세 맨 아래에는 그 요청에서 할 일 버튼 하나만 둔다.
  */
 export type CroPaths = { pipe: string; clients: string };
-export const CRO_PATHS: CroPaths = { pipe: "/cro", clients: "/cro/clients" };
+export const CRO_PATHS: CroPaths = { pipe: "/cro/requests", clients: "/cro/clients" };
 
 export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { items: PipeItem[]; sel: string | null; paths?: CroPaths; companyOf?: Record<string, string> }) {
   const groups = groupPipeline(items);
@@ -20,7 +20,7 @@ export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { it
   if (!items.length) {
     return (
       <>
-        <div className="ph"><div><h1>견적 진행</h1></div></div>
+        <div className="ph"><div><h1>받은 요청</h1></div></div>
         <div className="empty">
           <b>아직 받은 요청이 없어요</b>
           시험 목록의 분야와 맞는 요청이 오면 참여 안내를 메일과 알림으로 보내요.
@@ -34,7 +34,7 @@ export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { it
     <div className={`pl${cur ? " pl--sel" : ""}`}>
       <div className="pl__list">
         <div className="pl__head">
-          <h1>견적 진행</h1>
+          <h1>받은 요청</h1>
           <p className="tnum">할 일 {todo}건 · 진행 중 {live}건</p>
         </div>
         {groups.map((g) => (
@@ -66,7 +66,7 @@ function Due({ item }: { item: PipeItem }) {
 function Detail({ item, paths, companyOf }: { item: PipeItem; paths: CroPaths; companyOf: Record<string, string> }) {
   return (
     <article className="pl__detail" aria-labelledby="pl-title">
-      <Link href={paths.pipe} className="pl__back only-narrow" scroll={false}>‹ 견적 진행</Link>
+      <Link href={paths.pipe} className="pl__back only-narrow" scroll={false}>‹ 받은 요청</Link>
       <div className="pl__body">
         <header className="pl__rh">
           <div>

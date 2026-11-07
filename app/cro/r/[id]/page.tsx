@@ -42,7 +42,7 @@ export default async function CroRequest({ params, searchParams }: { params: Pro
   }
   return (
     <>
-      <Crumb href={`/cro?sel=${id}`} label="견적 진행" />
+      <Crumb href={`/cro/requests?sel=${id}`} label="받은 요청" />
       <RequestView got={got} replyHref={`/cro/r/${id}/reply`} withdrawHref={`/cro/r/${id}?decline=1`} afterDeclineHref="/cro" />
     </>
   );

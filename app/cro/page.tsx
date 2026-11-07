@@ -1,33 +1,20 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
-import { dbReady, listAwardsForOrg, listInvitesForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
-import { Pipeline } from "@/components/cro/Pipeline";
-import { buildPipeline } from "@/lib/pipeline";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { TodayView } from "@/components/cro/crm/TodayView";
+import { loadCtx } from "@/components/cro/crm/load";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 견적 진행 (2026-11-07). 받은 요청 · 제출한 견적 · 수주를 요청 하나의 흐름으로 본다.
- * ?sel=<초대 id> 는 오른쪽(휴대폰은 다음 화면) 상세. 빠진 배포는 승인·분야 변경 시점과 매일 크론이 채운다.
+ * 오늘 (2026-11-07 CRM 1단계, 시안 v5 1번). 오늘 할 일(일정·할 일·단추 기한)과 손이 필요한 안건.
+ * 옛 "견적 진행"은 /cro/requests (받은 요청). 예전 링크 /cro?sel= 는 그쪽으로 보낸다.
  */
-export default async function CroPipeline({ searchParams }: { searchParams: Promise<{ sel?: string }> }) {
-  const s = await requireSession("cro");
-  const org = s.org;
-  if (!org || org.status !== "approved") {
-    return (
-      <>
-        <div className="ph"><div><h1>견적 진행</h1></div></div>
-        <PendingOrg org={org} pendingOrg={s.pendingOrg} />
-      </>
-    );
-  }
+export default async function CroToday({ searchParams }: { searchParams: Promise<{ sel?: string }> }) {
   const { sel } = await searchParams;
-  const [invites, awards] = dbReady() ? await Promise.all([listInvitesForOrg(org.id), listAwardsForOrg(org.id)]) : [[], []];
-  const items = buildPipeline(invites, awards);
-  // 선정된 의뢰자 → 고객사 화면 (0038). 아직 고객사로 들어오지 않았으면 고객사 목록으로 (목록을 열면 들어온다)
-  const sb = dbReady() ? getSupabaseAdmin() : null;
-  const { data: links } = sb ? await sb.from("cro_crm_contacts").select("danchu_key, company_id").eq("org_id", org.id).not("danchu_key", "is", null) : { data: null };
-  const companyOf = Object.fromEntries((links ?? []).map((l) => [l.danchu_key as string, l.company_id]));
-  return <Pipeline items={items} sel={sel && /^[0-9a-f-]{36}$/.test(sel) ? sel : null} companyOf={companyOf} />;
+  if (sel && /^[0-9a-f-]{36}$/.test(sel)) redirect(`/cro/requests?sel=${sel}`);
+  const s = await requireSession("cro");
+  const got = await loadCtx(s);
+  if (!got) return <><div className="ph"><div><h1>오늘</h1></div></div><PendingOrg org={s.org} pendingOrg={s.pendingOrg} /></>;
+  return <TodayView c={got.c} undecided={[...got.bundle.danchu.values()]} />;
 }

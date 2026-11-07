@@ -546,7 +546,10 @@ export function todayList(a: {
 /** 이번 주 (월~금) 일정 수 + 줄 */
 export function weekStrip(a: { events: CrmEvent[]; quotes: CrmQuote[]; deals: Pick<CrmDeal, "id" | "status" | "title">[]; companies: Pick<CrmCompany, "id" | "name">[]; now?: number }) {
   const now = a.now ?? Date.now();
-  const mon = mondayOf(todayKst(now));
+  const today = todayKst(now);
+  // 토·일에는 다가오는 주를 보여 준다
+  const next = addDaysYmd(mondayOf(today), 5) <= today;
+  const mon = next ? addDaysYmd(mondayOf(today), 7) : mondayOf(today);
   const days = [0, 1, 2, 3, 4].map((i) => addDaysYmd(mon, i));
   const co = new Map(a.companies.map((c) => [c.id, c.name]));
   const open = new Set(a.deals.filter((d) => d.status === "open").map((d) => d.id));
@@ -561,7 +564,7 @@ export function weekStrip(a: { events: CrmEvent[]; quotes: CrmQuote[]; deals: Pi
     items.push({ date: q.valid_until, time: null, title: `${q.company_id ? co.get(q.company_id) ?? q.client : q.client} 견적 유효기간` });
   }
   items.sort((x, y) => `${x.date}${x.time ?? "99"}`.localeCompare(`${y.date}${y.time ?? "99"}`));
-  return { days: days.map((d) => ({ date: d, count: items.filter((x) => x.date === d).length })), items, from: days[0], to: days[4] };
+  return { days: days.map((d) => ({ date: d, count: items.filter((x) => x.date === d).length })), items, from: days[0], to: days[4], next };
 }
 
 // ─── 고객사 목록 · 고객사 화면 ───

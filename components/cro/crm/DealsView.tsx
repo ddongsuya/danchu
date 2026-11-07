@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CaretDown, Kanban, ListBullets, MagnifyingGlass, Plus, UploadSimple } from "@phosphor-icons/react/dist/ssr";
-import { DEAL_KIND, DEAL_KINDS, STAGE_LABEL, STATUS_LABEL, amountLabel, board, filterDeals, monthClosed, nextLabel, type Stage, type Status } from "@/lib/crm-deals";
+import { DEAL_KIND, DEAL_KINDS, STAGES, STAGE_LABEL, isStage, STATUS_LABEL, amountLabel, board, filterDeals, monthClosed, nextLabel, type Stage, type Status } from "@/lib/crm-deals";
 import { wonKo, ymdKst } from "@/lib/crm-shape";
 import { SheetButton } from "./forms";
 import { Board, DealForm, type BoardColumn } from "./deal-ui";
@@ -8,7 +8,7 @@ import { buildOpts, qs } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
 
-export type DealsQuery = { v: "board" | "list"; f: "" | "mine" | "need" | "nonext"; kind: string; src: "" | "danchu" | "direct"; s: "open" | "won" | "lost" | "all"; q: string };
+export type DealsQuery = { v: "board" | "list"; f: "" | "mine" | "need" | "nonext"; kind: string; src: "" | "danchu" | "direct"; s: "open" | "won" | "lost" | "all"; q: string; st: Stage | "" };
 
 export function parseDealsQuery(sp: Record<string, string | undefined>): DealsQuery {
   return {
@@ -18,6 +18,7 @@ export function parseDealsQuery(sp: Record<string, string | undefined>): DealsQu
     src: sp.src === "danchu" || sp.src === "direct" ? sp.src : "",
     s: sp.s === "won" || sp.s === "lost" || sp.s === "all" ? sp.s : "open",
     q: (sp.q ?? "").slice(0, 60),
+    st: isStage(sp.st) ? sp.st : "",
   };
 }
 
@@ -25,6 +26,32 @@ export function parseDealsQuery(sp: Record<string, string | undefined>): DealsQu
  * 안건 보드 (시안 v5 2번). 단계별 열 머리에 건수와 합계 금액, 카드에는 안건 이름 · 고객사 · 금액 · 다음 할 일 · 단계에 머문 날.
  * 단추 요청은 선정 전이라 고객사 대신 요청 번호가 보인다. 목록 보기에는 수주·실패도 있다.
  */
+/** 휴대폰: 보드 대신 단계 하나씩 (단계 칩을 누르면 그 단계 카드만) */
+function MobileBoard({ cols, cur, link }: { cols: BoardColumn[]; cur: Stage; link: (st: Stage) => string }) {
+  const col = cols.find((x) => x.stage === cur) ?? cols[0];
+  return (
+    <div className="cx-mboard only-narrow">
+      <nav className="cx-mstages" aria-label="단계">
+        {STAGES.map((s) => { const c = cols.find((x) => x.stage === s); return <Link key={s} href={link(s)} aria-current={s === col.stage ? "true" : undefined}>{STAGE_LABEL[s]} <b className="tnum">{c?.count ?? 0}</b></Link>; })}
+      </nav>
+      <p className="cx-msum"><span>{STAGE_LABEL[col.stage]} {col.count}건</span><b className="tnum">{col.sum}</b></p>
+      {col.cards.length ? (
+        <ul className="cx-mcards">
+          {col.cards.map((d) => (
+            <li key={d.id}>
+              <Link href={d.href}>
+                <span className="cx-mcards__r1"><b>{d.title}</b><span className="tnum">{d.amount}</span></span>
+                <small>{d.danchu ? <><span className="cx-d cx-d--s" aria-hidden="true">단</span>{d.danchu}</> : d.who} · {d.days}일째</small>
+                {d.flag ? <span className={`cx-flag cx-flag--${d.flagTone}`}>{d.flag}</span> : d.next ? <small className="cx-mcards__next">다음 · {d.next}</small> : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="cx-none">이 단계 안건이 없어요.</p>}
+    </div>
+  );
+}
+
 export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
   const { data, paths, now, me } = c;
   const all = rowsOf(c);
@@ -33,7 +60,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
   const noNext = open.filter((r) => r.flag?.label === "다음 할 일 없음").length;
   const month = monthClosed(data.deals, now);
   const opts = buildOpts({ ...data, me });
-  const link = (p: Partial<DealsQuery>) => qs(paths.deals, { ...q, ...p, v: (p.v ?? q.v) === "list" ? "list" : null, s: (p.s ?? q.s) === "open" ? null } as Record<string, string>);
+  const link = (p: Partial<DealsQuery>) => qs(paths.deals, { ...q, ...p, v: (p.v ?? q.v) === "list" ? "list" : null, s: (p.s ?? q.s) === "open" ? null : p.s ?? q.s } as Record<string, string>);
   const cols: BoardColumn[] = board(rows).map((col) => ({
     stage: col.stage, count: col.count, sum: wonKo(col.sum),
     cards: col.rows.map((r) => ({
@@ -48,7 +75,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
   const listRows = rows.filter((r) => q.s === "all" || r.deal.status === q.s).sort((x, y) => (y.deal.closed_at ?? y.deal.updated_at).localeCompare(x.deal.closed_at ?? x.deal.updated_at));
   const mem = new Map(data.members.map((m) => [m.id, m.name]));
   return (
-    <div className="cx">
+    <div className="cx cx-ds">
       <header className="cx-ph">
         <div>
           <h1>안건</h1>
@@ -96,6 +123,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
       {q.v === "board" ? (
         <>
           <Board cols={cols} />
+          <MobileBoard cols={cols} cur={q.st || (cols.find((x) => x.count)?.stage ?? "inquiry")} link={(st) => link({ st })} />
           <p className="cx-foot">
             <span>이번 달 수주 <b className="tnum">{month.won}건 · {wonKo(month.wonSum)}</b></span>
             <span>이번 달 실패 <b className="tnum">{month.lost}건</b></span>

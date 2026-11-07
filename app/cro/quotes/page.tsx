@@ -27,7 +27,7 @@ export default async function CroQuotes() {
       {list.length === 0 ? (
         <div className="empty">
           <b>제출한 견적이 없어요</b>
-          견적 진행에서 회신을 작성하면 여기에 쌓여요.
+          받은 요청에서 회신을 작성하면 여기에 쌓여요.
         </div>
       ) : (
         <div className="card tbl-wrap">

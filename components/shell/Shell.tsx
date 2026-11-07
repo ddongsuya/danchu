@@ -8,8 +8,9 @@ import "./portal.css";
 import { ArrowUpRight, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
 /** soon: 아직 열리지 않은 메뉴 (사전예약 기간). 누를 수 없고 옆에 열리는 날을 적는다 */
-export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean; soon?: string };
-export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt" | "explore" | "book" | "quote" | "clients" | "calendar";
+/** group: 넓은 화면 사이드바에서 이 항목 위에 작은 묶음 이름을 단다 (앞 항목과 묶음이 다를 때만) */
+export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean; soon?: string; group?: string };
+export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt" | "explore" | "book" | "quote" | "clients" | "calendar" | "today" | "deals" | "report" | "note" | "more";
 
 // 화면에서는 "기관"으로 통일한다 (의뢰자 화면의 "선택한 기관"과 같은 말)
 const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관", admin: "운영자" };
@@ -18,7 +19,8 @@ const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관"
  * 포털 공통 셸 — 넓은 화면은 사이드바, 좁은 화면은 상단 바 + 하단 탭.
  * 각 역할 layout이 nav 목록을 넘긴다.
  */
-export function Shell({ session, nav, children }: { session: Session; nav: NavItem[]; children: React.ReactNode }) {
+/** tabs: 휴대폰 아래 탭을 따로 줄 때 (없으면 nav 앞 다섯 개) */
+export function Shell({ session, nav, tabs, children }: { session: Session; nav: NavItem[]; tabs?: NavItem[]; children: React.ReactNode }) {
   const role = session.profile.role;
   const who = session.profile.name || session.email;
   const org = role === "cro" ? session.org?.name : session.profile.company;
@@ -78,7 +80,7 @@ export function Shell({ session, nav, children }: { session: Session; nav: NavIt
         </header>
         <main className="pt__main" id="main-content">{children}</main>
         <nav className="pt__tabs" aria-label="주요 메뉴">
-          <TabLinks items={nav} />
+          <TabLinks items={tabs ?? nav} />
         </nav>
       </div>
     </div>

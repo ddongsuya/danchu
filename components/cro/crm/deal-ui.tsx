@@ -409,3 +409,18 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
     </>
   );
 }
+
+/** 안건 지우기 (단추에서 온 안건은 서버가 막는다) */
+export function DealDelete({ id, back }: { id: string; back: string }) {
+  const { busy, err, send } = useSend();
+  const [ask, setAsk] = useState(false);
+  if (!ask) return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={() => setAsk(true)}>안건 지우기</button></div>;
+  return (
+    <div className="crm-confirm cx-del">
+      <span className="crm-hint">이 안건의 기록·할 일·일정이 함께 지워져요. 견적서는 안건 없이 남아요.</span>
+      <button type="button" className="b2 b2--danger bsm" disabled={busy} onClick={async () => { if (await send("deals", "DELETE", { id }, { refresh: false })) location.assign(back); }}>지우기</button>
+      <button type="button" className="btxt" onClick={() => setAsk(false)}>취소</button>
+      <Err msg={err} />
+    </div>
+  );
+}

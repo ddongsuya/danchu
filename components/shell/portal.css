@@ -1378,3 +1378,6 @@
 .crm-it__t { align-self: start; }
 .crm-sec__h h3 { font-size: 12px; font-weight: 600; color: var(--muted); }
 .crm-m__pane > .crm-sec__h h3 { font-size: 14px; color: var(--ink); }
+/* 사이드바 묶음 이름 (기관 CRM: 견적 · 설정) */
+.pt__grp { display: none; }
+@media (min-width: 960px) { .pt__grp { display: block; font-size: 11px; color: var(--muted); padding: 16px 12px 4px; } }

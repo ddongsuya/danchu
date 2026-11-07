@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { IconName, NavItem } from "./Shell";
 
-import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad, UsersThree, CalendarBlank } from "@phosphor-icons/react";
+import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad, UsersThree, CalendarBlank, Sun, Kanban, ChartBar, NotePencil, DotsThreeCircle } from "@phosphor-icons/react";
+import { Fragment } from "react";
 
-const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad, clients: UsersThree, calendar: CalendarBlank };
+const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad, clients: UsersThree, calendar: CalendarBlank, today: Sun, deals: Kanban, report: ChartBar, note: NotePencil, more: DotsThreeCircle };
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const Glyph = ICONS[name];
   return <Glyph size={size} weight="regular" aria-hidden="true" />;
@@ -29,18 +30,20 @@ export function NavLinks({ items, variant }: { items: NavItem[]; variant: "side"
   void variant;
   return (
     <>
-      {items.map((it) => it.soon ? (
-        <span key={it.href} className="pt__navi pt__soon" aria-disabled="true">
+      {items.map((it, i) => <Fragment key={it.href}>
+        {it.group && it.group !== items[i - 1]?.group && <span className="pt__grp" aria-hidden="true">{it.group}</span>}
+        {it.soon ? (
+        <span className="pt__navi pt__soon" aria-disabled="true">
           <Icon name={it.icon} size={20} />
           <span>{it.label} <small>· {it.soon}</small></span>
         </span>
       ) : (
-        <Link key={it.href} href={it.href} className="pt__navi" aria-current={active === it.href ? "page" : undefined} data-on={active === it.href ? "1" : "0"}>
+        <Link href={it.href} className="pt__navi" aria-current={active === it.href ? "page" : undefined} data-on={active === it.href ? "1" : "0"}>
           <Icon name={it.icon} size={20} />
           <span>{it.label}</span>
           {it.badge ? <span className="pt__dot">{it.badge > 99 ? "99+" : it.badge}</span> : null}
         </Link>
-      ))}
+      )}</Fragment>)}
     </>
   );
 }

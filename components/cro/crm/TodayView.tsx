@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarBlank, CaretRight, EnvelopeSimple, Handshake, Phone, Plus, VideoCamera } from "@phosphor-icons/react/dist/ssr";
 import { STAGE_LABEL, amountLabel, todayList, weekStrip, type Stage } from "@/lib/crm-deals";
-import { hmKst, mondayOf, todayKst, weekdayKo, ymdKst } from "@/lib/crm-shape";
+import { hmKst, todayKst, weekdayKo, ymdKst } from "@/lib/crm-shape";
 import { SheetButton, TaskCheck } from "./forms";
 import { DealForm } from "./deal-ui";
 import { MailReview } from "./mail-ui";
@@ -36,14 +36,14 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
   };
   const noDeals = data.ready && !data.deals.length;
   return (
-    <div className="cx">
+    <div className="cx cx-t">
       <header className="cx-ph">
         <div>
           <h1>{d.getUTCMonth() + 1}월 {d.getUTCDate()}일 {weekdayKo(today)}요일</h1>
           <p className="cx-ph__sub">일정 <b className="tnum">{events}</b> · 할 일 <b className="tnum">{tasks}</b> · 손이 필요한 안건 <b className="tnum">{need.length}</b></p>
         </div>
         <div className="cx-ph__acts">
-          <Link href={`${paths.calendar}?w=${mondayOf(today)}`} className="b2 bsm"><CalendarBlank size={16} aria-hidden="true" />주간 캘린더</Link>
+          <Link href={`${paths.calendar}?w=${week.from}`} className="b2 bsm"><CalendarBlank size={16} aria-hidden="true" />주간 캘린더</Link>
           <SheetButton className="b1 bsm" title="안건 만들기" label={<><Plus size={16} aria-hidden="true" />안건 만들기</>}><DealForm opts={opts} base={paths.deals} /></SheetButton>
         </div>
       </header>
@@ -98,7 +98,7 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
 
         <aside className="cx-side" aria-label="이번 주와 메일">
           <section className="cx-box">
-            <div className="cx-sec__h"><h2>이번 주</h2><span className="cx-muted tnum">{+week.from.slice(5, 7)}.{+week.from.slice(8)} ~ {+week.to.slice(5, 7)}.{+week.to.slice(8)}</span></div>
+            <div className="cx-sec__h"><h2>{week.next ? "다음 주" : "이번 주"}</h2><span className="cx-muted tnum">{+week.from.slice(5, 7)}.{+week.from.slice(8)} ~ {+week.to.slice(5, 7)}.{+week.to.slice(8)}</span></div>
             <ol className="cx-week">
               {week.days.map((w) => (
                 <li key={w.date} data-today={w.date === today ? "1" : "0"}>

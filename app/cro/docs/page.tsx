@@ -30,7 +30,7 @@ export default async function CroDocs() {
       {list.length === 0 ? (
         <div className="empty">
           <b>아직 만든 견적서가 없어요</b>
-          견적 진행의 회신 화면에서 &quot;견적서 만들기&quot;를 누르거나, 단추 밖 의뢰자에게 보낼 견적서를 새로 만들어요.
+          받은 요청의 회신 화면에서 &quot;견적서 만들기&quot;를 누르거나, 단추 밖 의뢰자에게 보낼 견적서를 새로 만들어요.
           <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/cro/docs/new" className="b1 bsm">새 견적서</Link>
             <Link href="/cro/catalog" className="b2 bsm">표준가 먼저 정하기</Link>
