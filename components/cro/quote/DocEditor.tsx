@@ -116,6 +116,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
         <div className="qed__actions">
           <span role="status" className="qed__saved" data-s={saved}>{savedLabel}</span>
           {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          {!readOnly && <Link className="b2 bsm" href={`/cro/docs/${head.id}/fill`}>질문으로 채우기</Link>}
           <a className="b2 bsm" href={`/api/cro/docs/${head.id}/xlsx`}>엑셀</a>
           <Link className="b2 bsm" href={`/cro/docs/${head.id}/print`}>PDF</Link>
           {replyHref && <Link className="b1 bsm" href={replyHref}>회신 보내기</Link>}

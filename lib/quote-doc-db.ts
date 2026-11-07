@@ -6,7 +6,7 @@ import { loadCatalog } from "./catalog-db";
 import { pickVariant, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
-  addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog,
+  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog,
   type DocData, type DocHead, type QuoteStyle, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
@@ -42,9 +42,11 @@ export async function saveRates(orgId: string, itemKey: string, prices: unknown,
     if (!own.has(id)) continue;
     const raw = (p as { std_price?: unknown }).std_price;
     const v = typeof raw === "number" && Number.isFinite(raw) && raw >= 0 && raw <= 99_999_999_999 ? Math.round(raw) : null;
-    const { error } = await sb.from("cro_catalog").update({ std_price: v }).eq("id", id).eq("org_id", orgId);
+    const { error } = await sb.from("cro_catalog").update({ std_price: v, price_min: v, price_max: null }).eq("id", id).eq("org_id", orgId);
     if (error) return { ok: false, error: "표준가를 저장하지 못했어요." };
   }
+  // 표준가만 보낸 경우(견적서 질문 화면의 "시험 목록에도 저장")는 단가를 건드리지 않는다
+  if (rates === undefined) return { ok: true };
   const { error } = await sb.from("cro_quote_rates").upsert({ org_id: orgId, item_key: itemKey, rates: cleanRates(rates), updated_at: new Date().toISOString() }, { onConflict: "org_id,item_key" });
   if (error) return { ok: false, error: "추가 비용 단가를 저장하지 못했어요." };
   return { ok: true };
@@ -156,7 +158,7 @@ function emptyData(style: QuoteStyle): DocData {
 }
 
 /** 카탈로그 조합으로 새 견적서 */
-export async function createDocFromCatalog(orgId: string, orgName: string, userId: string | null, catalogIds: string[], client: string, substance: string): Promise<{ id?: string; error?: string }> {
+export async function createDocFromCatalog(orgId: string, orgName: string, userId: string | null, catalogIds: string[], client: string, substance: string, manual: string[] = []): Promise<{ id?: string; error?: string }> {
   const [rows, rates, style] = await Promise.all([loadCatalog(orgId), loadRates(orgId), loadStyle(orgId, orgName)]);
   const byId = new Map(rows.map((r) => [r.id, r]));
   const data = emptyData(style);
@@ -164,6 +166,7 @@ export async function createDocFromCatalog(orgId: string, orgName: string, userI
     const c = byId.get(id);
     if (c) data.tests.push(testFromCatalog(c, rates.get(c.item_key) ?? []));
   }
+  for (const name of manual) data.tests.push(blankTest(name));
   return insertDoc(orgId, userId, { client, substance, data });
 }
 
