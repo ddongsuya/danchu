@@ -95,6 +95,7 @@ export async function GET(req: Request) {
     reoffered: 0,
     pendingCleaned: 0,
     earlyOpenSms: 0,
+    noteReminders: 0,
     digest: false,
     retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 },
     errors: [] as string[],
@@ -337,6 +338,22 @@ export async function GET(req: Request) {
   });
 
   // 6) 운영자 하루 요약 메일. 견적 제출·회신하지 않음은 실시간으로는 앱 알림만 보내고 여기서 모은다
+  // 고객 메모 알림 날짜 (0038). 그날 아침 작성자에게 알림·메일. reminded_at 을 먼저 채워 두 번 보내지 않는다. 표가 없으면(0038 전) 건너뛴다
+  await step("client-notes", out.errors, async () => {
+    const { data: due, error } = await sb.from("cro_client_notes").select("id, org_id, client_key, body, created_by").is("reminded_at", null).lte("remind_on", today).limit(200);
+    if (error) { console.warn("client-notes", error.message); return; }
+    for (const n of due ?? []) {
+      const { data: claimed } = await sb.from("cro_client_notes").update({ reminded_at: new Date().toISOString() }).eq("id", n.id).is("reminded_at", null).select("id");
+      if (!claimed?.length || !n.created_by) continue;
+      const { data: p } = await sb.from("profiles").select("email, cro_org_id").eq("id", n.created_by).maybeSingle();
+      // 작성자가 그 기관을 떠났으면 보내지 않는다
+      if (!p || p.cro_org_id !== n.org_id) continue;
+      const body = n.body.length > 140 ? `${n.body.slice(0, 140)}…` : n.body;
+      await notifyUsers([n.created_by], { kind: "기관", title: "오늘 챙길 고객 메모가 있어요", body, href: `/cro/clients?c=${encodeURIComponent(n.client_key)}` }, { to: [p.email], subject: "[단추] 오늘 챙길 고객 메모" });
+      out.noteReminders++;
+    }
+  });
+
   await step("digest", out.errors, async () => {
     const since = new Date(Date.now() - 864e5).toISOString();
     const { data: evs } = await sb.from("rfq_events").select("kind, rfq_id, title, created_at").gte("created_at", since).in("kind", ["received", "joined", "quote_submitted", "declined", "withdrawn", "compared", "selected", "contract", "closed", "outcome"]).order("created_at").limit(1000);
