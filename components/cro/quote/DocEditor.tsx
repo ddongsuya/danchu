@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
 import {
-  blankTest, condChanges, docTitle, docTotals, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testLines, uid,
+  blankTest, condChanges, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
+import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
 import { COND_LABEL, Cover, DetailPage, Logo, brandVars, QuotePage, SchedulePage, condLine, pageKeys, type PageKey } from "./DocPages";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
@@ -340,6 +341,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
   const ch = condChanges(t);
   const added = t.evals.filter((e) => e.on && !e.base).length;
   const qtyRates = t.rates.filter((r) => r.kind === "qty");
+  const kind = testKind(t);
   return (
     <section className="qd qd--edit" style={brandVars(style)}>
       <PageHead head={head} style={style} />
@@ -373,6 +375,8 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
           return <div key={k}><dt>{label}</dt><dd><Field label={label} value={t.cond[k]} was={t.catalogId ? t.std.cond[k] : undefined} disabled={readOnly} wide onChange={(v) => set({ cond: { ...t.cond, [k]: v.slice(0, 160) } })} /></dd></div>;
         })}
       </dl>
+
+      {kind !== "tox" && t.kd && <KindEdit t={t} set={set} readOnly={readOnly} />}
 
       {(t.groups.length > 0 || t.std.groups.length > 0) && (
         <>
@@ -457,6 +461,28 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
   );
 }
 
+/** 효력·약동학·개별 분석 설계. 질문으로 쓰기와 같은 칸을 쓴다 (KindQ) */
+const KIND_H: Record<string, string> = { pd: "효력 설계", pk: "약동학 설계", other: "검체" };
+function KindEdit({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>) => void; readOnly: boolean }) {
+  const k = testKind(t);
+  const tabs = kindTabs(k);
+  const [tab, setTab] = useState<KTab>(tabs[0][0]);
+  const cur = tabs.some(([x]) => x === tab) ? tab : tabs[0][0];
+  const setK = (p: Partial<DocTest> | ((x: DocTest) => DocTest)) => set(typeof p === "function" ? p(t) : p);
+  const rows = kindRows(t) ?? [];
+  const ch = rows.filter((r) => r.changed).length;
+  return (
+    <div className="qed__kind">
+      <div className="qed__h2row"><h2 className="qd__h2">{KIND_H[k]}</h2><span>{ch ? `기관 표준과 다른 칸 ${ch}` : "기관 표준 그대로"}</span></div>
+      {t.orig && <OrigBox t={t} />}
+      <div className="qf__tabs" role="tablist" aria-label={KIND_H[k]}>
+        {tabs.map(([key, label]) => <button key={key} type="button" role="tab" className="chip" aria-selected={cur === key} aria-pressed={cur === key} onClick={() => setTab(key)}>{label}</button>)}
+      </div>
+      <div className="qed__kindbody"><KindTab tab={cur} t={t} readOnly={readOnly} set={setK} /></div>
+    </div>
+  );
+}
+
 function EvalAdder({ onAdd }: { onAdd: (name: string) => void }) {
   const [v, setV] = useState("");
   const add = () => { const s = v.trim().slice(0, 80); if (s) { onAdd(s); setV(""); } };
@@ -470,16 +496,18 @@ function EvalAdder({ onAdd }: { onAdd: (name: string) => void }) {
 
 function TestLedger({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>) => void; readOnly: boolean }) {
   const c = testLines(t);
-  const manualPrice = !t.catalogId;
+  const kindPriced = testKind(t) !== "tox" && !!t.kd;
+  const manualPrice = !t.catalogId && !kindPriced;
   return (
     <section className="qed__sec">
       <div className="qed__sech"><h2 className="qed__h qed__h--lg">이 시험 금액</h2>{t.itemKey && <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>추가 비용 단가</Link>}</div>
       <p className="qed__muted">표준가에 달라진 곳의 추가 비용만 더해요</p>
       <ul className="qed__ledgerrows">
         <li>
-          <div><span>표준가</span>{manualPrice || t.std.price == null ? <input aria-label="표준가" className="qed__num" inputMode="numeric" disabled={readOnly} value={t.std.price ? n(t.std.price) : ""} placeholder="금액 입력" onChange={(e) => set({ std: { ...t.std, price: e.target.value ? Number(digits(e.target.value)) : null } })} /> : <b className="tnum">{n(c.base)}</b>}</div>
+          <div><span>표준가</span>{!kindPriced && (manualPrice || t.std.price == null) ? <input aria-label="표준가" className="qed__num" inputMode="numeric" disabled={readOnly} value={t.std.price ? n(t.std.price) : ""} placeholder="금액 입력" onChange={(e) => set({ std: { ...t.std, price: e.target.value ? Number(digits(e.target.value)) : null } })} /> : <b className="tnum">{n(c.base)}</b>}</div>
           <small>{[t.subtitle, t.std.summary].filter(Boolean).join(" · ") || (manualPrice ? "시험 목록에 없는 시험이에요" : "")}</small>
-          {!manualPrice && t.std.price == null && <small className="qed__warn">시험 목록에 {t.std.choices ? `${[t.cond.species, t.cond.route].filter(Boolean).join(" · ")} 조건의` : "이 조건의"} 표준가가 없어요. <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>표준가 정하기</Link></small>}
+          {kindPriced && c.base === 0 && <small className="qed__warn">기관 표준 금액이 비어 있어요. 왼쪽 설계의 금액 칸에 넣거나 시험 목록에서 정해요.</small>}
+          {!kindPriced && !manualPrice && t.std.price == null && <small className="qed__warn">시험 목록에 {t.std.choices ? `${[t.cond.species, t.cond.route].filter(Boolean).join(" · ")} 조건의` : "이 조건의"} 표준가가 없어요. <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>표준가 정하기</Link></small>}
         </li>
         {c.lines.filter((l) => l.kind !== "extra").map((l, k) => (
           <li key={k}><div><span>{l.label}</span><b className="tnum">{signed(l.amount)}</b></div><small className="tnum">{l.formula}</small>{l.amount === 0 && <small className="qed__warn">단가가 비어 있어 금액이 0원이에요.</small>}</li>

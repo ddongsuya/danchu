@@ -10,6 +10,11 @@ import { PRESETS, presetItems } from "@/lib/presets";
 import { defaultRates, standardGroups, uid, type Rate } from "@/lib/quote-doc";
 import type { Cat, Values } from "@/lib/rfq-schema";
 import { won, ymd } from "@/lib/format";
+import { kindOfCategory, type Kind } from "@/lib/kind-design";
+import { KindMoney, KindStructure, kindLine, kindPriceLabel } from "./KindDesignEdit";
+
+/** 견적 요청 네 갈래와 같은 탭 (2026-11-07) */
+const KIND_TAB: [Kind, string][] = [["tox", "독성시험"], ["pd", "효력시험"], ["pk", "약동학시험"], ["other", "개별 분석"]];
 
 /**
  * 시험 목록 (기관 카탈로그, 2026-11-06 재구성).
@@ -59,6 +64,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
   const [view, setView] = useState<View>(() => startView === "wizard" && initialRows.length ? { kind: "wizard", queue: initialRows.slice(0, 3).map((r) => r.id), at: 0 } : startView === "pick" || !initialRows.length ? { kind: "pick" } : { kind: "list" });
   const [openId, setOpenId] = useState<string | null>(null);
   const [cat, setCat] = useState<string>("");
+  const [kindTab, setKindTab] = useState<Kind | null>(() => (initialRows[0] ? kindOfCategory(initialRows[0].category) : null));
   const [q, setQ] = useState("");
   const [toast, setToast] = useState("");
 
@@ -67,7 +73,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
     const key = sp.get("item");
     if (!key) return;
     const r = initialRows.find((x) => x.item_key === key);
-    if (r) setOpenId(r.id);
+    if (r) { setOpenId(r.id); setKindTab(kindOfCategory(r.category)); }
   }, [sp, initialRows]);
 
   useEffect(() => {
@@ -150,9 +156,12 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
   return ListView();
 
   function ListView() {
-    const shownCats = [...new Set(rows.map((r) => r.category))];
+    const kinds = KIND_TAB.filter(([k]) => rows.some((r) => kindOfCategory(r.category) === k));
+    const kt = kinds.length > 1 ? (kindTab && kinds.some(([k]) => k === kindTab) ? kindTab : kinds[0][0]) : null;
+    const inKind = rows.filter((r) => !kt || kindOfCategory(r.category) === kt);
+    const shownCats = [...new Set(inKind.map((r) => r.category))];
     const term = q.trim().toLowerCase();
-    const list = rows.filter((r) => (!cat || r.category === cat) && (!term || `${r.item} ${r.method ?? ""} ${r.species.join(" ")} ${routesOf(r).join(" ")}`.toLowerCase().includes(term)));
+    const list = inKind.filter((r) => (!cat || r.category === cat) && (!term || `${r.item} ${r.method ?? ""} ${r.species.join(" ")} ${routesOf(r).join(" ")}`.toLowerCase().includes(term)));
     const groups = shownCats.filter((c) => !cat || c === cat).map((c) => ({ cat: c, rows: list.filter((r) => r.category === c) })).filter((g) => g.rows.length);
     const open = rows.find((r) => r.id === openId) ?? null;
     return (
@@ -165,13 +174,22 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
           <button type="button" className="b1 tl__add" onClick={() => setView({ kind: "pick" })} disabled={readOnly}><Plus size={18} weight="bold" aria-hidden="true" />시험 추가</button>
         </div>
 
-        <div className="tl__tools">
-          <div className="tl__chips" role="group" aria-label="분야">
-            <button type="button" className="chip" aria-pressed={!cat} onClick={() => setCat("")}>전체 <span>{rows.length}</span></button>
-            {shownCats.map((c) => (
-              <button key={c} type="button" className="chip" aria-pressed={cat === c} onClick={() => setCat(cat === c ? "" : c)}>{c} <span>{rows.filter((r) => r.category === c).length}</span></button>
+        {kt && (
+          <div className="tl__kinds" role="tablist" aria-label="시험 갈래">
+            {kinds.map(([k, label]) => (
+              <button key={k} type="button" role="tab" aria-selected={kt === k} onClick={() => { setKindTab(k); setCat(""); }}>{label} <span className="tnum">{rows.filter((r) => kindOfCategory(r.category) === k).length}</span></button>
             ))}
           </div>
+        )}
+        <div className="tl__tools">
+          {shownCats.length > 1 ? (
+            <div className="tl__chips" role="group" aria-label="분야">
+              <button type="button" className="chip" aria-pressed={!cat} onClick={() => setCat("")}>전체 <span>{inKind.length}</span></button>
+              {shownCats.map((c) => (
+                <button key={c} type="button" className="chip" aria-pressed={cat === c} onClick={() => setCat(cat === c ? "" : c)}>{c} <span>{rows.filter((r) => r.category === c).length}</span></button>
+              ))}
+            </div>
+          ) : <span />}
           <label className="tl__search">
             <MagnifyingGlass size={16} aria-hidden="true" />
             <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="시험 이름, 동물종으로 찾기" aria-label="시험 찾기" />
@@ -187,12 +205,14 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
             {g.rows.map((r) => {
               const p = priceOf(r);
               const perSample = r.unit === "per_sample";
+              const kp = kindOfCategory(r.category) !== "tox" ? kindPriceLabel(r) : null;
+              const kl = kindOfCategory(r.category) !== "tox" ? kindLine(r) : "";
               return (
                 <button key={r.id} type="button" className="tl__row" data-off={r.available ? undefined : "1"} onClick={() => setOpenId(r.id)}>
                   <span className="tl__name">
                     <b>{r.item}</b>
                     <span className="tl__sub">
-                      {r.method && <span>{r.method}</span>}
+                      {kl ? <span>{kl}</span> : r.method && <span>{r.method}</span>}
                       {!r.available && <span className="tl__tag">지금 안 받음</span>}
                       {r.available && r.source === "learned" && <span className="tl__tag tl__tag--hl">최근 회신에서</span>}
                     </span>
@@ -200,7 +220,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
                   <span className="tl__cond">{condLine(r) || <em>조건을 적어 주세요</em>}</span>
                   <span className="tl__weeks r tnum">{r.weeks ? `${r.weeks}주` : r.last_weeks ? `${r.last_weeks}주` : "-"}</span>
                   <span className="tl__price r tnum">
-                    {!r.available ? "-" : p != null ? (perSample ? `검체당 ${p.toLocaleString("ko-KR")}원` : `${p.toLocaleString("ko-KR")}원`) : <u>표준가 적기</u>}
+                    {!r.available ? "-" : kp ? kp : p != null ? (perSample ? `검체당 ${p.toLocaleString("ko-KR")}원` : `${p.toLocaleString("ko-KR")}원`) : <u>표준가 적기</u>}
                   </span>
                   <CaretRight size={18} className="tl__go" aria-hidden="true" />
                 </button>
@@ -492,10 +512,15 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
   const [dirty, setDirty] = useState(false);
   const set = (p: Partial<CatalogRow>) => { setD((s) => ({ ...s, ...p })); setDirty(true); };
   const perSample = d.unit === "per_sample";
-  const hasGroups = standardGroups(d).length > 0;
-  const list = rs ?? defaultRates(hasGroups);
+
+  const kind = kindOfCategory(d.category);
+  const byKind = kind !== "tox";
+  // 효력·약동학·개별 분석은 군·동물 수 금액을 설계 칸(군당·마리당·검체당)에서 받는다. 여기는 한 번 더하는 항목만
+  const hasGroups = !byKind && standardGroups(d).length > 0;
+  const list = (rs ?? defaultRates(hasGroups)).filter((r) => !byKind || r.kind === "flat" || r.kind === "qty");
   const setRate = (id: string, p: Partial<Rate>) => { setRs(list.map((r) => (r.id === id ? { ...r, ...p } : r))); setDirty(true); };
-  const extras = EXTRA_FIELDS[d.category as Cat] ?? [];
+  // 효력·약동학·개별 분석은 갈래 설계가 추가 조건(유발·비용 칸)을 대신한다
+  const extras = byKind ? [] : EXTRA_FIELDS[d.category as Cat] ?? [];
   const k = d.id;
 
   useEffect(() => {
@@ -533,7 +558,8 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
             <h3>가능한 조건</h3>
             <CondPick row={d} onChange={set} k={k} small />
             <div className="tf__grid">
-              <MethodField id={`${k}-method`} row={d} onChange={set} />
+              {/* 효력은 질환 모델이 시험법 자리다 (기관 표준 설계에서 고친다) */}
+              {kind !== "pd" && <MethodField id={`${k}-method`} row={d} onChange={set} />}
               <div className="fld">
                 <label className="fld__lab" htmlFor={`${k}-glp`}>GLP</label>
                 <div className="selwrap">
@@ -548,8 +574,8 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
           </section>
 
           <section className="td__blk">
-            <h3>설계</h3>
-            {!designOpen ? (
+            <h3>{byKind ? "기관 표준 설계" : "설계"}{byKind && <span>견적서가 이 설계와 달라진 곳을 표시해요</span>}</h3>
+            {!designOpen && !byKind ? (
               <div className="td__sum">
                 <div>
                   <p>{designLine(d)}</p>
@@ -559,13 +585,13 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
               </div>
             ) : (
               <div className="td__open">
-                <DesignFields row={d} onChange={set} k={k} />
-                <div className="fld">
+                {byKind ? <KindStructure row={d} onChange={set} k={k} /> : <DesignFields row={d} onChange={set} k={k} />}
+                {!byKind && <div className="fld">
                   <span className="fld__lab">표준가에 든 항목</span>
                   <div className="chips">
                     {INCLUDE_KEYS.map((key) => <button key={key} type="button" className="chip chip--md" aria-pressed={d.includes.includes(key)} onClick={() => set({ includes: toggle(d.includes, key) })}>{key}</button>)}
                   </div>
-                </div>
+                </div>}
                 <div className="fld">
                   <span className="fld__lab">따로 받는 항목과 금액</span>
                   {d.options.map((o, i) => (
@@ -590,6 +616,19 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
             )}
           </section>
 
+          {byKind ? (
+            <section className="td__blk">
+              <h3>{kind === "pd" ? "비용 다섯 칸" : "금액"}</h3>
+              <KindMoney row={d} onChange={set} k={k} />
+              <div className="tf__grid">
+                <div className="fld">
+                  <label className="fld__lab" htmlFor={`${k}-wk`}>소요 기간</label>
+                  <div className="numin"><input id={`${k}-wk`} type="text" inputMode="numeric" value={d.weeks != null ? String(d.weeks) : ""} onChange={(e) => { const v = digits(e.target.value, 3); set({ weeks: v ? Math.min(200, Number(v)) : null }); }} /><span>주</span></div>
+                  <span className="fld__help">{kind === "pd" ? "동물 입고부터 보고서(안)까지" : "시료 접수부터 보고서(안)까지"}</span>
+                </div>
+              </div>
+            </section>
+          ) : (
           <section className="td__blk">
             <h3>표준가와 기간</h3>
             {PER_SAMPLE_CATS.includes(d.category) && (
@@ -608,6 +647,7 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
             </div>
             <CondPrices row={d} onChange={set} k={k} perSample={perSample} />
           </section>
+          )}
 
           {(hasGroups || list.length > 0) && (
             <section className="td__blk">
@@ -694,6 +734,7 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
   const set = (p: Partial<CatalogRow>) => setD((s) => ({ ...s, ...p }));
   const perSample = d.unit === "per_sample";
   const k = d.id;
+  const kind = kindOfCategory(d.category);
   const steps = ["조건", "설계", "금액"];
 
   const finish = async () => {
@@ -718,14 +759,31 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
           {methodOptions(d.category, d.item).length > 0 && <div className="tw__q"><MethodField id={`${k}-wm`} row={d} onChange={set} chips /></div>}
         </>
       )}
-      {step === 1 && (
+      {step === 1 && kind !== "tox" && (
+        <>
+          <h1>{kind === "pd" ? "기관 표준 디자인을 적어 주세요" : kind === "pk" ? "표준 채혈·분석 설계를 적어 주세요" : "받는 시료를 적어 주세요"}</h1>
+          <p className="tw__lead">견적서는 이 설계에서 시작하고, 의뢰자 요청과 달라진 칸만 노랗게 표시해요. 모르는 칸은 비워 두세요.</p>
+          <div className="tw__q tk__wiz"><KindStructure row={d} onChange={set} k={k} /></div>
+        </>
+      )}
+      {step === 2 && kind !== "tox" && (
+        <>
+          <h1>{kind === "pd" ? "비용 다섯 칸의 기준 금액을 적어 주세요" : "금액을 적어 주세요"}</h1>
+          <p className="tw__lead">{kind === "pd" ? "앞의 표준 디자인 그대로일 때 금액이에요. 군이 늘 때 금액을 적어 두면 견적서가 칸마다 맞춰요." : "검체 수는 요청마다 달라서 검체당 단가로 받아요. 견적서가 검체 수를 세어 곱해요."}</p>
+          <div className="tw__q tk__wiz"><KindMoney row={d} onChange={set} k={k} /></div>
+          <div className="tw__q tw__weeks">
+            <Int id={`${k}-ww`} label="소요 기간" value={d.weeks} onChange={(v) => set({ weeks: v })} unit="주" max={200} />
+          </div>
+        </>
+      )}
+      {step === 1 && kind === "tox" && (
         <>
           <h1>표준 설계를 적어 주세요</h1>
           <p className="tw__lead">표준가가 어떤 설계 기준인지 알려 주는 값이에요. 모르는 칸은 비워 두세요.</p>
           <div className="tw__q"><DesignFields row={d} onChange={set} k={k} /></div>
         </>
       )}
-      {step === 2 && (
+      {step === 2 && kind === "tox" && (
         <>
           <h1>{baseLabel(d) ? `${baseLabel(d)} 기준 ` : "이 조건의 "}{perSample ? "검체당 단가" : "표준가"}를 적어 주세요</h1>
           <p className="tw__lead">앞에서 고른 설계 그대로일 때 금액이에요. {multi(d) ? "다른 동물종·경로 금액도 아래에 적어 두면 그 조건 요청에 그대로 들어가요." : "회신 초안과 견적서에 이 금액이 먼저 들어가요."}</p>

@@ -466,13 +466,22 @@ function kindLines(t: DocTest, k: Kind): { base: number; lines: Line[]; total: n
     lines.push({ label: x.label || "기타", formula: "직접 입력", amount: Math.round(n0(x.amount)), kind: "extra" });
   }
   const total = Math.max(0, base + lines.reduce((a, l) => a + l.amount, 0));
-  return { base, lines, total, changes: lines.length };
+  // 변경 수: 기관 표준과 달라진 설계 칸 + 추가 항목·직접 입력. 검체 분석 금액 자체는 변경이 아니다
+  const changes = lines.filter((l) => l.kind !== "qty").length + (sampleChanged(t, k) ? 1 : 0);
+  return { base, lines, total, changes };
 }
 
 /**
  * 견적서에 보일 금액 내역 (효력·약동학·개별 분석). 달라진 곳만이 아니라 칸 전체를 보여 준다.
  * 합계는 testLines(t).total 과 같다
  */
+/** 검체 수가 기관 표준 설계와 다른가 (표준 설계가 없으면 변경 아님) */
+function sampleChanged(t: DocTest, k: Kind): boolean {
+  if (k === "pk" && t.kd?.pk && t.std.kd?.pk?.groups.length) return pkSamples(t.kd.pk) !== pkSamples(t.std.kd.pk);
+  if (k === "other" && t.kd?.other && t.std.kd?.other?.n) return t.kd.other.n !== t.std.kd.other.n;
+  return false;
+}
+
 export type KindRow = { label: string; note: string; amount: number; changed: boolean };
 export function kindRows(t: DocTest): KindRow[] | null {
   const k = testKind(t);
@@ -482,13 +491,13 @@ export function kindRows(t: DocTest): KindRow[] | null {
   if (k === "pk" && t.kd.pk) {
     const p = t.kd.pk, n = pkSamples(p);
     rows.push({ label: "동물 실험 (투여·채혈)", note: p.groups.length ? `${p.groups.length}군 · ${p.groups.reduce((a, g) => a + g.n, 0)}마리` : "", amount: p.animal ?? 0, changed: false });
-    rows.push({ label: `검체 분석${p.matrix.length ? ` (${p.matrix.join("·")})` : ""}`, note: n ? `${n}검체 × ${fmt(p.perSample ?? 0)}` : "검체 수 미정", amount: n * (p.perSample ?? 0), changed: false });
+    rows.push({ label: `검체 분석${p.matrix.length ? ` (${p.matrix.join("·")})` : ""}`, note: n ? `${n}검체 × ${fmt(p.perSample ?? 0)}` : "검체 수 미정", amount: n * (p.perSample ?? 0), changed: sampleChanged(t, k) });
     if (p.method === "dev") rows.push({ label: "분석법 개발", note: "의뢰자 분석법 없음", amount: p.dev ?? 0, changed: true });
     rows.push({ label: "PK 파라미터 분석·보고서", note: "", amount: p.report ?? 0, changed: false });
   }
   if (k === "other" && t.kd.other) {
     const o = t.kd.other;
-    rows.push({ label: "검체 분석", note: `${o.sample ? `${o.sample} · ` : ""}${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), changed: false });
+    rows.push({ label: "검체 분석", note: `${o.sample ? `${o.sample} · ` : ""}${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), changed: sampleChanged(t, k) });
     if (o.setup != null) rows.push({ label: "시료 접수·보관", note: "", amount: o.setup, changed: false });
     if (o.report != null) rows.push({ label: "결과 보고서", note: "", amount: o.report, changed: false });
   }

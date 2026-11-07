@@ -734,3 +734,7 @@
   .qf__gantt { display: none; }
   .qf__lane { grid-template-columns: minmax(0, 1fr) 108px 100px; gap: 6px; padding: 4px 6px; }
 }
+/* 직접 편집 화면의 갈래 설계: 질문 화면과 같은 칸을 문서 안에 둔다 */
+.qed__kind .qf__tabs { display: flex; gap: 6px; margin: 12px 0 14px; }
+.qed__kind .qf__orig { margin-top: 4px; }
+.qed__kindbody { display: flex; flex-direction: column; gap: 16px; }
