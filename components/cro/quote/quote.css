@@ -196,6 +196,7 @@
 .qed__in:disabled { border-bottom-color: transparent; }
 .qed__in::placeholder { color: var(--d-faint); }
 .qed__in.is-ch { background: var(--d-mark); }
+.qed__sel { appearance: auto; cursor: pointer; }
 .qed__fld { display: inline-flex; flex-direction: column; min-width: 0; width: 100%; }
 .qed__was { font-size: 10.5px; color: var(--d-faint); line-height: 1.2; }
 .qed__kv { margin: 24px 0 0; border-top: 1px solid var(--d-line2); }

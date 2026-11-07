@@ -184,7 +184,8 @@ export async function createDocFromRequest(orgId: string, orgName: string, userI
     // 대표가 아닌 동물종·경로로 맞으면 표준가를 그대로 쓰지 않는다 (기관이 금액을 적는다)
     const other = picked.mismatch.includes(PRICE_CHECK_SPECIES) || picked.mismatch.includes(PRICE_CHECK_ROUTE);
     const base = other ? { ...picked.row, std_price: null } : picked.row;
-    data.tests.push({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? []), rfqSeq: line.seq });
+    const full = (byKey.get(rowKey(line)) ?? []).find((r) => r.id === picked.row.id) ?? picked.row;
+    data.tests.push({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq });
   }
   return insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
 }

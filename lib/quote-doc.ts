@@ -7,7 +7,7 @@
  *
  * 이 파일은 DB·화면을 모른다. 편집 화면·PDF·엑셀이 같은 계산을 쓴다.
  */
-import type { CatalogRow } from "./catalog";
+import type { CatalogRow, CondPrice } from "./catalog";
 
 /* ── 추가 비용 단가 ─────────────────────────────────── */
 
@@ -32,6 +32,11 @@ export type Rate = {
   deduct: number | null;
   /** 견적서 표시명 */
   shown: string;
+  /**
+   * 대표가 아닌 동물종의 단가 (animal·recovery·group). 동물종 이름 → 추가·차감.
+   * 칸을 비우면 위 대표 동물종 단가를 쓴다
+   */
+  bySpecies?: Record<string, { add: number | null; deduct: number | null }>;
 };
 
 export const RATE_KIND_LABEL: Record<RateKind, string> = {
@@ -75,15 +80,32 @@ export function cleanRates(raw: unknown): Rate[] {
     if (seen.has(id)) continue;
     seen.add(id);
     const label = text(o.label, 60) || RATE_KIND_LABEL[kind];
+    const bySpecies: Record<string, { add: number | null; deduct: number | null }> = {};
+    if (auto && o.bySpecies && typeof o.bySpecies === "object") {
+      for (const [sp, v] of Object.entries(o.bySpecies as Record<string, unknown>).slice(0, 12)) {
+        const name = text(sp, 60);
+        if (!name || !v || typeof v !== "object") continue;
+        const add = int((v as Record<string, unknown>).add, MAX_WON), deduct = int((v as Record<string, unknown>).deduct, MAX_WON);
+        if (add != null || deduct != null) bySpecies[name] = { add, deduct };
+      }
+    }
     out.push({
       id, kind, label,
       unit: text(o.unit, 12) || (kind === "group" ? "군" : kind === "flat" ? "시험" : "마리"),
       add: int(o.add, MAX_WON),
       deduct: kind === "flat" ? null : int(o.deduct, MAX_WON),
       shown: text(o.shown, 60) || label,
+      ...(Object.keys(bySpecies).length ? { bySpecies } : {}),
     });
   }
   return out;
+}
+
+/** 이 동물종일 때의 단가. 동물종 칸이 비어 있으면 대표 동물종 단가 */
+export function rateFor(r: Rate, species: string): Rate {
+  const sp = species ? r.bySpecies?.[species] : undefined;
+  if (!sp) return r;
+  return { ...r, add: sp.add ?? r.add, deduct: sp.deduct ?? r.deduct };
 }
 
 /* ── 견적서 ─────────────────────────────────────────── */
@@ -105,8 +127,8 @@ export type DocTest = {
   rfqSeq?: number;
   title: string;
   subtitle: string;
-  /** 표준가와 표준 설계 (카탈로그 사본) */
-  std: { price: number | null; groups: DocGroup[]; cond: TestCond; evals: string[]; summary: string };
+  /** 표준가와 표준 설계 (카탈로그 사본). price 는 지금 cond 의 동물종·경로일 때 표준가 */
+  std: { price: number | null; groups: DocGroup[]; cond: TestCond; evals: string[]; summary: string; choices?: Choices };
   cond: TestCond;
   groups: DocGroup[];
   evals: DocEval[];
@@ -122,6 +144,13 @@ export type DocTest = {
   startWeek: number;
   phases: Phase[];
 };
+
+/**
+ * 시험 목록에서 이 시험에 체크한 동물종·경로와 조건별 표준가 (사본).
+ * species[0]·routes[0] 이 대표(표준가 기준), repPrice 가 그 표준가.
+ * 견적서에서 동물종·경로를 바꾸면 이 값으로 표준가를 다시 잡는다
+ */
+export type Choices = { species: string[]; routes: string[]; repPrice: number | null; prices: CondPrice[] };
 
 export type DocVisible = { perTest: boolean; adjust: boolean; formula: boolean };
 export type DocTerms = { pay: string; extra: string; note: string };
@@ -197,7 +226,7 @@ const condOfRow = (c: CatalogRow): TestCond => ({
 });
 
 /** 카탈로그 조건 하나 + 그 시험의 단가 → 견적서의 새 시험 (표준 그대로) */
-export function testFromCatalog(c: CatalogRow, rates: Rate[]): DocTest {
+export function testFromCatalog(c: CatalogRow, rates: Rate[], full: CatalogRow = c): DocTest {
   const groups = standardGroups(c);
   // 카탈로그 "별도 옵션"(이름·금액)도 평가항목 추가로 쓴다. 같은 이름의 단가가 있으면 단가를 쓴다
   const flats = rates.filter((r) => r.kind === "flat");
@@ -217,12 +246,40 @@ export function testFromCatalog(c: CatalogRow, rates: Rate[]): DocTest {
     itemKey: c.item_key, category: c.category, item: c.item, catalogId: c.id,
     title: c.dosing ? `${c.item} (${c.dosing})` : c.item,
     subtitle,
-    std: { price: c.std_price ?? null, groups: groups.map((g) => ({ ...g })), cond: { ...cond }, evals: [...c.includes], summary: stdSummary(groups, c.recovery_weeks) },
+    std: { price: c.std_price ?? null, groups: groups.map((g) => ({ ...g })), cond: { ...cond }, evals: [...c.includes], summary: stdSummary(groups, c.recovery_weeks), ...choicesOf(full) },
     cond, groups, evals, qty: {}, extras: [], rates: allRates,
     description: c.note ?? "",
     weeks, startWeek: 0,
     phases: defaultPhases(weeks, c.dosing, c.recovery_weeks, groups.length > 0),
   };
+}
+
+function choicesOf(c: CatalogRow): { choices?: Choices } {
+  const routes = c.routes?.length ? c.routes : c.route ? [c.route] : [];
+  if (c.species.length < 2 && routes.length < 2) return {};
+  return { choices: { species: [...c.species], routes: [...routes], repPrice: c.std_price ?? null, prices: (c.cond_prices ?? []).map((p) => ({ ...p })) } };
+}
+
+/** 이 동물종·경로일 때 표준가. 대표 조건이면 대표 표준가, 하나만 다르면 그 조건 금액, 둘 다 다르거나 금액이 없으면 null */
+export function priceForCond(ch: Choices, species: string, route: string): number | null {
+  const sp0 = ch.species[0] ?? "", rt0 = ch.routes[0] ?? "";
+  const onSp = !species || species === sp0, onRt = !route || route === rt0;
+  if (onSp && onRt) return ch.repPrice;
+  if (!onSp && !onRt) return null;
+  const hit = ch.prices.find((p) => (onRt ? p.species === species && !p.route : p.route === route && !p.species));
+  return hit ? hit.price : null;
+}
+
+/** 견적서에서 동물종·경로를 바꾼다. 표준가와 비교 기준도 그 조건으로 옮겨서, 달라진 금액은 표준가에 반영된다 */
+export function switchCond(t: DocTest, p: { species?: string; route?: string }): DocTest {
+  const ch = t.std.choices;
+  if (!ch) return t;
+  const species = p.species ?? t.cond.species, route = p.route ?? t.cond.route;
+  const cond = { ...t.cond, species, route };
+  const stdCond = { ...t.std.cond, species, route };
+  const was = [t.cond.species, t.cond.route];
+  const subtitle = t.subtitle.split(" · ").map((x) => (x === was[0] ? species : x === was[1] ? route : x)).join(" · ");
+  return { ...t, cond, subtitle, std: { ...t.std, cond: stdCond, price: priceForCond(ch, species, route) } };
 }
 
 /** 카탈로그에 없는 시험 (직접 적는 시험) */
@@ -272,7 +329,7 @@ export const recoveryAnimals = (gs: DocGroup[]) => gs.reduce((a, g) => a + n0(g.
 export function testLines(t: DocTest): { base: number; lines: Line[]; total: number; changes: number } {
   const base = t.std.price ?? 0;
   const lines: Line[] = [];
-  const rate = (kind: RateKind) => t.rates.find((r) => r.kind === kind);
+  const rate = (kind: RateKind) => { const r = t.rates.find((x) => x.kind === kind); return r && rateFor(r, t.cond.species); };
   const stdById = new Map(t.std.groups.map((g) => [g.id, g]));
   const perGroupStd = t.std.groups[0] ? t.std.groups[0].m + t.std.groups[0].f : 0;
 
@@ -385,6 +442,23 @@ function cleanGroups(v: unknown): DocGroup[] {
   });
 }
 
+function cleanChoices(v: unknown): { choices?: Choices } {
+  if (!v || typeof v !== "object") return {};
+  const o = v as Record<string, unknown>;
+  const list = (x: unknown) => (Array.isArray(x) ? x.filter((s): s is string => typeof s === "string").slice(0, 12).map((s) => s.slice(0, 60)) : []);
+  const species = list(o.species), routes = list(o.routes);
+  if (!species.length && !routes.length) return {};
+  const prices: CondPrice[] = (Array.isArray(o.prices) ? o.prices : []).slice(0, 24).flatMap((p) => {
+    if (!p || typeof p !== "object") return [];
+    const x = p as Record<string, unknown>;
+    const price = int(x.price, MAX_WON);
+    if (price == null) return [];
+    const sp = typeof x.species === "string" ? x.species.slice(0, 60) : "", rt = typeof x.route === "string" ? x.route.slice(0, 60) : "";
+    return sp || rt ? [{ ...(sp ? { species: sp } : {}), ...(rt ? { route: rt } : {}), price }] : [];
+  });
+  return { choices: { species, routes, repPrice: int(o.repPrice, MAX_WON), prices } };
+}
+
 /** 편집 화면이 보낸 견적서 내용을 정리한다 (서버 저장 전). 잘못된 값은 버리거나 기본값으로 */
 export function cleanDocData(raw: unknown): DocData {
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -406,6 +480,7 @@ export function cleanDocData(raw: unknown): DocData {
         cond: cleanCond(std.cond),
         evals: Array.isArray(std.evals) ? std.evals.filter((e): e is string => typeof e === "string").slice(0, 40).map((e) => e.slice(0, 80)) : [],
         summary: text(std.summary, 200),
+        ...cleanChoices(std.choices),
       },
       cond: cleanCond(x.cond),
       groups: cleanGroups(x.groups),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CaretRight, CheckSquare, MagnifyingGlass, Plus, Square, X } from "@phosphor-icons/react";
 import { RfqField } from "@/components/RfqField";
@@ -616,9 +616,10 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
               <div className="td__rates">
                 <span aria-hidden="true" /><span className="td__rh" aria-hidden="true">1{list[0]?.unit ?? "마리"}당 추가</span><span className="td__rh" aria-hidden="true">차감</span>
                 {list.map((r) => (
-                  <RateRow key={r.id} r={r} onChange={(p) => setRate(r.id, p)} />
+                  <RateRow key={r.id} r={r} species={d.species} onChange={(p) => setRate(r.id, p)} />
                 ))}
               </div>
+              {d.species.length > 1 && hasGroups && <p className="td__mut">동물종마다 단가가 다르면 동물종 줄에 적어요. 비워 두면 {d.species[0]} 단가로 계산해요.</p>}
               <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "flat", label: "", unit: "시험", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 항목 추가</button>
             </section>
           )}
@@ -652,14 +653,30 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
   );
 }
 
-function RateRow({ r, onChange }: { r: Rate; onChange: (p: Partial<Rate>) => void }) {
+function RateRow({ r, species, onChange }: { r: Rate; species: string[]; onChange: (p: Partial<Rate>) => void }) {
   const auto = r.kind === "animal" || r.kind === "recovery" || r.kind === "group";
   const name = r.kind === "animal" ? "본시험 동물" : r.kind === "recovery" ? "회복군 동물" : r.kind === "group" ? "투여군" : r.label;
+  const others = auto ? species.slice(1) : [];
+  const setSp = (sp: string, key: "add" | "deduct", raw: string) => {
+    const v = digits(raw, 12);
+    const cur = r.bySpecies?.[sp] ?? { add: null, deduct: null };
+    const next = { ...(r.bySpecies ?? {}), [sp]: { ...cur, [key]: v ? Number(v) : null } };
+    if (next[sp].add == null && next[sp].deduct == null) delete next[sp];
+    onChange({ bySpecies: next });
+  };
+  const fmtW = (v: number | null | undefined) => (v != null ? v.toLocaleString("ko-KR") : "");
   return (
     <>
-      {auto ? <span className="td__rl">{name} <small>1{r.unit}</small></span> : <input className="inp" value={r.label} placeholder="항목 이름 (예: 추가 장기 조직병리)" aria-label="추가 항목 이름" onChange={(e) => onChange({ label: e.target.value.slice(0, 60), shown: e.target.value.slice(0, 60) })} />}
+      {auto ? <span className="td__rl">{name} <small>1{r.unit}{others.length ? ` · ${species[0]}` : ""}</small></span> : <input className="inp" value={r.label} placeholder="항목 이름 (예: 추가 장기 조직병리)" aria-label="추가 항목 이름" onChange={(e) => onChange({ label: e.target.value.slice(0, 60), shown: e.target.value.slice(0, 60) })} />}
       <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 추가 단가`} value={r.add != null ? r.add.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ add: v ? Number(v) : null }); }} /><span>원</span></div>
       {r.kind === "flat" ? <span /> : <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 차감 단가`} placeholder="없음" value={r.deduct != null ? r.deduct.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ deduct: v ? Number(v) : null }); }} /><span>원</span></div>}
+      {others.map((sp) => (
+        <Fragment key={sp}>
+          <span className="td__rl td__rl--sp">{sp}</span>
+          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 추가 단가`} placeholder={fmtW(r.add) || "대표와 같음"} value={fmtW(r.bySpecies?.[sp]?.add)} onChange={(e) => setSp(sp, "add", e.target.value)} /><span>원</span></div>
+          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 차감 단가`} placeholder={fmtW(r.deduct) || "없음"} value={fmtW(r.bySpecies?.[sp]?.deduct)} onChange={(e) => setSp(sp, "deduct", e.target.value)} /><span>원</span></div>
+        </Fragment>
+      ))}
     </>
   );
 }
