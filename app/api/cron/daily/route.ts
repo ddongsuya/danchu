@@ -95,7 +95,7 @@ export async function GET(req: Request) {
     reoffered: 0,
     pendingCleaned: 0,
     earlyOpenSms: 0,
-    noteReminders: 0,
+    crmReminders: 0,
     digest: false,
     retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 },
     errors: [] as string[],
@@ -338,19 +338,46 @@ export async function GET(req: Request) {
   });
 
   // 6) 운영자 하루 요약 메일. 견적 제출·회신하지 않음은 실시간으로는 앱 알림만 보내고 여기서 모은다
-  // 고객 메모 알림 날짜 (0038). 그날 아침 작성자에게 알림·메일. reminded_at 을 먼저 채워 두 번 보내지 않는다. 표가 없으면(0038 전) 건너뛴다
-  await step("client-notes", out.errors, async () => {
-    const { data: due, error } = await sb.from("cro_client_notes").select("id, org_id, client_key, body, created_by").is("reminded_at", null).lte("remind_on", today).limit(200);
-    if (error) { console.warn("client-notes", error.message); return; }
-    for (const n of due ?? []) {
-      const { data: claimed } = await sb.from("cro_client_notes").update({ reminded_at: new Date().toISOString() }).eq("id", n.id).is("reminded_at", null).select("id");
-      if (!claimed?.length || !n.created_by) continue;
-      const { data: p } = await sb.from("profiles").select("email, cro_org_id").eq("id", n.created_by).maybeSingle();
-      // 작성자가 그 기관을 떠났으면 보내지 않는다
-      if (!p || p.cro_org_id !== n.org_id) continue;
-      const body = n.body.length > 140 ? `${n.body.slice(0, 140)}…` : n.body;
-      await notifyUsers([n.created_by], { kind: "기관", title: "오늘 챙길 고객 메모가 있어요", body, href: `/cro/clients?c=${encodeURIComponent(n.client_key)}` }, { to: [p.email], subject: "[단추] 오늘 챙길 고객 메모" });
-      out.noteReminders++;
+  // 기관 CRM 일정·할 일 알림 (0038). 매일 09:00 KST 한 번 돈다: 내일 일정은 오늘 아침, 오늘 기한 할 일은 오늘 아침에 알린다.
+  // 먼저 reminded_at / notified_on 을 채워(잡기) 두 번 보내지 않는다. 받는 사람이 그 기관을 떠났으면 보내지 않는다. 표가 없으면(0038 전) 건너뛴다
+  await step("crm-reminders", out.errors, async () => {
+    const tomorrow = addDays(today, 1);
+    const from = new Date(`${tomorrow}T00:00:00+09:00`).toISOString();
+    const to = new Date(`${addDays(today, 2)}T00:00:00+09:00`).toISOString();
+    const { data: evs, error } = await sb.from("cro_crm_events").select("id, org_id, company_id, title, starts_at, all_day, location, mode, attendee_members, created_by").eq("remind", true).is("reminded_at", null).is("done_at", null).gte("starts_at", from).lt("starts_at", to).limit(300);
+    if (error) { console.warn("crm-reminders", error.message); return; }
+    const { data: tasks } = await sb.from("cro_crm_tasks").select("id, org_id, company_id, title, assignee, created_by").is("done_at", null).eq("due_on", today).or(`notified_on.is.null,notified_on.neq.${today}`).limit(300);
+    const people = new Set<string>();
+    for (const e of evs ?? []) for (const id of [e.created_by, ...e.attendee_members]) if (id) people.add(id);
+    for (const t of tasks ?? []) { const id = t.assignee ?? t.created_by; if (id) people.add(id); }
+    const companyIds = [...new Set([...(evs ?? []), ...(tasks ?? [])].map((x) => x.company_id).filter((x): x is string => !!x))];
+    const [{ data: ps }, { data: cos }] = await Promise.all([
+      people.size ? sb.from("profiles").select("id, email, cro_org_id").in("id", [...people]) : Promise.resolve({ data: [] as { id: string; email: string; cro_org_id: string | null }[] }),
+      companyIds.length ? sb.from("cro_crm_companies").select("id, name").in("id", companyIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    ]);
+    const pBy = new Map((ps ?? []).map((p) => [p.id, p]));
+    const coBy = new Map((cos ?? []).map((c) => [c.id, c.name]));
+    const inOrg = (ids: (string | null)[], org: string) => [...new Set(ids.filter((x): x is string => !!x))].filter((id) => pBy.get(id)?.cro_org_id === org);
+    const hm = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" });
+    const MODE: Record<string, string> = { in_person: "대면", video: "화상", phone: "전화" };
+    for (const e of evs ?? []) {
+      const { data: claimed } = await sb.from("cro_crm_events").update({ reminded_at: new Date().toISOString() }).eq("id", e.id).is("reminded_at", null).select("id");
+      if (!claimed?.length) continue;
+      const ids = inOrg([e.created_by, ...e.attendee_members], e.org_id);
+      if (!ids.length) continue;
+      const co = e.company_id ? coBy.get(e.company_id) ?? "" : "";
+      const body = [`내일 ${e.all_day ? "하루 종일" : hm(e.starts_at)}`, co, e.mode ? MODE[e.mode] ?? "" : "", e.location].filter(Boolean).join(" · ");
+      await notifyUsers(ids, { kind: "기관", title: `내일 일정 · ${e.title}`, body, href: `/cro/calendar?w=${tomorrow}&e=${e.id}` }, { to: ids.map((id) => pBy.get(id)?.email ?? "").filter(Boolean), subject: `[단추] 내일 일정 · ${e.title}` });
+      out.crmReminders++;
+    }
+    for (const t of tasks ?? []) {
+      const { data: claimed } = await sb.from("cro_crm_tasks").update({ notified_on: today }).eq("id", t.id).or(`notified_on.is.null,notified_on.neq.${today}`).select("id");
+      if (!claimed?.length) continue;
+      const ids = inOrg([t.assignee ?? t.created_by], t.org_id);
+      if (!ids.length) continue;
+      const co = t.company_id ? coBy.get(t.company_id) ?? "" : "";
+      await notifyUsers(ids, { kind: "기관", title: `오늘까지 할 일 · ${t.title}`, body: co || undefined, href: t.company_id ? `/cro/clients/${t.company_id}?tab=tasks` : "/cro/calendar" }, { to: ids.map((id) => pBy.get(id)?.email ?? "").filter(Boolean), subject: `[단추] 오늘까지 할 일 · ${t.title}` });
+      out.crmReminders++;
     }
   });
 

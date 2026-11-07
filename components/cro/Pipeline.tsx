@@ -10,7 +10,7 @@ import { dday } from "@/lib/format";
 export type CroPaths = { pipe: string; clients: string };
 export const CRO_PATHS: CroPaths = { pipe: "/cro", clients: "/cro/clients" };
 
-export function Pipeline({ items, sel, paths = CRO_PATHS }: { items: PipeItem[]; sel: string | null; paths?: CroPaths }) {
+export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { items: PipeItem[]; sel: string | null; paths?: CroPaths; companyOf?: Record<string, string> }) {
   const groups = groupPipeline(items);
   const cur = items.find((x) => x.id === sel) ?? null;
   const active = cur ?? items[0] ?? null;
@@ -50,7 +50,7 @@ export function Pipeline({ items, sel, paths = CRO_PATHS }: { items: PipeItem[];
           </section>
         ))}
       </div>
-      {active && <Detail item={active} paths={paths} />}
+      {active && <Detail item={active} paths={paths} companyOf={companyOf} />}
     </div>
   );
 }
@@ -63,7 +63,7 @@ function Due({ item }: { item: PipeItem }) {
   return <span className={`pl__dd${warn ? " pl__dd--warn" : ""}`}>{label}</span>;
 }
 
-function Detail({ item, paths }: { item: PipeItem; paths: CroPaths }) {
+function Detail({ item, paths, companyOf }: { item: PipeItem; paths: CroPaths; companyOf: Record<string, string> }) {
   return (
     <article className="pl__detail" aria-labelledby="pl-title">
       <Link href={paths.pipe} className="pl__back only-narrow" scroll={false}>‹ 견적 진행</Link>
@@ -74,7 +74,7 @@ function Detail({ item, paths }: { item: PipeItem; paths: CroPaths }) {
             <h2 id="pl-title">{item.title}</h2>
             <span className="pl__who">
               {item.client
-                ? item.clientKey ? <Link href={`${paths.clients}?c=${encodeURIComponent(item.clientKey)}`}>{item.client}</Link> : item.client
+                ? item.clientKey ? <Link href={companyOf[item.clientKey] ? `${paths.clients}/${companyOf[item.clientKey]}` : paths.clients}>{item.client}</Link> : item.client
                 : <><LockSimple size={13} aria-hidden="true" /> 선정 시 공개 · {item.clientHint.replace(" · 이름은 선정 뒤 공개", "")}</>}
             </span>
           </div>

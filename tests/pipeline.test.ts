@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { buildPipeline, clientKeyOf, gapPct } from "@/lib/pipeline";
-import { groupClients } from "@/lib/clients";
 
 const NOW = new Date("2026-11-07T00:00:00+09:00").getTime();
 const day = (d: number) => new Date(NOW + d * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
@@ -31,8 +30,6 @@ describe("견적 진행판", () => {
     expect(x.clientKey).toBe("u1");
     expect(x.group).toBe("todo");
     expect(x.action?.label).toBe("계약 결과 보고");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(groupClients([a as any])[0]).toMatchObject({ key: "u1", name: "의뢰사 가", pending: 1 });
   });
   it("다른 기관이 선정되면 미선정, 회사는 끝까지 가린다", () => {
     const q = { id: "q1", status: "submitted", total_amount: 50_000_000 };

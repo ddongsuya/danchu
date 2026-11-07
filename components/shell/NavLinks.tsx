@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { IconName, NavItem } from "./Shell";
 
-import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad, UsersThree } from "@phosphor-icons/react";
+import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad, UsersThree, CalendarBlank } from "@phosphor-icons/react";
 
-const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad, clients: UsersThree };
+const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad, clients: UsersThree, calendar: CalendarBlank };
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const Glyph = ICONS[name];
   return <Glyph size={size} weight="regular" aria-hidden="true" />;

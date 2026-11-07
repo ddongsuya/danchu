@@ -3,6 +3,7 @@ import { dbReady, listAwardsForOrg, listInvitesForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { Pipeline } from "@/components/cro/Pipeline";
 import { buildPipeline } from "@/lib/pipeline";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -24,5 +25,9 @@ export default async function CroPipeline({ searchParams }: { searchParams: Prom
   const { sel } = await searchParams;
   const [invites, awards] = dbReady() ? await Promise.all([listInvitesForOrg(org.id), listAwardsForOrg(org.id)]) : [[], []];
   const items = buildPipeline(invites, awards);
-  return <Pipeline items={items} sel={sel && /^[0-9a-f-]{36}$/.test(sel) ? sel : null} />;
+  // 선정된 의뢰자 → 고객사 화면 (0038). 아직 고객사로 들어오지 않았으면 고객사 목록으로 (목록을 열면 들어온다)
+  const sb = dbReady() ? getSupabaseAdmin() : null;
+  const { data: links } = sb ? await sb.from("cro_crm_contacts").select("danchu_key, company_id").eq("org_id", org.id).not("danchu_key", "is", null) : { data: null };
+  const companyOf = Object.fromEntries((links ?? []).map((l) => [l.danchu_key as string, l.company_id]));
+  return <Pipeline items={items} sel={sel && /^[0-9a-f-]{36}$/.test(sel) ? sel : null} companyOf={companyOf} />;
 }

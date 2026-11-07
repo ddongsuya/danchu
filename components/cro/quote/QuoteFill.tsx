@@ -36,12 +36,14 @@ type Props = {
   replyHref: string | null;
   start?: string;
   readOnly?: boolean;
+  /** 고객사 화면에서 "견적서 만들기"로 왔을 때 (0038): 의뢰자 칸을 채우고 만든 견적서를 그 고객사·담당자에 묶는다 */
+  crm?: { companyId: string; contactId: string | null; client: string } | null;
 };
 
-export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHref, start, readOnly = false }: Props) {
+export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHref, start, readOnly = false, crm = null }: Props) {
   const router = useRouter();
   const isNew = !head0;
-  const blankHead: DocHead = { id: "", docNo: "새 견적서", title: "견적서", client: "", substance: "", issuedOn: today(), validUntil: null, inviteId: null, rfqNo: null, memo: "", updatedAt: "" };
+  const blankHead: DocHead = { id: "", docNo: "새 견적서", title: "견적서", client: crm?.client ?? "", substance: "", issuedOn: today(), validUntil: null, inviteId: null, rfqNo: null, memo: "", updatedAt: "" };
   const [head, setHead] = useState<DocHead>(head0 ?? blankHead);
   const [data, setData] = useState<DocData>(initial ?? { tests: [], visible: { perTest: true, adjust: true, formula: false }, discount: 0, terms: style.terms, glp: "" });
   const first: StepId = ORDER.includes(start as StepId) ? (start as StepId) : head0?.rfqNo ? "tests" : "client";
@@ -125,7 +127,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
     setBusy(true);
     const ids = data.tests.map((t) => t.catalogId).filter((x): x is string => !!x);
     const manual = data.tests.filter((t) => !t.catalogId).map((t) => t.title);
-    const r = await fetch("/api/cro/docs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ catalogIds: ids, manual, client: head.client, substance: head.substance }) }).catch(() => null);
+    const r = await fetch("/api/cro/docs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ catalogIds: ids, manual, client: head.client, substance: head.substance, companyId: crm?.companyId, contactId: crm?.contactId }) }).catch(() => null);
     const d = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;
     if (!r?.ok || !d?.id) { setBusy(false); setErr(d?.error || "견적서를 만들지 못했어요. 네트워크를 확인하고 다시 시도해 주세요."); return; }
     const nextStep = data.tests.some((t) => t.std.price == null) ? "price" : "change";

@@ -19,7 +19,7 @@ export default async function CrmPipelinePreview({ searchParams }: { searchParam
   return (
     <AppState>
       <Shell session={SESSION} nav={NAV}>
-        <Pipeline items={items} sel={sel ?? null} paths={PATHS} />
+        <Pipeline items={items} sel={sel ?? null} paths={PATHS} companyOf={{ u5: "00000000-0000-4000-8000-000000000001" }} />
       </Shell>
     </AppState>
   );
