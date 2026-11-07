@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
 import {
-  blankTest, condChanges, docTitle, docTotals, mainAnimals, recoveryAnimals, scheduleWeeks, testFromCatalog, testLines, uid,
+  blankTest, condChanges, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
+import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
 import { COND_LABEL, Cover, DetailPage, Logo, brandVars, QuotePage, SchedulePage, condLine, pageKeys, type PageKey } from "./DocPages";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
@@ -116,6 +117,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
         <div className="qed__actions">
           <span role="status" className="qed__saved" data-s={saved}>{savedLabel}</span>
           {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          {!readOnly && <Link className="b2 bsm" href={`/cro/docs/${head.id}/fill`}>질문으로 채우기</Link>}
           <a className="b2 bsm" href={`/api/cro/docs/${head.id}/xlsx`}>엑셀</a>
           <Link className="b2 bsm" href={`/cro/docs/${head.id}/print`}>PDF</Link>
           {replyHref && <Link className="b1 bsm" href={replyHref}>회신 보내기</Link>}
@@ -154,7 +156,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
             <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험을 추가하세요"} thumb="schedule" />
           </nav>
           {!readOnly && <button type="button" className="qed__add" onClick={() => setPicker(true)}><Plus size={16} aria-hidden="true" />시험 추가</button>}
-          <p className="qed__railnote">시험을 추가하면 카탈로그의 <b>표준가와 포함 범위</b>로 채워져요. 달라진 곳만 추가 비용으로 계산해요.</p>
+          <p className="qed__railnote">시험을 추가하면 시험 목록의 <b>표준가와 포함 범위</b>로 채워져요. 달라진 곳만 추가 비용으로 계산해요.</p>
         </aside>
 
         {/* 가운데: 책상 위 페이지 */}
@@ -339,6 +341,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
   const ch = condChanges(t);
   const added = t.evals.filter((e) => e.on && !e.base).length;
   const qtyRates = t.rates.filter((r) => r.kind === "qty");
+  const kind = testKind(t);
   return (
     <section className="qd qd--edit" style={brandVars(style)}>
       <PageHead head={head} style={style} />
@@ -357,10 +360,23 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
 
       <div className="qed__h2row"><h2 className="qd__h2">시험 조건</h2><span>점선 칸을 눌러 수정해요{ch.length ? ` · 변경 ${ch.length}` : ""}</span></div>
       <dl className="qed__cond">
-        {COND_LABEL.map(([k, label]) => (
-          <div key={k}><dt>{label}</dt><dd><Field label={label} value={t.cond[k]} was={t.catalogId ? t.std.cond[k] : undefined} disabled={readOnly} wide onChange={(v) => set({ cond: { ...t.cond, [k]: v.slice(0, 160) } })} /></dd></div>
-        ))}
+        {COND_LABEL.map(([k, label]) => {
+          // 시험 목록에서 여러 개 체크한 동물종·경로는 고르기. 바꾸면 그 조건의 표준가·단가로 다시 계산한다
+          const opts = k === "species" ? t.std.choices?.species : k === "route" ? t.std.choices?.routes : undefined;
+          if (opts && opts.length > 1) {
+            return (
+              <div key={k}><dt>{label}</dt><dd>
+                <select aria-label={label} className="qed__in qed__sel" value={t.cond[k]} disabled={readOnly} onChange={(e) => set(switchCond(t, { [k]: e.target.value }))}>
+                  {(opts.includes(t.cond[k]) ? opts : [t.cond[k], ...opts]).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </dd></div>
+            );
+          }
+          return <div key={k}><dt>{label}</dt><dd><Field label={label} value={t.cond[k]} was={t.catalogId ? t.std.cond[k] : undefined} disabled={readOnly} wide onChange={(v) => set({ cond: { ...t.cond, [k]: v.slice(0, 160) } })} /></dd></div>;
+        })}
       </dl>
+
+      {kind !== "tox" && t.kd && <KindEdit t={t} set={set} readOnly={readOnly} />}
 
       {(t.groups.length > 0 || t.std.groups.length > 0) && (
         <>
@@ -416,12 +432,12 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
             );
           })}
         </ul>
-      ) : <p className="qed__muted">카탈로그에 기본 포함 항목을 적어 두면 여기에 채워져요.</p>}
+      ) : <p className="qed__muted">시험 목록에 표준가에 든 항목을 적어 두면 여기에 채워져요.</p>}
       {!readOnly && <EvalAdder onAdd={(name) => set({ evals: [...t.evals, { name, on: true, base: true }] })} />}
 
       {qtyRates.length > 0 && (
         <>
-          <div className="qed__h2row"><h2 className="qd__h2">수량 항목</h2><span>카탈로그 추가 비용 단가</span></div>
+          <div className="qed__h2row"><h2 className="qd__h2">수량 항목</h2><span>시험 목록의 추가 비용 단가</span></div>
           <ul className="qed__qty">
             {qtyRates.map((r) => (
               <li key={r.id}>
@@ -445,6 +461,28 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
   );
 }
 
+/** 효력·약동학·개별 분석 설계. 질문으로 쓰기와 같은 칸을 쓴다 (KindQ) */
+const KIND_H: Record<string, string> = { pd: "효력 설계", pk: "약동학 설계", other: "검체" };
+function KindEdit({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>) => void; readOnly: boolean }) {
+  const k = testKind(t);
+  const tabs = kindTabs(k);
+  const [tab, setTab] = useState<KTab>(tabs[0][0]);
+  const cur = tabs.some(([x]) => x === tab) ? tab : tabs[0][0];
+  const setK = (p: Partial<DocTest> | ((x: DocTest) => DocTest)) => set(typeof p === "function" ? p(t) : p);
+  const rows = kindRows(t) ?? [];
+  const ch = rows.filter((r) => r.changed).length;
+  return (
+    <div className="qed__kind">
+      <div className="qed__h2row"><h2 className="qd__h2">{KIND_H[k]}</h2><span>{ch ? `기관 표준과 다른 칸 ${ch}` : "기관 표준 그대로"}</span></div>
+      {t.orig && <OrigBox t={t} />}
+      <div className="qf__tabs" role="tablist" aria-label={KIND_H[k]}>
+        {tabs.map(([key, label]) => <button key={key} type="button" role="tab" className="chip" aria-selected={cur === key} aria-pressed={cur === key} onClick={() => setTab(key)}>{label}</button>)}
+      </div>
+      <div className="qed__kindbody"><KindTab tab={cur} t={t} readOnly={readOnly} set={setK} /></div>
+    </div>
+  );
+}
+
 function EvalAdder({ onAdd }: { onAdd: (name: string) => void }) {
   const [v, setV] = useState("");
   const add = () => { const s = v.trim().slice(0, 80); if (s) { onAdd(s); setV(""); } };
@@ -458,16 +496,18 @@ function EvalAdder({ onAdd }: { onAdd: (name: string) => void }) {
 
 function TestLedger({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>) => void; readOnly: boolean }) {
   const c = testLines(t);
-  const manualPrice = !t.catalogId;
+  const kindPriced = testKind(t) !== "tox" && !!t.kd;
+  const manualPrice = !t.catalogId && !kindPriced;
   return (
     <section className="qed__sec">
-      <div className="qed__sech"><h2 className="qed__h qed__h--lg">이 시험 금액</h2>{t.itemKey && <Link href={`/cro/catalog/prices?item=${encodeURIComponent(t.itemKey)}`}>추가 비용 단가</Link>}</div>
+      <div className="qed__sech"><h2 className="qed__h qed__h--lg">이 시험 금액</h2>{t.itemKey && <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>추가 비용 단가</Link>}</div>
       <p className="qed__muted">표준가에 달라진 곳의 추가 비용만 더해요</p>
       <ul className="qed__ledgerrows">
         <li>
-          <div><span>표준가</span>{manualPrice || t.std.price == null ? <input aria-label="표준가" className="qed__num" inputMode="numeric" disabled={readOnly} value={t.std.price ? n(t.std.price) : ""} placeholder="금액 입력" onChange={(e) => set({ std: { ...t.std, price: e.target.value ? Number(digits(e.target.value)) : null } })} /> : <b className="tnum">{n(c.base)}</b>}</div>
-          <small>{[t.subtitle, t.std.summary].filter(Boolean).join(" · ") || (manualPrice ? "카탈로그에 없는 시험이에요" : "")}</small>
-          {!manualPrice && t.std.price == null && <small className="qed__warn">카탈로그에 이 조건의 표준가가 없어요. <Link href={`/cro/catalog/prices?item=${encodeURIComponent(t.itemKey)}`}>표준가 정하기</Link></small>}
+          <div><span>표준가</span>{!kindPriced && (manualPrice || t.std.price == null) ? <input aria-label="표준가" className="qed__num" inputMode="numeric" disabled={readOnly} value={t.std.price ? n(t.std.price) : ""} placeholder="금액 입력" onChange={(e) => set({ std: { ...t.std, price: e.target.value ? Number(digits(e.target.value)) : null } })} /> : <b className="tnum">{n(c.base)}</b>}</div>
+          <small>{[t.subtitle, t.std.summary].filter(Boolean).join(" · ") || (manualPrice ? "시험 목록에 없는 시험이에요" : "")}</small>
+          {kindPriced && c.base === 0 && <small className="qed__warn">기관 표준 금액이 비어 있어요. 왼쪽 설계의 금액 칸에 넣거나 시험 목록에서 정해요.</small>}
+          {!kindPriced && !manualPrice && t.std.price == null && <small className="qed__warn">시험 목록에 {t.std.choices ? `${[t.cond.species, t.cond.route].filter(Boolean).join(" · ")} 조건의` : "이 조건의"} 표준가가 없어요. <Link href={`/cro/catalog?item=${encodeURIComponent(t.itemKey)}`}>표준가 정하기</Link></small>}
         </li>
         {c.lines.filter((l) => l.kind !== "extra").map((l, k) => (
           <li key={k}><div><span>{l.label}</span><b className="tnum">{signed(l.amount)}</b></div><small className="tnum">{l.formula}</small>{l.amount === 0 && <small className="qed__warn">단가가 비어 있어 금액이 0원이에요.</small>}</li>
@@ -530,7 +570,7 @@ function ScheduleEdit({ data, setTest, head, style, total, readOnly }: { data: D
             {!readOnly && <button type="button" className="btxt" onClick={() => { const last = t.phases[t.phases.length - 1]; setTest(t.uid, { phases: [...t.phases, { id: uid("p"), name: "새 단계", start: last ? last.start + (last.kind === "point" ? 1 : last.weeks) : 0, weeks: 1, kind: "report" }] }); }}><Plus size={14} aria-hidden="true" /> 단계 추가</button>}
           </div>
         ))}
-        {!data.tests.length && <p className="qed__muted">시험을 추가하면 카탈로그의 기간으로 일정이 채워져요.</p>}
+        {!data.tests.length && <p className="qed__muted">시험을 추가하면 시험 목록의 기간으로 일정이 채워져요.</p>}
       </section>
       <p className="qed__under">PDF에서는 이렇게 보여요</p>
       <SchedulePage head={head} data={data} style={style} i={total} total={total} />
@@ -586,7 +626,7 @@ export function TestPicker({ catalog, rates, onAdd, onClose }: { catalog: Catalo
   const ref = useRef<HTMLDialogElement>(null);
   const [q, setQ] = useState("");
   useEffect(() => { ref.current?.showModal(); }, []);
-  const rows = catalog.filter((c) => c.available && (!q || `${c.category} ${c.item} ${c.species.join(" ")} ${c.route ?? ""} ${c.dosing ?? ""}`.toLowerCase().includes(q.toLowerCase())));
+  const rows = catalog.filter((c) => c.available && (!q || `${c.category} ${c.item} ${c.species.join(" ")} ${(c.routes ?? []).join(" ") || (c.route ?? "")} ${c.dosing ?? ""}`.toLowerCase().includes(q.toLowerCase())));
   const byItem = new Map<string, CatalogRow[]>();
   for (const r of rows) byItem.set(r.item_key, [...(byItem.get(r.item_key) ?? []), r]);
   return (
@@ -595,24 +635,24 @@ export function TestPicker({ catalog, rates, onAdd, onClose }: { catalog: Catalo
         <h2 id="qed-pick-title">시험 추가</h2>
         <button type="button" className="qed__x" aria-label="닫기" onClick={() => ref.current?.close()}><X size={18} /></button>
       </div>
-      <input className="inp" type="search" aria-label="카탈로그 검색" placeholder="시험 이름, 동물종, 투여경로로 찾기" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input className="inp" type="search" aria-label="시험 찾기" placeholder="시험 이름, 동물종, 투여경로로 찾기" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="qed__dlglist">
         {[...byItem.entries()].map(([key, list]) => (
           <div key={key} className="qed__dlgitem">
             <p><b>{list[0].item}</b><span>{list[0].category}</span></p>
             {list.map((c) => (
               <button key={c.id} type="button" onClick={() => onAdd(testFromCatalog(c, rates[c.item_key] ?? []))}>
-                <span>{[c.species.join("·"), c.route, c.dosing, c.method].filter(Boolean).join(" · ") || "조건 미입력"}</span>
+                <span>{[c.species.join("·"), (c.routes?.length ? c.routes.join("·") : c.route), c.dosing, c.method].filter(Boolean).join(" · ") || "조건 미입력"}</span>
                 <b className="tnum">{c.std_price != null ? `${n(c.std_price)}원` : "표준가 없음"}</b>
               </button>
             ))}
           </div>
         ))}
-        {!byItem.size && <p className="qed__muted">{catalog.length ? "찾는 시험이 없어요." : "카탈로그에 등록한 시험이 없어요. 카탈로그에 시험 조건을 등록하면 표준가로 채워져요."}</p>}
+        {!byItem.size && <p className="qed__muted">{catalog.length ? "찾는 시험이 없어요." : "시험 목록에 담은 시험이 없어요. 시험 목록에 조건과 표준가를 적어 두면 그 값으로 채워져요."}</p>}
       </div>
       <div className="qed__dlgfoot">
-        <Link href="/cro/catalog" className="btxt">카탈로그 열기</Link>
-        <button type="button" className="b2 bsm" onClick={() => onAdd(blankTest())}>카탈로그에 없는 시험 직접 추가</button>
+        <Link href="/cro/catalog" className="btxt">시험 목록 열기</Link>
+        <button type="button" className="b2 bsm" onClick={() => onAdd(blankTest())}>목록에 없는 시험 직접 추가</button>
       </div>
     </dialog>
   );

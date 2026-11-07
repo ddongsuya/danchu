@@ -46,7 +46,7 @@ export function CroStory({ got, replyHref, children }: { got: Loaded; replyHref:
     lead = `회신 기한 ${md(rfq.replyBy)}까지 제출하면 이 요청의 비교표에 들어가요.`;
   } else {
     title = <>시험 {p.total}개 견적,<br /><span className="rs-mark">{p.left.length}개</span> 남았어요</>;
-    lead = `${draft?.prefilled ? "카탈로그로 채운 초안이 있어요. 확인하고 저장해 주세요." : p.done ? "작성한 내용은 저장되어 있어요." : "항목마다 가능 여부와 금액·기간을 적어 주세요."} 회신 기한 ${md(rfq.replyBy)}까지 제출하면 이 요청의 비교표에 들어가요.`;
+    lead = `${draft?.prefilled ? "시험 목록으로 채운 초안이 있어요. 확인하고 저장해 주세요." : p.done ? "작성한 내용은 저장되어 있어요." : "항목마다 가능 여부와 금액·기간을 적어 주세요."} 회신 기한 ${md(rfq.replyBy)}까지 제출하면 이 요청의 비교표에 들어가요.`;
   }
 
   const steps: Step[] = [

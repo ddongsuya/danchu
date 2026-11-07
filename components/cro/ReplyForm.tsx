@@ -129,7 +129,7 @@ type Loaded = {
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
 /** 견적서 생성 툴(0036)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
-export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null }[] };
+export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null; extra?: Record<string, string> }[] };
 
 export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string } }) {
   const router = useRouter();
@@ -182,7 +182,10 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
       const l = by.get(it.seq);
       if (!l) return it;
       count++;
-      return { ...it, avail: it.avail === "조건부 가능" ? it.avail : "가능" as const, amount: String(l.amount), weeks: l.weeks ? String(l.weeks) : it.weeks, unit: "total" as const, unitPrice: "", sampleCount: "", source: "manual" as const, checks: [] };
+      // 견적서의 설계 설명(군 구성·일정·비용 다섯 칸·고친 이유)이 회신 설계 칸을 채운다. 견적서가 주지 않은 칸은 그대로 둔다
+      const prev = (it.design?.extra && typeof it.design.extra === "object" ? it.design.extra : {}) as Record<string, unknown>;
+      const extra = { ...prev, ...(l.extra ?? {}) };
+      return { ...it, avail: it.avail === "조건부 가능" ? it.avail : "가능" as const, amount: String(l.amount), weeks: l.weeks ? String(l.weeks) : it.weeks, unit: "total" as const, unitPrice: "", sampleCount: "", source: "manual" as const, checks: [], design: { ...(it.design ?? {}), extra } };
     });
     if (!count) return;
     setItems(next);
@@ -375,9 +378,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
       )}
       {data.draft?.prefilled && !readOnly && (
         <div className="note" style={{ marginBottom: 16 }}>
-          <b>카탈로그로 초안을 채웠어요.</b>{" "}
+          <b>시험 목록으로 초안을 채웠어요.</b>{" "}
           {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
-          <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>카탈로그 수정</Link>
+          <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>
         </div>
       )}
 
@@ -409,7 +412,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
             const needReason = it.avail === "불가" || it.avail === "조건부 가능";
             const perSample = it.unit === "per_sample";
             const checks = it.checks ?? [];
-            const src = it.source === "catalog" ? "카탈로그" : it.source === "learned" ? "최근 회신" : "";
+            const src = it.source === "catalog" ? "시험 목록" : it.source === "learned" ? "최근 회신" : "";
             return (
               <div id={`reply-item-${r.seq}`} tabIndex={-1} key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, borderColor: checks.length ? "var(--warn, #C98A1B)" : undefined }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>

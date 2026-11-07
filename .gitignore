@@ -17,3 +17,5 @@ __pycache__/
 
 # Supabase CLI 로컬 캐시
 supabase/.temp/
+# replica 스킬 산출물 (.claude/skills/replica-*). 남의 화면 캡처가 들어가므로 커밋 금지
+/replica/

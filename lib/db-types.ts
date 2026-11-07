@@ -465,6 +465,10 @@ export type Database = {
           after_keys: string[];
           /** 0036: 견적서 표준가 (표준 설계 금액, 원, VAT 별도) */
           std_price: number | null;
+          /** 0037: 가능한 투여 경로. 첫 번째가 표준가 기준이며 route 와 같다 */
+          routes: string[];
+          /** 0037: 기준이 아닌 동물종·경로일 때 표준가 [{ species?, route?, price }] */
+          cond_prices: Json;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_catalog"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_catalog"]["Row"], "org_id" | "item_key" | "category" | "item">>;
         Update: Partial<Database["public"]["Tables"]["cro_catalog"]["Row"]>;

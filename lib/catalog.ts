@@ -8,6 +8,7 @@
 import { CATS, DETAILS, type Cat, type Field, type Values } from "./rfq-schema";
 import type { QuoteLineDef } from "./quote-items";
 import { EFFICACY_CAT, costLines, modelsOf } from "./efficacy";
+import { kdExtra, kindOfCategory, type KindDesign } from "./kind-design";
 
 export type Glp = "GLP" | "Non-GLP" | "both";
 export type CatalogOption = { name: string; amount: number | null };
@@ -19,10 +20,14 @@ export type CatalogRow = {
   item: string;
   available: boolean;
   glp: Glp;
-  /** 조합 축 1: 동물종·계통 (설계·단가가 같으면 여러 종을 한 조합에 둘 수 있다) */
+  /** 가능한 동물종·계통. 첫 번째가 표준가 기준(대표) 동물종 */
   species: string[];
-  /** 조합 축 2: 투여 경로 */
+  /** 표준가 기준(대표) 투여 경로 = routes[0]. 이전 코드 호환용 */
   route: string | null;
+  /** 0037: 가능한 투여 경로. 첫 번째가 표준가 기준 */
+  routes: string[];
+  /** 0037: 기준이 아닌 동물종·경로일 때 표준가. 동물종 금액은 기준 경로, 경로 금액은 기준 동물종일 때 */
+  cond_prices?: CondPrice[];
   /** 조합 축 3: 시험법·가이드라인 */
   method: string | null;
   groups_ctrl: number | null;
@@ -50,9 +55,13 @@ export type CatalogRow = {
   translation_weeks?: number | null;
   /** 0029: 최근 제출한 앞 단계 (항목 키 또는 step::단계 이름) */
   after_keys?: string[];
-  /** 0036: 견적서 표준가 (표준 설계 금액). 견적서 단가 화면에서만 바꾼다 */
+  /** 0036: 표준가 (표준 설계 금액). 시험 목록에서 바꾸고, 저장할 때 price_min 에도 같은 값이 들어간다 */
   std_price?: number | null;
+  /** 2026-11-07: 갈래별 표준 설계 (효력·약동학·개별 분석). DB 에서는 extra.kd */
+  kd?: KindDesign;
 };
+
+export type CondPrice = { species?: string; route?: string; price: number };
 
 export type CatalogItem = { key: string; category: Cat; item: string };
 
@@ -148,7 +157,7 @@ export const EXTRA_FIELDS: Partial<Record<Cat, Field[]>> = {
   동물대체시험: [{ id: "model", type: "text", label: "모델·키트", placeholder: "예: EpiDerm, KeraSkin, SkinEthic" }],
   "의료기기 생물학적 안전성": [{ id: "extract", type: "select", label: "표준 추출 조건", options: ["37℃ 72h", "50℃ 72h", "70℃ 24h", "121℃ 1h", "협의"] }],
   "효력시험(약효)": [
-    { id: "induction", type: "text", label: "유도 방법", placeholder: "예: DSS 음수 투여 7일" },
+    { id: "induction", type: "text", label: "유발 방법", placeholder: "예: DSS 음수 투여 7일" },
     { id: "positiveControl", type: "text", label: "검증된 양성 대조약", placeholder: "이 모델에서 자료를 가진 대조약" },
     { id: "endpoints", type: "text", label: "기본 평가 지표", placeholder: "예: 체중, 질병활성지수, 대장 길이, 조직 점수" },
     { id: "customDev", type: "radio", label: "맞춤 모델 개발", options: ["가능", "불가"] },
@@ -199,8 +208,8 @@ const EXPLAIN: Partial<Record<Cat, [string, string, string][]>> = {
     ["exp_samples", "채혈 시점과 예상 검체 수", "예: 8시점 × 3마리 × 3용량 = 72검체"],
   ],
   "효력시험(약효)": [
-    ["exp_groups", "군 구성 (군 이름·처치·마릿수)", "예: 정상 8, 유도 대조 8, 양성 대조 8, 시험물질 저·중·고 각 8"],
-    ["exp_schedule", "유도·투여·관찰 일정", "예: 유도 7일, 투여 14일(1일 1회 경구), 15일째 종료"],
+    ["exp_groups", "군 구성 (군 이름·처치·마릿수)", "예: 정상 8, 유발 대조 8, 양성 대조 8, 시험물질 저·중·고 각 8"],
+    ["exp_schedule", "유발·투여·관찰 일정", "예: 유발 7일, 투여 14일(1일 1회 경구), 15일째 종료"],
     ["exp_endpoints", "포함한 평가 지표", "총액에 든 지표"],
     ["exp_options", "선택 평가 지표와 금액", "예: 사이토카인 5종 +3,000,000원"],
     ["exp_posdata", "양성 대조약과 자료 보유", "예: 설파살라진, 이 모델에서 자료 보유"],
@@ -215,6 +224,14 @@ export const EXPLAIN_FIELDS: Partial<Record<Cat, Field[]>> = {};
 for (const [cat, list] of Object.entries(EXPLAIN) as [Cat, [string, string, string][]][]) {
   EXPLAIN_FIELDS[cat] = list.map(([id, label, placeholder]) => ({ id, type: "text", label, placeholder }));
   EXTRA_FIELDS[cat] = [...(EXTRA_FIELDS[cat] ?? []), ...EXPLAIN_FIELDS[cat]!];
+}
+// 회신에만 있는 기관 설명 (2026-11-07): 견적서의 "디자인을 고친 이유"·"의뢰자에게 확인할 것"이 들어온다. 시험 목록에는 두지 않는다
+for (const cat of ["효력시험(약효)", "PK/TK/ADME·생체시료분석", "기타(임상병리·조직병리 등)", "조제물분석"] as Cat[]) {
+  EXPLAIN_FIELDS[cat] = [
+    ...(EXPLAIN_FIELDS[cat] ?? []),
+    { id: "exp_why", type: "text", label: "요청과 다르게 설계한 이유", placeholder: "예: 용량 반응을 보려고 시험물질군을 두 용량으로 했습니다" },
+    { id: "exp_asks", type: "text", label: "의뢰자에게 확인할 것", placeholder: "예: 투여 시작을 유발과 같은 날로 해도 되는지" },
+  ];
 }
 /** design.extra 에서 기관 설명만 뽑아 [라벨, 값] 으로 */
 export function explainOf(category: string, extra: unknown): [string, string][] {
@@ -231,7 +248,7 @@ export function newVariant(it: CatalogItem, init: Partial<CatalogRow> = {}): Cat
   return {
     id: `new-${Date.now()}-${seq}`,
     item_key: it.key, category: it.category, item: it.item,
-    available: true, glp: "both", species: [], route: null, method: null,
+    available: true, glp: "both", species: [], route: null, routes: [], method: null,
     groups_ctrl: null, groups_test: null, per_sex: null, recovery_weeks: null, recovery_per_sex: null, dosing: null, weeks: null,
     includes: [], options: [], unit: PER_SAMPLE_CATS.includes(it.category) ? "per_sample" : "total",
     price_min: null, price_max: null, extra: {}, note: null,
@@ -305,7 +322,14 @@ function modelMatch(req: string[], m: string | null): boolean | null {
   return req.some((r) => [...words(r)].some((w) => mine.has(w)));
 }
 
-/** 요청 조건과 가장 가까운 조합을 고른다. 없으면 undefined */
+/** 표준가가 대표(첫 번째) 동물종·경로 기준이라, 다른 동물종·경로로 맞으면 금액을 기관이 확인한다 */
+export const PRICE_CHECK_SPECIES = "동물종별 금액 확인";
+export const PRICE_CHECK_ROUTE = "투여경로별 금액 확인";
+
+/**
+ * 요청 조건과 가장 가까운 시험을 고른다. 없으면 undefined.
+ * 시험 하나에 가능한 동물종·경로가 여럿이면, 돌려주는 row 는 요청에 맞는 동물종·경로 하나로 좁힌 사본이다.
+ */
 export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: Values): { row: CatalogRow; mismatch: string[] } | undefined {
   if (!variants.length) return undefined;
   const c = row.category;
@@ -317,16 +341,40 @@ export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: 
   for (const v of variants) {
     let score = v.available ? 0 : -100;
     const mismatch: string[] = [];
+    const routes = v.routes?.length ? v.routes : v.route ? [v.route] : [];
+    let species = v.species.slice(0, 1);
+    let route = routes[0] ?? null;
     const sm = speciesMatch(reqSpecies, v.species);
-    if (sm === true) score += 4; else if (sm === false) mismatch.push("동물종");
-    if (reqRoute && v.route) { if (v.route === reqRoute) score += 2; else mismatch.push("투여경로"); }
+    if (sm === true) {
+      score += 4;
+      const hit = v.species.filter((cs) => speciesMatch(reqSpecies, [cs]));
+      species = hit;
+      if (!hit.includes(v.species[0])) mismatch.push(PRICE_CHECK_SPECIES);
+    } else if (sm === false) mismatch.push("동물종");
+    if (reqRoute && routes.length) {
+      if (routes.includes(reqRoute)) {
+        score += 2;
+        route = reqRoute;
+        if (reqRoute !== routes[0]) mismatch.push(PRICE_CHECK_ROUTE);
+      } else mismatch.push("투여경로");
+    }
     // 효력시험은 시험법 자리에 질환 모델이 있다. 이름 표기가 기관마다 달라 핵심어가 겹치면 같은 모델로 본다
     const eff = c === EFFICACY_CAT;
     const mm = eff ? modelMatch(reqMethod, v.method) : methodMatch(reqMethod, v.method);
     if (mm === true) score += 2; else if (mm === false) mismatch.push(eff ? "질환 모델" : "시험법");
     if (typeof reqGlp === "string" && (reqGlp === "GLP" || reqGlp === "Non-GLP") && v.glp !== "both") { if (v.glp === reqGlp) score += 1; else mismatch.push(`${reqGlp} 수행`); }
     if (v.source === "manual") score += 0.5;
-    if (!best || score > best.score) best = { row: v, score, mismatch };
+    // 기준이 아닌 동물종·경로면 그 조건 금액을 쓴다. 둘 다 기준이 아니거나 금액이 없으면 기관이 확인한다
+    let picked: CatalogRow = { ...v, species, route };
+    const offSp = mismatch.includes(PRICE_CHECK_SPECIES), offRt = mismatch.includes(PRICE_CHECK_ROUTE);
+    if (offSp !== offRt) {
+      const cp = (v.cond_prices ?? []).find((x) => (offSp ? x.species === species[0] : x.route === route));
+      if (cp) {
+        picked = { ...picked, std_price: cp.price, price_min: cp.price, price_max: null };
+        mismatch.splice(mismatch.indexOf(offSp ? PRICE_CHECK_SPECIES : PRICE_CHECK_ROUTE), 1);
+      }
+    }
+    if (!best || score > best.score) best = { row: picked, score, mismatch };
   }
   return best && { row: best.row, mismatch: best.mismatch };
 }
@@ -339,7 +387,9 @@ export function prefillRow(row: QuoteLineDef, picked: { row: CatalogRow; mismatc
   const design = {
     species: cat.species, route: cat.route, method: cat.method,
     groups_ctrl: cat.groups_ctrl, groups_test: cat.groups_test, per_sex: cat.per_sex,
-    recovery_weeks: cat.recovery_weeks, recovery_per_sex: cat.recovery_per_sex, dosing: cat.dosing, extra: cat.extra,
+    recovery_weeks: cat.recovery_weeks, recovery_per_sex: cat.recovery_per_sex, dosing: cat.dosing,
+    // 효력·약동학 기관 표준 설계가 있으면 비용 다섯 칸·설계 설명도 초안에 넣는다 (견적서 없이 바로 회신할 때)
+    extra: cat.kd ? { ...cat.extra, ...kdExtra(kindOfCategory(cat.category), cat.kd) } : cat.extra,
   };
   if (!cat.available) return { ...base, avail: "불가", reason: "해당 조합은 수행하지 않아요.", source: "catalog", design };
 

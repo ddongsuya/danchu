@@ -1,7 +1,16 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { TablesInsert, TablesUpdate } from "./db-types";
 import { orderToKeys } from "./schedule";
-import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type Glp } from "./catalog";
+import { cleanKd, COST_KEYS } from "./kind-design";
+import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type CondPrice, type Glp } from "./catalog";
+
+/** 0037 전 행은 routes 가 없다. 그때는 route 하나를 목록으로 본다 */
+function routesOf(r: Record<string, unknown>): { route: string | null; routes: string[] } {
+  const list = Array.isArray(r.routes) ? (r.routes as unknown[]).filter((x): x is string => typeof x === "string" && !!x) : [];
+  const one = typeof r.route === "string" && r.route ? r.route : null;
+  const routes = list.length ? list : one ? [one] : [];
+  return { route: routes[0] ?? null, routes };
+}
 
 function fromDb(r: Record<string, unknown>): CatalogRow {
   return {
@@ -10,7 +19,7 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     available: r.available !== false,
     glp: (r.glp as Glp) || "both",
     species: Array.isArray(r.species) ? (r.species as string[]) : [],
-    route: (r.route as string | null) ?? null,
+    ...routesOf(r),
     method: (r.method as string | null) ?? null,
     groups_ctrl: (r.groups_ctrl as number | null) ?? null, groups_test: (r.groups_test as number | null) ?? null, per_sex: (r.per_sex as number | null) ?? null,
     recovery_weeks: (r.recovery_weeks as number | null) ?? null, recovery_per_sex: (r.recovery_per_sex as number | null) ?? null,
@@ -19,7 +28,7 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     options: Array.isArray(r.options) ? (r.options as CatalogRow["options"]) : [],
     unit: r.unit === "per_sample" ? "per_sample" : "total",
     price_min: (r.price_min as number | null) ?? null, price_max: (r.price_max as number | null) ?? null,
-    extra: r.extra && typeof r.extra === "object" ? (r.extra as CatalogRow["extra"]) : {},
+    ...extraOf(r.extra),
     note: (r.note as string | null) ?? null,
     last_amount: (r.last_amount as number | null) ?? null, last_weeks: (r.last_weeks as number | null) ?? null, last_quoted_at: (r.last_quoted_at as string | null) ?? null,
     source: (r.source as CatalogRow["source"]) || "empty",
@@ -28,7 +37,16 @@ function fromDb(r: Record<string, unknown>): CatalogRow {
     translation_weeks: (r.translation_weeks as number | null) ?? null,
     after_keys: Array.isArray(r.after_keys) ? (r.after_keys as string[]) : [],
     std_price: (r.std_price as number | null) ?? null,
+    cond_prices: Array.isArray(r.cond_prices) ? (r.cond_prices as CondPrice[]) : [],
   };
+}
+
+/** extra 의 kd(갈래별 설계)는 따로 꺼낸다 */
+function extraOf(raw: unknown): { extra: CatalogRow["extra"]; kd?: CatalogRow["kd"] } {
+  if (!raw || typeof raw !== "object") return { extra: {} };
+  const { kd, ...rest } = raw as Record<string, unknown>;
+  const clean = cleanKd(kd);
+  return { extra: rest as CatalogRow["extra"], ...(clean ? { kd: clean } : {}) };
 }
 
 /** 기관의 카탈로그 전체 (조합 행만, 항목·정렬 순) */
@@ -58,9 +76,10 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
   const r = raw as Record<string, unknown>;
   const it = valid.get(String(r.item_key));
   if (!it) return null;
-  const extra: Record<string, string | string[]> = {};
+  const extra: Record<string, unknown> = {};
   if (r.extra && typeof r.extra === "object") {
     for (const [k, v] of Object.entries(r.extra as Record<string, unknown>)) {
+      if (k === "kd") continue;
       if (typeof v === "string") extra[k] = v.slice(0, 300);
       else if (Array.isArray(v)) extra[k] = v.filter((x): x is string => typeof x === "string").slice(0, 20);
     }
@@ -71,23 +90,54 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
         .filter((o): o is { name: string; amount: number | null } => !!o && !!o.name)
         .slice(0, 20)
     : [];
+  const routesPart = cleanRoutes(r);
+  const species = arr(r.species, SPECIES);
+  // 기준이 아닌(두 번째부터) 체크한 동물종·경로의 금액만 남긴다
+  const cond_prices: CondPrice[] = [];
+  for (const x of Array.isArray(r.cond_prices) ? (r.cond_prices as unknown[]) : []) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const price = big(o.price);
+    if (price == null) continue;
+    if (typeof o.species === "string" && species.indexOf(o.species) > 0 && !cond_prices.some((c) => c.species === o.species)) cond_prices.push({ species: o.species, price });
+    else if (typeof o.route === "string" && routesPart.routes.indexOf(o.route) > 0 && !cond_prices.some((c) => c.route === o.route)) cond_prices.push({ route: o.route, price });
+  }
+  // 갈래별 설계가 있으면 표준가 한 칸도 그 값으로 맞춘다: 효력은 비용 다섯 칸 합, 약동학·개별 분석은 검체당 단가
+  const kd = cleanKd(r.kd);
+  const kdPrice = kd?.pd && COST_KEYS.some((k) => kd.pd!.costs[k] != null) ? COST_KEYS.reduce((a, k) => a + (kd.pd!.costs[k] ?? 0), 0)
+    : kd?.pk?.perSample ?? kd?.other?.perSample ?? null;
+  const perSampleKd = kd?.pk?.perSample != null || kd?.other?.perSample != null;
+  if (kdPrice != null) { r.std_price = kdPrice; if (perSampleKd) r.unit = "per_sample"; }
   return {
     org_id: orgId, item_key: String(r.item_key), category: it.category, item: it.item,
     available: r.available !== false,
     glp: ["GLP", "Non-GLP", "both"].includes(String(r.glp)) ? String(r.glp) : "both",
-    species: arr(r.species, SPECIES),
-    route: ROUTES.includes(String(r.route)) ? String(r.route) : str(r.route, 60),
+    species,
+    ...routesPart,
+    cond_prices,
     method: str(r.method, 120),
     groups_ctrl: int(r.groups_ctrl, 20), groups_test: int(r.groups_test, 20), per_sex: int(r.per_sex, 200),
     recovery_weeks: int(r.recovery_weeks, 52), recovery_per_sex: int(r.recovery_per_sex, 100),
     dosing: str(r.dosing, 120), weeks: int(r.weeks, 200),
     includes: arr(r.includes, INCLUDE_KEYS), options,
     unit: r.unit === "per_sample" || (r.unit == null && PER_SAMPLE_CATS.includes(it.category)) ? "per_sample" : "total",
-    price_min: big(r.price_min), price_max: big(r.price_max),
-    extra, note: str(r.note, 500),
+    // 표준가 한 칸 (2026-11-06): 견적서(std_price)와 회신 초안(price_min)이 같은 값을 쓴다. 범위(상한)는 더 받지 않는다
+    std_price: big(r.std_price) ?? big(r.price_min), price_min: big(r.std_price) ?? big(r.price_min), price_max: null,
+    extra: (kd ? { ...extra, kd } : extra) as TablesInsert<"cro_catalog">["extra"], note: str(r.note, 500),
     source: "manual",
     sort,
   };
+}
+
+/** 가능한 투여 경로 (최대 12개, 중복 없이). 첫 번째가 표준가 기준이라 route 에도 둔다 */
+function cleanRoutes(r: Record<string, unknown>): { route: string | null; routes: string[] } {
+  const { routes } = routesOf(r);
+  const out: string[] = [];
+  for (const x of routes) {
+    const v = ROUTES.includes(x) ? x : str(x, 60);
+    if (v && !out.includes(v)) out.push(v);
+  }
+  return { route: out[0] ?? null, routes: out.slice(0, 12) };
 }
 
 /**
@@ -187,7 +237,7 @@ export async function learnFromSubmission(orgId: string, items: LearnItem[], ste
     const rows = existing.get(key) ?? [];
     const same = (a: string[] | null, b: string[] | null) => !a?.length || !b?.length || a.some((x) => b.includes(x));
     const match =
-      rows.find((r) => same(species, r.species) && (!route || !r.route || r.route === route) && (!method || !r.method || r.method === method)) ??
+      rows.find((r) => same(species, r.species) && (!route || !r.routes.length || r.routes.includes(route)) && (!method || !r.method || r.method === method)) ??
       rows.find((r) => same(species, r.species)) ??
       (rows.length === 1 ? rows[0] : undefined);
     if (match) {
@@ -198,8 +248,10 @@ export async function learnFromSubmission(orgId: string, items: LearnItem[], ste
       if (match.source !== "manual") {
         patch.source = "learned";
         if (!match.weeks && it.weeks) patch.weeks = it.weeks;
-        if (!match.species.length && species.length) patch.species = species;
-        if (!match.route && route) patch.route = route;
+        // 시험 하나에 가능한 동물종·경로를 모은다. 기관이 직접 고친 행(manual)은 건드리지 않는다
+        const sp = [...match.species, ...species.filter((x) => !match.species.includes(x))];
+        if (sp.length !== match.species.length) patch.species = sp;
+        if (route && !match.routes.includes(route)) { patch.routes = [...match.routes, route]; patch.route = match.routes[0] ?? route; }
         if (!match.method && method) patch.method = method;
       }
       updates.push(patch);
@@ -207,7 +259,7 @@ export async function learnFromSubmission(orgId: string, items: LearnItem[], ste
       inserts.push({
         org_id: orgId, item_key: key, category: def.category, item: def.item,
         available: true, source: "learned",
-        species, route, method,
+        species, route, routes: route ? [route] : [], method,
         groups_ctrl: int(d.groups_ctrl, 20), groups_test: int(d.groups_test, 20), per_sex: int(d.per_sex, 200),
         recovery_weeks: int(d.recovery_weeks, 52), recovery_per_sex: int(d.recovery_per_sex, 100), dosing: str(d.dosing, 120),
         weeks: it.weeks ?? null, unit: it.unit === "per_sample" ? "per_sample" : "total",
