@@ -508,6 +508,13 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["cro_quote_design_requests"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_quote_design_requests_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
+      /** 기관 고객 메모 (0038). 선정된 의뢰자별 내부 메모, 그 기관만 본다. client_key = 의뢰자 계정 id 또는 'co:' + 회사명 */
+      cro_client_notes: {
+        Row: { id: string; org_id: string; client_key: string; body: string; remind_on: string | null; reminded_at: string | null; created_by: string | null; created_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_client_notes"]["Row"], "id" | "remind_on" | "reminded_at" | "created_by" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_client_notes"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_client_notes_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
       cro_org_presets: {
         Row: { org_id: string; preset_key: string; offered: boolean; package_price: number | null; note: string | null; updated_at: string };
         Insert: Ins<Database["public"]["Tables"]["cro_org_presets"]["Row"], "offered" | "package_price" | "note" | "updated_at">;

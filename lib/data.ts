@@ -109,7 +109,7 @@ export async function unreadCount(userId: string): Promise<number> {
 
 /* ── CRO ── */
 
-export type InviteWithQuote = InviteRow & { quote: QuoteRow | null; rfq: Pick<RfqRow, "substance" | "categories" | "purpose" | "confidentiality" | "org_type" | "company" | "status" | "payload" | "selected_quote_id" | "compared_at"> | null };
+export type InviteWithQuote = InviteRow & { quote: QuoteRow | null; rfq: Pick<RfqRow, "substance" | "categories" | "purpose" | "confidentiality" | "org_type" | "company" | "status" | "payload" | "selected_quote_id" | "compared_at" | "join_by" | "user_id"> | null };
 
 export async function listInvitesForOrg(orgId: string): Promise<InviteWithQuote[]> {
   const c = sb();
@@ -120,7 +120,7 @@ export async function listInvitesForOrg(orgId: string): Promise<InviteWithQuote[
   const rfqIds = [...new Set(invites.map((i) => i.rfq_id))];
   const [{ data: qs }, { data: rs }] = await Promise.all([
     c.from("cro_quotes").select("*").in("invite_id", ids),
-    c.from("rfq_requests").select("id, substance, categories, purpose, confidentiality, org_type, company, status, payload, selected_quote_id, compared_at").in("id", rfqIds),
+    c.from("rfq_requests").select("id, substance, categories, purpose, confidentiality, org_type, company, status, payload, selected_quote_id, compared_at, join_by, user_id").in("id", rfqIds),
   ]);
   const qBy = new Map((qs ?? []).map((q) => [q.invite_id, q]));
   const rBy = new Map((rs ?? []).map((r) => [r.id, r]));
@@ -133,13 +133,13 @@ export async function getInviteById(id: string): Promise<InviteRow | null> {
   return data ?? null;
 }
 
-export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "company" | "contact_name" | "email" | "phone" | "status"> | null; quoteAmount: number | null })[]> {
+export async function listAwardsForOrg(orgId: string): Promise<(AwardRow & { rfq: Pick<RfqRow, "rfq_no" | "substance" | "categories" | "company" | "contact_name" | "email" | "phone" | "status" | "user_id" | "org_type"> | null; quoteAmount: number | null })[]> {
   const c = sb();
   const { data: aws } = await c.from("rfq_awards").select("*").eq("cro_org_id", orgId).order("awarded_at", { ascending: false });
   const list = aws ?? [];
   if (!list.length) return [];
   const [{ data: rs }, { data: qs }] = await Promise.all([
-    c.from("rfq_requests").select("id, rfq_no, substance, categories, company, contact_name, email, phone, status").in("id", list.map((a) => a.rfq_id)),
+    c.from("rfq_requests").select("id, rfq_no, substance, categories, company, contact_name, email, phone, status, user_id, org_type").in("id", list.map((a) => a.rfq_id)),
     c.from("cro_quotes").select("id, total_amount").in("id", list.map((a) => a.quote_id)),
   ]);
   const rBy = new Map((rs ?? []).map((r) => [r.id, r]));

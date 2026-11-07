@@ -34,7 +34,7 @@ export default async function CroAwards() {
         <div className="empty">
           <b>아직 수주가 없어요</b>
           의뢰자가 우리 기관을 고르면 알림으로 알려요.
-          <div style={{ marginTop: 14 }}><Link href="/cro" className="b2 bsm">받은 요청 보기</Link></div>
+          <div style={{ marginTop: 14 }}><Link href="/cro" className="b2 bsm">견적 진행 보기</Link></div>
         </div>
       ) : (
         <div className="stack" style={{ gap: 16 }}>
