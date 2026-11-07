@@ -7,7 +7,10 @@ import { dday } from "@/lib/format";
  * 견적 진행 (2026-11-07). 넓은 화면: 왼쪽 목록 + 오른쪽 상세. 휴대폰: 목록 화면 → 누르면 상세 화면(?sel=).
  * 상세 맨 아래에는 그 요청에서 할 일 버튼 하나만 둔다.
  */
-export function Pipeline({ items, sel }: { items: PipeItem[]; sel: string | null }) {
+export type CroPaths = { pipe: string; clients: string };
+export const CRO_PATHS: CroPaths = { pipe: "/cro", clients: "/cro/clients" };
+
+export function Pipeline({ items, sel, paths = CRO_PATHS }: { items: PipeItem[]; sel: string | null; paths?: CroPaths }) {
   const groups = groupPipeline(items);
   const cur = items.find((x) => x.id === sel) ?? null;
   const active = cur ?? items[0] ?? null;
@@ -38,7 +41,7 @@ export function Pipeline({ items, sel }: { items: PipeItem[]; sel: string | null
           <section key={g.group} className="pl__grp" aria-label={GROUP_LABEL[g.group]}>
             <h2><span>{GROUP_LABEL[g.group]}</span><span className="tnum">{g.items.length}</span></h2>
             {g.items.map((x) => (
-              <Link key={x.id} href={`/cro?sel=${x.id}`} scroll={false} className="pl__it" aria-current={active?.id === x.id ? "true" : undefined}>
+              <Link key={x.id} href={`${paths.pipe}?sel=${x.id}`} scroll={false} className="pl__it" aria-current={active?.id === x.id ? "true" : undefined}>
                 <span className="pl__a">{g.group === "todo" ? x.next : x.title}</span>
                 <span className="pl__b">{g.group === "todo" ? x.title : x.next} · {x.client ?? "선정 시 공개"}</span>
                 <Due item={x} />
@@ -47,7 +50,7 @@ export function Pipeline({ items, sel }: { items: PipeItem[]; sel: string | null
           </section>
         ))}
       </div>
-      {active && <Detail item={active} />}
+      {active && <Detail item={active} paths={paths} />}
     </div>
   );
 }
@@ -60,10 +63,10 @@ function Due({ item }: { item: PipeItem }) {
   return <span className={`pl__dd${warn ? " pl__dd--warn" : ""}`}>{label}</span>;
 }
 
-function Detail({ item }: { item: PipeItem }) {
+function Detail({ item, paths }: { item: PipeItem; paths: CroPaths }) {
   return (
     <article className="pl__detail" aria-labelledby="pl-title">
-      <Link href="/cro" className="pl__back only-narrow" scroll={false}>‹ 견적 진행</Link>
+      <Link href={paths.pipe} className="pl__back only-narrow" scroll={false}>‹ 견적 진행</Link>
       <div className="pl__body">
         <header className="pl__rh">
           <div>
@@ -71,7 +74,7 @@ function Detail({ item }: { item: PipeItem }) {
             <h2 id="pl-title">{item.title}</h2>
             <span className="pl__who">
               {item.client
-                ? item.clientKey ? <Link href={`/cro/clients?c=${encodeURIComponent(item.clientKey)}`}>{item.client}</Link> : item.client
+                ? item.clientKey ? <Link href={`${paths.clients}?c=${encodeURIComponent(item.clientKey)}`}>{item.client}</Link> : item.client
                 : <><LockSimple size={13} aria-hidden="true" /> 선정 시 공개 · {item.clientHint.replace(" · 이름은 선정 뒤 공개", "")}</>}
             </span>
           </div>

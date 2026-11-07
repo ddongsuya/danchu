@@ -4,13 +4,14 @@ import { NoteComposer } from "@/components/cro/NoteComposer";
 import { NoteDelete } from "@/components/cro/NoteDelete";
 import type { Client, ClientDoc, FeedEvent } from "@/lib/clients";
 import { md } from "@/lib/format";
+import { CRO_PATHS, type CroPaths } from "@/components/cro/Pipeline";
 
 const TABS = [["log", "기록"], ["won", "수주"], ["info", "정보"]] as const;
 export type ClientTab = (typeof TABS)[number][0];
 const kday = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 
 /** 고객 화면 본문 (데이터는 app/cro/clients/page.tsx 가 읽는다). 디자인 검토 화면도 같은 컴포넌트를 쓴다 */
-export function ClientsView({ clients, cur, active, tab, feed, docs, notesReady }: { clients: Client[]; cur: Client | null; active: Client | null; tab: ClientTab; feed: FeedEvent[]; docs: ClientDoc[]; notesReady: boolean }) {
+export function ClientsView({ clients, cur, active, tab, feed, docs, notesReady, paths = CRO_PATHS }: { clients: Client[]; cur: Client | null; active: Client | null; tab: ClientTab; feed: FeedEvent[]; docs: ClientDoc[]; notesReady: boolean; paths?: CroPaths }) {
   if (!clients.length) {
     return (
       <>
@@ -24,7 +25,7 @@ export function ClientsView({ clients, cur, active, tab, feed, docs, notesReady 
     );
   }
 
-  const href = (key: string, t?: ClientTab) => `/cro/clients?c=${encodeURIComponent(key)}${t && t !== "log" ? `&tab=${t}` : ""}`;
+  const href = (key: string, t?: ClientTab) => `${paths.clients}?c=${encodeURIComponent(key)}${t && t !== "log" ? `&tab=${t}` : ""}`;
   let lastDay = "";
 
   return (
@@ -46,7 +47,7 @@ export function ClientsView({ clients, cur, active, tab, feed, docs, notesReady 
       {active && (
         <>
           <article className="cl__main" aria-labelledby="cl-title">
-            <Link href="/cro/clients" className="pl__back only-narrow" scroll={false}>‹ 고객</Link>
+            <Link href={paths.clients} className="pl__back only-narrow" scroll={false}>‹ 고객</Link>
             <header className="cl__head">
               <div>
                 <h2 id="cl-title">{active.name}</h2>
@@ -92,7 +93,7 @@ export function ClientsView({ clients, cur, active, tab, feed, docs, notesReady 
               <h3>이 고객과의 수주</h3>
               <div className="cl__wins">
                 {active.wins.map((w) => (
-                  <Link key={w.awardId} href={w.inviteId ? `/cro?sel=${w.inviteId}` : "/cro/awards"}>
+                  <Link key={w.awardId} href={w.inviteId ? `${paths.pipe}?sel=${w.inviteId}` : "/cro/awards"}>
                     <b>{w.substance || w.no}</b>
                     <span><span className={`pill ${w.reported ? "pill--sf" : "pill--ink"}`}>{w.reported ? "계약 확정" : "계약 진행"}</span> <span className="tnum">{(w.reported ? w.contractAmount : w.quoteAmount)?.toLocaleString("ko-KR") ?? "-"}원 · {w.no}</span></span>
                   </Link>
