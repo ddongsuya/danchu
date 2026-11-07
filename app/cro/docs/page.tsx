@@ -19,11 +19,11 @@ export default async function CroDocs() {
       <div className="ph">
         <div>
           <h1>견적서</h1>
-          <p>카탈로그의 표준가로 견적서를 채우고, 설계가 달라진 곳만 추가 비용으로 계산해요. 표지 · 견적서 · 시험 상세 설명 · 일정표 4부를 PDF와 엑셀로 내려받아요.</p>
+          <p>시험 목록의 표준가로 견적서를 채우고, 설계가 달라진 곳만 추가 비용으로 계산해요. 표지 · 견적서 · 시험 상세 설명 · 일정표 4부를 PDF와 엑셀로 내려받아요.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/docs/style" className="b2 bsm">견적서 양식</Link>
-          <Link href="/cro/catalog/prices" className="b2 bsm">견적서 단가</Link>
+          <Link href="/cro/catalog" className="b2 bsm">시험 목록</Link>
           <Link href="/cro/docs/new" className="b1 bsm">새 견적서</Link>
         </div>
       </div>
@@ -33,7 +33,7 @@ export default async function CroDocs() {
           받은 요청의 회신 화면에서 &quot;견적서 만들기&quot;를 누르거나, 단추 밖 의뢰자에게 보낼 견적서를 새로 만들어요.
           <div style={{ marginTop: 14, display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/cro/docs/new" className="b1 bsm">새 견적서</Link>
-            <Link href="/cro/catalog/prices" className="b2 bsm">표준가 먼저 정하기</Link>
+            <Link href="/cro/catalog" className="b2 bsm">표준가 먼저 정하기</Link>
           </div>
         </div>
       ) : (

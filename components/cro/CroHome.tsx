@@ -36,7 +36,7 @@ export function CroHome({ orgName, items, awards, now }: { orgName: string; item
             <p className="rs-lead">{lead}</p>
             <div className="rs-acts">
               {todo && <Link href={todoHref} className="b1 blg">{todoLabel}</Link>}
-              <Link href="/cro/catalog" className={todo ? "b2 blg" : "b1 blg"}>카탈로그 보기</Link>
+              <Link href="/cro/catalog" className={todo ? "b2 blg" : "b1 blg"}>시험 목록 보기</Link>
             </div>
             {/* 버튼이 가리키는 요청 한 줄. 예전에는 아래 "지금 할 일" 띠가 같은 곳을 한 번 더 가리켰다 */}
             {todo && (
