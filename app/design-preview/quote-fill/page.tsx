@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "견적서 질문 화면 검토 · 단추", robots: { index: false, follow: false } };
 
 const NAV: NavItem[] = [
-  { href: "/cro", label: "받은 요청", icon: "inbox", exact: true },
+  { href: "/cro/requests", label: "받은 요청", icon: "inbox" },
   { href: "/cro/quotes", label: "제출한 견적", icon: "doc" },
   { href: "/design-preview/quote-fill", label: "견적서", icon: "quote" },
   { href: "/design-preview/catalog", label: "시험 목록", icon: "list" },
