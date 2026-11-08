@@ -160,7 +160,7 @@ export function CompanyForm({ company, members = [] }: { company?: CrmCompany; m
       <Field label="웹사이트" htmlFor="co-web"><input id="co-web" className="inp" type="url" value={v.website} maxLength={300} placeholder="https://" onChange={(e) => set({ website: e.target.value })} /></Field>
       <Field label="메모" htmlFor="co-memo"><textarea id="co-memo" className="ta" rows={3} value={v.memo} maxLength={4000} onChange={(e) => set({ memo: e.target.value })} /></Field>
       <div className="grid2">
-        <Field label="메일 도메인" htmlFor="co-dom" help="이 도메인에서 온 메일을 이 고객사에 붙여요."><input id="co-dom" className="inp" value={v.email_domain} maxLength={120} placeholder="garambio.co.kr" onChange={(e) => set({ email_domain: e.target.value })} /></Field>
+        <Field label="메일 도메인" htmlFor="co-dom" help="담당자 메일 주소에서 @ 뒤 부분이에요."><input id="co-dom" className="inp" value={v.email_domain} maxLength={120} placeholder="garambio.co.kr" onChange={(e) => set({ email_domain: e.target.value })} /></Field>
         {members.length > 0 && (
           <Field label="담당 영업" htmlFor="co-own">
             <Select id="co-own" value={v.owner} onChange={(owner) => set({ owner })}>

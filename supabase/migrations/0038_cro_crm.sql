@@ -59,7 +59,7 @@ create table if not exists public.cro_crm_contacts (
   phone       text not null default '' check (char_length(phone) <= 40),
   mobile      text not null default '' check (char_length(mobile) <= 40),
   memo        text not null default '' check (char_length(memo) <= 2000),
-  source      text not null default 'manual' check (source in ('manual', 'danchu', 'import', 'mail')),
+  source      text not null default 'manual' check (source in ('manual', 'danchu', 'import')),
   danchu_key  text check (danchu_key is null or char_length(danchu_key) between 1 and 240),
   created_by  uuid references public.profiles(id) on delete set null,
   created_at  timestamptz not null default now(),
@@ -68,7 +68,7 @@ create table if not exists public.cro_crm_contacts (
 create unique index if not exists cro_crm_contacts_danchu_key_uq on public.cro_crm_contacts (org_id, danchu_key) where danchu_key is not null;
 create index if not exists cro_crm_contacts_company_idx on public.cro_crm_contacts (company_id, name);
 create index if not exists cro_crm_contacts_email_idx on public.cro_crm_contacts (org_id, lower(email)) where email <> '';
-comment on table public.cro_crm_contacts is '기관 CRM 담당자 (0038). role: decision 결정권자 · user 실무 · contract 계약 · finance 정산 · other. danchu_key 는 이 기관을 선정한 단추 의뢰자(계정 id 또는 co:회사명). source=mail 은 메일 기록에서 기관이 추가한 사람';
+comment on table public.cro_crm_contacts is '기관 CRM 담당자 (0038). role: decision 결정권자 · user 실무 · contract 계약 · finance 정산 · other. danchu_key 는 이 기관을 선정한 단추 의뢰자(계정 id 또는 co:회사명).';
 alter table public.cro_crm_contacts enable row level security;
 
 -- ─────────────────────────────────────────────
@@ -116,7 +116,6 @@ create table if not exists public.cro_crm_deals (
   source       text not null default 'manual' check (source in ('manual', 'danchu', 'import')),
   invite_id    uuid references public.rfq_invites(id) on delete set null,
   rfq_no       text not null default '' check (char_length(rfq_no) <= 40),
-  mail_key     text not null default encode(gen_random_bytes(5), 'hex') check (mail_key ~ '^[0-9a-z]{6,20}$'),
   memo         text not null default '' check (char_length(memo) <= 4000),
   import_id    uuid references public.cro_crm_imports(id) on delete set null,
   created_by   uuid references public.profiles(id) on delete set null,
@@ -126,10 +125,9 @@ create table if not exists public.cro_crm_deals (
   check (status <> 'lost' or char_length(lost_reason) > 0)
 );
 create unique index if not exists cro_crm_deals_invite_uq on public.cro_crm_deals (org_id, invite_id) where invite_id is not null;
-create unique index if not exists cro_crm_deals_mail_key_uq on public.cro_crm_deals (mail_key);
 create index if not exists cro_crm_deals_org_idx on public.cro_crm_deals (org_id, status, stage);
 create index if not exists cro_crm_deals_company_idx on public.cro_crm_deals (company_id) where company_id is not null;
-comment on table public.cro_crm_deals is '기관 CRM 안건 (0038). stage: inquiry 문의 · quote 견적 · negotiation 협의 · intake 접수 · contract 계약. status: open 진행 · won 수주 · lost 실패. source=danchu 는 단추 요청에 참여해 생긴 안건 (invite_id). 선정 전에는 company_id 가 비어 있다. mail_key 는 안건별 메일 기록 주소의 앞부분';
+comment on table public.cro_crm_deals is '기관 CRM 안건 (0038). stage: inquiry 문의 · quote 견적 · negotiation 협의 · intake 접수 · contract 계약. status: open 진행 · won 수주 · lost 실패. source=danchu 는 단추 요청에 참여해 생긴 안건 (invite_id). 선정 전에는 company_id 가 비어 있다';
 alter table public.cro_crm_deals enable row level security;
 
 -- 단계·상태가 바뀔 때마다 한 줄 (보고서의 단계별 머문 날·전환율, 타임라인의 단계 변경)
@@ -151,15 +149,6 @@ create index if not exists cro_crm_deal_history_org_idx on public.cro_crm_deal_h
 comment on table public.cro_crm_deal_history is '안건 단계·상태 변경 이력 (0038). actor: member 기관 담당자 · danchu 단추 이벤트(견적 제출·선정·계약 보고) · import 엑셀. 첫 줄(from_stage null)은 안건이 생긴 때';
 alter table public.cro_crm_deal_history enable row level security;
 
--- 기관 CRM 설정: 기관 공용 메일 기록 주소
-create table if not exists public.cro_crm_settings (
-  org_id     uuid primary key references public.cro_orgs(id) on delete cascade,
-  mail_key   text not null default encode(gen_random_bytes(5), 'hex') check (mail_key ~ '^[0-9a-z]{6,20}$'),
-  created_at timestamptz not null default now()
-);
-create unique index if not exists cro_crm_settings_mail_key_uq on public.cro_crm_settings (mail_key);
-comment on table public.cro_crm_settings is '기관 CRM 설정 (0038). mail_key 는 기관 공용 메일 기록 주소의 앞부분 (안건을 모를 때 쓰는 주소)';
-alter table public.cro_crm_settings enable row level security;
 
 -- ─────────────────────────────────────────────
 -- 3) 일정 (기록보다 먼저: 기록이 일정을 가리킨다)
@@ -215,12 +204,6 @@ create table if not exists public.cro_crm_activities (
   body              text not null default '' check (char_length(body) <= 20000),
   attendee_contacts uuid[] not null default '{}' check (cardinality(attendee_contacts) <= 30),
   attendee_members  uuid[] not null default '{}' check (cardinality(attendee_members) <= 30),
-  via               text not null default 'manual' check (via in ('manual', 'mail_log')),
-  mail_from         text not null default '' check (char_length(mail_from) <= 200),
-  mail_to           text[] not null default '{}' check (cardinality(mail_to) <= 50),
-  mail_id           text check (mail_id is null or char_length(mail_id) <= 200),
-  attachments       text[] not null default '{}' check (cardinality(attachments) <= 30),
-  needs_review      boolean not null default false,
   created_by        uuid references public.profiles(id) on delete set null,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now(),
@@ -230,9 +213,7 @@ create index if not exists cro_crm_activities_company_idx on public.cro_crm_acti
 create index if not exists cro_crm_activities_deal_idx on public.cro_crm_activities (deal_id, occurred_at desc) where deal_id is not null;
 create index if not exists cro_crm_activities_contact_idx on public.cro_crm_activities (contact_id, occurred_at desc) where contact_id is not null;
 create index if not exists cro_crm_activities_org_idx on public.cro_crm_activities (org_id, occurred_at desc);
-create index if not exists cro_crm_activities_review_idx on public.cro_crm_activities (org_id) where needs_review;
-create unique index if not exists cro_crm_activities_mail_uq on public.cro_crm_activities (org_id, mail_id) where mail_id is not null;
-comment on table public.cro_crm_activities is '기관 CRM 기록 (0038). 미팅·통화·메일·메모. 단추에서 일어난 일(참여·견적 제출·선정·계약 보고)은 저장하지 않고 화면에서 합친다. via=mail_log 는 메일 기록 주소로 들어온 메일 (첨부는 파일 이름만 남긴다). needs_review 는 안건·담당자를 찾지 못해 기관이 확인할 메일';
+comment on table public.cro_crm_activities is '기관 CRM 기록 (0038). 미팅·통화·메일·메모. 메일은 기관 담당자가 직접 남긴 기록. 단추에서 일어난 일(참여·견적 제출·선정·계약 보고)은 저장하지 않고 화면에서 합친다';
 alter table public.cro_crm_activities enable row level security;
 
 -- ─────────────────────────────────────────────
@@ -291,7 +272,7 @@ comment on column public.cro_quote_docs.deal_id is 'CRM 안건 (0038). 같은 �
 
 -- 서버(service role)만 쓴다. RLS 정책이 없어 막히지만, 권한도 걷어 둔다
 revoke all on public.cro_crm_companies, public.cro_crm_contacts, public.cro_crm_imports, public.cro_crm_deals, public.cro_crm_deal_history,
-  public.cro_crm_settings, public.cro_crm_events, public.cro_crm_activities, public.cro_crm_tasks, public.cro_crm_task_actions from anon, authenticated;
+  public.cro_crm_events, public.cro_crm_activities, public.cro_crm_tasks, public.cro_crm_task_actions from anon, authenticated;
 
 -- updated_at
 do $$

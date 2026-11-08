@@ -142,7 +142,7 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   const base = (n: number, o: Partial<CrmDeal>): CrmDeal => ({
     id: id(1000 + n), org_id: "org", company_id: null, contact_ids: [], title: "", kind: "tox", substance: "", submit_to: "", report_lang: "", amount: null, expected_on: null,
     stage: "inquiry", status: "open", stage_at: iso(-1), lost_reason: "", lost_note: "", won_amount: null, closed_at: null, owner: ME, source: "manual", invite_id: null, rfq_no: "",
-    mail_key: `d${n.toString(36)}k2`, memo: "", import_id: null, created_by: ME, created_at: iso(-30), updated_at: iso(-1), ...o,
+    memo: "", import_id: null, created_by: ME, created_at: iso(-30), updated_at: iso(-1), ...o,
   });
   const danchuDeal = (n: number, inv: (typeof invites)[number], o: Partial<CrmDeal> = {}) => {
     const tg = danchuTarget(danchu.get(inv.id)!, now);
@@ -211,16 +211,15 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   ];
   const act = (n: number, deal: number | null, c: number | null, kind: string, when: string, title: string, body: string, o: Partial<CrmActivity> = {}): CrmActivity => ({
     id: id(400 + n), org_id: "org", company_id: c ? id(c) : null, deal_id: deal ? id(1000 + deal) : null, contact_id: null, quote_doc_id: null, event_id: null, kind, occurred_at: when, duration_min: null, title, body,
-    attendee_contacts: [], attendee_members: [ME], via: "manual", mail_from: "", mail_to: [], mail_id: null, attachments: [], needs_review: false, created_by: ME, created_at: when, updated_at: when, ...o,
+    attendee_contacts: [], attendee_members: [ME], created_by: ME, created_at: when, updated_at: when, ...o,
   });
   const activities = [
-    act(1, 3, 1, "email", iso(0, "09:12"), "회복군 제외 시 일정 문의", "회복군 4주를 빼면 최종보고서(안)을 언제 받을 수 있는지 궁금합니다. 내일 미팅 때 일정표로 설명 부탁드립니다.", { via: "mail_log", mail_from: "park@garambio.example", mail_to: ["kim@cro.example"], mail_id: "m1", contact_id: id(101), attachments: ["시험물질_안정성자료.pdf"], attendee_members: [] }),
+    act(1, 3, 1, "email", iso(0, "09:12"), "회복군 제외 시 일정 문의", "회복군 4주를 빼면 최종보고서(안)을 언제 받을 수 있는지 궁금합니다. 내일 미팅 때 일정표로 설명 부탁드립니다.", { contact_id: id(101) }),
     act(2, 3, 1, "call", iso(-3, "16:40"), "", "회복군을 빼면 일정을 2주 당길 수 있는지 문의. 시험책임자와 확인한 뒤 미팅에서 답하기로 함.", { contact_id: id(101), attendee_contacts: [id(101)], duration_min: 12 }),
     act(3, 3, 1, "meeting", iso(-10, "10:00"), "", "TK 채혈 시점을 1·13주로 조정. 회복군을 둘지 의뢰자 내부 검토 중.", { contact_id: id(101), attendee_contacts: [id(101), id(102)], attendee_members: [ME, CHOI], duration_min: 50 }),
     act(4, 11, 2, "call", iso(-4, "11:20"), "", "4주 반복 군만 먼저 진행할 수 있는지 문의. 유효기간 전에 다시 통화하기로.", { contact_id: id(104), attendee_contacts: [id(104)], duration_min: 9 }),
     act(5, 12, 3, "meeting", iso(-6, "14:00"), "", "시설 방문 희망. 견적은 5종 묶음으로 다시 받기로.", { contact_id: id(105), duration_min: 40 }),
     act(6, 14, 5, "memo", iso(-15, "18:00"), "", "예산 확정 전까지 대기. 담당 이사가 다음 분기에 다시 연락 준다고 함.", { created_by: OH, attendee_members: [OH] }),
-    act(7, null, null, "email", iso(0, "08:51"), "구매 절차 관련 문의", "", { via: "mail_log", mail_from: "procure@unknown.example", mail_id: "m2", needs_review: true, attendee_members: [] }),
     act(8, 17, 2, "call", iso(-5, "15:00"), "", "계약 조건 확인. 이번 주 안에 계약서 회신.", { contact_id: id(104), duration_min: 6 }),
   ];
   const tk = (n: number, deal: number | null, c: number | null, title: string, due: string | null, o: Partial<CrmTask> = {}): CrmTask => ({
@@ -245,7 +244,7 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
     qd(5, 16, 5, "Q-2611-009", "효력 · 마우스 종양 모델", 87_000_000, { contact_id: id(107), sent_at: iso(-5), created_at: iso(-5) }),
   ];
   return {
-    data: { ready: true, companies, contacts, deals, history, events, activities, tasks, quotes, members: MEMBERS, mailKey: "k7cro" },
+    data: { ready: true, companies, contacts, deals, history, events, activities, tasks, quotes, members: MEMBERS },
     danchu,
   };
 }
@@ -253,5 +252,5 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
 /** 검토 화면이 함께 쓰는 묶음 */
 export function previewCtx(now = Date.now()): CrmCtx {
   const { data, danchu } = crmSample(now);
-  return { data, danchu, me: ME, paths: CPATHS, now, mailDomain: "log.danchu.kr", preview: true };
+  return { data, danchu, me: ME, paths: CPATHS, now, preview: true };
 }

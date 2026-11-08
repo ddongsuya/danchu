@@ -25,7 +25,7 @@ const src = (i: any, a: any = null): DanchuSrc => danchuSrcOf(i, a);
 const deal = (o: Partial<CrmDeal> = {}): CrmDeal => ({
   id: U(100), org_id: "o", company_id: null, contact_ids: [], title: "안건", kind: "", substance: "", submit_to: "", report_lang: "", amount: null, expected_on: null,
   stage: "inquiry", status: "open", stage_at: iso("2026-11-02T09:00:00"), lost_reason: "", lost_note: "", won_amount: null, closed_at: null, owner: null, source: "manual",
-  invite_id: null, rfq_no: "", mail_key: "abcdef1234", memo: "", import_id: null, created_by: null, created_at: iso("2026-11-02T09:00:00"), updated_at: iso("2026-11-02T09:00:00"), ...o,
+  invite_id: null, rfq_no: "", memo: "", import_id: null, created_by: null, created_at: iso("2026-11-02T09:00:00"), updated_at: iso("2026-11-02T09:00:00"), ...o,
 });
 
 describe("단추 요청 → 안건", () => {

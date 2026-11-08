@@ -6,7 +6,7 @@ import { CONTACT_ROLE, EVENT_MODE, hmKst, mdW, todayKst, wonKo, ymdKst } from "@
 import { ActivityDelete, ContactForm, SheetButton } from "./forms";
 import { CloseButtons, Composer, CopyText, DealDelete, DealForm, DoneButton, StageBar } from "./deal-ui";
 import { buildOpts } from "./opts";
-import { mailAddress, rowsOf, type CrmCtx } from "./ctx";
+import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
 
 const KIND_ICON = { meeting: Handshake, call: Phone, email: EnvelopeSimple, memo: NotePencil, stage: ArrowRight, quote: FileText, task: Check } as const;
@@ -29,16 +29,15 @@ export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: strin
         {x.body && (
           <div className="cx-ev__q">
             <p>{x.body}</p>
-            {x.attachments && <small className="cx-muted">첨부 {x.attachments.length} · {x.attachments.join(", ")}</small>}
           </div>
         )}
-        {(x.sub || x.viaMail || dealHref) && (
+        {(x.sub || dealHref) && (
           <p className="cx-ev__src">
             {x.sub}
             {dealHref && <> · <Link href={dealHref} className="cx-lk">안건 열기</Link></>}
           </p>
         )}
-        {x.ref?.type === "activity" && !x.viaMail && <span className="cx-ev__del"><ActivityDelete id={x.ref.id} /></span>}
+        {x.ref?.type === "activity" && <span className="cx-ev__del"><ActivityDelete id={x.ref.id} /></span>}
       </div>
       <time className="cx-ev__tm tnum" dateTime={x.at}>{hmKst(x.at)}</time>
     </li>
@@ -46,7 +45,7 @@ export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: strin
 }
 
 /**
- * 안건 화면 (시안 v5 3번). 위에 단계 막대와 수주·실패, 왼쪽은 안건 정보, 가운데는 다음 할 일 · 기록 남기기 · 타임라인, 오른쪽은 담당자 · 견적서 · 메일 기록 주소 · 파일.
+ * 안건 화면 (시안 v5 3번). 위에 단계 막대와 수주·실패, 왼쪽은 안건 정보, 가운데는 다음 할 일 · 기록 남기기 · 타임라인, 오른쪽은 담당자 · 견적서.
  * 단추에서 온 칸(출처·선정일·요청 번호)은 "단추가 채움"으로 잠근다. 선정 전에는 의뢰자 이름과 연락처를 보이지 않는다.
  */
 export type DealTab = "log" | "info" | "people";
@@ -65,7 +64,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
   const mem = new Map(data.members.map((m) => [m.id, m.name]));
   const hist = data.history.filter((h) => h.deal_id === d.id);
   const spans = stageSpans(d, hist, now);
-  const acts = data.activities.filter((a) => a.deal_id === d.id && !a.needs_review);
+  const acts = data.activities.filter((a) => a.deal_id === d.id);
   const quotes = data.quotes.filter((q) => q.deal_id === d.id).sort((x, y) => x.created_at.localeCompare(y.created_at));
   const tasks = data.tasks.filter((t) => t.deal_id === d.id);
   const dealContacts = d.contact_ids.map((cid) => data.contacts.find((x) => x.id === cid)).filter((x): x is NonNullable<typeof x> => !!x);
@@ -74,12 +73,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
   const tl = buildTimeline({ activities: acts, history: hist, quotes, tasks, contacts: data.contacts, members: data.members, danchu: src ? [{ dealId: d.id, src, contacts: dealContacts.length }] : [] });
   const days = byDay(tl);
   const opts = buildOpts({ ...data, me });
-  const mail = mailAddress(d.mail_key, c.mailDomain);
   const lastWith = (cid: string) => acts.filter((a) => a.contact_id === cid || a.attendee_contacts.includes(cid)).sort((x, y) => y.occurred_at.localeCompare(x.occurred_at))[0];
-  const files = [
-    ...acts.flatMap((a) => a.attachments.map((f) => ({ name: f, at: a.occurred_at, from: a.kind === "email" ? "메일" : "기록" }))),
-    ...quotes.filter((q) => q.sent_at).map((q) => ({ name: `견적서 ${q.doc_no}`, at: q.sent_at as string, from: "견적서" })),
-  ].sort((x, y) => y.at.localeCompare(x.at));
   const latestDoc = quotes.at(-1);
   const sub = [r.company ?? (r.danchuNo ? `단추 요청 ${r.danchuNo}` : ""), d.title].filter(Boolean).join(" · ");
   const next = r.next;
@@ -193,7 +187,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                       </span>
                       <span className="cx-ppl__ico">
                         {(p.mobile || p.phone) && <a href={`tel:${(p.mobile || p.phone).replace(/[^0-9+]/g, "")}`} className="cx-icon" aria-label={`${p.name}에게 전화`}><Phone size={16} aria-hidden="true" /></a>}
-                        {p.email && <a href={`mailto:${p.email}${mail ? `?bcc=${encodeURIComponent(mail)}` : ""}`} className="cx-icon" aria-label={`${p.name}에게 메일`}><EnvelopeSimple size={16} aria-hidden="true" /></a>}
+                        {p.email && <a href={`mailto:${p.email}`} className="cx-icon" aria-label={`${p.name}에게 메일`}><EnvelopeSimple size={16} aria-hidden="true" /></a>}
                       </span>
                     </li>
                   );
@@ -228,22 +222,6 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
             ) : <p className="cx-muted cx-small">아직 견적서가 없어요. 위 &quot;견적서 만들기&quot;로 시작하면 이 안건에 붙어요.</p>}
           </section>
 
-          {mail && (
-            <section className="cx-rail__s cx-logbox">
-              <h2 className="cx-rail__h">이 안건의 메일 기록 주소</h2>
-              <CopyText text={mail} label="메일 기록 주소 복사" />
-              <p className="cx-muted cx-small">고객에게 메일을 보낼 때 숨은참조에 넣거나, 받은 메일을 이 주소로 전달하면 타임라인에 붙어요.</p>
-            </section>
-          )}
-
-          {files.length > 0 && (
-            <section className="cx-rail__s">
-              <h2 className="cx-rail__h">파일</h2>
-              <ul className="cx-files">
-                {files.slice(0, 8).map((f, i) => <li key={i}><FileText size={15} aria-hidden="true" /><span>{f.name}</span><small className="cx-muted tnum">{+ymdKst(f.at).slice(5, 7)}.{+ymdKst(f.at).slice(8, 10)} {f.from}</small></li>)}
-              </ul>
-            </section>
-          )}
         </aside>
       </div>
       <Link href={`${paths.log}?deal=${d.id}`} className="b1 cx-mfab only-narrow">기록 남기기</Link>

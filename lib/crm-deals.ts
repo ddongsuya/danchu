@@ -396,11 +396,8 @@ export type TimelineItem = {
   title: string;
   sub: string;
   body?: string;
-  attachments?: string[];
   amount?: number | null;
   diffNote?: string;
-  review?: boolean;
-  viaMail?: boolean;
   dealId: string | null;
   ref?: { type: "activity" | "task"; id: string };
 };
@@ -421,11 +418,8 @@ export function buildTimeline(a: {
     let title = x.title;
     let sub = "";
     if (x.kind === "email") {
-      // 보낸 사람이 고객 담당자면 그 이름, 아니면 우리 담당자 (메일 기록 주소로 들어온 메일은 mail_from 이 원래 보낸 사람)
-      const sender = x.mail_from ? a.contacts.find((c) => c.email && c.email.toLowerCase() === x.mail_from.toLowerCase()) : null;
-      who = sender ? personLabel(sender.name, sender.title) : (x.created_by ? mem.get(x.created_by) ?? "" : "") || x.mail_from;
-      sub = x.via === "mail_log" ? "메일 기록 주소로 들어왔어요" : "";
-      title = `메일 · ${x.title || "제목 없음"}`;
+      // 기관 담당자가 직접 남긴 메일 기록 (주고받은 고객 담당자 이름을 앞에)
+      title = `${[ppl.join(", "), "메일"].filter(Boolean).join(" ")} · ${x.title || "제목 없음"}`;
     } else if (x.kind === "call" || x.kind === "meeting") {
       title = `${[ppl.join(", "), ACT_KIND[x.kind]].filter(Boolean).join(" ")}${x.duration_min ? ` ${x.duration_min}분` : ""}`;
       if (x.kind === "meeting" && ours.length > 1) sub = `${ppl.join(", ")} / ${ours.join(", ")}`;
@@ -435,7 +429,7 @@ export function buildTimeline(a: {
     }
     out.push({
       at: x.occurred_at, kind: x.kind as TimelineItem["kind"], who, title, sub: [sub, !a.deals ? "" : x.deal_id ? dealT.get(x.deal_id) ?? "" : ""].filter(Boolean).join(" · "),
-      body: x.body || undefined, attachments: x.attachments.length ? x.attachments : undefined, review: x.needs_review, viaMail: x.via === "mail_log", dealId: x.deal_id, ref: { type: "activity", id: x.id },
+      body: x.body || undefined, dealId: x.deal_id, ref: { type: "activity", id: x.id },
     });
   }
   // 단계 변경: 기관 담당자가 옮긴 것만 따로 한 줄. 단추가 옮긴 것은 단추 이벤트 줄에 붙인다
@@ -658,7 +652,7 @@ export function buildReport(a: { deals: CrmDeal[]; history: DealHistory[]; activ
     const w = cs.filter((d) => d.status === "won").length;
     return { key, label: key === "danchu" ? "단추 요청" : "직접 받은 문의", won: w, closed: cs.length, rate: pct(w, cs.length) };
   };
-  const acts = a.activities.filter((x) => inR(x.occurred_at) && !x.needs_review);
+  const acts = a.activities.filter((x) => inR(x.occurred_at));
   const activity = a.members.filter((m) => !a.owner || m.id === a.owner).map((m) => {
     const mine = acts.filter((x) => x.created_by === m.id);
     const c = (k: string) => mine.filter((x) => x.kind === k).length;

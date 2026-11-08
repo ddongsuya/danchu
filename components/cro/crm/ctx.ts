@@ -12,8 +12,6 @@ export type CrmCtx = {
   me: string;
   paths: CrmPaths;
   now: number;
-  /** 메일 기록 주소 도메인 (없으면 메일 기록을 보이지 않는다) */
-  mailDomain: string | null;
   /** 미리보기: 저장 버튼이 막힌다는 안내를 붙인다 */
   preview?: boolean;
 };
@@ -22,4 +20,3 @@ export function rowsOf(c: CrmCtx): DealRow[] {
   return dealRows({ deals: c.data.deals, companies: c.data.companies, contacts: c.data.contacts, tasks: c.data.tasks, events: c.data.events, quotes: c.data.quotes, danchu: c.danchu, me: c.me, now: c.now, base: c.paths.deals });
 }
 
-export const mailAddress = (key: string | null | undefined, domain: string | null) => (key && domain ? `${key}@${domain}` : null);

@@ -17,7 +17,7 @@ export type CrmContact = {
 export type CrmDeal = {
   id: string; org_id: string; company_id: string | null; contact_ids: string[]; title: string; kind: string; substance: string; submit_to: string; report_lang: string;
   amount: number | null; expected_on: string | null; stage: string; status: string; stage_at: string; lost_reason: string; lost_note: string; won_amount: number | null; closed_at: string | null;
-  owner: string | null; source: string; invite_id: string | null; rfq_no: string; mail_key: string; memo: string; import_id: string | null; created_by: string | null; created_at: string; updated_at: string;
+  owner: string | null; source: string; invite_id: string | null; rfq_no: string; memo: string; import_id: string | null; created_by: string | null; created_at: string; updated_at: string;
 };
 export type DealHistory = {
   id: string; deal_id: string; from_stage: string | null; to_stage: string; from_status: string | null; to_status: string; reason: string; actor: string; created_by: string | null; at: string;
@@ -30,7 +30,6 @@ export type CrmEvent = {
 export type CrmActivity = {
   id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; event_id: string | null; kind: string;
   occurred_at: string; duration_min: number | null; title: string; body: string; attendee_contacts: string[]; attendee_members: string[];
-  via: string; mail_from: string; mail_to: string[]; mail_id: string | null; attachments: string[]; needs_review: boolean;
   created_by: string | null; created_at: string; updated_at: string;
 };
 export type CrmTaskAction = { id: string; task_id: string; body: string; at: string; created_by: string | null };

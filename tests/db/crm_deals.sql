@@ -2,7 +2,6 @@
 do $$
 declare
   o uuid := pg_temp.t_org('CRM 기관');
-  o2 uuid := pg_temp.t_org('CRM 다른 기관');
   r uuid := pg_temp.t_rfq('CRM-1');
   inv uuid := pg_temp.t_invite(r, o);
   c uuid;
@@ -12,7 +11,6 @@ begin
   insert into public.cro_crm_deals (org_id, company_id, title, source, invite_id) values (o, c, '13주 반복투여독성', 'danchu', inv) returning id into d;
   perform pg_temp.t_eq((select stage from public.cro_crm_deals where id = d), 'inquiry', '새 안건은 문의 단계');
   perform pg_temp.t_eq((select status from public.cro_crm_deals where id = d), 'open', '새 안건은 진행');
-  perform pg_temp.t_assert((select mail_key ~ '^[0-9a-f]{10}$' from public.cro_crm_deals where id = d), '안건마다 메일 기록 주소 앞부분이 생긴다');
 
   -- 같은 초대로 두 번째 안건은 안 된다 (같은 기관)
   begin
@@ -42,15 +40,6 @@ begin
   delete from public.cro_crm_deals where id = d;
   perform pg_temp.t_eq((select count(*)::int from public.cro_crm_deal_history where deal_id = d), 0, '안건과 이력이 함께 지워짐');
   perform pg_temp.t_eq((select count(*)::int from public.cro_crm_activities where deal_id = d), 0, '안건과 기록이 함께 지워짐');
-
-  -- 메일 기록은 같은 메일을 두 번 넣지 않는다
-  insert into public.cro_crm_activities (org_id, kind, body, via, mail_id, needs_review) values (o, 'email', '본문', 'mail_log', 'em_1', true);
-  begin
-    insert into public.cro_crm_activities (org_id, kind, body, via, mail_id) values (o, 'email', '본문', 'mail_log', 'em_1');
-    raise exception 'ASSERT 실패: 같은 메일 두 번 기록';
-  exception when unique_violation then null;
-  end;
-  insert into public.cro_crm_activities (org_id, kind, body, via, mail_id) values (o2, 'email', '다른 기관은 같은 메일을 따로 남긴다', 'mail_log', 'em_1');
 
   perform pg_temp.t_assert(not has_table_privilege('authenticated', 'public.cro_crm_deals', 'select'), 'authenticated 는 안건을 못 읽음');
   perform pg_temp.t_assert(not has_table_privilege('anon', 'public.cro_crm_deal_history', 'insert'), 'anon 은 이력을 못 씀');

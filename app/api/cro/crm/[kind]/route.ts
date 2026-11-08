@@ -111,35 +111,6 @@ export async function POST(req: Request, { params }: Ctx) {
     return NextResponse.json({ ok: true, id: deal.id });
   }
 
-  // 확인할 메일: 안건에 붙이기 · 보낸 사람을 담당자로 · 지우기
-  if (kind === "mail-review") {
-    if (!isUuid(b.id)) return bad("메일 기록을 찾지 못했어요.");
-    const { data: a } = await sb.from("cro_crm_activities").select("id, mail_from, needs_review").eq("id", b.id).eq("org_id", orgId).maybeSingle();
-    if (!a) return bad("메일 기록을 찾지 못했어요.", 404);
-    if (b.drop === true) {
-      await sb.from("cro_crm_activities").delete().eq("id", a.id).eq("org_id", orgId);
-      return NextResponse.json({ ok: true });
-    }
-    if (isUuid(b.deal_id)) {
-      const { data: d } = await sb.from("cro_crm_deals").select("id, company_id").eq("id", b.deal_id).eq("org_id", orgId).maybeSingle();
-      if (!d) return bad("안건을 찾지 못했어요.", 404);
-      const { error } = await sb.from("cro_crm_activities").update({ deal_id: d.id, company_id: d.company_id, needs_review: false } as never).eq("id", a.id).eq("org_id", orgId);
-      return error ? fail("메일 기록", error) : NextResponse.json({ ok: true, id: a.id });
-    }
-    if (isUuid(b.company_id)) {
-      const err = await checkRefs(sb, orgId, { company_id: b.company_id });
-      if (err) return bad(err, 404);
-      const name = (typeof b.name === "string" && b.name.trim() ? b.name.trim() : a.mail_from.split("@")[0] || "담당자").slice(0, 100);
-      const { data: c, error } = await sb.from("cro_crm_contacts").insert({ org_id: orgId, company_id: b.company_id, name, email: a.mail_from.slice(0, 200), source: "mail", created_by: s.userId } as never).select("id").single();
-      if (error || !c) return fail("담당자", error);
-      // 이 고객사의 진행 중 안건이 하나면 그 안건에 붙인다
-      const { data: open } = await sb.from("cro_crm_deals").select("id").eq("org_id", orgId).eq("company_id", b.company_id).eq("status", "open").limit(2);
-      await sb.from("cro_crm_activities").update({ company_id: b.company_id, contact_id: c.id, deal_id: open?.length === 1 ? open[0].id : null, needs_review: false } as never).eq("id", a.id).eq("org_id", orgId);
-      return NextResponse.json({ ok: true, id: a.id });
-    }
-    return bad("붙일 안건이나 고객사를 골라 주세요.");
-  }
-
   if (kind === "task-actions") {
     if (!isUuid(b.task_id)) return bad("할 일을 찾지 못했어요.");
     const body = typeof b.body === "string" ? b.body.trim().slice(0, 1000) : "";

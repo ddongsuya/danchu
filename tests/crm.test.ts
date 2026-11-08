@@ -128,7 +128,7 @@ describe("캘린더 파일", () => {
 describe("저장소 규칙 (0038)", () => {
   const sql = readFileSync("supabase/migrations/0038_cro_crm.sql", "utf8");
   it("표마다 RLS, 단추 담당자 키는 기관 안에서 하나", () => {
-    for (const t of ["cro_crm_companies", "cro_crm_contacts", "cro_crm_deals", "cro_crm_deal_history", "cro_crm_imports", "cro_crm_settings", "cro_crm_events", "cro_crm_activities", "cro_crm_tasks", "cro_crm_task_actions"]) expect(sql).toMatch(new RegExp(`${t}[\\s\\S]*enable row level security|enable row level security[\\s\\S]*${t}`));
+    for (const t of ["cro_crm_companies", "cro_crm_contacts", "cro_crm_deals", "cro_crm_deal_history", "cro_crm_imports", "cro_crm_events", "cro_crm_activities", "cro_crm_tasks", "cro_crm_task_actions"]) expect(sql).toMatch(new RegExp(`${t}[\\s\\S]*enable row level security|enable row level security[\\s\\S]*${t}`));
     expect(sql).toMatch(/unique index[\s\S]*danchu_key/);
   });
   it("API 는 다른 기관 id 를 막고, 단추 선정 담당자는 지우지 않는다", () => {

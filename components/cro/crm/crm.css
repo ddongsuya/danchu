@@ -113,11 +113,6 @@
 .cx-week__list { display: grid; gap: 6px; font-size: 13px; color: var(--ink); }
 .cx-week__list li { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 8px; }
 .cx-week__list li span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.cx-mail { background: var(--surface); border-radius: var(--r-sm); padding: 10px 11px; display: grid; gap: 3px; font-size: 13px; }
-.cx-mail__from { display: flex; gap: 6px; align-items: center; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
-.cx-mail__s { color: var(--muted); font-size: 12.5px; }
-.cx-mail__acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-top: 4px; }
-.cx-mail__acts .sel { height: 32px; font-size: 13px; max-width: 100%; }
 
 /* ── 2. 안건 보드 ── */
 .cx-filters { display: flex; gap: 6px 8px; flex-wrap: wrap; align-items: center; }
@@ -288,13 +283,8 @@
 .cx-qv__x b { color: var(--ink); font-weight: 600; font-size: 13.5px; }
 .cx-qv li[data-cur="0"] .cx-qv__x b { color: var(--muted); font-weight: 500; text-decoration: line-through; }
 .cx-qv__x small { font-size: 12px; color: var(--muted); }
-.cx-logbox { background: var(--white); border-radius: var(--r-lg); padding: 12px; }
 .cx-copy { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface); border-radius: var(--r-sm); padding: 5px 5px 5px 10px; min-width: 0; }
 .cx-copy code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cx-files { display: grid; gap: 6px; font-size: 13px; }
-.cx-files li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: var(--ink); }
-.cx-files li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cx-files small { font-size: 12px; }
 .cx-del { margin-top: 18px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cx-del.crm-acts { justify-content: flex-start; }
 

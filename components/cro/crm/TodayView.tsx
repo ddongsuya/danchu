@@ -4,7 +4,6 @@ import { STAGE_LABEL, amountLabel, todayList, weekStrip, type Stage } from "@/li
 import { hmKst, todayKst, weekdayKo, ymdKst } from "@/lib/crm-shape";
 import { SheetButton, TaskCheck } from "./forms";
 import { DealForm } from "./deal-ui";
-import { MailReview } from "./mail-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
@@ -13,7 +12,7 @@ const MODE_ICON = { video: VideoCamera, phone: Phone, in_person: Handshake } as 
 
 /**
  * 오늘 (시안 v5 1번). 숫자 카드 대신 두 목록: 오늘 할 일(할 일·일정·단추 기한, 시간순)과 손이 필요한 안건.
- * 넓은 화면 오른쪽에는 이번 주 일정과 확인할 메일 기록.
+ * 넓은 화면 오른쪽에는 이번 주 일정.
  */
 export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<typeof todayList>[0]["invites"] }) {
   const { data, paths, now, me } = c;
@@ -22,7 +21,6 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
   const list = todayList({ tasks: data.tasks, events: data.events, rows, invites: undecided, me, now, base: paths.deals });
   const need = rows.filter((r) => r.flag).sort((x, y) => (x.flag!.tone === y.flag!.tone ? y.days - x.days : x.flag!.tone === "due" ? -1 : 1));
   const week = weekStrip({ events: data.events, quotes: data.quotes, deals: data.deals, companies: data.companies, now });
-  const review = data.activities.filter((a) => a.needs_review);
   const opts = buildOpts({ ...data, me });
   const d = new Date(`${today}T12:00:00+09:00`);
   const events = list.filter((x) => x.kind === "event").length;
@@ -96,7 +94,7 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
           ) : <p className="cx-none">모든 진행 안건에 다음 할 일이 잡혀 있어요.</p>}
         </section>
 
-        <aside className="cx-side" aria-label="이번 주와 메일">
+        <aside className="cx-side" aria-label="이번 주 일정">
           <section className="cx-box">
             <div className="cx-sec__h"><h2>{week.next ? "다음 주" : "이번 주"}</h2><span className="cx-muted tnum">{+week.from.slice(5, 7)}.{+week.from.slice(8)} ~ {+week.to.slice(5, 7)}.{+week.to.slice(8)}</span></div>
             <ol className="cx-week">
@@ -110,20 +108,8 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
               <ul className="cx-week__list">
                 {week.items.slice(0, 6).map((x, i) => <li key={i}><span className="tnum">{weekdayKo(x.date)}{x.time ? ` ${x.time}` : ""}</span>{x.title}</li>)}
               </ul>
-            ) : <p className="cx-muted">이번 주 일정이 없어요.</p>}
+            ) : <p className="cx-muted">{week.next ? "다음 주" : "이번 주"} 일정이 없어요.</p>}
           </section>
-          {c.mailDomain && (
-            <section className="cx-box">
-              <div className="cx-sec__h"><h2>확인할 메일 기록</h2><span className="cx-muted tnum">{review.length}건</span></div>
-              {review.length ? review.slice(0, 4).map((a) => (
-                <article key={a.id} className="cx-mail">
-                  <p className="cx-mail__from"><EnvelopeSimple size={15} aria-hidden="true" />{a.mail_from || "보낸 사람 모름"}</p>
-                  <p className="cx-mail__s">&quot;{a.title || "제목 없음"}&quot; · 받은 날 {ymdKst(a.occurred_at).slice(5).replace("-", ".")}</p>
-                  <MailReview id={a.id} from={a.mail_from} deals={opts.deals} companies={opts.companies} />
-                </article>
-              )) : <p className="cx-muted">메일 기록 주소로 들어온 메일은 담당자를 찾아 안건에 붙여요. 찾지 못한 메일만 여기 남아요.</p>}
-            </section>
-          )}
         </aside>
       </div>
       <Link href={paths.log} className="b1 cx-mfab only-narrow">통화 기록 남기기</Link>

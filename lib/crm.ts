@@ -26,17 +26,12 @@ export type CrmData = {
   tasks: CrmTask[];
   quotes: CrmQuote[];
   members: Member[];
-  /** 기관 공용 메일 기록 주소 앞부분 (메일 기록이 꺼져 있으면 null) */
-  mailKey: string | null;
 };
 
-const EMPTY: CrmData = { ready: false, companies: [], contacts: [], deals: [], history: [], events: [], activities: [], tasks: [], quotes: [], members: [], mailKey: null };
+const EMPTY: CrmData = { ready: false, companies: [], contacts: [], deals: [], history: [], events: [], activities: [], tasks: [], quotes: [], members: [] };
 export const QUOTE_COLS = "id, doc_no, title, client, supply, status, sent_at, valid_until, deal_id, company_id, contact_id, rfq_no, updated_at, created_at, issued_on, invite_id";
 
 export const memberName = (p: { name: string | null; email: string }) => p.name || p.email.split("@")[0];
-
-/** 메일 기록 주소 도메인. 비어 있으면 메일 기록을 쓰지 않는다 (화면에 주소를 보이지 않는다) */
-export const crmMailDomain = () => (process.env.CRM_MAIL_DOMAIN ?? "").trim().toLowerCase() || null;
 
 export async function listMembers(sb: Admin, orgId: string): Promise<Member[]> {
   const { data } = await sb.from("profiles").select("id, name, email").eq("cro_org_id", orgId).order("created_at");
@@ -50,7 +45,7 @@ export async function listMembers(sb: Admin, orgId: string): Promise<Member[]> {
 export async function loadCrm(orgId: string): Promise<CrmData> {
   const sb = getSupabaseAdmin();
   if (!sb) return EMPTY;
-  const [co, ct, dl, hi, ev, ac, tk, qd, mem, st] = await Promise.all([
+  const [co, ct, dl, hi, ev, ac, tk, qd, mem] = await Promise.all([
     sb.from("cro_crm_companies").select("*").eq("org_id", orgId).order("updated_at", { ascending: false }).limit(3000),
     sb.from("cro_crm_contacts").select("*").eq("org_id", orgId).order("created_at").limit(6000),
     sb.from("cro_crm_deals").select("*").eq("org_id", orgId).order("updated_at", { ascending: false }).limit(5000),
@@ -60,7 +55,6 @@ export async function loadCrm(orgId: string): Promise<CrmData> {
     sb.from("cro_crm_tasks").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(3000),
     sb.from("cro_quote_docs").select(QUOTE_COLS).eq("org_id", orgId).order("created_at").limit(3000),
     listMembers(sb, orgId),
-    sb.from("cro_crm_settings").select("mail_key").eq("org_id", orgId).maybeSingle(),
   ]);
   // 0038 이 아직 적용되지 않았으면 빈 CRM 으로 보여 준다
   if (dl.error) {
@@ -71,11 +65,6 @@ export async function loadCrm(orgId: string): Promise<CrmData> {
   const ta = tasks.length ? await sb.from("cro_crm_task_actions").select("id, task_id, body, at, created_by").in("task_id", tasks.map((t) => t.id)).order("at").limit(5000) : { data: [] };
   const actBy = new Map<string, CrmTaskAction[]>();
   for (const a of (ta.data ?? []) as CrmTaskAction[]) actBy.set(a.task_id, [...(actBy.get(a.task_id) ?? []), a]);
-  let mailKey = st.data?.mail_key ?? null;
-  if (!mailKey && crmMailDomain()) {
-    const { data } = await sb.from("cro_crm_settings").upsert({ org_id: orgId }, { onConflict: "org_id", ignoreDuplicates: true }).select("mail_key").maybeSingle();
-    mailKey = data?.mail_key ?? (await sb.from("cro_crm_settings").select("mail_key").eq("org_id", orgId).maybeSingle()).data?.mail_key ?? null;
-  }
   return {
     ready: true,
     companies: (co.data ?? []) as CrmCompany[],
@@ -87,7 +76,6 @@ export async function loadCrm(orgId: string): Promise<CrmData> {
     tasks: tasks.map((t) => ({ ...t, actions: actBy.get(t.id) ?? [] })),
     quotes: (qd.data ?? []) as CrmQuote[],
     members: mem,
-    mailKey: crmMailDomain() ? mailKey : null,
   };
 }
 

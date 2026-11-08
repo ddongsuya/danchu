@@ -162,14 +162,14 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
 
       {q.tab === "a" && (
         <section className="cx-panel" aria-labelledby="r-act">
-          <div><h2 id="r-act">사람별 기록</h2><p className="cx-cap">기간 안에 남긴 기록과 끝낸 할 일. 메일은 메일 기록 주소로 들어와 안건에 붙은 것만 셉니다.</p></div>
+          <div><h2 id="r-act">사람별 기록</h2><p className="cx-cap">기간 안에 남긴 기록과 끝낸 할 일이에요.</p></div>
           {r.activity.length ? (
             <div className="cx-tablewrap cx-tablewrap--flat">
               <table className="cx-table">
-                <thead><tr><th>담당자</th><th className="r">미팅</th><th className="r">통화</th><th className="r">메일</th><th className="r">메모</th><th className="r">끝낸 할 일</th></tr></thead>
+                <thead><tr><th>담당자</th><th className="r">미팅</th><th className="r">통화</th><th className="r">메모</th><th className="r">끝낸 할 일</th></tr></thead>
                 <tbody>
                   {r.activity.map((x) => (
-                    <tr key={x.member}><td>{x.member}</td><td className="r tnum">{x.meeting}</td><td className="r tnum">{x.call}</td><td className="r tnum">{x.email}</td><td className="r tnum">{x.memo}</td><td className="r tnum">{x.tasks}</td></tr>
+                    <tr key={x.member}><td>{x.member}</td><td className="r tnum">{x.meeting}</td><td className="r tnum">{x.call}</td><td className="r tnum">{x.memo}</td><td className="r tnum">{x.tasks}</td></tr>
                   ))}
                 </tbody>
               </table>

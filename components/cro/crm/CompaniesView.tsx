@@ -85,7 +85,7 @@ export function CompaniesView({ c, q }: { c: CrmCtx; q: CompaniesQuery }) {
   );
 }
 
-const TL_FILTERS = { all: "전체", email: "메일만", meeting: "미팅만", call: "통화만" } as const;
+const TL_FILTERS = { all: "전체", meeting: "미팅만", call: "통화만" } as const;
 type TlFilter = keyof typeof TL_FILTERS;
 
 /** 고객사 화면 (시안 v5 5번). 위에 요약, 가운데 안건 표와 회사 전체 기록, 오른쪽 담당자와 회사 정보 */
@@ -190,7 +190,7 @@ export function CompanyView({ c, id, t }: { c: CrmCtx; id: string; t?: string })
                       <span className="cx-av" aria-hidden="true">{p.name.slice(0, 1)}</span>
                       <span className="cx-ppl__x">
                         <SheetButton className="cx-ppl__n" title="담당자 고치기" label={<b>{p.name}{p.title && !p.name.includes(p.title) ? ` ${p.title}` : ""}</b>}><ContactForm companyId={co.id} contact={p} /></SheetButton>
-                        <small>{[p.dept, p.role ? CONTACT_ROLE[p.role] : "", p.source === "mail" ? "메일에서 추가됨" : p.danchu_key ? "단추에서 들어옴" : "", last ? (ymdKst(last.occurred_at) === todayKst(now) ? "오늘 연락" : `${mdW(ymdKst(last.occurred_at))} 연락`) : ""].filter(Boolean).join(" · ")}</small>
+                        <small>{[p.dept, p.role ? CONTACT_ROLE[p.role] : "", p.danchu_key ? "단추에서 들어옴" : "", last ? (ymdKst(last.occurred_at) === todayKst(now) ? "오늘 연락" : `${mdW(ymdKst(last.occurred_at))} 연락`) : ""].filter(Boolean).join(" · ")}</small>
                       </span>
                       <span className="cx-ppl__ico">
                         {(p.mobile || p.phone) && <a href={`tel:${(p.mobile || p.phone).replace(/[^0-9+]/g, "")}`} className="cx-icon" aria-label={`${p.name}에게 전화`}><Phone size={16} aria-hidden="true" /></a>}
