@@ -3,7 +3,8 @@
  * PDF 저장(인쇄)·편집 화면의 미리보기·양식 미리보기가 같은 페이지를 쓴다. 상태가 없는 표시 전용 컴포넌트.
  * 문서는 화면 테마와 상관없이 종이색으로 고정한다 (quote.css .qd).
  */
-import { docTotals, inkOn, mainAnimals, recoveryAnimals, scheduleWeeks, testLines, type DocData, type DocHead, type DocTest, type QuoteStyle } from "@/lib/quote-doc";
+import { docTotals, inkOn, kindRows, kindSummary, mainAnimals, recoveryAnimals, scheduleWeeks, testKind, testLines, type DocData, type DocHead, type DocTest, type QuoteStyle } from "@/lib/quote-doc";
+import { PD_ROLE, pkSamples } from "@/lib/kind-design";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
 
@@ -42,6 +43,8 @@ export function condLine(t: DocTest): string {
 }
 /** 군 구성 요약: "4군, 126마리" */
 export function groupLine(t: DocTest): string {
+  const ks = kindSummary(t);
+  if (ks) return ks;
   if (!t.groups.length) return "";
   return `${t.groups.length}군, ${mainAnimals(t.groups) + recoveryAnimals(t.groups)}마리`;
 }
@@ -102,7 +105,8 @@ export function QuotePage({ head, data, style, i, total }: { head: DocHead; data
         <thead><tr><th className="qd__no">No</th><th>시험</th><th>조건</th><th className="r">기간</th>{v.perTest && <th className="r">금액</th>}</tr></thead>
         {data.tests.map((x, idx) => {
           const c = testLines(x);
-          const showAdj = v.perTest && v.adjust && c.lines.length > 0;
+          const rows = kindRows(x);
+          const showAdj = v.perTest && v.adjust && (rows ? rows.length > 0 : c.lines.length > 0);
           return (
             <tbody key={x.uid}>
               <tr className="qd__test">
@@ -112,7 +116,10 @@ export function QuotePage({ head, data, style, i, total }: { head: DocHead; data
                 <td className="r">{x.weeks ? `${x.weeks}주` : ""}</td>
                 {v.perTest && <td className="r qd__num qd__amt">{n(c.total)}</td>}
               </tr>
-              {showAdj && (
+              {showAdj && rows && rows.map((r, k) => (
+                <tr className="qd__adj" key={k}><td /><td colSpan={3}>{r.label}{r.note && (v.formula || testKind(x) !== "pd") ? <span className="qd__formula"> {r.note}</span> : null}</td><td className="r qd__num">{r.amount < 0 ? `- ${n(-r.amount)}` : n(r.amount)}</td></tr>
+              ))}
+              {showAdj && !rows && (
                 <>
                   <tr className="qd__adj"><td /><td colSpan={3}>표준가{x.std.summary ? ` (${x.std.summary})` : ""}</td><td className="r qd__num">{n(c.base)}</td></tr>
                   {c.lines.map((l, k) => (
@@ -161,6 +168,61 @@ export function GroupTable({ t }: { t: DocTest }) {
   );
 }
 
+/** 효력·약동학·개별 분석의 설계 (3부) */
+function KindDetail({ t }: { t: DocTest }) {
+  const k = testKind(t);
+  const pd = k === "pd" ? t.kd?.pd : undefined;
+  const pk = k === "pk" ? t.kd?.pk : undefined;
+  const ot = k === "other" ? t.kd?.other : undefined;
+  return (
+    <>
+      {pd && (
+        <>
+          {(pd.model || pd.induction) && <dl className="qd__cond">{pd.model && <div><dt>질환 모델</dt><dd>{pd.model}</dd></div>}{pd.induction && <div><dt>유발</dt><dd>{pd.induction}</dd></div>}</dl>}
+          {pd.groups.length > 0 && (
+            <>
+              <h2 className="qd__h2">군 구성</h2>
+              <table className="qd__groups">
+                <thead><tr><th>군</th><th>처치</th><th>용량</th><th className="r">군당 수</th></tr></thead>
+                <tbody>{pd.groups.map((g) => <tr key={g.id}><td>{g.label} <small>{PD_ROLE[g.role]}</small></td><td>{g.treat}</td><td>{g.dose}</td><td className="r qd__num">{g.n}</td></tr>)}</tbody>
+                <tfoot><tr><td>합계</td><td /><td /><td className="r qd__num">{pd.groups.reduce((a, g) => a + g.n, 0)}</td></tr></tfoot>
+              </table>
+            </>
+          )}
+          {pd.endpoints.length > 0 && <><h2 className="qd__h2">평가 지표</h2><ul className="qd__evals">{pd.endpoints.map((e) => <li key={e}>{e}</li>)}</ul></>}
+        </>
+      )}
+      {pk && (
+        <>
+          {pk.types.length > 0 && <dl className="qd__cond"><div><dt>시험 종류</dt><dd>{pk.types.join(", ")}</dd></div></dl>}
+          {pk.groups.length > 0 && (
+            <>
+              <h2 className="qd__h2">용량군</h2>
+              <table className="qd__groups">
+                <thead><tr><th>군</th><th>투여경로</th><th>용량</th><th className="r">마리</th></tr></thead>
+                <tbody>{pk.groups.map((g) => <tr key={g.id}><td>{g.label}</td><td>{g.route}</td><td>{g.dose}</td><td className="r qd__num">{g.n}</td></tr>)}</tbody>
+              </table>
+            </>
+          )}
+          <h2 className="qd__h2">채혈과 분석</h2>
+          <dl className="qd__cond">
+            {pk.times.length > 0 && <div><dt>채혈 시점</dt><dd>{pk.times.join(", ")} ({pk.times.length}시점)</dd></div>}
+            {pk.matrix.length > 0 && <div><dt>검체</dt><dd>{pk.matrix.join(", ")}</dd></div>}
+            {pkSamples(pk) > 0 && <div><dt>검체 수</dt><dd className="qd__num">{pkSamples(pk)}검체</dd></div>}
+            {pk.method && <div><dt>분석법</dt><dd>{pk.method === "dev" ? "분석법 개발 포함" : "의뢰자 분석법 사용"}</dd></div>}
+            {pk.params.length > 0 && <div><dt>파라미터</dt><dd>{pk.params.join(", ")}</dd></div>}
+          </dl>
+        </>
+      )}
+      {ot && (ot.sample || ot.n > 0) && (
+        <dl className="qd__cond">{ot.sample && <div><dt>시료</dt><dd>{ot.sample}</dd></div>}{ot.n > 0 && <div><dt>검체 수</dt><dd className="qd__num">{ot.n}검체</dd></div>}</dl>
+      )}
+      {t.why && <><h2 className="qd__h2">요청과 다르게 설계한 이유</h2><p className="qd__desc">{t.why}</p></>}
+      {t.asks && t.asks.length > 0 && <><h2 className="qd__h2">확인이 필요한 사항</h2><ol className="qd__evals">{t.asks.map((a) => <li key={a}>{a}</li>)}</ol></>}
+    </>
+  );
+}
+
 export const COND_LABEL: [keyof DocTest["cond"], string][] = [["species", "실험동물"], ["route", "투여경로"], ["dosing", "투여기간"], ["recovery", "회복기간"], ["glp", "시험 기준"], ["guideline", "참고 가이드라인"]];
 
 export function DetailPage({ head, t, idx, count, style, i, total }: { head: DocHead; t: DocTest; idx: number; count: number; style: QuoteStyle; i: number; total: number }) {
@@ -174,6 +236,7 @@ export function DetailPage({ head, t, idx, count, style, i, total }: { head: Doc
       <h2 className="qd__h2">시험 조건</h2>
       <dl className="qd__cond">{COND_LABEL.filter(([k]) => t.cond[k] && !(k === "recovery" && !t.groups.length && t.cond[k] === "없음")).map(([k, label]) => <div key={k}><dt>{label}</dt><dd>{t.cond[k]}</dd></div>)}</dl>
       {t.groups.length > 0 && <><h2 className="qd__h2">군 구성</h2><GroupTable t={t} /></>}
+      <KindDetail t={t} />
       {evals.length > 0 && <><h2 className="qd__h2">평가항목</h2><ul className="qd__evals">{evals.map((e) => <li key={e.name}>{e.name}</li>)}</ul></>}
       {t.description && <><h2 className="qd__h2">시험 설명</h2><p className="qd__desc">{t.description}</p></>}
       <Foot label="3부 시험 상세 설명" i={i} total={total} />

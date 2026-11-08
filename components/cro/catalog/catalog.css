@@ -181,3 +181,71 @@
 .tc__price label b { font-weight: 600; }
 .tc__price label span { font-size: 13px; color: var(--muted); }
 @media (max-width: 759px) { .tc__price { grid-template-columns: minmax(0, 1fr) minmax(0, 170px); } }
+
+/* ── 갈래 탭과 효력·약동학·개별 분석 표준 설계 (2026-11-07) ──
+   탭은 견적 요청 네 갈래와 같다. 줄은 가로선 없이 번갈아 면으로, 금액 칸은 오른쪽 정렬 숫자 */
+.tl__kinds { display: flex; gap: 4px; margin: -8px 0 20px; overflow-x: auto; scrollbar-width: none; }
+.tl__kinds::-webkit-scrollbar { display: none; }
+.tl__kinds button { flex: none; height: 44px; padding: 0 14px; border: 0; border-radius: var(--r-md); background: none; color: var(--muted); font: inherit; font-size: 15.5px; font-weight: 500; transition: background-color 160ms ease, color 160ms ease, transform 160ms var(--ease-out); }
+.tl__kinds button span { margin-left: 4px; font-size: 13px; opacity: .75; }
+.tl__kinds button[aria-selected="true"] { background: var(--ink); color: var(--wh); font-weight: 600; }
+.tl__kinds button:active { transform: scale(0.97); }
+.tl__kinds button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .tl__kinds button:hover:not([aria-selected="true"]) { background: var(--track); color: var(--ink); } }
+
+.tk__n { font-style: normal; font-weight: 400; color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.tk__rows { display: flex; flex-direction: column; gap: 2px; }
+.tk__g, .tk__l, .tk__k, .tk__c { display: grid; gap: 8px; align-items: center; padding: 6px 8px; border-radius: var(--r-md); }
+.tk__g:nth-child(even), .tk__l:nth-child(even), .tk__k:nth-child(even), .tk__c:nth-child(even) { background: var(--sf); }
+.tk__hd { font-size: 12.5px; color: var(--muted); padding-block: 2px; background: none !important; }
+.tk__hd .r { text-align: right; }
+.tk__g { grid-template-columns: minmax(0, 1.1fr) 104px minmax(0, 1.4fr) 76px 32px; }
+.tk__l { grid-template-columns: minmax(0, 1fr) 104px 92px 32px; }
+.tk__k { grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) 76px 32px; }
+.tk__c { grid-template-columns: minmax(0, 1fr) 150px 130px; }
+.tk__rows .inp, .tk__costs .numin input, .tk__cnt input { height: 40px; font-size: 14.5px; }
+.tk__sel { appearance: auto; padding-right: 6px; }
+.tk__cnt input { text-align: right; padding-right: 12px; }
+.tk__cnt:has(> span) input { padding-right: 40px; }
+.tk__x { width: 32px; height: 32px; justify-content: center; padding: 0; color: var(--muted); }
+.tk__pt { font-size: 13px; color: var(--muted); text-align: right; padding-right: 10px; }
+.tk__gantt { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--sf); border-radius: var(--r-md); }
+.tk__gantt > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.tk__gantt > div > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk__bar { position: relative; height: 10px; background: var(--track); border-radius: 2px; }
+.tk__bar i { position: absolute; top: 2px; bottom: 2px; background: var(--ink); border-radius: 2px; }
+.tk__bar em { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1px; background: var(--ink); }
+.tk__own { display: flex; gap: 8px; }
+.tk__own .inp { height: 40px; max-width: 240px; }
+.tk__calc { font-size: 14px; color: var(--body); }
+.tk__costs { display: flex; flex-direction: column; gap: 2px; }
+.tk__costs .numin input { text-align: right; padding-right: 32px; }
+.tk__cl { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.tk__cl b { font-size: 14.5px; font-weight: 600; }
+.tk__cl small { font-size: 12.5px; color: var(--muted); }
+.tk__ms { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.tk__money { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tk__money label { display: flex; align-items: baseline; gap: 6px; font-size: 14px; font-weight: 600; color: var(--body); }
+.tk__money label small { font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.tk__money .numin input { text-align: right; padding-right: 32px; }
+.tk__money--sm { display: grid; grid-template-columns: minmax(0, 1fr) 150px; align-items: center; padding: 0 8px; }
+.tk__sum { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: var(--r-md); background: var(--sf); font-size: 13.5px; color: var(--muted); }
+.tk__sum b { font-size: 17px; font-weight: 700; color: var(--ink); }
+.tk__wiz { display: flex; flex-direction: column; gap: 24px; }
+
+@media (max-width: 759px) {
+  .tl__kinds { margin: -4px -16px 14px; padding: 0 16px; }
+  .tl__kinds button { height: 40px; padding: 0 12px; font-size: 14.5px; }
+  .tk__g { grid-template-columns: minmax(0, 1fr) 92px 64px 28px; }
+  .tk__g .tk__treat, .tk__g.tk__hd > span:nth-child(3) { display: none; }
+  .tk__k { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) 64px 28px; }
+  .tk__k > .inp:nth-child(3), .tk__k.tk__hd > span:nth-child(3) { display: none; }
+  .tk__l { grid-template-columns: minmax(0, 1fr) 96px 80px 28px; }
+  .tk__c { grid-template-columns: minmax(0, 1fr) 116px 116px; gap: 6px; padding-inline: 4px; }
+  .tk__costs .numin input { padding-left: 8px; padding-right: 24px; font-size: 14px; }
+  .tk__costs .numin > span { right: 8px; }
+  .tk__cl small { display: none; }
+  .tk__ms { grid-template-columns: 1fr; }
+  .tk__money--sm { grid-template-columns: minmax(0, 1fr) 120px; }
+  .tk__x { width: 28px; }
+}

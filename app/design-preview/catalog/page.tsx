@@ -6,6 +6,8 @@ import { Shell, type NavItem } from "@/components/shell/Shell";
 import { TestList } from "@/components/cro/catalog/TestList";
 import { catalogItems, itemKey, newVariant, type CatalogRow } from "@/lib/catalog";
 import type { Session } from "@/lib/auth";
+import { kindOfCategory } from "@/lib/kind-design";
+import { kindRows } from "../kind-fixtures";
 import "@/components/cro/catalog/catalog.css";
 
 export const dynamic = "force-dynamic";
@@ -30,18 +32,21 @@ function sample(): CatalogRow[] {
     mk("일반독성", "단회(급성)투여독성", "00000000-0000-4000-8000-000000000003", { source: "manual", species: ["SD 랫드", "ICR 마우스"], route: "경구(PO)", routes: ["경구(PO)"], method: "OECD TG 423 급성독성등급법", dosing: "단회, 관찰 14일", weeks: 6 }),
     mk("일반독성", "반복투여 13주", "00000000-0000-4000-8000-000000000004", { source: "manual", available: false, species: ["SD 랫드"], route: "경구(PO)", routes: ["경구(PO)"], groups_ctrl: 1, groups_test: 3, per_sex: 10, weeks: 26 }),
     mk("유전독성", "복귀돌연변이(Ames, TG 471)", "00000000-0000-4000-8000-000000000005", { source: "manual", species: ["in vitro(동물 없음)"], method: "OECD TG 기준", glp: "GLP", weeks: 6, std_price: 8_000_000 }),
+    // 효력·약동학·개별 분석 (2026-11-07). 임상병리는 갈래 설계를 아직 안 채운 줄
+    ...(() => { const k = kindRows(mk); return [k.pd, { ...k.pd, id: "00000000-0000-4000-8000-000000000031", item: "간", item_key: itemKey("효력시험(약효)", "간"), method: "알코올성 지방간", kd: undefined, std_price: null }, k.pk, k.other, k.otherNew]; })(),
   ];
 }
 
 /**
  * 시험 목록 검토용 (로그인 없이, 저장 안 됨). Vercel 미리보기 배포에서만 열린다.
- * ?view=list|pick|wizard|empty, ?open=1 이면 첫 줄 서랍을 연다
+ * ?view=list|pick|wizard|empty, ?open=1 이면 첫 줄 서랍을 연다, ?kind=pd|pk|other 면 그 갈래 줄을 앞에 둔다 (질문형은 그 줄부터)
  */
-export default async function CatalogPreview({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
+export default async function CatalogPreview({ searchParams }: { searchParams: Promise<{ view?: string; kind?: string }> }) {
   const enabled = process.env.VERCEL_ENV === "preview" || (process.env.VERCEL_ENV !== "production" && process.env.DANCHU_DESIGN_PREVIEW === "1");
   if (!enabled) notFound();
   const sp = await searchParams;
-  const rows = sp.view === "empty" ? [] : sample();
+  const all = sp.view === "empty" ? [] : sample();
+  const rows = sp.kind ? [...all.filter((r) => kindOfCategory(r.category) === sp.kind), ...all.filter((r) => kindOfCategory(r.category) !== sp.kind)] : all;
   const session: Session = {
     userId: "catalog-preview", email: "preview@example.invalid", org: null, pendingOrg: null,
     profile: { id: "catalog-preview", email: "preview@example.invalid", role: "cro", name: "검토 계정", company: null, dept: null, phone: null, org_type: null, cro_org_id: null },
@@ -51,7 +56,7 @@ export default async function CatalogPreview({ searchParams }: { searchParams: P
     <AppState>
       <Shell session={session} nav={NAV}>
         <Suspense>
-          <TestList items={catalogItems()} initialRows={rows} initialRates={{}} orgCategories={["일반독성", "유전독성", "안전성약리"]} readOnly startView={view} />
+          <TestList items={catalogItems()} initialRows={rows} initialRates={{}} orgCategories={["일반독성", "유전독성", "안전성약리", "효력시험(약효)", "PK/TK/ADME·생체시료분석"]} readOnly startView={view} />
         </Suspense>
       </Shell>
     </AppState>

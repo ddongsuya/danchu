@@ -3,13 +3,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Minus, Plus, X } from "@phosphor-icons/react";
+import { Check, Plus, X } from "@phosphor-icons/react";
 import {
-  addDays, blankTest, docTitle, docTotals, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testLines, uid,
+  addDays, blankTest, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
   type DocData, type DocGroup, type DocHead, type DocTest, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
-import { Cover, QuotePage } from "./DocPages";
+import { kindOfCategory, type Kind } from "@/lib/kind-design";
+import { KINDS } from "@/lib/study-kinds";
+import { Cover, DetailPage, QuotePage } from "./DocPages";
+import { KindPriceQ, KindTab, OrigBox, Stepper, kdForCatalog, kindTabs, needsPrice, type KTab } from "./KindQ";
 
 /**
  * 견적서 질문 화면 (2026-11-07 시안 승인). 질문 하나씩 답하면 견적서가 채워진다.
@@ -19,9 +22,17 @@ import { Cover, QuotePage } from "./DocPages";
  * head 가 없으면 아직 만들지 않은 새 견적서: 시험까지 고른 뒤 만들고 이 화면으로 다시 온다.
  */
 
-type StepId = "client" | "tests" | "price" | "change" | "detail" | "terms" | "review";
-const ORDER: StepId[] = ["client", "tests", "price", "change", "detail", "terms", "review"];
-const BAR: Record<StepId, number> = { client: 1, tests: 2, price: 3, change: 4, detail: 4, terms: 5, review: 6 };
+type StepId = "kind" | "client" | "tests" | "price" | "change" | "detail" | "terms" | "review";
+const ORDER: StepId[] = ["kind", "client", "tests", "price", "change", "detail", "terms", "review"];
+const BAR: Record<StepId, number> = { kind: 1, client: 1, tests: 2, price: 3, change: 4, detail: 4, terms: 5, review: 6 };
+const KIND_ORDER: Kind[] = ["tox", "pd", "pk", "other"];
+/** 갈래 고르기 줄의 설명: 견적서에서 무엇이 달라지는지 */
+const KIND_STRUCT: Record<Kind, string> = {
+  tox: "군 구성 · 회복군 · 동물종별 표준가",
+  pd: "질환 모델 · 군 구성 · 주 단위 일정 · 비용 다섯 칸",
+  pk: "시험 종류 · 채혈 시점 · 검체 · 분석법 · 파라미터",
+  other: "검체 수 × 검체당 단가",
+};
 
 const n = (v: number) => v.toLocaleString("ko-KR");
 const digits = (s: string, max = 12) => s.replace(/[^\d]/g, "").slice(0, max);
@@ -46,10 +57,12 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const blankHead: DocHead = { id: "", docNo: "새 견적서", title: "견적서", client: crm?.client ?? "", substance: "", issuedOn: today(), validUntil: null, inviteId: null, rfqNo: null, memo: "", updatedAt: "" };
   const [head, setHead] = useState<DocHead>(head0 ?? blankHead);
   const [data, setData] = useState<DocData>(initial ?? { tests: [], visible: { perTest: true, adjust: true, formula: false }, discount: 0, terms: style.terms, glp: "" });
-  const first: StepId = ORDER.includes(start as StepId) ? (start as StepId) : head0?.rfqNo ? "tests" : "client";
+  const first: StepId = ORDER.includes(start as StepId) ? (start as StepId) : head0?.rfqNo ? "tests" : isNew ? "kind" : "client";
   const [step, setStep] = useState<StepId>(first);
-  // ?step=detail 로 바로 열면 첫 시험을 바꿀 시험으로 잡는다
-  const [changeIds, setChangeIds] = useState<string[]>(() => (first === "detail" && initial?.tests[0] ? [initial.tests[0].uid] : []));
+  // 새 견적서는 갈래부터 고른다. 시험 고르기가 그 갈래의 시험만 보여 준다
+  const [kind, setKind] = useState<Kind | null>(() => (initial?.tests[0] ? testKind(initial.tests[0]) : null));
+  // ?step=detail 로 바로 열면 첫 시험을, 받은 요청에서 만든 견적서는 원안이 있는 효력·약동학·개별 분석 시험을 바꿀 시험으로 잡는다
+  const [changeIds, setChangeIds] = useState<string[]>(() => (first === "detail" && initial?.tests[0] ? [initial.tests[0].uid] : (initial?.tests ?? []).filter((t) => t.orig && testKind(t) !== "tox").map((t) => t.uid)));
   const [at, setAt] = useState(0);
   const [saveToList, setSaveToList] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<"saved" | "saving" | "failed">("saved");
@@ -62,7 +75,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const totals = useMemo(() => docTotals(data), [data]);
-  const noPrice = data.tests.filter((t) => t.std.price == null);
+  const noPrice = data.tests.filter((t) => needsPrice(t, testKind(t)));
   const changing = changeIds.map((u) => data.tests.find((t) => t.uid === u)).filter((t): t is DocTest => !!t);
   const cur = changing[Math.min(at, changing.length - 1)];
 
@@ -103,6 +116,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const go = (s: StepId) => { setErr(""); setPeek(false); setStep(s); };
   const next = async () => {
     setErr("");
+    if (step === "kind") return go("client");
     if (step === "client") return go("tests");
     if (step === "tests") {
       if (isNew) return create();
@@ -127,24 +141,47 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
     setBusy(true);
     const ids = data.tests.map((t) => t.catalogId).filter((x): x is string => !!x);
     const manual = data.tests.filter((t) => !t.catalogId).map((t) => t.title);
-    const r = await fetch("/api/cro/docs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ catalogIds: ids, manual, client: head.client, substance: head.substance, companyId: crm?.companyId, contactId: crm?.contactId, dealId: crm?.dealId }) }).catch(() => null);
+    const r = await fetch("/api/cro/docs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ catalogIds: ids, manual, kind: kind ?? "tox", client: head.client, substance: head.substance, companyId: crm?.companyId, contactId: crm?.contactId, dealId: crm?.dealId }) }).catch(() => null);
     const d = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;
     if (!r?.ok || !d?.id) { setBusy(false); setErr(d?.error || "견적서를 만들지 못했어요. 네트워크를 확인하고 다시 시도해 주세요."); return; }
-    const nextStep = data.tests.some((t) => t.std.price == null) ? "price" : "change";
+    const nextStep = data.tests.some((t) => needsPrice(t, testKind(t))) ? "price" : "change";
     router.replace(`/cro/docs/${d.id}/fill?step=${nextStep}`);
   };
 
   /** 금액 단계: "시험 목록에도 저장"을 켠 시험의 표준가를 시험 목록에 적는다 */
   const savePrices = async () => {
-    const list = data.tests.filter((t) => t.catalogId && t.std.price != null && canSave(t) && saveToList[t.uid] !== false);
+    const list = data.tests.filter((t) => t.catalogId && !needsPrice(t, testKind(t)) && canSave(t) && saveToList[t.uid] !== false && t.uid in saveToList);
     for (const t of list) {
-      await fetch("/api/cro/rates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemKey: t.itemKey, prices: [{ id: t.catalogId, std_price: t.std.price }] }) }).catch(() => null);
+      const kd = kdForCatalog(t, testKind(t));
+      await fetch("/api/cro/rates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemKey: t.itemKey, prices: [{ id: t.catalogId, std_price: t.std.price, ...(kd ? { kd } : {}) }] }) }).catch(() => null);
     }
   };
 
   /* ── 질문 ── */
   let h = "", lead = "", body: React.ReactNode = null, nextLabel = "다음", alt: React.ReactNode = null, cost: React.ReactNode = null;
   let canNext = !readOnly;
+
+  if (step === "kind") {
+    h = "어떤 견적서인가요?";
+    lead = "갈래에 따라 견적서의 칸과 금액 계산이 달라져요. 받은 요청에서 만들면 요청의 갈래와 의뢰자 원안이 그대로 들어와요.";
+    const count = (k: Kind) => catalog.filter((c) => kindOfCategory(c.category) === k).length;
+    body = (
+      <div className="qf__kinds" role="radiogroup" aria-label="견적서 갈래">
+        {KIND_ORDER.map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={kind === k} className="qf__kind" disabled={readOnly} onClick={() => setKind(k)}>
+            <span className="qf__ktag">{KINDS[k].tag}</span>
+            <span className="qf__pt">
+              <b>{KINDS[k].name}</b>
+              <span className="qf__sub">{KIND_STRUCT[k]}</span>
+            </span>
+            <span className="qf__help tnum">{count(k) ? `시험 ${count(k)}개` : "목록 비어 있음"}</span>
+          </button>
+        ))}
+      </div>
+    );
+    nextLabel = kind ? `${KINDS[kind].name}으로 시작` : "갈래를 골라 주세요";
+    canNext = canNext && !!kind;
+  }
 
   if (step === "client") {
     h = "누구에게 보내는 견적서인가요?";
@@ -168,7 +205,8 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   if (step === "tests") {
     h = "어떤 시험을 넣을까요?";
     lead = "시험 목록에 적어 둔 조건과 표준가로 채워져요.";
-    body = <TestsQ catalog={catalog} rates={rates} tests={data.tests} readOnly={readOnly} onChange={(tests) => setDoc({ tests })} />;
+    body = <TestsQ catalog={isNew && kind ? catalog.filter((c) => kindOfCategory(c.category) === kind) : catalog} kind={isNew ? kind ?? "tox" : "tox"} rates={rates} tests={data.tests} readOnly={readOnly} onChange={(tests) => setDoc({ tests })} />;
+    if (isNew && kind) lead = `시험 목록의 ${KINDS[kind].name} 시험이에요. 적어 둔 설계와 금액으로 채워져요.`;
     nextLabel = data.tests.length ? `${data.tests.length}개 넣기` : "시험을 골라 주세요";
     canNext = canNext && data.tests.length > 0 && !busy;
     if (busy) nextLabel = "만드는 중…";
@@ -176,12 +214,26 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
 
   if (step === "price") {
     // 적는 동안 줄이 사라지지 않게, 이 단계에서 금액을 적은 시험도 함께 둔다
-    const list = data.tests.filter((t) => t.std.price == null || (saveToList[t.uid] !== undefined));
-    h = list.length ? `표준가가 없는 시험이 ${list.length}개 있어요` : "모든 시험에 금액이 있어요";
+    const list = data.tests.filter((t) => needsPrice(t, testKind(t)) || (saveToList[t.uid] !== undefined));
+    h = list.length ? `기준 금액이 없는 시험이 ${list.length}개 있어요` : "모든 시험에 금액이 있어요";
     lead = "이 견적서에 쓸 금액을 적어 주세요. 시험 목록에도 저장하면 다음 견적서부터 바로 채워져요.";
     body = (
       <div className="qf__list">
-        {list.map((t) => (
+        {list.map((t) => testKind(t) !== "tox" ? (
+          <div key={t.uid} className="qf__kprice">
+            <div className="qf__khd">
+              <b>{t.title}</b>
+              <span className="qf__sub">{KINDS[testKind(t)].name}{t.subtitle ? ` · ${t.subtitle}` : ""}</span>
+              {t.catalogId && (
+                <label className="qf__save">
+                  <input type="checkbox" checked={saveToList[t.uid] !== false} disabled={readOnly} onChange={(e) => setSaveToList((s) => ({ ...s, [t.uid]: e.target.checked }))} />
+                  시험 목록 기준 금액으로도 저장
+                </label>
+              )}
+            </div>
+            <KindPriceQ t={t} k={testKind(t)} readOnly={readOnly} set={(p) => { setSaveToList((s) => (t.uid in s ? s : { ...s, [t.uid]: true })); setTest(t.uid, p); }} />
+          </div>
+        ) : (
           <div key={t.uid} className="qf__mrow">
             <div>
               <b>{t.title}</b>
@@ -233,11 +285,13 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
     lead = changing.length > 1 ? `바꿀 시험 ${changing.length}개 중 ${at + 1}번째예요. 바꾼 곳만 추가 비용으로 더해요.` : "바꾼 곳만 추가 비용으로 더해요. 단가는 시험 목록에 적은 값이에요.";
     body = <DetailQ key={cur.uid} t={cur} readOnly={readOnly} set={(p) => setTest(cur.uid, p)} />;
     const zero = c.lines.filter((l) => l.amount === 0 && l.kind !== "extra");
+    const rows = kindRows(cur);
+    if (testKind(cur) !== "tox") lead = changing.length > 1 ? `바꿀 시험 ${changing.length}개 중 ${at + 1}번째예요. 노란 칸이 기관 표준과 달라진 곳이에요.` : "노란 칸이 기관 표준과 달라진 곳이에요.";
     cost = (
       <div className="qf__cost" aria-live="polite">
-        <span className="qf__help tnum">{[`표준가 ${cur.std.price != null ? n(cur.std.price) : "없음"}`, ...c.lines.map((l) => `${l.label} ${l.amount < 0 ? `- ${n(-l.amount)}` : n(l.amount)}`)].join(" + ").replace(/\+ -/g, "-")}</span>
+        <span className="qf__help tnum">{rows ? (c.total !== c.base ? `기관 표준 ${n(c.base)}원에서 ${c.total > c.base ? "+" : "-"}${n(Math.abs(c.total - c.base))}원` : `기관 표준 ${n(c.base)}원 그대로예요`) : [`표준가 ${cur.std.price != null ? n(cur.std.price) : "없음"}`, ...c.lines.map((l) => `${l.label} ${l.amount < 0 ? `- ${n(-l.amount)}` : n(l.amount)}`)].join(" + ").replace(/\+ -/g, "-")}</span>
         <b>이 시험 금액 <mark className="tnum">{n(c.total)}원</mark></b>
-        {zero.length > 0 && <span className="qf__warn">{zero.map((l) => l.label.split(" · ")[0]).join(", ")} 단가가 비어 있어 0원이에요. <Link href={`/cro/catalog?item=${encodeURIComponent(cur.itemKey)}`}>시험 목록에서 적기</Link></span>}
+        {!rows && zero.length > 0 && <span className="qf__warn">{zero.map((l) => l.label.split(" · ")[0]).join(", ")} 단가가 비어 있어 0원이에요. <Link href={`/cro/catalog?item=${encodeURIComponent(cur.itemKey)}`}>시험 목록에서 적기</Link></span>}
       </div>
     );
     nextLabel = at < changing.length - 1 ? "다음 시험" : "다음";
@@ -271,12 +325,15 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   }
 
   const ix = ORDER.indexOf(step);
-  const showBack = ix > 0;
+  const showBack = ix > 0 && !(step === "client" && !isNew);
   const primary = step === "review"
     ? replyHref ? <Link className="b1" href={replyHref}>회신에 붙이기</Link> : <Link className="b1" href="/cro/docs">견적서 목록으로</Link>
     : <button type="button" className="b1" disabled={!canNext} onClick={next}>{nextLabel}</button>;
   const savedLabel = readOnly ? "읽기 전용" : isNew ? "시험을 고르면 저장돼요" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
-  const preview = step === "client" ? <Cover head={head} data={data} style={style} i={1} total={3 + data.tests.length} /> : <QuotePage head={head} data={data} style={style} i={2} total={3 + data.tests.length} />;
+  const curIdx = cur ? data.tests.findIndex((t) => t.uid === cur.uid) : -1;
+  const preview = step === "client" || step === "kind" ? <Cover head={head} data={data} style={style} i={1} total={3 + data.tests.length} />
+    : step === "detail" && cur && curIdx >= 0 && testKind(cur) !== "tox" ? <DetailPage head={head} t={cur} idx={curIdx} count={data.tests.length} style={style} i={3 + curIdx} total={3 + data.tests.length} />
+    : <QuotePage head={head} data={data} style={style} i={2} total={3 + data.tests.length} />;
 
   return (
     <div className="qf">
@@ -339,7 +396,7 @@ function Paper({ children }: { children: React.ReactNode }) {
 }
 
 /* ── 2. 시험 ── */
-function TestsQ({ catalog, rates, tests, readOnly, onChange }: { catalog: CatalogRow[]; rates: Record<string, Rate[]>; tests: DocTest[]; readOnly: boolean; onChange: (t: DocTest[]) => void }) {
+function TestsQ({ catalog, kind, rates, tests, readOnly, onChange }: { catalog: CatalogRow[]; kind: Kind; rates: Record<string, Rate[]>; tests: DocTest[]; readOnly: boolean; onChange: (t: DocTest[]) => void }) {
   const [q, setQ] = useState("");
   const [own, setOwn] = useState("");
   const cats = useMemo(() => {
@@ -361,7 +418,7 @@ function TestsQ({ catalog, rates, tests, readOnly, onChange }: { catalog: Catalo
         <b>시험 목록에 담은 시험이 없어요</b>
         <span>시험 목록에 조건과 표준가를 적어 두면 여기에서 고를 수 있어요. 아래에서 시험 이름을 직접 적어도 돼요.</span>
         <Link className="b2 bsm" href="/cro/catalog">시험 목록 열기</Link>
-        <Own value={own} setValue={setOwn} onAdd={(name) => onChange([...tests, blankTest(name)])} disabled={readOnly} />
+        <Own value={own} setValue={setOwn} onAdd={(name) => onChange([...tests, blankTest(name, kind)])} disabled={readOnly} />
         {manual.length > 0 && <ManualList tests={manual} onRemove={(u) => onChange(tests.filter((t) => t.uid !== u))} />}
       </div>
     );
@@ -389,7 +446,7 @@ function TestsQ({ catalog, rates, tests, readOnly, onChange }: { catalog: Catalo
         {!cats.size && <p className="qf__help">찾는 시험이 없어요. 아래에서 직접 적어요.</p>}
       </div>
       {manual.length > 0 && <ManualList tests={manual} onRemove={(u) => onChange(tests.filter((t) => t.uid !== u))} />}
-      <Own value={own} setValue={setOwn} onAdd={(name) => onChange([...tests, blankTest(name)])} disabled={readOnly} />
+      <Own value={own} setValue={setOwn} onAdd={(name) => onChange([...tests, blankTest(name, kind)])} disabled={readOnly} />
     </>
   );
 }
@@ -423,12 +480,17 @@ function ManualList({ tests, onRemove }: { tests: DocTest[]; onRemove: (uid: str
 }
 
 /* ── 4-1. 바꾸기 ── */
-type Tab = "groups" | "cond" | "evals";
+type Tab = "groups" | "cond" | "evals" | KTab;
 function DetailQ({ t, readOnly, set }: { t: DocTest; readOnly: boolean; set: (p: Partial<DocTest> | ((t: DocTest) => DocTest)) => void }) {
-  const hasGroups = t.std.groups.length > 0 || t.groups.length > 0;
+  const k = testKind(t);
+  const hasGroups = k === "tox" && (t.std.groups.length > 0 || t.groups.length > 0);
   const extraEvals = t.evals.filter((e) => !e.base);
   const qty = t.rates.filter((r) => r.kind === "qty");
-  const tabs: [Tab, string][] = [...(hasGroups ? [["groups", "동물 수·군 구성"] as [Tab, string]] : []), ["cond", "조건"], ...(extraEvals.length || qty.length ? [["evals", "평가항목"] as [Tab, string]] : [])];
+  const kt = kindTabs(k);
+  // 효력·약동학·개별 분석은 갈래 탭이 먼저. 조건·선택 항목은 뒤에, 의뢰자에게는 맨 끝
+  const tabs: [Tab, string][] = k === "tox"
+    ? [...(hasGroups ? [["groups", "동물 수·군 구성"] as [Tab, string]] : []), ["cond", "조건"], ...(extraEvals.length || qty.length ? [["evals", "평가항목"] as [Tab, string]] : []), ...kt]
+    : [...kt.slice(0, -1), ["cond", "조건"], ...(extraEvals.length || qty.length ? [["evals", "선택 항목"] as [Tab, string]] : []), kt[kt.length - 1]];
   const [tab, setTab] = useState<Tab>(tabs[0][0]);
   const stdById = new Map(t.std.groups.map((g) => [g.id, g]));
   const setG = (id: string, p: Partial<DocGroup>) => set((x) => ({ ...x, groups: x.groups.map((g) => (g.id === id ? { ...g, ...p } : g)) }));
@@ -439,11 +501,14 @@ function DetailQ({ t, readOnly, set }: { t: DocTest; readOnly: boolean; set: (p:
 
   return (
     <>
+      <OrigBox t={t} />
       {tabs.length > 1 && (
         <div className="chips qf__tabs" role="tablist" aria-label="바꿀 곳">
-          {tabs.map(([k, label]) => <button key={k} type="button" role="tab" className="chip" aria-selected={tab === k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}</button>)}
+          {tabs.map(([key, label]) => <button key={key} type="button" role="tab" className="chip" aria-selected={tab === key} aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}
         </div>
       )}
+
+      {tab !== "groups" && tab !== "cond" && tab !== "evals" && <KindTab tab={tab} t={t} readOnly={readOnly} set={set} />}
 
       {tab === "groups" && (
         <div className="qf__q">
@@ -525,17 +590,6 @@ function CondField({ label, value, was, opts, disabled, onChange }: { label: str
         <input id={id} className={`inp${changed ? " is-ch" : ""}`} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value.slice(0, 160))} />
       )}
     </div>
-  );
-}
-
-function Stepper({ label, value, was, onChange, disabled, min = 0, unit }: { label: string; value: number; was?: number; onChange: (v: number) => void; disabled: boolean; min?: number; unit?: string }) {
-  const changed = was !== undefined && was !== value;
-  return (
-    <span className={`qf__step${changed ? " is-ch" : ""}`} role="group" aria-label={label}>
-      <button type="button" aria-label="줄이기" disabled={disabled || value <= min} onClick={() => onChange(value - 1)}><Minus size={14} aria-hidden="true" /></button>
-      <span className="tnum">{changed && <s>{was}</s>}{value}{unit ? <small> {unit}</small> : null}</span>
-      <button type="button" aria-label="늘리기" disabled={disabled || value >= 999} onClick={() => onChange(value + 1)}><Plus size={14} aria-hidden="true" /></button>
-    </span>
   );
 }
 

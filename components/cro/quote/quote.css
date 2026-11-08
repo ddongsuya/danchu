@@ -583,7 +583,9 @@
 .qf__money input { text-align: right; }
 
 /* 군 구성 */
-.qf__tabs { margin-top: 20px; }
+.qf__tabs { margin-top: 20px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; }
+.qf__tabs::-webkit-scrollbar { display: none; }
+.qf__tabs .chip { flex: none; }
 .qf__grp { display: grid; grid-template-columns: minmax(0, 1fr) 104px 104px; gap: 8px; align-items: center; padding: 8px 10px; border-radius: var(--r-md); }
 .qf__grp:nth-child(even) { background: var(--sf); }
 .qf__grp--hd { font-size: 12px; color: var(--muted); padding-top: 0; padding-bottom: 0; }
@@ -658,8 +660,81 @@
   .qf__paper { max-width: 620px; }
   .qf__grp { grid-template-columns: minmax(0, 1.2fr) 112px 112px minmax(0, 1fr); }
   .qf__c3 { display: block; }
+  .qf__tabs { flex-wrap: wrap; margin-inline: 0; padding-inline: 0; overflow: visible; }
   .qf__big { font-size: 44px; }
 }
 .qf__prow:focus-visible, .qf__step button:focus-visible, .qf__lk:focus-visible, .qf__x:focus-visible, .qf__gx:focus-visible, .qf .chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .qf__prow:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) { .qf__prow, .qf__step button { transition: none; } }
+
+/* 갈래별 질문 (2026-11-07) */
+.qf__kinds { display: flex; flex-direction: column; gap: 4px; margin-top: 22px; }
+.qf__kind { display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: 14px; row-gap: 2px; align-items: center; padding: 15px 14px; border: 0; border-radius: var(--r-md); background: transparent; text-align: left; width: 100%; color: var(--ink); font: inherit; transition: transform 160ms var(--ease-out); }
+.qf__kind:nth-child(odd) { background: var(--sf); }
+.qf__kind > .qf__help { grid-column: 2; }
+.qf__kind[aria-checked="true"] { background: var(--ink); color: var(--wh); }
+.qf__kind[aria-checked="true"] .qf__sub, .qf__kind[aria-checked="true"] .qf__help, .qf__kind[aria-checked="true"] .qf__ktag { color: var(--track); }
+.qf__kind:active:not(:disabled) { transform: scale(0.99); }
+.qf__ktag { font-size: 13px; font-weight: 600; color: var(--muted); }
+.qf__orig { margin-top: 16px; padding: 10px 14px; background: var(--sf); border-radius: var(--r-md); font-size: 13.5px; }
+.qf__orig summary { display: flex; gap: 10px; align-items: baseline; cursor: pointer; list-style: none; min-width: 0; }
+.qf__orig summary::-webkit-details-marker { display: none; }
+.qf__orig summary b { font-size: 12.5px; font-weight: 600; color: var(--muted); flex: none; }
+.qf__orig summary span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qf__orig[open] summary span { display: none; }
+.qf__orig summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.qf__orig dl { margin: 6px 0 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; }
+.qf__orig dt { color: var(--muted); }
+.qf__orig dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.qf__pdg { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 8px; align-items: center; padding: 8px 10px; border-radius: var(--r-md); }
+.qf__pdg:nth-child(even) { background: var(--sf); }
+.qf__pdg.is-add { background: var(--brand-tint); }
+.qf__pdg--hd { font-size: 12px; color: var(--muted); padding-top: 0; padding-bottom: 0; }
+.qf__gl { height: 36px; font-size: 14px; font-weight: 500; padding: 0 8px; min-width: 0; flex: 1; }
+.qf__role { height: 30px; border: 0; border-radius: var(--r-pill); background: var(--track); color: var(--body); font: inherit; font-size: 12px; padding: 0 6px; flex: none; }
+.qf__two { display: none; gap: 6px; }
+.qf__lanes { display: flex; flex-direction: column; gap: 4px; }
+.qf__lane { display: grid; grid-template-columns: minmax(0, 1fr) 122px 112px; gap: 8px; align-items: center; padding: 6px 10px; border-radius: var(--r-md); }
+.qf__lane:nth-child(even) { background: var(--sf); }
+.qf__lane > .qf__help { text-align: center; }
+.qf__gantt { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; padding: 10px 12px; background: var(--sf); border-radius: var(--r-md); }
+.qf__gantt > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.qf__gantt > div > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qf__bar { position: relative; height: 10px; background: var(--track); border-radius: 2px; }
+.qf__bar i { position: absolute; top: 2px; bottom: 2px; background: var(--ink); border-radius: 2px; }
+.qf__bar em { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1px; background: var(--ink); }
+.qf__cst { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px; align-items: center; padding: 8px 10px; border-radius: var(--r-md); }
+.qf__cst:nth-child(even) { background: var(--sf); }
+.qf__cst--hd { font-size: 12px; color: var(--muted); padding-top: 0; padding-bottom: 0; }
+.qf__cst .qf__pt b { font-size: 14px; font-weight: 500; }
+.qf__cst .r { text-align: right; }
+.qf__cst .numin input, .qf__kprice .numin input { text-align: right; }
+.qf .numin.is-ch input { background: var(--brand-tint); border-color: var(--ink); }
+.qf__calc { font-size: 14px; color: var(--body); margin: 4px 0 0; }
+.qf__calc mark { background: var(--brand-tint); color: var(--ink); padding: 0 3px; }
+.qf__ta { height: auto; min-height: 84px; padding: 10px 12px; line-height: 1.55; resize: vertical; font: inherit; font-size: 14.5px; }
+.qf__asks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; counter-reset: a; }
+.qf__asks li { display: grid; grid-template-columns: 22px minmax(0, 1fr) 28px; align-items: center; padding: 6px 4px 6px 10px; border-radius: var(--r-md); font-size: 14px; counter-increment: a; }
+.qf__asks li:nth-child(odd) { background: var(--sf); }
+.qf__asks li::before { content: counter(a); font-weight: 600; color: var(--muted); }
+.qf__kprice { padding: 16px; background: var(--sf); border-radius: var(--r-md); }
+.qf__kprice .qf__q { margin-top: 12px; }
+.qf__khd b { font-weight: 600; display: block; }
+.qf__khd .qf__sub { display: block; }
+@media (min-width: 960px) {
+  .qf__pdg { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 112px; }
+  .qf__two { display: flex; }
+  .qf__lane { grid-template-columns: minmax(0, 1fr) 132px 132px; }
+  .qf__cst { grid-template-columns: minmax(0, 1.2fr) 96px 92px 150px; }
+}
+.qf__kind:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .qf__kind { transition: none; } }
+/* 휴대폰: 일정 막대는 미리보기 견적서에 그대로 나오므로 숨기고, 이름 칸을 넓힌다 */
+@media (max-width: 599px) {
+  .qf__gantt { display: none; }
+  .qf__lane { grid-template-columns: minmax(0, 1fr) 108px 100px; gap: 6px; padding: 4px 6px; }
+}
+/* 직접 편집 화면의 갈래 설계: 질문 화면과 같은 칸을 문서 안에 둔다 */
+.qed__kind .qf__tabs { display: flex; gap: 6px; margin: 12px 0 14px; }
+.qed__kind .qf__orig { margin-top: 4px; }
+.qed__kindbody { display: flex; flex-direction: column; gap: 16px; }

@@ -129,7 +129,7 @@ type Loaded = {
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
 /** 견적서 생성 툴(0036)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
-export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null }[] };
+export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null; extra?: Record<string, string> }[] };
 
 export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string } }) {
   const router = useRouter();
@@ -182,7 +182,10 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
       const l = by.get(it.seq);
       if (!l) return it;
       count++;
-      return { ...it, avail: it.avail === "조건부 가능" ? it.avail : "가능" as const, amount: String(l.amount), weeks: l.weeks ? String(l.weeks) : it.weeks, unit: "total" as const, unitPrice: "", sampleCount: "", source: "manual" as const, checks: [] };
+      // 견적서의 설계 설명(군 구성·일정·비용 다섯 칸·고친 이유)이 회신 설계 칸을 채운다. 견적서가 주지 않은 칸은 그대로 둔다
+      const prev = (it.design?.extra && typeof it.design.extra === "object" ? it.design.extra : {}) as Record<string, unknown>;
+      const extra = { ...prev, ...(l.extra ?? {}) };
+      return { ...it, avail: it.avail === "조건부 가능" ? it.avail : "가능" as const, amount: String(l.amount), weeks: l.weeks ? String(l.weeks) : it.weeks, unit: "total" as const, unitPrice: "", sampleCount: "", source: "manual" as const, checks: [], design: { ...(it.design ?? {}), extra } };
     });
     if (!count) return;
     setItems(next);
