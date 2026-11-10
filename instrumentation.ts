@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubEvent } from "@/lib/sentry-scrub";
 import { missingProdEnv } from "@/lib/env";
 
 /**
@@ -15,6 +16,10 @@ export async function register() {
     dsn,
     environment: process.env.VERCEL_ENV || process.env.NODE_ENV,
     tracesSampleRate: 0.1,
+    // 회신 토큰이 든 주소는 밖으로 내보내지 않는다 (lib/sentry-scrub.ts)
+    beforeSend: (event) => scrubEvent(event),
+    beforeSendTransaction: (event) => scrubEvent(event),
+    beforeBreadcrumb: (crumb) => scrubEvent(crumb),
   });
 }
 

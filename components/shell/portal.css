@@ -482,6 +482,9 @@
 .pt--guest .pt__topin { max-width: 1080px; margin: 0 auto; }
 .pt--guest .pt__topin > .pt__brand { display: flex; }
 .pt--guest .pt__main { padding-bottom: calc(48px + var(--bot)); }
+/* 손님 요청서 위 사전예약 안내 (/request 의 .rq-pre 와 같은 모양) */
+.pt .pt__main > .pt-prereg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; max-width: 840px; margin: 0 auto 24px; padding: 12px 16px; border-radius: var(--r-md); background: var(--band); font-size: 14.5px; line-height: 1.5; color: var(--ink-2); }
+.pt .pt__main > .pt-prereg a { font-weight: 600; color: var(--ink); text-underline-offset: 3px; }
 .pt .pt__guest-login { font-size: 14px; color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; text-underline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) { .pt .pt__guest-login:hover { color: var(--ink); text-decoration: underline; } }
 

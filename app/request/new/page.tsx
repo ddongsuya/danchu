@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession, homeOf } from "@/lib/auth";
 import { GuestShell } from "@/components/shell/GuestShell";
 import { NewRequest } from "@/components/NewRequest";
+import { preregActive } from "@/lib/prereg";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -24,6 +25,13 @@ export default async function GuestRequestPage({ searchParams }: { searchParams:
   if (s) redirect(s.profile.role === "requester" || s.profile.role === "admin" ? `/app/new${search}` : homeOf(s.profile.role));
   return (
     <GuestShell loginNext={`/app/new${search}`}>
+      {/* 사전예약 기간에는 새 계정의 요청이 접수되지 않는다 (/api/rfq/pending 403). 다 쓴 뒤에야 알게 되지 않도록 먼저 알린다. 문구는 /request 와 같다 */}
+      {preregActive() && (
+        <p className="pt-prereg" role="note">
+          <span>지금은 사전예약 기간이에요. 새 계정의 견적 요청은 2027년 6월 1일부터 열려요.</span>
+          <a href="/early">사전예약하기</a>
+        </p>
+      )}
       <NewRequest guest userId="guest" contact={{ company: "", name: "", dept: "", email: "", phone: "", orgType: "" }} />
     </GuestShell>
   );

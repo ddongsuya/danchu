@@ -62,7 +62,7 @@ export async function loadCrm(orgId: string): Promise<CrmData> {
     return { ...EMPTY, members: mem };
   }
   const tasks = (tk.data ?? []) as CrmTask[];
-  const ta = tasks.length ? await sb.from("cro_crm_task_actions").select("id, task_id, body, at, created_by").in("task_id", tasks.map((t) => t.id)).order("at").limit(5000) : { data: [] };
+  const ta = tasks.length ? await sb.from("cro_crm_task_actions").select("id, task_id, body, at, created_by").eq("org_id", orgId).in("task_id", tasks.map((t) => t.id)).order("at").limit(5000) : { data: [] };
   const actBy = new Map<string, CrmTaskAction[]>();
   for (const a of (ta.data ?? []) as CrmTaskAction[]) actBy.set(a.task_id, [...(actBy.get(a.task_id) ?? []), a]);
   return {

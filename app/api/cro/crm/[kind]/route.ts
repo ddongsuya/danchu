@@ -243,9 +243,9 @@ export async function DELETE(req: Request, { params }: Ctx) {
   const b = await readBody(req);
   if (!isUuid(b.id)) return bad("지울 항목을 찾지 못했어요.");
   if (kind === "task-actions") {
-    const { data: a } = await sb.from("cro_crm_task_actions").select("id, task_id").eq("id", b.id).maybeSingle();
+    const { data: a } = await sb.from("cro_crm_task_actions").select("id, task_id").eq("id", b.id).eq("org_id", orgId).maybeSingle();
     if (!a || (await checkRefs(sb, orgId, { task_id: a.task_id }))) return bad("찾지 못했어요.", 404);
-    await sb.from("cro_crm_task_actions").delete().eq("id", b.id);
+    await sb.from("cro_crm_task_actions").delete().eq("id", b.id).eq("org_id", orgId);
     return NextResponse.json({ ok: true });
   }
   if (!(kind in TABLE)) return bad("없는 항목이에요.", 404);

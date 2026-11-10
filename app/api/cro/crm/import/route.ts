@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       ...(d.status !== "open" ? [{ org_id: orgId, deal_id: d.id, from_stage: d.stage, to_stage: d.stage, from_status: "open", to_status: d.status, reason: d.lost_reason, actor: "import", created_by: s.userId, at: d.created_at }] : []),
     ]) as never);
   }
-  await sb.from("cro_crm_imports").update({ company_ids: madeCompanies, contact_ids: madeContacts, deal_ids: madeDeals } as never).eq("id", imp.id);
+  await sb.from("cro_crm_imports").update({ company_ids: madeCompanies, contact_ids: madeContacts, deal_ids: madeDeals } as never).eq("id", imp.id).eq("org_id", orgId);
   return NextResponse.json({ ok: true, id: imp.id, companies: madeCompanies.length, merged: plan.mergedCompanies, contacts: madeContacts.length, deals: madeDeals.length, skipped: plan.skipped });
 }
 
@@ -141,6 +141,6 @@ export async function DELETE(req: Request) {
       if (error) { console.error("crm import undo", t, error); return bad("되돌리다 멈췄어요. 잠시 뒤 다시 눌러 주세요.", 500); }
     }
   }
-  await sb.from("cro_crm_imports").update({ undone_at: new Date().toISOString() } as never).eq("id", imp.id);
+  await sb.from("cro_crm_imports").update({ undone_at: new Date().toISOString() } as never).eq("id", imp.id).eq("org_id", orgId);
   return NextResponse.json({ ok: true });
 }

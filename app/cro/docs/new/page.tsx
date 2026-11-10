@@ -50,7 +50,7 @@ export default async function NewDocPage({ searchParams }: { searchParams: Promi
     }
   } else if (sbc && sp.company && isUuid(sp.company)) {
     const { data: co } = await sbc.from("cro_crm_companies").select("id, name").eq("id", sp.company).eq("org_id", org.id).maybeSingle();
-    const { data: ct } = co && sp.contact && isUuid(sp.contact) ? await sbc.from("cro_crm_contacts").select("id").eq("id", sp.contact).eq("company_id", co.id).maybeSingle() : { data: null };
+    const { data: ct } = co && sp.contact && isUuid(sp.contact) ? await sbc.from("cro_crm_contacts").select("id").eq("id", sp.contact).eq("company_id", co.id).eq("org_id", org.id).maybeSingle() : { data: null };
     if (co) crm = { companyId: co.id, contactId: ct?.id ?? null, client: co.name };
   }
   return <QuoteFill crm={crm} head={null} initial={null} style={style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={null} readOnly={!!s.demo} />;

@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 import { DEMO_COOKIE, DEMO_READONLY, demoEnabled, isDemoRole } from "@/lib/demo";
+import { CROSS_SITE, crossSiteWrite } from "@/lib/origin";
 
 /**
  * 세션 갱신 + 보호 영역 접근 제어.
@@ -15,6 +16,11 @@ export async function proxy(req: NextRequest) {
   const anon = supabaseAnonKey();
   const { pathname } = req.nextUrl;
   const needsAuth = PROTECTED.some((re) => re.test(pathname));
+
+  // 다른 사이트에서 보낸 변경 요청은 쿠키가 붙었든 아니든 받지 않는다 (SameSite 쿠키에 더한 두 번째 방어선)
+  if (pathname.startsWith("/api/") && crossSiteWrite(req.method, req.headers.get("origin"), [req.headers.get("host"), req.headers.get("x-forwarded-host"), req.nextUrl.host])) {
+    return NextResponse.json({ error: CROSS_SITE }, { status: 403 });
+  }
 
   if (!url || !anon) {
     // 인증 미설정: 보호 영역은 로그인 화면으로 (설정 안내가 그곳에 있다)
