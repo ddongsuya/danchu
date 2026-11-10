@@ -18,7 +18,7 @@ const cardHead = { padding: "14px 16px 6px", fontSize: 13, fontWeight: 600, colo
 
 /**
  * 월별 청구 명세 (0020 기준). 청구 단위는 기관이 제출한 견적 1건이고, 그 견적을 처음 제출한 달에 한 번 센다.
- * 요금표(0031): 5,000만 원 미만은 월 구독료, 5,000만 원 이상은 견적서 송부 비용, 선정 견적 5,000만 원 이상이 계약 확정되면 계약 금액 × 구간 요율의 성사 수수료.
+ * 요금표(0031): 5,000만 원 미만은 월 구독료, 5,000만 원 이상은 견적서 송부 비용, 선정 견적 5,000만 원 이상이 계약 확정되면 계약 금액을 구간으로 나눠 구간별 요율을 곱해 더한 성사 수수료 (0039).
  * 마감한 달은 마감 때 저장한 명세(billing_periods.snapshot)를 보여 준다. 마감한 달은 다시 열 수 없고(0024), 돌려드릴 금액은
  * 다음 열린 달에 조정 항목으로 넣는다. 시범 기간 참고 수치("유료였다면")는 따로 보여 주고 합계에 넣지 않는다.
  * 아래 표는 우회 거래의 신호도 보여 준다: 기관별 선정률이 유독 낮거나, 의뢰자가 선정 없이 마무리한 요청이 특정 기관에 몰리면 확인한다.
@@ -92,7 +92,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <details className="cat-more" style={{ marginBottom: 16 }}>
       <summary>청구 규칙 보기</summary>
       <p style={{ ...muted, fontSize: 13, lineHeight: 1.6, margin: "8px 0 0", maxWidth: "75ch" }}>
-        기관이 직접 참여한 요청에 제출한 견적만 청구합니다. 참여 기록이 없는 견적, 시범 운영 조건 판으로 참여한 요청의 견적과 성사 수수료, 요청을 받고 견적을 내지 않은 기관, 금액이 입력되지 않은 견적은 청구하지 않습니다. 기관이 참여한 뒤 운영자가 옮겨 적은 견적은 기관이 직접 낸 견적과 같게 셉니다. 금액 없이 제출된 견적은 나중에 금액이 들어온 달에 청구합니다. 견적 총액(부가세 별도) 5,000만 원 미만은 월 구독료에 포함됩니다. 5,000만 원 이상은 견적서 송부 비용(5,000만 ~ 9,999만 원 30,000원, 1억 원 이상 50,000원)을 받고, 단추를 통해 계약이 확정되면 선정 견적 구간의 요율(2%, 5%, 5억 원 이상 7%)을 계약 금액에 곱한 성사 수수료를 더합니다. 기관에 특별 조건을 넣었으면 그 값을 씁니다. 같은 초대의 재제출·수정은 처음 제출한 달에 한 번만 셉니다. 월 구독료(기준 {comma(SUBSCRIPTION_FEE)}원)는 구독 시작 월부터, 청구 시작 월 이후 이번 달까지만 나옵니다.
+        기관이 직접 참여한 요청에 제출한 견적만 청구합니다. 참여 기록이 없는 견적, 시범 운영 조건 판으로 참여한 요청의 견적과 성사 수수료, 요청을 받고 견적을 내지 않은 기관, 금액이 입력되지 않은 견적은 청구하지 않습니다. 기관이 참여한 뒤 운영자가 옮겨 적은 견적은 기관이 직접 낸 견적과 같게 셉니다. 금액 없이 제출된 견적은 나중에 금액이 들어온 달에 청구합니다. 견적 총액(부가세 별도) 5,000만 원 미만은 월 구독료에 포함됩니다. 5,000만 원 이상은 견적서 송부 비용(5,000만 ~ 9,999만 원 30,000원, 1억 원 이상 50,000원)을 받고, 단추를 통해 계약이 확정되면 성사 수수료를 더합니다. 성사 수수료는 계약 금액을 구간으로 나눠 5,000만 원 초과 1억 원까지 2%, 1억 원 초과 5억 원까지 5%, 5억 원 초과분 7%를 곱해 더합니다(계약 3억 원이면 1,100만 원). 기관에 특별 조건을 넣었으면 그 값을 씁니다. 같은 초대의 재제출·수정은 처음 제출한 달에 한 번만 셉니다. 월 구독료(기준 {comma(SUBSCRIPTION_FEE)}원)는 구독 시작 월부터, 청구 시작 월 이후 이번 달까지만 나옵니다.
       </p>
       </details>
       {closed && (
@@ -221,7 +221,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="card tbl-wrap" style={{ marginBottom: 20 }}>
-        <div style={cardHead}>성사 수수료 · 선정 견적 5,000만 원 이상만. 예상은 이 달 선정분(선정 견적 × 요율, 안내용), 정산은 이 달 계약 확정분(확정된 계약 금액 × 요율. 의뢰자 확인 또는 보고 7일 뒤 자동 확정)</div>
+        <div style={cardHead}>성사 수수료 · 선정 견적 5,000만 원 이상만. 예상은 이 달 선정분(선정 견적 금액으로 계산, 안내용), 정산은 이 달 계약 확정분(확정된 계약 금액으로 계산. 의뢰자 확인 또는 보고 7일 뒤 자동 확정). 요율 칸이 요금표이면 구간별 요율로 계산한 금액입니다</div>
         {guidance.length + settled.length === 0 ? (
           <p className="empty">이 달에 해당하는 성사 수수료가 없습니다.</p>
         ) : (
@@ -236,7 +236,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td className="tnum" data-label="선정 견적">{won(a.quote_amount)}</td>
                   <td className="tnum" data-label="계약 금액">{a.contract_amount != null ? won(a.contract_amount) : "-"}</td>
                   <td data-label="계약 상태" style={{ fontSize: 12 }}>{CONTRACT_STATUS_LABEL[a.contract_status] ?? a.contract_status}</td>
-                  <td className="tnum" data-label="요율">{a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : "미정"}</td>
+                  <td className="tnum" data-label="요율">{a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : a.fee != null ? "요금표" : "미정"}</td>
                   <td className="tnum" data-label="수수료" style={{ fontWeight: a.kind === "settlement" ? 700 : 400 }}>{wonOrPending(a.fee, comma, "요율 미정")}</td>
                 </tr>
               ))}
@@ -279,7 +279,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   </td>
                   <td className="tnum" data-label="체결 (5,000만 원 이상)">{x.success_count ? <>{x.success_count}건<span style={{ ...muted, display: "block" }}>계약 {won(x.success_contract_amount)}</span></> : "-"}</td>
                   <td className="tnum" data-label="성사 수수료 (참고)">
-                    {x.success_count ? <>{comma(x.success_fee)}<span style={{ ...muted, display: "block" }}>{x.success_rate_source === "schedule" ? "요금표 구간 요율" : `${REFERENCE_SOURCE_LABEL[x.success_rate_source]} ${rateLabel(x.success_rate)}`}</span></> : "-"}
+                    {x.success_count ? <>{comma(x.success_fee)}<span style={{ ...muted, display: "block" }}>{x.success_rate_source === "schedule" ? "요금표 구간별 요율" : `${REFERENCE_SOURCE_LABEL[x.success_rate_source]} ${rateLabel(x.success_rate)}`}</span></> : "-"}
                   </td>
                 </tr>
               ))}

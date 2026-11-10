@@ -43,5 +43,5 @@ begin
 
   perform pg_temp.t_assert(not has_table_privilege('authenticated', 'public.cro_crm_deals', 'select'), 'authenticated 는 안건을 못 읽음');
   perform pg_temp.t_assert(not has_table_privilege('anon', 'public.cro_crm_deal_history', 'insert'), 'anon 은 이력을 못 씀');
-  perform pg_temp.t_eq(public.danchu_schema_version(), 38, '판 38');
+  perform pg_temp.t_eq(public.danchu_schema_version(), 39, '판 39');
 end $$;

@@ -92,7 +92,7 @@ export async function GET(req: Request) {
     push(["월 구독료", o.org_name, r.from, "", "", "", "", "Y", "", "", o.monthly_fee, o.monthly_fee, `5,000만 원 미만 견적 ${o.subscription}건 포함`]);
   }
   for (const a of view.awards) {
-    const rate = a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : "미정";
+    const rate = a.fee_rate != null ? `${Math.round(a.fee_rate * 10000) / 100}%` : a.fee != null ? "요금표" : "미정";
     if (a.kind === "settlement") {
       // 0023: 참여 기록이 없거나 시범 판으로 참여한 초대의 수주는 명세 합계에 넣지 않는다 (billing_summary). 행은 남기고 N 으로 표시
       const joined = a.invite_joined !== false;

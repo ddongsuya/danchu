@@ -16,7 +16,7 @@ export default async function AdminAwards() {
   await requireSession("admin");
   const list = dbReady() ? await listAllAwards() : [];
   const total = list.reduce((a, x) => a + (x.contract_amount ?? 0), 0);
-  // 성사 수수료: 선정 견적 5,000만 원 이상만. 예상 = 선정 견적 × 요율(안내), 정산 = 확정된 계약 금액 × 요율 (의뢰자 확인 또는 7일 뒤 자동 확정, 0025)
+  // 성사 수수료: 선정 견적 5,000만 원 이상만. 예상 = 선정 견적 금액으로 계산(안내), 정산 = 확정된 계약 금액으로 계산. 요금표는 구간 초과분 누진(0039) (의뢰자 확인 또는 7일 뒤 자동 확정, 0025)
   const orgIds = [...new Set(list.map((a) => a.cro_org_id).filter((x): x is string => !!x))];
   const { data: rates } = orgIds.length ? await getSupabaseAdmin()!.from("cro_orgs").select("id, fee_rate").in("id", orgIds) : { data: [] as { id: string; fee_rate: number | null }[] };
   const rateOf = new Map((rates ?? []).map((o) => [o.id, o.fee_rate]));

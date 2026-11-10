@@ -236,7 +236,7 @@ describe("조정·참고 계산 도우미", () => {
     });
     expect(r).toEqual({
       subscription_count: 1, per_quote_count: 3, per_quote_unit: 0, per_quote_unit_source: "schedule", per_quote_fee: 110_000,
-      success_count: 1, success_contract_amount: 55_000_000, success_rate: 0, success_rate_source: "schedule", success_fee: 1_100_000,
+      success_count: 1, success_contract_amount: 55_000_000, success_rate: 0, success_rate_source: "schedule", success_fee: 100_000,
     });
     const own = referenceForOrg({ lines: [line("per_quote_success", "pilot", 52_000_000), line("per_quote_success", "legacy", 200_000_000)], settlements: [{ contract_amount: 70_000_000, quote_amount: 70_000_000 }], perRequestFee: 300_000, feeRate: 0.05 });
     expect(own).toMatchObject({ per_quote_count: 2, per_quote_fee: 600_000, per_quote_unit_source: "org", success_fee: 3_500_000, success_rate_source: "org" });

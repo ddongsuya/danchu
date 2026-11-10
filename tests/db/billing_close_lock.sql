@@ -203,7 +203,7 @@ begin
   perform pg_temp.t_eq(r.success_contract_amount, 55000000::bigint, '계약 금액');
   perform pg_temp.t_eq(r.success_rate, 0::numeric, '특별 조건 없으면 요율 칸 0 (견적마다 요금표)');
   perform pg_temp.t_eq(r.success_rate_source, 'schedule', '요율 출처: 요금표');
-  perform pg_temp.t_eq(r.success_fee, 1100000::bigint, '참고 성사 수수료 = 55,000,000 × 2% (선정 견적 6천만 원 구간)');
+  perform pg_temp.t_eq(r.success_fee, 100000::bigint, '참고 성사 수수료 = 5,500만 원 중 5,000만 원 초과분 500만 원 × 2% (0039)');
 
   select * into r from public.billing_reference(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = own_org;
   perform pg_temp.t_eq(r.per_quote_count, 2, '약정 기관: 시범 1건 + legacy 1건 (유료 조건 견적은 참고에 없음)');

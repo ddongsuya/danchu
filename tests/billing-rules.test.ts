@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase", () => {
     return b;
   };
   // 배포 전 스키마 판 확인(lib/schema-version.ts)은 이 코드가 기대하는 판을 돌려준다
-  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 38, error: null } : { data: null, error: null }) }) };
+  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 39, error: null } : { data: null, error: null }) }) };
 });
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/mail", () => ({ mailWrap: (s: string) => s, esc: (s: string) => s, sendMail: fx.sendMail }));
@@ -53,7 +53,7 @@ vi.mock("@/lib/data", () => ({ getCroOrg: async () => fx.org }));
 vi.mock("@/lib/audit", async (orig) => ({ ...(await orig<typeof import("@/lib/audit")>()), audit: fx.audit }));
 
 import {
-  PAID_FROM, PILOT_FROM, SUBSCRIPTION_FEE, SUBSCRIPTION_MAX_EXCL, SUCCESS_FEE_MIN, billingTier, effectiveRate, effectiveSendFee, joinedBeforePaid, sendFee, successRate, chargesPerQuote, joinStatusNote, statementDigest, statementTotals, successFeeEligible, successFeeView, wonOrPending,
+  PAID_FROM, PILOT_FROM, SUBSCRIPTION_FEE, SUBSCRIPTION_MAX_EXCL, SUCCESS_FEE_MIN, billingTier, effectiveSuccessFee, effectiveSendFee, joinedBeforePaid, scheduleSuccessFee, sendFee, chargesPerQuote, joinStatusNote, statementDigest, statementTotals, successFeeEligible, successFeeView, wonOrPending,
 } from "@/lib/billing";
 import { comma } from "@/lib/format";
 import { ORG_COLUMNS, distributeTo } from "@/lib/distribute";
@@ -90,19 +90,35 @@ describe("구간 기준 금액 (0031 요금표)", () => {
     expect(successFeeEligible(49_999_999)).toBe(false);
     expect(successFeeEligible(50_000_000)).toBe(true);
     const cases: [number, number, number][] = [
-      [1, 0, 0], [49_999_999, 0, 0], [50_000_000, 30_000, 0.02], [99_999_999, 30_000, 0.02],
-      [100_000_000, 50_000, 0.05], [499_999_999, 50_000, 0.05], [500_000_000, 50_000, 0.07], [3_000_000_000, 50_000, 0.07],
+      [1, 0, 0], [49_999_999, 0, 0], [50_000_000, 30_000, 0], [99_999_999, 30_000, 1_000_000],
+      [100_000_000, 50_000, 1_000_000], [499_999_999, 50_000, 21_000_000], [500_000_000, 50_000, 21_000_000], [3_000_000_000, 50_000, 196_000_000],
     ];
-    for (const [amt, fee, rate] of cases) {
+    for (const [amt, fee, success] of cases) {
       expect(sendFee(amt), String(amt)).toBe(fee);
-      expect(successRate(amt), String(amt)).toBe(rate);
+      expect(scheduleSuccessFee(amt), String(amt)).toBe(success);
     }
+  });
+  it("성사 수수료는 구간 초과분 누진: 구간에 걸친 금액에만 그 구간의 요율 (0039)", () => {
+    expect(scheduleSuccessFee(80_000_000)).toBe(600_000);
+    expect(scheduleSuccessFee(100_000_000)).toBe(1_000_000);
+    expect(scheduleSuccessFee(300_000_000)).toBe(11_000_000);
+    expect(scheduleSuccessFee(500_000_000)).toBe(21_000_000);
+    expect(scheduleSuccessFee(700_000_000)).toBe(35_000_000);
+    // 경계에서 뛰지 않는다: 1원 늘 때 수수료는 그 구간 요율만큼만 는다
+    for (const edge of [50_000_000, 100_000_000, 500_000_000]) {
+      expect(scheduleSuccessFee(edge + 100) - scheduleSuccessFee(edge - 100)).toBeLessThanOrEqual(14);
+    }
+    expect(scheduleSuccessFee(null)).toBe(0);
+    // SQL 과 같은 식인지 (0039)
+    const M39 = readFileSync("supabase/migrations/0039_marginal_success_fee.sql", "utf8");
+    expect(M39).toMatch(/\(least\(p_amount, 100000000\) - 50000000\) \* 2\s+\+ greatest\(least\(p_amount, 500000000\) - 100000000, 0\) \* 5\s+\+ greatest\(p_amount - 500000000, 0\) \* 7/);
+    expect(M39).toMatch(/case when a\.rate is null then public\.billing_success_fee\(a\.contract_amount\) else round\(a\.contract_amount \* a\.rate\)::bigint end/);
   });
   it("기관 특별 조건이 있으면 그 값, 없으면 요금표", () => {
     expect(effectiveSendFee(120_000_000, null)).toBe(50_000);
     expect(effectiveSendFee(120_000_000, 20_000)).toBe(20_000);
-    expect(effectiveRate(60_000_000, undefined)).toBe(0.02);
-    expect(effectiveRate(60_000_000, 0.01)).toBe(0.01);
+    expect(effectiveSuccessFee(60_000_000, undefined)).toBe(200_000);
+    expect(effectiveSuccessFee(60_000_000, 0.01)).toBe(600_000);
   });
   it("2027-12-31 까지 참여는 무료, 2028-01-01 부터 청구", () => {
     expect(joinedBeforePaid("2027-12-31")).toBe(true);
@@ -131,10 +147,10 @@ describe("성사수수료: 예상(견적 기준)과 정산(계약 기준)", () =
   it("선정 견적 5,000만 원 미만은 계약 금액이 커도 대상 아님", () => {
     expect(successFeeView({ quoteAmount: 49_999_999, contractAmount: 70_000_000, contractStatus: "signed", feeRate: 0.03 })).toMatchObject({ eligible: false, settled: 0 });
   });
-  it("기관 요율이 없으면 선정 견적 구간의 요금표 요율 (미정 없음)", () => {
-    expect(successFeeView({ quoteAmount: 90_000_000, contractAmount: 90_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 1_800_000, settled: 1_800_000 });
-    expect(successFeeView({ quoteAmount: 120_000_000, contractAmount: 110_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 6_000_000, settled: 5_500_000 });
-    expect(successFeeView({ quoteAmount: 600_000_000, contractAmount: 600_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ settled: 42_000_000 });
+  it("기관 요율이 없으면 요금표의 구간 초과분 누진 (미정 없음). 예상은 선정 견적, 정산은 계약 금액으로", () => {
+    expect(successFeeView({ quoteAmount: 90_000_000, contractAmount: 90_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 800_000, settled: 800_000 });
+    expect(successFeeView({ quoteAmount: 120_000_000, contractAmount: 110_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 2_000_000, settled: 1_500_000 });
+    expect(successFeeView({ quoteAmount: 600_000_000, contractAmount: 600_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ settled: 28_000_000 });
     expect(wonOrPending(null, comma, "요율 미정")).toBe("요율 미정");
     expect(wonOrPending(0, comma)).toBe("0원");
   });

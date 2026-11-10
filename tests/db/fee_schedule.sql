@@ -17,6 +17,16 @@ begin
   perform pg_temp.t_eq(public.billing_success_rate(100000000), 0.05::numeric, '1억 원은 5%');
   perform pg_temp.t_eq(public.billing_success_rate(499999999), 0.05::numeric, '499,999,999 는 5%');
   perform pg_temp.t_eq(public.billing_success_rate(500000000), 0.07::numeric, '5억 원은 7%');
+  -- 성사 수수료 (0039): 구간에 걸친 금액에만 그 구간의 요율. 경계에서 뛰지 않는다
+  perform pg_temp.t_eq(public.billing_success_fee(null), 0::bigint, '금액 없음 0원');
+  perform pg_temp.t_eq(public.billing_success_fee(50000000), 0::bigint, '5,000만 원까지 0원');
+  perform pg_temp.t_eq(public.billing_success_fee(80000000), 600000::bigint, '8,000만 원은 60만 원');
+  perform pg_temp.t_eq(public.billing_success_fee(99999999), 1000000::bigint, '99,999,999 원은 100만 원 (반올림)');
+  perform pg_temp.t_eq(public.billing_success_fee(100000000), 1000000::bigint, '1억 원은 100만 원');
+  perform pg_temp.t_eq(public.billing_success_fee(300000000), 11000000::bigint, '3억 원은 1,100만 원');
+  perform pg_temp.t_eq(public.billing_success_fee(499999999), 21000000::bigint, '499,999,999 원은 2,100만 원 (반올림)');
+  perform pg_temp.t_eq(public.billing_success_fee(500000000), 21000000::bigint, '5억 원은 2,100만 원');
+  perform pg_temp.t_eq(public.billing_success_fee(700000000), 35000000::bigint, '7억 원은 3,500만 원');
   perform pg_temp.t_eq(public.billing_subscription_fee(), 1000000, '월 구독료 기준 100만 원');
   perform pg_temp.t_eq(public.billing_pilot_from(), date '2027-06-01', '시범 운영 시작');
   -- 참여 시각: 청구 시작일 전은 시범(무료), 뒤는 청구. 시범 판 이름은 날짜와 상관없이 무료

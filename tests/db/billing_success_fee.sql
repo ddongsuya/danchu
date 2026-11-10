@@ -86,7 +86,7 @@ begin
   perform pg_temp.t_confirm(a);
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
   perform pg_temp.t_eq(s.settled_count, 1, '정산 대상 1건');
-  perform pg_temp.t_eq(s.settled_fee, 1800000::bigint, '정산 = 90,000,000 × 2% (요금표)');
-  perform pg_temp.t_eq(s.guidance_fee, 1800000::bigint, '예상도 요금표 요율');
+  perform pg_temp.t_eq(s.settled_fee, 800000::bigint, '정산 = 9,000만 원 중 5,000만 원 초과분 4,000만 원 × 2% (요금표, 0039)');
+  perform pg_temp.t_eq(s.guidance_fee, 800000::bigint, '예상도 요금표 (구간 초과분 누진)');
   perform pg_temp.t_eq(s.terms_pending, false, '미정 없음');
 end $$;

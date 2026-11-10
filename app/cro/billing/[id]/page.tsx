@@ -120,7 +120,7 @@ export default async function CroInvoice({ params }: { params: Promise<{ id: str
                       <td data-label="요청" className="tnum">{a.rfq_no}</td>
                       <td data-label="계약 확정일" className="tnum">{ymd(a.contract_confirmed_at ?? a.contract_reported_at)}</td>
                       <td data-label="계약 금액" className="tnum">{comma(a.contract_amount ?? 0)}</td>
-                      <td data-label="요율" className="tnum">{a.fee_rate == null ? "-" : `${Math.round(a.fee_rate * 10000) / 100}%`}</td>
+                      <td data-label="요율" className="tnum">{a.fee_rate == null ? "요금표" : `${Math.round(a.fee_rate * 10000) / 100}%`}</td>
                       <td data-label="수수료" className="tnum">{comma(a.fee ?? 0)}</td>
                     </tr>
                   ))}
