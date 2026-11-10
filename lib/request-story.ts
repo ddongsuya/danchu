@@ -91,3 +91,88 @@ export function homeTotals<T extends StoryReq & Counts>(list: T[]): { scope: "ac
 
 /** 회신을 기다리는 단계인지 (비교표가 열리기 전) */
 export const waitingReplies = (r: StoryReq) => WAITING.includes(r.status) && !r.compared_at;
+
+/* ---- 홈 시간축 (2026-11-10 대표 선택: 시안 5 "시간축", 문구는 설명 없이 짧게) ---- */
+
+/** ISO 시각 또는 날짜 → 서울 날짜 YYYY-MM-DD */
+export function seoulDay(s: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? s.slice(0, 10) : d.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+const dayNo = (ymd: string) => Math.round(Date.parse(`${ymd}T00:00:00Z`) / 864e5);
+/** b - a (일) */
+export const daysBetween = (a: string, b: string) => dayNo(b) - dayNo(a);
+
+/** 시간축의 점 하나. late 기한 지남(할 일), open 보고서 열림, plain 그 밖의 일정 */
+export type TimelineEvent = { key: string; rfq_no: string; date: string; kind: "late" | "open" | "plain"; label: string; sub: string; href: string };
+type TimelineReq = StoryReq & Counts & { id: string; rfq_no: string; created_at: string };
+
+/** 진행 중인 요청마다 지금 가장 중요한 날짜 하나를 점으로 만든다. 날짜순 */
+export function timelineEvents(list: TimelineReq[], today: string): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+  for (const r of list) {
+    if (DONE.includes(r.status) || r.status === "selected" || r.status === "contracting") continue;
+    const base = { key: r.id, rfq_no: r.rfq_no, href: `/app/r/${r.rfq_no}` };
+    if (reportReady(r)) out.push({ ...base, href: `${base.href}/compare`, date: seoulDay(r.compared_at!), kind: "open", label: "보고서 열림", sub: `견적 ${r.submitted}건` });
+    else if (r.compared_at) out.push({ ...base, date: seoulDay(r.compared_at), kind: "late", label: "견적 없이 마감", sub: "견적 0건" });
+    else if (noJoinPastDue(r, today)) out.push({ ...base, date: r.reply_by!, kind: "late", label: "회신 기한 지남", sub: "참여 0곳" });
+    else if (r.status === "received" && !r.sent) out.push({ ...base, date: seoulDay(r.created_at), kind: "plain", label: "접수", sub: "전달 전" });
+    else if (r.reply_by) out.push({ ...base, date: r.reply_by, kind: "plain", label: "회신 마감", sub: r.reply_by < today ? "보고서 준비 중" : `참여 ${r.joined}곳, 견적 ${r.submitted}건` });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date) || a.rfq_no.localeCompare(b.rfq_no));
+}
+
+/** 홈 제목 숫자: 할 일(기한 지남)과 다가오는 마감 */
+export function timelineCounts(events: TimelineEvent[], today: string): { todo: number; due: number; open: number } {
+  return {
+    todo: events.filter((e) => e.kind === "late").length,
+    due: events.filter((e) => e.kind === "plain" && e.label === "회신 마감" && e.date >= today).length,
+    open: events.filter((e) => e.kind === "open").length,
+  };
+}
+
+/** 가로 축에 놓을 자리. 축은 오늘을 포함해 앞뒤로 넉넉히 잡고, 가까운 점끼리는 줄(row)을 달리해 겹치지 않게 한다 */
+export function timelineLayout(events: TimelineEvent[], today: string, minGapPct = 14): { start: string; end: string; todayPct: number; ticks: { date: string; pct: number }[]; items: (TimelineEvent & { pct: number; row: number })[] } {
+  const shift = (ymd: string, n: number) => new Date(dayNo(ymd) * 864e5 + n * 864e5).toISOString().slice(0, 10);
+  const clampDay = (d: string) => (d < shift(today, -45) ? shift(today, -45) : d > shift(today, 60) ? shift(today, 60) : d);
+  const days = events.map((e) => clampDay(e.date));
+  const first = days.reduce((a, d) => (d < a ? d : a), shift(today, -14));
+  const last = days.reduce((a, d) => (d > a ? d : a), shift(today, 21));
+  const start = shift(first, -5), end = shift(last, 7);
+  const span = Math.max(1, daysBetween(start, end));
+  const pct = (d: string) => Math.round((daysBetween(start, d) / span) * 1000) / 10;
+  const lastAt: number[] = [];
+  const todayPct = pct(today);
+  const items = events.map((e, i) => {
+    const p = pct(days[i]);
+    // 오늘 선에 붙은 점은 첫 줄을 비워 선 위 이름표와 겹치지 않게 한다
+    const from = Math.abs(p - todayPct) < minGapPct / 2 ? 1 : 0;
+    if (from && lastAt.length === 0) lastAt[0] = -100;
+    let row = lastAt.findIndex((x, k) => k >= from && p - x >= minGapPct);
+    if (row < 0 && from && lastAt.length === 1) row = 1;
+    if (row < 0) row = lastAt.length < 3 ? lastAt.length : lastAt.indexOf(Math.min(...lastAt));
+    lastAt[row] = p;
+    return { ...e, pct: p, row };
+  });
+  const ticks: { date: string; pct: number }[] = [];
+  const step = span > 70 ? 14 : 7;
+  for (let d = shift(start, 4); d < end; d = shift(d, step)) ticks.push({ date: d, pct: pct(d) });
+  return { start, end, todayPct, ticks, items };
+}
+
+/** 목록 한 줄: 설명 문장 없이 사실만. stage 는 5칸 진행 막대의 지금 칸(0 전달, 1 참여, 2 견적, 3 보고서, 4 선택) */
+export const TRACK_STAGES = ["전달", "참여", "견적", "보고서", "선택"] as const;
+export function terseRow(r: TimelineReq & { cap?: number | null }, today: string, md: (d: string) => string): { text: string; late: boolean; stage: number; done: boolean; when: string; go: string } {
+  const created = `${md(seoulDay(r.created_at))} 접수`;
+  if (r.status === "cancelled") return { text: "취소", late: false, stage: 0, done: true, when: created, go: "열기" };
+  if (r.status === "closed") return { text: r.outcome ? `선택 없이 마무리, ${r.outcome}` : "계약 완료", late: false, stage: 4, done: true, when: created, go: "열기" };
+  if (r.status === "selected" || r.status === "contracting") return { text: r.status === "contracting" ? "계약 진행 중" : "기관 선택, 계약 대기", late: false, stage: 4, done: false, when: created, go: "열기" };
+  if (reportReady(r)) return { text: `견적 ${r.submitted}건`, late: false, stage: 3, done: false, when: `${md(seoulDay(r.compared_at!))} 열림`, go: "보고서" };
+  if (r.status === "received" && !r.sent) return { text: "전달 전", late: false, stage: 0, done: false, when: created, go: "열기" };
+  if (noJoinPastDue(r, today)) return { text: `참여 0곳, 기한 ${md(r.reply_by!)} 지남`, late: true, stage: 1, done: false, when: `${daysBetween(r.reply_by!, today)}일 지남`, go: "기한 변경" };
+  if (r.compared_at && r.submitted === 0) return { text: "견적 0건, 회신 마감", late: true, stage: 2, done: false, when: `${md(seoulDay(r.compared_at))} 마감`, go: "열기" };
+  const when = r.reply_by ? (r.reply_by < today ? "보고서 준비 중" : `${md(r.reply_by)} 마감`) : "기한 미정";
+  if (!r.joined) return { text: `${r.sent}곳 전달, 참여 0곳`, late: false, stage: 1, done: false, when, go: "열기" };
+  return { text: `참여 ${r.joined}곳, 견적 ${r.submitted}건`, late: false, stage: r.submitted > 0 ? 2 : 1, done: false, when, go: "열기" };
+}

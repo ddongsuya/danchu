@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { RfqSummary } from "@/lib/data";
-import { dotsOf, homeTotals, noJoinPastDue, reportReady, rowLine } from "@/lib/request-story";
-import { Orbit } from "@/components/app/Orbit";
+import { TRACK_STAGES, reportReady, terseRow, timelineCounts, timelineEvents, timelineLayout } from "@/lib/request-story";
 import { HowItWorks } from "@/components/app/HowItWorks";
 import { md } from "@/lib/format";
 
@@ -14,132 +13,141 @@ const FILTERS = ["전체", "진행 중", "보고서 열림", "종료"] as const;
 const DONE = ["closed", "cancelled"];
 
 /**
- * 의뢰자 홈 (2026-10-29 대표 지시). 첫 장면은 랜딩처럼 한 문장 요약(요청 n건 → 기관 n곳 → 참여 → 견적),
- * 그 아래는 지금 할 일과 요청마다 어디까지 왔는지. 숫자는 합계만 보인다 (lib/request-story.ts).
+ * 의뢰자 홈 (2026-11-10 대표 선택: 시안 5 "시간축"). 첫 장면은 숫자 제목 하나와 시간축.
+ * 시간축의 점 하나가 요청 하나의 가장 가까운 일정이다. 오늘 선 왼쪽의 빨간 점이 할 일.
+ * 화면 문구는 사용법을 설명하지 않는다 (범례와 명사형 표기만). 계산은 lib/request-story.ts.
+ * 넓은 화면은 가로 축, 좁은 화면은 세로 축 (옆으로 밀지 않는다).
  */
 export function RequestOverview({ name, list, today }: { name: string; list: RequestListItem[]; today: string }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
   const [search, setSearch] = useState("");
-  const t = homeTotals(list);
-  const late = list.filter((r) => noJoinPastDue(r, today));
+  const events = timelineEvents(list, today);
+  const c = timelineCounts(events, today);
+  const lay = timelineLayout(events, today);
+  const active = list.filter((r) => !DONE.includes(r.status));
   const source =
-    filter === "진행 중" ? list.filter((r) => !DONE.includes(r.status)) : filter === "보고서 열림" ? list.filter((r) => reportReady(r)) : filter === "종료" ? list.filter((r) => DONE.includes(r.status)) : list;
+    filter === "진행 중" ? active : filter === "보고서 열림" ? list.filter((r) => reportReady(r)) : filter === "종료" ? list.filter((r) => DONE.includes(r.status)) : list;
   const query = search.trim().toLocaleLowerCase();
   const filtered = source.filter((r) => `${r.rfq_no} ${r.substance} ${r.categories.join(" ")}`.toLocaleLowerCase().includes(query));
-  const first = t.ready[0];
-  const n = t.reqs.length;
-  const rings = t.reqs.slice(0, 5).map((r) => ({ key: r.id, dots: dotsOf(r), late: noJoinPastDue(r, today), tag: r.rfq_no.slice(-4) }));
-  const orbitLabel = `요청 ${n}건. 고리 하나가 요청 하나, 점 하나가 기관 하나예요. 채운 점은 견적을 낸 곳, 반 채운 점은 참여한 곳이에요.`;
+  const firstLate = events.find((e) => e.kind === "late");
+  const firstOpen = events.find((e) => e.kind === "open");
+  const tools = list.length > 8;
+  const short = (d: string) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
+  // 세로 축에서 오늘 선이 들어갈 자리
+  const todayAt = events.findIndex((e) => e.date > today);
 
   return (
     <div className="rs-home">
-      <section className="rs-scene" aria-labelledby="home-title">
-        <div className={list.length ? "rs-hero" : "rs-hero rs-hero--solo"}>
+      <section className="tlh" aria-labelledby="home-title">
+        <div className="tlh__head">
           <div>
             <p className="rs-k">{name} 님의 견적 요청</p>
             {list.length === 0 ? (
-              <h1 id="home-title" className="rs-h1">첫 견적 요청을<br />보내 보세요</h1>
-            ) : t.sent === 0 ? (
-              <h1 id="home-title" className="rs-h1">요청 {n}건을<br />기관에 보낼<br />준비 중이에요</h1>
-            ) : t.scope === "all" ? (
-              <h1 id="home-title" className="rs-h1">지금까지 요청 {n}건을<br />기관 <span className="rs-mark">{t.sent}곳</span>에<br />보냈어요</h1>
+              <h1 id="home-title" className="tlh__h1">첫 견적 요청을 보내 보세요</h1>
+            ) : c.todo + c.due === 0 ? (
+              <h1 id="home-title" className="tlh__h1">{c.open ? `보고서 ${c.open}건 열림` : active.length ? `진행 중 ${active.length}건` : `끝난 요청 ${list.length}건`}</h1>
             ) : (
-              <h1 id="home-title" className="rs-h1">요청 {n}건이<br />기관 <span className="rs-mark">{t.sent}곳</span>에<br />전달됐어요</h1>
+              <h1 id="home-title" className="tlh__h1">
+                {c.todo > 0 && <span className="tlh__late">할 일 {c.todo}건</span>}
+                {c.todo > 0 && c.due > 0 && ", "}
+                {c.due > 0 && <>마감 {c.due}건</>}
+              </h1>
             )}
-            <p className="rs-lead">
-              {list.length === 0
-                ? "한 번의 요청으로 분야가 맞는 여러 기관에 참여 안내가 가요."
-                : t.joined === 0
-                  ? "아직 참여한 기관은 없어요. 기관의 참여 결정을 기다리고 있어요."
-                  : `${t.joined}곳이 참여했고, 견적 ${t.submitted}건이 도착했어요.${t.ready.length ? ` 비교 보고서 ${t.ready.length}건을 지금 볼 수 있어요.` : ""}`}
-            </p>
-            <div className="rs-acts">
-              {first ? (
-                <>
-                  <Link href={`/app/r/${first.rfq_no}/compare`} className="b1 blg">비교 보고서 보기</Link>
-                  <Link href="/app/new" className="b2 blg">새 견적 요청</Link>
-                </>
-              ) : (
-                <Link href="/app/new" className="b1 blg">새 견적 요청</Link>
-              )}
-            </div>
           </div>
-          {list.length > 0 && t.sent > 0 && <Orbit rings={rings} label={orbitLabel} />}
+          {firstLate ? (
+            <Link href={firstLate.href} className="b1 blg"><span className="tnum">{firstLate.rfq_no}</span> 기한 변경</Link>
+          ) : firstOpen ? (
+            <Link href={firstOpen.href} className="b1 blg"><span className="tnum">{firstOpen.rfq_no}</span> 보고서</Link>
+          ) : (
+            <Link href="/app/new" className="b1 blg">새 견적 요청</Link>
+          )}
         </div>
-        {list.length > 0 && (
-          <ol className="rs-flow" aria-label="요청 흐름">
-            <li><b className="tnum">{n}<small>건</small></b><span>{t.scope === "active" ? "진행 중인 요청" : "내 요청"}</span></li>
-            <li><b className="tnum">{t.sent}<small>곳</small></b><span>전달된 기관</span></li>
-            <li><b className="tnum">{t.joined}<small>곳</small></b><span>참여한 기관</span></li>
-            <li><b className="tnum">{t.submitted}<small>건</small></b><span>도착한 견적</span></li>
-          </ol>
+
+        {events.length > 0 && (
+          <>
+            <p className="tlh__legend" aria-hidden="true">
+              <span><i className="tlh__dot tlh__dot--late" />기한 지남</span>
+              <span><i className="tlh__dot" />일정</span>
+              <span><i className="tlh__dot tlh__dot--open" />보고서 열림</span>
+            </p>
+            {/* 넓은 화면: 가로 축 */}
+            <div className="tlh__axis only-wide" role="list" aria-label="요청 일정" style={{ height: `${120 + Math.max(0, ...lay.items.map((e) => e.row)) * 48}px` }}>
+              {lay.ticks.map((t) => <span key={t.date} className="tlh__tick tnum" style={{ left: `${t.pct}%` }} aria-hidden="true">{short(t.date)}</span>)}
+              {lay.items.filter((e) => e.kind === "late").map((e) => (
+                <span key={`s-${e.key}`} className="tlh__span" style={{ left: `${e.pct}%`, width: `${Math.max(0, lay.todayPct - e.pct)}%`, top: `${34 + e.row * 48}px` }} aria-hidden="true" />
+              ))}
+              <span className="tlh__today" style={{ left: `${lay.todayPct}%` }}><b className="tnum">오늘 {short(today)}</b></span>
+              {lay.items.map((e) => (
+                <Link key={e.key} href={e.href} role="listitem" className={`tlh__ev tlh__ev--${e.kind}`} style={{ left: `${e.pct}%`, top: `${28 + e.row * 48}px` }}>
+                  <i className={`tlh__dot tlh__dot--${e.kind}`} aria-hidden="true" />
+                  <b>{e.label}</b>
+                  <span>{e.sub}</span>
+                  <small className="tnum">{e.rfq_no}</small>
+                </Link>
+              ))}
+            </div>
+            {/* 좁은 화면: 세로 축 */}
+            <div className="tlh__vax only-narrow" role="list" aria-label="요청 일정">
+              {events.map((e, i) => (
+                <div key={e.key} role="listitem">
+                  {i === todayAt && <p className="tlh__now"><b className="tnum">오늘 {short(today)}</b></p>}
+                  <Link href={e.href} className={`tlh__v tlh__v--${e.kind}`}>
+                    <time className="tnum" dateTime={e.date}>{short(e.date)}</time>
+                    <b>{e.label}</b>
+                    <small>{e.sub}</small>
+                  </Link>
+                </div>
+              ))}
+              {todayAt < 0 && <p className="tlh__now"><b className="tnum">오늘 {short(today)}</b></p>}
+            </div>
+          </>
         )}
       </section>
 
-      <HowItWorks role="requester" open={list.length === 0} />
-
-      {late.length > 0 && (
-        <section className="rs-block rs-block--tight" aria-labelledby="todo-title">
-          <h2 id="todo-title" className="rs-bk">지금 할 일</h2>
-          {late.slice(0, 2).map((r) => (
-            <Link key={r.id} href={`/app/r/${r.rfq_no}`} className="rs-todo">
-              <span>
-                <b>{r.substance} 요청에 참여한 기관이 없어요</b>
-                <span>회신 기한 {md(r.reply_by)}이 지났어요. 기한을 늘릴지, 마무리할지 정해 주세요.</span>
-              </span>
-              <span className="rs-todo__go">다음 할 일 보기</span>
-            </Link>
-          ))}
-        </section>
-      )}
+      {list.length === 0 && <HowItWorks role="requester" open />}
 
       {list.length > 0 && (
-        <section className="rs-block" aria-labelledby="list-title">
-          <p className="rs-bk">내 요청 {list.length}건</p>
-          <h2 id="list-title" className="rs-h2">요청마다 어디까지 왔는지</h2>
-          <div className="rs-tools">
-            <div className="rs-chips" role="group" aria-label="요청 상태 필터">
-              {FILTERS.map((f) => (
-                <button key={f} type="button" aria-pressed={f === filter} onClick={() => setFilter(f)}>{f}</button>
-              ))}
+        <section className="rs-block tlh__list" aria-labelledby="list-title">
+          <h2 id="list-title" className="tlh__h2">내 요청 {list.length}건</h2>
+          {tools && (
+            <div className="rs-tools">
+              <div className="rs-chips" role="group" aria-label="요청 상태 필터">
+                {FILTERS.map((f) => (
+                  <button key={f} type="button" aria-pressed={f === filter} onClick={() => setFilter(f)}>{f}</button>
+                ))}
+              </div>
+              <label className="rs-search">
+                <MagnifyingGlass size={18} aria-hidden="true" />
+                <span className="sr-only">요청 번호, 물질명, 시험 분야 검색</span>
+                <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명" />
+              </label>
             </div>
-            <label className="rs-search">
-              <MagnifyingGlass size={18} aria-hidden="true" />
-              <span className="sr-only">요청 번호, 물질명, 시험 분야 검색</span>
-              <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명 검색" />
-            </label>
-          </div>
-          <p className="rs-legend" aria-hidden="true">
-            <span><i className="rs-dot rs-dot--f" />견적 보냄</span>
-            <span><i className="rs-dot rs-dot--h" />참여</span>
-            <span><i className="rs-dot rs-dot--w" />아직 참여 전</span>
-            <span>점 하나가 기관 하나</span>
-          </p>
+          )}
           <p className="sr-only" role="status">{filtered.length}건의 요청</p>
           {filtered.length === 0 ? (
             <div className="rs-empty">
-              <b>조건에 맞는 요청이 없어요</b>
-              <span>다른 검색어를 넣거나 필터를 바꿔 보세요.</span>
-              <button type="button" className="b2" onClick={() => { setSearch(""); setFilter("전체"); }}>전체 요청 보기</button>
+              <b>조건에 맞는 요청 없음</b>
+              <button type="button" className="b2" onClick={() => { setSearch(""); setFilter("전체"); }}>전체 요청</button>
             </div>
           ) : (
             <div className="rs-list">
               {filtered.map((r) => {
-                const line = rowLine(r, today, md);
-                const ready = reportReady(r);
-                const dots = dotsOf(r, 12);
+                const row = terseRow(r, today, md);
                 return (
-                  <Link key={r.id} href={ready ? `/app/r/${r.rfq_no}/compare` : `/app/r/${r.rfq_no}`} className="rs-row">
+                  <Link key={r.id} href={row.go === "보고서" ? `/app/r/${r.rfq_no}/compare` : `/app/r/${r.rfq_no}`} className="rs-row tlh__row">
                     <span className="rs-row__no tnum">{r.rfq_no}</span>
                     <span className="rs-row__main">
                       <b>{r.substance}</b>
-                      <span className={line.late ? "rs-row__line rs-row__line--late" : "rs-row__line"}>{line.text}</span>
+                      <span className={row.late ? "rs-row__line rs-row__line--late" : "rs-row__line"}>{row.text}</span>
                     </span>
-                    <span className="rs-dots" aria-hidden="true">
-                      {dots.map((d, i) => <i key={i} className={`rs-dot rs-dot--${d}`} />)}
-                      {r.sent > dots.length && <small>+{r.sent - dots.length}</small>}
+                    <span className="tlh__trk">
+                      <span className="tlh__bars" aria-hidden="true">
+                        {TRACK_STAGES.map((_, i) => <i key={i} className={i < row.stage || row.done ? "on" : i === row.stage ? (row.late ? "late" : "now") : ""} />)}
+                      </span>
+                      <small>{row.done ? "끝남" : `${TRACK_STAGES[row.stage]}${row.late ? " 멈춤" : ""}`}</small>
                     </span>
-                    <span className="rs-row__go">{ready ? "보고서 보기" : "진행 보기"}</span>
+                    <span className="tlh__when tnum">{row.when}</span>
+                    <span className="rs-row__go">{row.go}</span>
                   </Link>
                 );
               })}
@@ -148,8 +156,10 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
         </section>
       )}
 
-      <p className="rs-help">
-        시험 항목을 정하기 어려우면 <a href="/guide">시험 가이드</a>와 <a href="/guide/library">가이드라인 자료실</a>을 참고하세요.
+      <p className="rs-help tlh__help">
+        <a href="/guide">시험 가이드</a>
+        <a href="/guide/library">가이드라인 자료실</a>
+        {(firstLate || firstOpen) && <Link href="/app/new">새 견적 요청</Link>}
       </p>
     </div>
   );

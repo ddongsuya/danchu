@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dotsOf, funnel, homeTotals, noJoinPastDue, rowLine } from "@/lib/request-story";
+import { dotsOf, funnel, homeTotals, noJoinPastDue, rowLine, terseRow, timelineCounts, timelineEvents, timelineLayout } from "@/lib/request-story";
 import { availOf, differingRows, range, topCategoryShare, unavailableEverywhere, widestItem } from "@/lib/compare-report";
 import { noteFor, notesFor } from "@/lib/test-notes";
 
@@ -102,5 +102,44 @@ describe("기관 홈과 회신 진행", () => {
   it("불가는 금액 없이도 작성한 것으로 센다", () => {
     const rows = [{ seq: 1, name: "a" }, { seq: 2, name: "b" }, { seq: 3, name: "c" }];
     expect(replyProgress(rows, [{ seq: 1, avail: "가능", amount: "100" }, { seq: 2, avail: "불가", amount: "" }, { seq: 3, avail: "가능", amount: "" }])).toEqual({ total: 3, done: 2, left: ["c"] });
+  });
+});
+
+describe("홈 시간축", () => {
+  const base = { compared_at: null, selected_quote_id: null, outcome: null, started_at: "x", created_at: "2026-10-01T03:00:00Z" };
+  const list = [
+    { ...base, id: "a", rfq_no: "R-1", status: "distributed", reply_by: "2026-10-20", sent: 4, joined: 0, submitted: 0 },
+    { ...base, id: "b", rfq_no: "R-2", status: "compared", compared_at: "2026-10-09T01:00:00Z", reply_by: "2026-10-08", sent: 5, joined: 3, submitted: 3 },
+    { ...base, id: "c", rfq_no: "R-3", status: "quoted", reply_by: "2026-11-12", sent: 5, joined: 3, submitted: 2 },
+    { ...base, id: "d", rfq_no: "R-4", status: "received", reply_by: null, sent: 0, joined: 0, submitted: 0, created_at: "2026-10-27T02:00:00Z" },
+    { ...base, id: "e", rfq_no: "R-5", status: "closed", reply_by: "2026-09-01", sent: 3, joined: 3, submitted: 3 },
+  ];
+  const today = "2026-11-01";
+  const ev = timelineEvents(list, today);
+  it("진행 중인 요청마다 점 하나, 날짜순", () => {
+    expect(ev.map((e) => [e.rfq_no, e.date, e.kind, e.label])).toEqual([
+      ["R-2", "2026-10-09", "open", "보고서 열림"],
+      ["R-1", "2026-10-20", "late", "회신 기한 지남"],
+      ["R-4", "2026-10-27", "plain", "접수"],
+      ["R-3", "2026-11-12", "plain", "회신 마감"],
+    ]);
+    expect(ev[0].href).toBe("/app/r/R-2/compare");
+    expect(timelineCounts(ev, today)).toEqual({ todo: 1, due: 1, open: 1 });
+  });
+  it("축 위 자리는 날짜에 비례하고 오늘은 그 사이에 있다", () => {
+    const lay = timelineLayout(ev, today);
+    const p = lay.items.map((i) => i.pct);
+    expect([...p].sort((a, b) => a - b)).toEqual(p);
+    expect(lay.todayPct).toBeGreaterThan(p[2]);
+    expect(lay.todayPct).toBeLessThan(p[3]);
+    expect(p.every((x) => x >= 0 && x <= 100)).toBe(true);
+    expect(lay.items.every((i) => i.row >= 0 && i.row <= 2)).toBe(true);
+  });
+  it("목록 줄은 사실만 짧게", () => {
+    expect(terseRow(list[0], today, md)).toEqual({ text: "참여 0곳, 기한 10-20 지남", late: true, stage: 1, done: false, when: "12일 지남", go: "기한 변경" });
+    expect(terseRow(list[1], today, md)).toMatchObject({ text: "견적 3건", stage: 3, go: "보고서" });
+    expect(terseRow(list[2], today, md)).toMatchObject({ text: "참여 3곳, 견적 2건", stage: 2, when: "11-12 마감" });
+    expect(terseRow(list[3], today, md)).toMatchObject({ text: "전달 전", stage: 0 });
+    expect(terseRow(list[4], today, md)).toMatchObject({ done: true });
   });
 });

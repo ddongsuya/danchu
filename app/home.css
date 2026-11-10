@@ -733,7 +733,3 @@
 
 /* 한글 라벨은 고정폭·대문자 자간을 쓰지 않는다 (띄어쓰기·자간이 벌어져 어색함) */
 .a .mono.lab,.a .lab{font-family:var(--font-sans);letter-spacing:0;text-transform:none}
-
-/* 첫 화면 그림: 떠도는 네 점이 마크로 맺힌다 (components/site/MarkDrift). 점 색은 color 를 따른다 */
-.a .fd .mdrift{position:absolute;left:50%;top:50%;width:min(420px,100%);aspect-ratio:1;transform:translate(-50%,-50%);color:var(--ink);display:block}
-@media (max-width:860px){ .a .fd .mdrift{width:min(260px,100%)} }
