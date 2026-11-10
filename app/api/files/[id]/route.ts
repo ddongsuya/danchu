@@ -31,8 +31,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   // 기관 열람이면 선정 전까지 파일명을 가린다 (화면 라벨과 같은 규칙, CDA 체결과 무관). 의뢰자·운영자는 원본 이름
   let viaInvite: { id: string; cda_signed_at: string | null; cro_org_id: string | null } | null = null;
   type Inv = { id: string; cda_signed_at: string | null; expires_at: string; status: string; revoked_at: string | null; cro_org_id: string | null; joined_at: string | null; withdrawn_at: string | null };
+  // 2차 상세 견적 첨부는 링크 만료일이 지나도 받는 기관에 연다 (2차 회신 기한이 따로 있다, 0042)
   const inviteOpen = (inv: Inv | null): inv is Inv =>
-    !!inv && !inv.revoked_at && inv.status !== "expired" && new Date(inv.expires_at).getTime() > Date.now() && !!inv.joined_at && !inv.withdrawn_at && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
+    !!inv && !inv.revoked_at && inv.status !== "expired" && (file.scope === "detail" || new Date(inv.expires_at).getTime() > Date.now()) && !!inv.joined_at && !inv.withdrawn_at && confidentialAccess(rfq.confidentiality, inv.cda_signed_at);
   const INV_COLS = "id, cda_signed_at, expires_at, status, revoked_at, cro_org_id, joined_at, withdrawn_at";
   if (s) {
     if (s.profile.role === "admin") allowed = true;
@@ -54,6 +55,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const { data: org } = await sb.from("cro_orgs").select("status").eq("id", viaInvite.cro_org_id).maybeSingle();
     if (org?.status !== "approved") allowed = false;
   }
+  // 2차 상세 견적 첨부(0042)는 그 요청을 받은 기관에만 연다
+  if (allowed && viaInvite && file.scope === "detail") {
+    const { data: t } = await sb.from("rfq_detail_targets").select("id").eq("invite_id", viaInvite.id).maybeSingle();
+    if (!t) allowed = false;
+  }
   if (!allowed) return NextResponse.json({ error: "열람 권한이 없어요." }, { status: 403 });
 
   let downloadName = file.file_name;
@@ -62,7 +68,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const { data: q } = await sb.from("cro_quotes").select("id").eq("invite_id", viaInvite.id).maybeSingle();
     const awarded = !!q && !!rfq.selected_quote_id && rfq.selected_quote_id === q.id;
     if (!identityVisible({ awarded })) {
-      const { data: all } = await sb.from("rfq_files").select("id").eq("rfq_id", rfq.id).order("created_at");
+      const { data: all } = await sb.from("rfq_files").select("id").eq("rfq_id", rfq.id).eq("scope", file.scope).order("created_at");
       const idx = Math.max(0, (all ?? []).findIndex((x) => x.id === file.id));
       const ext = file.file_name.includes(".") ? file.file_name.slice(file.file_name.lastIndexOf(".")) : "";
       downloadName = anonymousFileLabel(idx, file.file_name, file.size_bytes).replace(/\s*\(.*\)$/, "") + ext;

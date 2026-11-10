@@ -23,7 +23,7 @@ async function call<T extends { ok: true }, F extends keyof Fns>(fn: F, args: Fn
 }
 
 /* ── 의뢰자 CRO 선택 ── */
-export type SelectQuoteResult = { ok: true; award_id: string; invite_id: string; cro_org_id: string | null; cro_name: string; revision?: number };
+export type SelectQuoteResult = { ok: true; award_id: string; invite_id: string; cro_org_id: string | null; cro_name: string; revision?: number; /** 선정 견적 금액: 2차를 고쳐 보낸 기관이면 2차 금액 (0042) */ amount?: number | null };
 /**
  * revision: 선정 확인 화면이 보여 준 견적 판 (cro_quotes.revision). 그 사이 기관이 견적을 고쳤으면 quote_changed 로 거절된다 (0022).
  * 동시 선정은 요청 행 잠금으로 한 건만 성공하고 나머지는 already_selected.
@@ -253,4 +253,34 @@ export const CONTRACT_CONFIRM_ERRORS: Record<string, { message: string; status: 
   note: { message: "실제와 다른 부분을 500자 안에서 적어 주세요.", status: 400 },
   no_dispute: { message: "정리할 이의가 없어요. 화면을 새로 고쳐 주세요.", status: 409 },
   bad_resolution: { message: "정리 방법을 선택해 주세요.", status: 400 },
+};
+
+/* ── 2차 상세 견적 (0042) ── */
+/** 의뢰자가 1차를 낸 기관 1~3곳에 상세 조건을 보낸다. 요청마다 한 번 */
+export function sendDetailRequest(rfqId: string, userId: string, quoteIds: string[], detail: Record<string, unknown>, replyBy: string, note: string) {
+  return call<{ ok: true; targets: number }, "send_detail_request">("send_detail_request", { p_rfq_id: rfqId, p_user: userId, p_quote_ids: quoteIds, p_detail: detail as Json, p_reply_by: replyBy, p_note: note });
+}
+export const DETAIL_REQUEST_ERRORS: Record<string, { message: string; status: number }> = {
+  not_found: { message: "요청을 찾을 수 없어요.", status: 404 },
+  not_compared: { message: "비교 보고서가 열린 뒤에 상세 견적을 요청할 수 있어요.", status: 409 },
+  closed: { message: "기관을 선정했거나 마무리한 요청이라 보낼 수 없어요.", status: 409 },
+  exists: { message: "이미 상세 견적을 요청했어요.", status: 409 },
+  bad_date: { message: "회신 기한은 내일부터 60일 안에서 골라 주세요.", status: 400 },
+  bad_detail: { message: "보낼 조건을 다시 확인해 주세요.", status: 400 },
+  bad_targets: { message: "1차 견적을 낸 기관 가운데 1~3곳을 골라 주세요.", status: 400 },
+};
+/** 기관의 2차 회신. 한 번 보내면 고치지 않는다 */
+export function saveDetailReply(inviteId: string, token: string, actorId: string | null, body: Record<string, unknown>) {
+  return call<{ ok: true; target_id: string; rfq_id: string; left: number }, "save_detail_reply">("save_detail_reply", { p_invite_id: inviteId, p_token: token, p_actor: actorId, p_body: body as Json });
+}
+export const DETAIL_REPLY_ERRORS: Record<string, { message: string; status: number }> = {
+  not_found: { message: "유효하지 않거나 만료된 링크예요.", status: 404 },
+  revoked: { message: "유효하지 않거나 만료된 링크예요.", status: 403 },
+  not_target: { message: "상세 견적 요청을 받지 않은 요청이에요.", status: 404 },
+  closed: { message: "의뢰자가 기관을 선정했거나 요청을 마무리해 회신이 닫혔어요.", status: 409 },
+  done: { message: "이미 회신했어요. 보낸 2차 회신은 고칠 수 없어요.", status: 409 },
+  expired: { message: "2차 회신 기한이 지났어요.", status: 403 },
+  org_inactive: { message: "기관 참여가 중지되어 회신할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 403 },
+  not_member: { message: "다른 기관 담당자 계정으로 로그인되어 있어 회신할 수 없어요.", status: 403 },
+  bad_body: { message: "금액과 기간을 다시 확인해 주세요.", status: 400 },
 };

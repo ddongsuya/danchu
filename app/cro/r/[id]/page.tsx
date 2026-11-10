@@ -7,6 +7,7 @@ import { loadOptsFor } from "@/lib/concierge";
 import { RequestView } from "@/components/cro/RequestView";
 import { DeclineForm } from "@/components/cro/DeclineForm";
 import { Crumb } from "@/components/app/ui";
+import { detailCueOfInvite } from "@/lib/detail-data";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +41,11 @@ export default async function CroRequest({ params, searchParams }: { params: Pro
       </>
     );
   }
+  const detail = got.joined ? await detailCueOfInvite(inv.id, inv.rfq_id, `/cro/r/${id}`) : null;
   return (
     <>
       <Crumb href={`/cro/requests?sel=${id}`} label="받은 요청" />
-      <RequestView got={got} replyHref={`/cro/r/${id}/reply`} withdrawHref={`/cro/r/${id}?decline=1`} afterDeclineHref="/cro" />
+      <RequestView got={got} replyHref={`/cro/r/${id}/reply`} withdrawHref={`/cro/r/${id}?decline=1`} afterDeclineHref="/cro" detail={detail} />
     </>
   );
 }

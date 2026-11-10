@@ -45,6 +45,12 @@ export async function POST(
       { status: 400 },
     );
   const sb = getSupabaseAdmin()!;
+  // 2차 상세 견적 첨부(0042): 상세 견적을 요청한 뒤에만 올린다. 받는 기관에만 보인다
+  const scope = b.scope === "detail" ? "detail" : "request";
+  if (scope === "detail") {
+    const { data: d } = await sb.from("rfq_details").select("rfq_id").eq("rfq_id", rfq.id).maybeSingle();
+    if (!d) return NextResponse.json({ error: "상세 견적을 요청한 뒤에 첨부할 수 있어요." }, { status: 409 });
+  }
   const { data: files, error } = await sb
     .from("rfq_files")
     .select("*")
@@ -55,7 +61,7 @@ export async function POST(
       { status: 503 },
     );
   const existing = files.find(
-    (f) => f.file_name === b.name && f.size_bytes === b.size,
+    (f) => f.file_name === b.name && f.size_bytes === b.size && f.scope === scope,
   );
   if (existing?.uploaded_at) return NextResponse.json({ uploaded: true });
   if (!existing && files.length >= 10)
@@ -75,6 +81,7 @@ export async function POST(
         file_name: b.name,
         size_bytes: b.size,
         mime_type: typeof b.type === "string" ? b.type.slice(0, 100) : null,
+        scope,
       });
     if (insertError)
       return NextResponse.json(

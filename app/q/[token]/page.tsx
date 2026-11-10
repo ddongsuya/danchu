@@ -4,6 +4,7 @@ import { loadQuote } from "@/lib/quote-load";
 import { viewerLoadOpts } from "@/lib/auth";
 import { RequestView } from "@/components/cro/RequestView";
 import { DeclineForm } from "@/components/cro/DeclineForm";
+import { detailCueOfInvite } from "@/lib/detail-data";
 
 export const dynamic = "force-dynamic";
 
@@ -37,5 +38,6 @@ export default async function TokenRequest({ params, searchParams }: { params: P
       </>
     );
   }
-  return <RequestView got={got} replyHref={`/q/${token}/reply`} withdrawHref={`/q/${token}?decline=1`} afterDeclineHref={`/q/${token}`} fileToken={token} />;
+  const detail = got.joined ? await detailCueOfInvite(got.inviteId, got.rfqId, `/q/${token}`) : null;
+  return <RequestView got={got} replyHref={`/q/${token}/reply`} withdrawHref={`/q/${token}?decline=1`} afterDeclineHref={`/q/${token}`} fileToken={token} detail={detail} />;
 }

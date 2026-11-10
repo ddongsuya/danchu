@@ -4,14 +4,14 @@ import { Lock } from "@/components/app/ui";
 import { md, won } from "@/lib/format";
 import { seatsLabel } from "@/lib/request-policy";
 import { JoinPanel } from "./JoinPanel";
-import { CroStory } from "./CroStory";
+import { CroStory, type DetailCue } from "./CroStory";
 
 /**
  * CRO가 보는 요청서. 토큰 링크(/q)와 CRO 포털(/cro/r) 양쪽에서 쓴다.
  * 참여 전(got.joined false, 0023): 요약(설계 규칙표 "참여 전에 보이는 것")과 참여 결정(JoinPanel)만 보인다.
  * 참여 뒤: 의뢰 개요 · 요청 시험 항목(항목마다 회신) · 공통 조건 · 첨부와 회신 작성, 제출 전 참여 철회.
  */
-export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDeclineHref, declineEndpoint }: { got: Loaded; replyHref: string; withdrawHref?: string; fileToken?: string; afterDeclineHref: string; declineEndpoint?: string }) {
+export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDeclineHref, declineEndpoint, detail }: { got: Loaded; replyHref: string; withdrawHref?: string; fileToken?: string; afterDeclineHref: string; declineEndpoint?: string; detail?: DetailCue | null }) {
   const { rfq, draft } = got;
   const submitted = draft?.status === "submitted";
   const total = draft?.items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0) ?? 0;
@@ -22,7 +22,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
 
   return (
     <>
-      <CroStory got={got} replyHref={replyHref}>
+      <CroStory got={got} replyHref={replyHref} detail={detail}>
         <div className="rs-next">
       {deciding && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} declineEndpoint={declineEndpoint} />}
       {/* 불참 되돌리기 (2026-10-20 결정 3): 참여 전 불참만, 참여 결정 기한 전, 자리가 남았을 때. 참여와 같은 동의·같은 길(join_offer) */}

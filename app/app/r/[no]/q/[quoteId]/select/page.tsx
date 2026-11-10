@@ -8,6 +8,7 @@ import { SelectCroForm } from "@/components/SelectCroForm";
 import { md, won } from "@/lib/format";
 import { comparisonOpened } from "@/lib/reply-window";
 import { QUOTE_CHANGED_MESSAGE } from "@/lib/rpc";
+import { loadDetail } from "@/lib/detail-data";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,8 @@ export default async function SelectCro({ params, searchParams }: { params: Prom
   }
   if (!quoteSelectable(q)) return <div className="note note--warn">정식 견적서와 유효기간을 확인한 뒤 기관을 선택해 주세요. <Link href={`/app/r/${no}/q/${quoteId}`}>견적 상세로 돌아가기</Link></div>;
   const others = d.quotes.filter((x) => x.status === "submitted" && x.id !== q.id);
+  // 2차 견적을 고쳐 보낸 기관이면 그 금액도 함께 확인한다 (0042)
+  const second = (await loadDetail(rfq.id))?.targets.find((t) => t.quoteId === q.id && t.status === "submitted");
 
   return (
     <>
@@ -60,7 +63,8 @@ export default async function SelectCro({ params, searchParams }: { params: Prom
         revision={seenRevision}
         croName={q.cro_name}
         summary={[
-          ["총 견적액", won(q.total_amount ?? 0)],
+          [second ? "1차 견적" : "총 견적액", won(q.total_amount ?? 0)],
+          ...(second?.total != null ? ([["2차 견적 (상세 조건)", `${won(second.total)}${second.weeks ? ` · 전체 ${second.weeks}주` : ""}`]] as [string, string][]) : []),
           ["착수 · 기간", `${md(q.start_date)} · ${q.total_weeks ? `${q.total_weeks}주` : "-"}`],
           ["유효기간", md(q.valid_until)],
         ]}

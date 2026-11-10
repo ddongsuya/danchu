@@ -280,7 +280,8 @@ export async function loadByInvite(inv: InviteRow, opts: LoadOpts = {}): Promise
   if (!inv.opened_at && opts.markOpened !== false) {
     await sb.from("rfq_invites").update({ opened_at: new Date().toISOString() }).eq("id", inv.id);
   }
-  const { data: files } = await sb.from("rfq_files").select("id, file_name, size_bytes").eq("rfq_id", inv.rfq_id).order("created_at");
+  // 1차 첨부만. 2차 상세 견적 첨부(scope detail, 0042)는 받는 기관의 상세 견적 화면에서 따로 연다
+  const { data: files } = await sb.from("rfq_files").select("id, file_name, size_bytes").eq("rfq_id", inv.rfq_id).eq("scope", "request").order("created_at");
   const joined = isJoined(inv);
   // 참여 전에는 견적 행이 있을 수 없다 (0023 트리거). 읽지 않는다
   const { data: q } = joined ? await sb.from("cro_quotes").select("*, cro_quote_items(*)").eq("invite_id", inv.id).maybeSingle() : { data: null };

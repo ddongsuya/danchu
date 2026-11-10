@@ -5,13 +5,16 @@ import { closedMessage, type Loaded } from "@/lib/quote-load";
 import { replyProgress } from "@/lib/cro-story";
 import { md, won } from "@/lib/format";
 
+/** 2차 상세 견적 요청을 받은 기관에 보이는 안내 (0042) */
+export type DetailCue = { open: boolean; status: "sent" | "submitted" | "kept" | "declined"; replyBy: string; href: string };
+
 type Step = { n: string; t: string; s: string; state: "done" | "now" | "next" };
 
 /**
  * 기관이 보는 요청 이야기 (2026-10-30, 의뢰자 요청 이야기와 같은 틀). 포털(/cro/r)과 토큰 링크(/q)가 함께 쓴다.
  * 첫 장면은 지금 상태 한 문장(참여 결정 / 남은 회신 항목 / 제출함 / 닫힘), 아래는 이 요청이 지나온 길.
  */
-export function CroStory({ got, replyHref, children }: { got: Loaded; replyHref: string; children?: ReactNode }) {
+export function CroStory({ got, replyHref, detail, children }: { got: Loaded; replyHref: string; detail?: DetailCue | null; children?: ReactNode }) {
   const { rfq, draft } = got;
   const submitted = draft?.status === "submitted";
   const summary = !rfq.full;
@@ -23,7 +26,13 @@ export function CroStory({ got, replyHref, children }: { got: Loaded; replyHref:
 
   let title: ReactNode;
   let lead: string;
-  if (got.closed) {
+  if (detail?.open) {
+    title = <>상세 견적 요청이<br /><span className="rs-mark">도착</span>했어요</>;
+    lead = `의뢰자가 1차 견적을 본 뒤 상세 조건을 보냈어요. 2차 회신 기한 ${md(detail.replyBy)}.`;
+  } else if (detail && detail.status !== "sent" && got.closedReason === "compared") {
+    title = <>2차 회신을<br />보냈어요</>;
+    lead = detail.status === "submitted" ? "의뢰자가 1차와 2차 견적을 함께 보고 있어요." : detail.status === "kept" ? "1차 견적 그대로 진행한다고 답했어요." : "이번에는 2차 견적을 내지 않는다고 답했어요.";
+  } else if (got.closed) {
     title = <>이 요청의<br />회신이 닫혔어요</>;
     lead = closedMessage(got.closedReason, { submitted });
   } else if (got.withdrawn) {
@@ -68,6 +77,11 @@ export function CroStory({ got, replyHref, children }: { got: Loaded; replyHref:
             <p className="rs-k"><span className="tnum">{rfq.no}</span> {summary ? field : rfq.substance} · {rfq.client}</p>
             <h1 id="cro-story-title" className="rs-h1">{title}</h1>
             <p className="rs-lead">{lead}</p>
+            {detail && (detail.open || detail.status !== "sent") && (
+              <div className="rs-acts">
+                <Link href={detail.href} className={detail.open ? "b1 blg" : "b2"}>{detail.open ? "2차 견적 쓰기" : "2차 회신 보기"}</Link>
+              </div>
+            )}
             {canWrite && (
               <div className="rs-acts">
                 <Link href={replyHref} className="b1 blg">{submitted ? (got.locked ? "제출한 회신 보기" : "제출한 회신 고치기") : draft ? "이어 쓰기" : "견적 쓰기"}</Link>

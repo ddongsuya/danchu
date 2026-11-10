@@ -44,9 +44,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const award = { id: sel.award_id };
   const { data: q } = await sb.from("cro_quotes").select("*").eq("id", quoteId).maybeSingle();
   const quote = (q ?? { id: quoteId, invite_id: sel.invite_id, cro_org_id: sel.cro_org_id, cro_name: sel.cro_name, total_amount: null }) as Pick<QuoteRow, "id" | "invite_id" | "cro_org_id" | "cro_name" | "total_amount">;
+  // 선정 견적 금액: 2차를 고쳐 보낸 기관이면 2차 금액 (0042 select_quote)
+  const picked = sel.amount ?? quote.total_amount ?? 0;
   const { data: inv } = await sb.from("rfq_invites").select("*").eq("id", quote.invite_id).maybeSingle();
   const invite = inv;
-  await logEvent(rfq.id, "selected", `${quote.cro_name} 선택`, `총 ${won(quote.total_amount ?? 0)} · 의뢰자 연락처가 CRO에 전달됐어요.`, s.userId, { quoteId: quote.id });
+  await logEvent(rfq.id, "selected", `${quote.cro_name} 선택`, `총 ${won(picked)} · 의뢰자 연락처가 CRO에 전달됐어요.`, s.userId, { quoteId: quote.id });
 
   // 선택된 CRO: 연락처 공개
   // 담당자 계정이 없거나 운영자 관리 기관은 포털(/cro, 로그인 필요)을 열 수 없다. 로그인 없는 회신 링크로 보내고 체결 여부는 운영자가 메일로 묻는다
@@ -90,7 +92,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   await notifyInvitedOrgs(unreplied.filter((i) => !occupiesSeat(i)), { kind: "선정", title: `${rfq.rfq_no} 참여 안내가 마감됐어요`, body: "의뢰자가 기관을 선정해 이 요청은 더 참여를 받지 않아요. 안내를 확인해 주셔서 감사합니다.", portalHref: "/cro" });
 
   // 거래 귀속은 선정 시점의 기록(rfq_awards)으로 본다. 기존 거래 여부로 따로 판정하지 않는다
-  await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(quote.total_amount ?? 0)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
+  await notifyUsers(await adminUserIds(), { kind: "선정", title: `${rfq.rfq_no} CRO 선택 · ${quote.cro_name}`, body: `${rfq.company} · 총 ${won(picked)}`, href: `/admin/r/${rfq.rfq_no}` }, { to: adminEmails() });
   // 의뢰자에게도 기관 담당자 연락처를 준다 (연락처는 선정 때 서로 주고받는다. 의뢰자 정보는 위에서 선정 기관에만 갔다)
   let contactLine = "";
   let croReplyTo: string | undefined;

@@ -104,10 +104,53 @@ export type Database = {
           mime_type: string | null;
           created_at: string;
           uploaded_at: string | null;
+          /** 0042: request = 참여한 기관 모두, detail = 2차 상세 견적을 받는 기관만 */
+          scope: "request" | "detail";
         };
-        Insert: Ins<Database["public"]["Tables"]["rfq_files"]["Row"], "id" | "created_at" | "mime_type" | "uploaded_at">;
+        Insert: Ins<Database["public"]["Tables"]["rfq_files"]["Row"], "id" | "created_at" | "mime_type" | "uploaded_at" | "scope">;
         Update: Partial<Database["public"]["Tables"]["rfq_files"]["Row"]>;
         Relationships: [{ foreignKeyName: "rfq_files_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] }];
+      };
+      /** 0042: 2차 상세 견적 요청 (요청마다 한 번) */
+      rfq_details: {
+        Row: {
+          rfq_id: string;
+          created_by: string | null;
+          created_at: string;
+          reply_by: string;
+          /** 요청서 payload 와 같은 키. 1차에 더하거나 바꾼 값만 */
+          detail: Json;
+          note: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["rfq_details"]["Row"], "created_by" | "created_at" | "detail" | "note">;
+        Update: Partial<Database["public"]["Tables"]["rfq_details"]["Row"]>;
+        Relationships: [{ foreignKeyName: "rfq_details_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: true; referencedRelation: "rfq_requests"; referencedColumns: ["id"] }];
+      };
+      /** 0042: 2차 상세 견적을 받는 기관과 그 회신. 1차 견적마다 한 줄 */
+      rfq_detail_targets: {
+        Row: {
+          id: string;
+          rfq_id: string;
+          quote_id: string;
+          invite_id: string;
+          cro_org_id: string | null;
+          status: "sent" | "submitted" | "kept" | "declined";
+          total_amount: number | null;
+          total_weeks: number | null;
+          /** [{seq, amount, weeks, mode, reason}] 고친 줄만 */
+          items: Json;
+          note: string;
+          responded_at: string | null;
+          responded_by: string | null;
+          created_at: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["rfq_detail_targets"]["Row"], "id" | "cro_org_id" | "status" | "total_amount" | "total_weeks" | "items" | "note" | "responded_at" | "responded_by" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["rfq_detail_targets"]["Row"]>;
+        Relationships: [
+          { foreignKeyName: "rfq_detail_targets_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_details"; referencedColumns: ["rfq_id"] },
+          { foreignKeyName: "rfq_detail_targets_quote_id_fkey"; columns: ["quote_id"]; isOneToOne: true; referencedRelation: "cro_quotes"; referencedColumns: ["id"] },
+          { foreignKeyName: "rfq_detail_targets_invite_id_fkey"; columns: ["invite_id"]; isOneToOne: false; referencedRelation: "rfq_invites"; referencedColumns: ["id"] },
+        ];
       };
       rfq_counters: {
         Row: { year: number; seq: number };
@@ -700,6 +743,10 @@ export type Database = {
       rotate_org_invite_tokens: { Args: { p_org: string }; Returns: number };
       /** 0022: p_revision 은 선정 확인 화면이 본 견적 판. 지금 판과 다르면 { ok: false, code: 'quote_changed', revision }. 0025: 비교표가 열리기 전이면 code 'not_compared' */
       select_quote: { Args: { p_rfq_id: string; p_quote_id: string; p_user: string; p_revision: number }; Returns: Json };
+      /** 0042: 의뢰자가 1차를 낸 기관 1~3곳에 상세 조건을 보낸다. { ok, targets } 또는 { ok: false, code: not_found·not_compared·closed·exists·bad_date·bad_detail·bad_targets } */
+      send_detail_request: { Args: { p_rfq_id: string; p_user: string; p_quote_ids: string[]; p_detail: Json; p_reply_by: string; p_note: string }; Returns: Json };
+      /** 0042: 기관의 2차 회신 (한 번). { ok, target_id, rfq_id, left } 또는 { ok: false, code: not_found·revoked·not_target·closed·done·expired·org_inactive·not_member·bad_body } */
+      save_detail_reply: { Args: { p_invite_id: string; p_token: string; p_actor: string | null; p_body: Json }; Returns: Json };
       /** 0022: 마지막으로 적용한 마이그레이션 번호 (lib/schema-version.ts) */
       danchu_schema_version: { Args: Record<string, never>; Returns: number };
       /** 0028: 의뢰자가 열린 비교표를 연 기록. 비교표가 열리지 않은 요청에는 아무것도 하지 않는다 */

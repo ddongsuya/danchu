@@ -5,6 +5,7 @@ import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
 import { comma, dday, md, payTerms, won } from "@/lib/format";
 import { quoteKindLabel } from "@/lib/concierge";
+import { DETAIL_STATUS_LABEL, type DetailReplyItem, type DetailStatus } from "@/lib/detail-quote";
 
 export type CompareCol = {
   id: string;
@@ -41,6 +42,8 @@ export type CompareCol = {
   auto: boolean;
   /** 운영자가 기관 PDF 를 보고 옮겨 적은 견적 (기준 문서는 PDF 원본) */
   operator?: boolean;
+  /** 2차 상세 견적 (0042). 상세 견적을 요청한 기관만 */
+  detail?: { status: DetailStatus; total: number | null; weeks: number | null; note: string | null; items: DetailReplyItem[] } | null;
 };
 export type CompareRowDef = { seq: number; name: string; category: string };
 
@@ -55,7 +58,8 @@ const SORTS: [SortKey, string][] = [
 function itemCell(c: CompareCol, seq: number): React.ReactNode {
   const it = c.items.find((i) => i.seq === seq);
   if (!it) return "회신 없음";
-  if (it.avail === "불가") return <span>수행 불가{it.note ? ` · ${it.note}` : ""}</span>;
+  const second = c.detail?.status === "submitted" ? c.detail.items.find((i) => i.seq === seq) : undefined;
+  if (it.avail === "불가" && !second) return <span>수행 불가{it.note ? ` · ${it.note}` : ""}</span>;
   return (
     <>
       <b className="tnum">{it.amount == null ? "미입력" : comma(it.amount)}</b>
@@ -72,6 +76,13 @@ function itemCell(c: CompareCol, seq: number): React.ReactNode {
         </p>
       ))}
       {it.note && <p style={{ whiteSpace: "pre-wrap" }}>{it.note}</p>}
+      {second && (second.amount !== it.amount || second.weeks !== it.weeks) && (
+        <p className="cmp-second">
+          2차 <mark className="cmp-gap tnum">{second.amount == null ? "미입력" : comma(second.amount)}</mark>
+          {second.weeks ? ` · ${second.weeks}주` : ""}
+          {second.mode === "assumed" && second.reason ? ` · ${second.reason}` : ""}
+        </p>
+      )}
     </>
   );
 }
@@ -136,7 +147,7 @@ export function CompareBoard({
         ),
       },
       {
-        label: "회신 금액 합계",
+        label: cols.some((c) => c.detail) ? "1차 견적" : "회신 금액 합계",
         cell: (c) => (
           <>
             <b className="tnum">{c.total ? won(c.total) : "미입력"}</b>
@@ -146,6 +157,26 @@ export function CompareBoard({
           </>
         ),
       },
+      ...(cols.some((c) => c.detail)
+        ? [
+            {
+              label: "2차 견적",
+              cell: (c: CompareCol) =>
+                !c.detail ? (
+                  "요청 안 함"
+                ) : c.detail.status === "submitted" && c.detail.total != null ? (
+                  <>
+                    <b className="tnum">{won(c.detail.total)}</b>
+                    {c.detail.total !== c.total && <> <mark className="cmp-gap tnum">{c.detail.total > c.total ? "+" : "-"}{won(Math.abs(c.detail.total - c.total))}</mark></>}
+                    <p className="fld__help">{c.detail.weeks ? `전체 ${c.detail.weeks}주 · ` : ""}상세 조건 기준</p>
+                    {c.detail.note && <p style={{ whiteSpace: "pre-wrap" }}>{c.detail.note}</p>}
+                  </>
+                ) : (
+                  DETAIL_STATUS_LABEL[c.detail.status]
+                ),
+            },
+          ]
+        : []),
       {
         label: "최종보고서",
         cell: (c) =>

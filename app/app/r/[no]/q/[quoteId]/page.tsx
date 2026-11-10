@@ -13,6 +13,8 @@ import { comparisonOpened } from "@/lib/reply-window";
 import { hasSchedule, planOfStored } from "@/lib/quote-schedule";
 import { scaleWeeks } from "@/lib/schedule";
 import { ScheduleGantt } from "@/components/ScheduleGantt";
+import { loadDetail } from "@/lib/detail-data";
+import { DETAIL_STATUS_LABEL } from "@/lib/detail-quote";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const plan = hasSchedule(q) ? planOfStored(q) : null;
   // 선정 전 자유 입력란의 연락처는 가린다 (lib/contact-guard.ts). 이 기관을 선정하면 그대로 보인다
   const reveal = rfq.selected_quote_id === q.id;
+  // 2차 상세 견적 (0042): 이 기관에 상세 조건을 보냈으면 회신을 1차 옆에 보인다
+  const second = (await loadDetail(rfq.id))?.targets.find((t) => t.quoteId === q.id) ?? null;
   const selectable = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
 
   return (
@@ -64,6 +68,14 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)" }}>총 견적액 · VAT 별도</div>
               <div className="tnum" style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.15 }}>{won(q.total_amount ?? 0)}</div>
             </div>
+            {second && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>2차 견적 · 상세 조건 기준</div>
+                <div className="tnum" style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.4 }}>
+                  {second.status === "submitted" && second.total != null ? <>{won(second.total)}{second.weeks ? ` · ${second.weeks}주` : ""}</> : DETAIL_STATUS_LABEL[second.status]}
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
@@ -98,6 +110,16 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
                   {it.weeks ? <span className="pill pill--sf">{it.weeks}주</span> : null}
                   {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{reveal ? it.reason : maskedText(it.reason)}</span>}
                 </div>
+                {(() => {
+                  const e = second?.status === "submitted" ? second.items.find((x) => x.seq === it.seq) : undefined;
+                  if (!e || (e.amount === it.amount && e.weeks === it.weeks)) return null;
+                  return (
+                    <div className="tnum" style={{ fontSize: 13 }}>
+                      2차 <mark className="cmp-gap">{e.amount == null ? "미입력" : comma(e.amount)}</mark>{e.weeks ? ` · ${e.weeks}주` : ""}
+                      {e.mode === "assumed" && e.reason ? ` · ${reveal ? e.reason : maskedText(e.reason)}` : ""}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "14px 0", borderTop: "1.5px solid var(--ink)", fontSize: 15 }}>

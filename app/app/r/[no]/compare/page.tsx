@@ -15,6 +15,7 @@ import { comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-win
 import { occupiesSeat } from "@/lib/request-policy";
 import { captureError } from "@/lib/observe";
 import { hasSchedule } from "@/lib/quote-schedule";
+import { loadDetail } from "@/lib/detail-data";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,10 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   for (const q of quotes) for (const it of q.cro_quote_items ?? []) if (!rowMap.has(it.seq)) rowMap.set(it.seq, { seq: it.seq, name: it.name, category: it.category });
   const rows = [...rowMap.values()].sort((a, b) => a.seq - b.seq);
 
+  // 2차 상세 견적 (0042): 요청한 기관의 열에 1차와 나란히 보인다
+  const detail = await loadDetail(rfq.id);
   const cols: CompareCol[] = quotes.map((q) => {
+    const dt = detail?.targets.find((t) => t.quoteId === q.id);
     const cov = glpCoverage(authorities, certsOf.get(q.cro_org_id ?? "") ?? []);
     const items = q.cro_quote_items ?? [];
     const unavailable = items.filter((i) => i.avail === "불가").map((i) => i.name);
@@ -107,9 +111,11 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
       operator: q.entry_source === "operator",
+      detail: dt ? { status: dt.status, total: dt.total, weeks: dt.weeks, note: (rfq.selected_quote_id === q.id ? dt.note : maskedText(dt.note)) || null, items: dt.items.map((i) => ({ ...i, reason: rfq.selected_quote_id === q.id ? i.reason : maskedText(i.reason) })) } : null,
     };
   });
 
+  const canSelect = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status);
   const board = (
     <>
       {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (
@@ -117,7 +123,19 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       ) : (
         <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기예요. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있어요.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
       )}
-      <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status)} />
+      {detail ? (
+        <div className="cmp-detail">
+          <b>상세 견적</b>
+          <span className="tnum">2차 회신 기한 {md(detail.replyBy)} · 답한 곳 {detail.targets.filter((t) => t.status !== "sent").length}/{detail.targets.length}</span>
+        </div>
+      ) : canSelect && cols.length > 0 ? (
+        <div className="cmp-detail">
+          <b>상세 견적</b>
+          <span>1차 견적 기관 중 최대 3곳 · 요청마다 한 번</span>
+          <Link href={`/app/r/${rfq.rfq_no}/detail`} className="b2">상세 조건 보내기</Link>
+        </div>
+      ) : null}
+      <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={canSelect} />
     </>
   );
 

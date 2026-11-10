@@ -316,3 +316,20 @@
 .cr-r > span:not(.cr-v):not(.cr-n) { min-width: 0; flex: 1; }
 .cr-r--btn .cr-v { max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-r--btn b { flex: none; }
+
+/* 상세 견적 요청 · 2차 회신 (components/ChatShell.tsx) */
+.cr a.cr-o { text-decoration: none; }
+span.cr-me { cursor: default; }
+.cr-file { min-height: 40px; padding-top: 4px; padding-bottom: 4px; }
+.cr-file small { flex: 1; min-width: 0; }
+.cr-file button { width: 36px; height: 36px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); }
+.cr-sum { padding: 14px; display: grid; gap: 6px; }
+.cr-sum__k { margin: 0; font-size: 12px; color: var(--muted); }
+.cr-sum__v { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.cr-sum__v s { font-size: 14px; font-weight: 400; color: var(--muted); margin-left: 8px; }
+.cr-doc__list { margin: 16px 0 0; padding: 0; list-style: none; font-size: 13.5px; }
+.cr-doc__list li { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid var(--card-line); }
+.cr-doc__list span { color: var(--muted); flex: none; }
+.cr-doc__list b { font-weight: 600; text-align: right; }
+.cr-doc__files { display: grid; gap: 4px; margin-top: 12px; font-size: 13.5px; }
+.cr-doc__files a { color: var(--ink); text-underline-offset: 3px; }
