@@ -8,7 +8,7 @@
 - 아래 디자인 규칙에 나오는 Tailwind 표기(`leading-relaxed`, `max-w-7xl`, `dark:` 등)는 **기준값으로 읽고 CSS로 옮겨 적용한다.** 예: `max-w-7xl` → `max-width: 80rem`, `text-balance` → `text-wrap: balance`, `min-h-[100dvh]` → `min-height: 100dvh`. Tailwind를 새로 설치하지 않는다.
 - 단추는 중립이다. 화면 문구에서 단추가 기준을 정하는 것처럼 쓰지 않는다. 기관마다 다른 부분은 기관의 설명을 나란히 보여 준다.
 - 운영 배포는 `main` 브랜치다. 커밋 전에 현재 브랜치를 확인한다.
-- 검사: `npm run typecheck`, `npx next build`.
+- 검사: `npm run typecheck`, `npm run lint`(오류 0이어야 한다. 경고는 `eslint.config.mjs` 의 BASELINE 설명 참고), `npx next build`.
 - **리디자인 범위 (2026-09-29 확인)**: 색을 포함한 시각 언어를 바꿀 때는 랜딩만이 아니라 로그인 후 화면(의뢰자 `/app`, 기관 `/cro`, 운영자 `/admin`, 토큰 회신 `/q`)까지 함께 바꾼다. 랜딩과 앱 화면의 색·글꼴·모서리 체계가 서로 다르면 안 된다. 브랜드 색은 바꿀 수 있다.
 
 ## 디자인 규칙

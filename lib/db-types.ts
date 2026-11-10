@@ -374,6 +374,8 @@ export type Database = {
           monthly_fee_from: string | null;
           /** 운영자가 등록·관리하는 기관 (담당자 계정 없음, 메일 링크는 /q 토큰) (0019) */
           managed: boolean;
+          /** 담당자 계정이 하나도 남지 않은 것을 처음 본 시각 (0040). 30일 뒤 CRM 자료를 지운다 */
+          members_left_at: string | null;
           /** 생성 컬럼: 사업자번호 숫자만. insert/update 에 넣지 않는다 */
           business_no_norm: string | null;
           /** 청구서 받을 이메일 (0032). 비어 있으면 contact_email */

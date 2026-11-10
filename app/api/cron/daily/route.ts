@@ -8,6 +8,8 @@ import { captureError } from "@/lib/observe";
 import { isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
+import { purgeLeftOrgCrm } from "@/lib/crm-purge";
+import { cronPart, stepInPart } from "@/lib/cron-parts";
 import { EARLY_OPEN_DATE, earlyOpenSms, type EarlyRole } from "@/lib/early";
 import { smsPhone } from "@/lib/sms";
 import { daysSince, reminderStage } from "@/lib/contract-reminder";
@@ -50,7 +52,7 @@ function addDays(ymd: string, n: number): string {
 }
 
 /**
- * 매일 09:00 KST 실행 (vercel.json crons).
+ * 매일 09:00 KST 실행 (vercel.json crons). 09:00 에 flow, 09:10 에 upkeep 묶음이 따로 돈다 (cronPart).
  * 0) 위자드가 시작하지 못한 접수(첨부 업로드 중 창을 닫는 등)를 대신 시작, 빠진 참여 안내 보충, 안 간 안내 메일 재발송
  * 0-2) 참여 단계 (0023, lib/opt-in-cron.ts): 참여 결정 기한 경과 처리(지명 기관 몫 자리 풀기), 참여 부족 알림(운영자 + 의뢰자 1회),
  *      회신 기한 3영업일 전 참여 1곳 이하 알림(운영자), 빈 자리 재안내("자리가 생겼습니다")
@@ -79,6 +81,8 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "저장소 미설정" }, { status: 503 });
 
   const today = todaySeoul();
+  const part = cronPart(req.url);
+  const run = (name: string, fn: () => Promise<void>): Promise<void> => (stepInPart(name, part) ? step(name, out.errors, fn) : Promise.resolve());
   const out = {
     started: 0,
     reminded: 0,
@@ -96,6 +100,7 @@ export async function GET(req: Request) {
     pendingCleaned: 0,
     earlyOpenSms: 0,
     crmReminders: 0,
+    crmPurge: { marked: 0, cleared: 0, purgedOrgs: 0, rows: 0 },
     digest: false,
     retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 },
     errors: [] as string[],
@@ -105,24 +110,24 @@ export async function GET(req: Request) {
   await sb.rpc("rate_limit_cleanup").then(({ error }) => { if (error) console.warn("rate_limit_cleanup", error.message); });
 
   // 0-0) 접수했지만 기관 전달을 시작하지 못한 요청 (위자드가 첨부를 올리다 창을 닫은 경우). 30분 넘게 지난 것만
-  await step("start", out.errors, async () => {
+  await run("start", async () => {
     const before = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data: idle } = await sb.from("rfq_requests").select("id").is("started_at", null).eq("status", "received").lt("created_at", before).limit(50);
     for (const r of idle ?? []) if ((await startRfq(r.id)).started) out.started++;
   });
 
   // 0) 빠진 배포 보충: 승인된 기관 중 열린 요청을 아직 받지 못한 곳
-  await step("distribute", out.errors, async () => {
+  await run("distribute", async () => {
     out.distributed = (await distributeOpenRfqs()).invites;
   });
 
   // 0-1) 배포 메일이 안 간 초대 재발송 (Resend 장애 뒤 복구)
-  await step("resend", out.errors, async () => {
+  await run("resend", async () => {
     out.resent = (await resendUnmailedInvites()).sent;
   });
 
   // 0-2) 참여 단계: 참여 결정 기한, 참여 부족, 빈 자리 재안내 (lib/opt-in-cron.ts)
-  await step("opt-in", out.errors, async () => {
+  await run("opt-in", async () => {
     const r = await runOptInSteps(sb, today);
     out.joinDeadlines = r.joinDeadlines;
     out.lowParticipation = r.lowParticipation;
@@ -133,7 +138,7 @@ export async function GET(req: Request) {
 
   // 0-3) 참여한 기관이 모두 제출했고 이제 더 참여할 수 없는 요청의 비교표를 연다 (0025, 2026-10-20 결정 1).
   //      마지막 제출 뒤에 참여 결정 기한이 지난 경우다. DB 가 요청 행을 잠그고 한 번만 연다. 알림도 그때 한 번
-  await step("open-ready", out.errors, async () => {
+  await run("open-ready", async () => {
     const { data: opened, error } = await sb.rpc("open_ready_comparisons");
     if (error) throw new Error(error.message);
     for (const o of opened ?? []) {
@@ -144,7 +149,7 @@ export async function GET(req: Request) {
   });
 
   // 1) 리마인더: 참여한 기관 중 아직 제출하지 않은 곳만 (참여 결정 전 안내·철회·취소에는 보내지 않는다, 0023)
-  await step("remind", out.errors, async () => {
+  await run("remind", async () => {
   for (const [kind, day] of [["d2", addDays(today, 2)], ["d0", today]] as const) {
     const { data: invites } = await sb.from("rfq_invites").select("*").eq("reply_by", day).in("status", ["sent", "draft"]);
     for (const inv of (invites ?? []).filter((i) => occupiesSeat(i))) {
@@ -178,7 +183,7 @@ export async function GET(req: Request) {
   });
 
   // 2) 기한 후 회신 마감 + 의뢰자 요약 (한 번만, lib/compare.ts closeReplies). 제출 0건이면 마감하지 않는다
-  await step("close-replies", out.errors, async () => {
+  await run("close-replies", async () => {
   const { data: rfqs } = await sb.from("rfq_requests").select("*").in("status", ["distributed", "quoted"]).is("compared_at", null).lt("reply_by", today);
   for (const rfq of rfqs ?? []) {
     if (!closeRepliesDue(rfq, today)) continue;
@@ -214,7 +219,7 @@ export async function GET(req: Request) {
 
   // 4) 회신 마감 14일 뒤에도 선정도 마무리도 없는 요청: 의뢰자에게 한 번 묻는다
   //    선정 버튼을 누르지 않은 요청이 어디로 갔는지 알아야 청구 명세의 선정률과 성사수수료가 맞는다
-  await step("outcome-ask", out.errors, async () => {
+  await run("outcome-ask", async () => {
   const asked = new Date(Date.now() - 14 * 864e5).toISOString();
   const { data: idle } = await sb.from("rfq_requests").select("id, rfq_no, user_id, substance").eq("status", "compared").is("selected_quote_id", null).is("outcome", null).lt("compared_at", asked);
   for (const rfq of idle ?? []) {
@@ -229,7 +234,7 @@ export async function GET(req: Request) {
   // 4-1) 선정 뒤 계약 보고가 없는 수주: 기관에 14·30일 리마인더, 45일에는 운영자·의뢰자에게 진행 여부를 묻는다
   //      성사수수료는 선정 견적 5,000만 원 이상이 체결(signed)로 확인된 계약에만, 계약 금액 기준으로 붙는다 (0020).
   //      체결 확인한 달에 정산하므로, 보고 누락이 곧 매출 누락이다
-  await step("contract-remind", out.errors, async () => {
+  await run("contract-remind", async () => {
     const since = new Date(Date.now() - 14 * 864e5).toISOString();
     // 마지막 단계(45일)에 15일 여유를 둔 60일 창. 미체결로 기록했거나 이미 마지막 단계를 지난 오래된 수주가 창을 채워 새 수주를 밀어내지 않게 한다
     const horizon = new Date(Date.now() - 60 * 864e5).toISOString();
@@ -304,7 +309,7 @@ export async function GET(req: Request) {
 
   // 4-2) 계약 보고 뒤 확인 기한(7일)이 지났고 이의가 없으면 보고 내용대로 확정하고 요청을 마친다 (0025 auto_confirm_contracts, 2026-10-20 결정 2).
   //      확인 열은 DB 함수만 쓴다. 이의가 정리되지 않은 계약은 확정하지 않는다. 성사수수료는 확정한 달에 정산한다
-  await step("contract-confirm", out.errors, async () => {
+  await run("contract-confirm", async () => {
     const { data: rows, error } = await sb.rpc("auto_confirm_contracts");
     if (error) throw new Error(error.message);
     for (const a of rows ?? []) {
@@ -321,7 +326,7 @@ export async function GET(req: Request) {
 
   // 4-3) 청구서 납부 안내 (0032): 보낸 청구서 중 미납만. 기한 3일 전, 다음 날, 7일 뒤, 30일 뒤에 한 번씩.
   //      30일 뒤에는 운영자에게도 알린다 (이용 제한은 운영자가 정한다). 단계를 먼저 올려 두 번 보내지 않는다
-  await step("invoice-remind", out.errors, async () => {
+  await run("invoice-remind", async () => {
     const { data: rows, error } = await sb.from("billing_invoices").select("*").eq("status", "issued").not("sent_at", "is", null);
     if (error) throw new Error(error.message);
     for (const inv of (rows ?? []) as BillingInvoiceRow[]) {
@@ -340,7 +345,7 @@ export async function GET(req: Request) {
   // 6) 운영자 하루 요약 메일. 견적 제출·회신하지 않음은 실시간으로는 앱 알림만 보내고 여기서 모은다
   // 기관 CRM 일정·할 일 알림 (0038). 매일 09:00 KST 한 번 돈다: 내일 일정은 오늘 아침, 오늘 기한 할 일은 오늘 아침에 알린다.
   // 먼저 reminded_at / notified_on 을 채워(잡기) 두 번 보내지 않는다. 받는 사람이 그 기관을 떠났으면 보내지 않는다. 표가 없으면(0038 전) 건너뛴다
-  await step("crm-reminders", out.errors, async () => {
+  await run("crm-reminders", async () => {
     const tomorrow = addDays(today, 1);
     const from = new Date(`${tomorrow}T00:00:00+09:00`).toISOString();
     const to = new Date(`${addDays(today, 2)}T00:00:00+09:00`).toISOString();
@@ -381,7 +386,7 @@ export async function GET(req: Request) {
     }
   });
 
-  await step("digest", out.errors, async () => {
+  await run("digest", async () => {
     const since = new Date(Date.now() - 864e5).toISOString();
     const { data: evs } = await sb.from("rfq_events").select("kind, rfq_id, title, created_at").gte("created_at", since).in("kind", ["received", "joined", "quote_submitted", "declined", "withdrawn", "compared", "selected", "contract", "closed", "outcome"]).order("created_at").limit(1000);
     const count = (k: string) => (evs ?? []).filter((e) => e.kind === k).length;
@@ -423,13 +428,13 @@ export async function GET(req: Request) {
 
   // 5-0) 보내기 직전 가입에서 인증하지 않고 끝난 임시 요청서(7일)와 첨부, 그 때문에 만들어졌지만 확인하지 않은 계정,
   //      접수로 바뀐 지 30일 지난 임시 기록 정리 (lib/rfq-pending.ts cleanupPending). 임시 첨부는 기관에게 보이지 않는다 (0025)
-  await step("pending-cleanup", out.errors, async () => {
+  await run("pending-cleanup", async () => {
     out.pendingCleaned = (await cleanupPending()).pending;
   });
 
   // 4-9) 시범 운영 시작 문자 (0035): 2027-06-01 부터 사전예약한 번호에 한 번씩. 솔라피 개인 계정 하루 한도가 있어 하루 300건씩 나눠 보낸다
   if (today >= EARLY_OPEN_DATE) {
-    await step("early-open-sms", out.errors, async () => {
+    await run("early-open-sms", async () => {
       const { data } = await sb.from("early_signups").select("id, role, phone").is("open_sms_at", null).not("phone", "is", null).order("created_at").limit(300);
       for (const r of (data ?? []) as { id: string; role: EarlyRole; phone: string }[]) {
         const st = await smsPhone(r.phone, { kind: "early", text: earlyOpenSms(r.role) });
@@ -441,8 +446,13 @@ export async function GET(req: Request) {
   }
 
   // 5) 보존기간 정리: 접속 기록 90일, 요청서 3년, 읽은 알림 180일 (개인정보처리방침 3항)
-  await step("retention", out.errors, async () => {
+  await run("retention", async () => {
     out.retention = await runRetention(sb);
+  });
+
+  // 5-1) 담당자 계정이 모두 탈퇴한 기관의 CRM 자료: 30일 뒤 지운다 (0040, 처리방침 "기관이 맡긴 개인정보의 처리")
+  await run("crm-purge", async () => {
+    out.crmPurge = await purgeLeftOrgCrm(sb);
   });
 
   // 실패한 단계가 있으면 운영자에게 알린다. 응답 JSON 은 아무도 읽지 않는다
@@ -450,5 +460,5 @@ export async function GET(req: Request) {
     await notifyUsers(await adminUserIds(), { kind: "시스템", title: `예약 작업 일부 실패 · ${out.errors.length}건`, body: `${today} 09:00 실행 중 실패한 단계:\n${out.errors.join("\n")}\n\n같은 작업은 다음 실행 때 다시 시도해요. 반복되면 Sentry 또는 Vercel 로그를 확인해 주세요.`, href: "/admin" }, { to: adminEmails() }).catch((e) => captureError(e, "cron:notify"));
   }
 
-  return NextResponse.json({ ok: out.errors.length === 0, today, ...out });
+  return NextResponse.json({ ok: out.errors.length === 0, today, part: part ?? "all", ...out });
 }

@@ -1,6 +1,7 @@
 {
   "regions": ["icn1"],
   "crons": [
-    { "path": "/api/cron/daily", "schedule": "0 0 * * *" }
+    { "path": "/api/cron/daily?part=flow", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/daily?part=upkeep", "schedule": "10 0 * * *" }
   ]
 }

@@ -5,7 +5,7 @@ import { loadCtx } from "@/components/cro/crm/load";
 
 export const dynamic = "force-dynamic";
 
-/** 보고서 (시안 v5 7번). ?tab=w|a ?p=m1|m3|y ?owner= */
+/** 보고서 (시안 v5 7번). ?tab=w|f|a ?p=m1|m3|y ?owner= */
 export default async function CroReports({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await requireSession("cro");
   const got = await loadCtx(s);

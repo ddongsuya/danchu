@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "bash scripts/db-test.sh",
-    "check:schema": "node scripts/check-schema.mjs"
+    "check:schema": "node scripts/check-schema.mjs",
+    "gen:db-types": "node scripts/gen-db-types.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -27,6 +29,8 @@
     "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.8",
     "typescript": "^5",
     "vitest": "^5.0.2"
   }

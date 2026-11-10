@@ -104,7 +104,7 @@ update public.profiles set role = 'admin' where lower(email) = 'ops@example.com'
 | 항목 | 어떻게 |
 |---|---|
 | 오류 모니터링 | `SENTRY_DSN`·`NEXT_PUBLIC_SENTRY_DSN`을 넣으면 서버·브라우저 오류가 Sentry로 간다(`instrumentation.ts`, `lib/observe.ts`). 없으면 콘솔 로그만 남고 `/admin`에 경고가 뜬다 |
-| 예약 작업 | `/api/cron/daily` 매일 09:00 KST(`vercel.json`). 단계(참여 안내 보충·참여 단계(참여 결정 기한 경과, 참여 부족 알림, 빈 자리 재안내, `lib/opt-in-cron.ts`)·참여 기관 리마인더·회신 마감·결과 문의)마다 오류를 격리하고, 실패한 단계가 있으면 운영자에게 앱 알림+메일을 보낸다. `CRON_SECRET`이 비어 있으면 500과 함께 운영자에게 알린다 |
+| 예약 작업 | `/api/cron/daily` 매일 09:00 KST(`vercel.json`). 09:00 에 `?part=flow`(요청 흐름), 09:10 에 `?part=upkeep`(알림 모음·정리·떠난 기관 CRM 삭제)로 나눠 돈다. 단계(참여 안내 보충·참여 단계(참여 결정 기한 경과, 참여 부족 알림, 빈 자리 재안내, `lib/opt-in-cron.ts`)·참여 기관 리마인더·회신 마감·결과 문의)마다 오류를 격리하고, 실패한 단계가 있으면 운영자에게 앱 알림+메일을 보낸다. `CRON_SECRET`이 비어 있으면 500과 함께 운영자에게 알린다 |
 | 메일 | Resend. 전송 예외는 한 번 재시도하고 실패해도 호출부를 끊지 않는다. 운영에서 `RESEND_FROM`이 비면 Resend 기본 발신자로만 나가 외부에 배달되지 않으므로 도메인 인증(SPF·DKIM·DMARC) 후 반드시 설정한다 |
 | 첨부 한도 | 버킷 수준에서 20MB·허용 형식만 받는다(`0010`). 서버 검사는 메타데이터만 보므로 버킷 한도가 실제 방어선이다 |
 | 백업 | Supabase Pro + PITR을 켠다. Storage 객체는 DB 백업에 포함되지 않으므로 `rfq-files`·`cro-files`를 주기적으로 외부에 복제한다. 출시 전 복구 리허설 1회 |

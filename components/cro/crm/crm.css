@@ -14,7 +14,8 @@
   --cx-hl: var(--acc-fill);
   --cx-bad-bg: var(--error-bg); --cx-bad: var(--error-fg);
   --cx-ok-bg: var(--ok-bg); --cx-ok: var(--ok-fg);
-  --cx-wbg: var(--warn-bg); --cx-w: var(--warn-fg);
+  /* 주의 표시는 색 대신 흑연 테두리로. 형광 노랑은 "차이"(.cx-diff)에만 쓴다 (2026-11-10) */
+  --cx-wbg: var(--band); --cx-w: var(--ink);
   --cx-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 7%, transparent);
   --cx-lift: 0 12px 32px color-mix(in srgb, var(--ink) 14%, transparent), 0 2px 6px color-mix(in srgb, var(--ink) 7%, transparent);
   display: grid; gap: 22px; min-width: 0; font-size: 14px; color: var(--body);
@@ -59,8 +60,8 @@
 .cx-d--s { margin-left: 6px; vertical-align: 1px; }
 .cx-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; line-height: 20px; padding: 0 7px; border-radius: var(--r-sm); background: var(--cx-f2); color: var(--ink); white-space: nowrap; }
 .cx-flag { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 500; line-height: 20px; padding: 0 7px; border-radius: var(--r-sm); white-space: nowrap; margin-right: 6px; }
-.cx-flag--warn { background: var(--cx-wbg); color: var(--cx-w); }
-.cx-flag--due { background: var(--cx-hl); color: var(--brand); }
+.cx-flag--warn { background: var(--white); color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.cx-flag--due { background: var(--brand); color: var(--on-brand); }
 .cx-st { display: inline-flex; font-size: 12px; font-weight: 500; line-height: 22px; padding: 0 8px; border-radius: var(--r-sm); background: var(--cx-f2); color: var(--ink); white-space: nowrap; }
 .cx-st--open { background: var(--brand); color: var(--on-brand); }
 .cx-st--won { background: var(--cx-ok-bg); color: var(--cx-ok); }
@@ -339,14 +340,14 @@
 .cx-filebar__f b { color: var(--ink); overflow-wrap: anywhere; }
 .cx-map .sel { height: 34px; font-size: 13.5px; min-width: 160px; }
 .cx-map td { vertical-align: middle; }
-.cx-map tbody tr[data-need="1"] td { background: color-mix(in srgb, var(--warn-bg) 60%, var(--white)) !important; }
-.cx-map tbody tr[data-need="1"] .sel { border-color: var(--warn-fg); }
+.cx-map tbody tr[data-need="1"] td { background: var(--band) !important; }
+.cx-map tbody tr[data-need="1"] .sel { border-color: var(--ink); }
 .cx-map__ex { font-family: var(--font-mono); font-size: 12px; color: var(--muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cx-valmap { display: grid; gap: 8px; }
 .cx-valmap li { display: grid; grid-template-columns: minmax(0, 96px) 16px minmax(0, 1fr) 40px; gap: 8px; align-items: center; font-size: 13px; }
 .cx-valmap__ex { font-family: var(--font-mono); font-size: 12px; color: var(--ink); background: var(--surface); padding: 3px 8px; border-radius: var(--r-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cx-valmap .sel { height: 32px; font-size: 13px; }
-.cx-valmap li[data-need="1"] .sel { border-color: var(--warn-fg); background: var(--warn-bg); }
+.cx-valmap li[data-need="1"] .sel { border-color: var(--ink); background: var(--band); }
 .cx-valmap li > span:last-child { text-align: right; font-family: var(--font-mono); font-size: 11.5px; }
 .cx-opts { display: grid; gap: 6px; }
 .cx-opts label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface); cursor: pointer; transition: box-shadow 160ms ease; }
@@ -361,7 +362,7 @@
 .cx-result dd { color: var(--ink); font-weight: 600; text-align: right; }
 .cx-result dd.cx-cap { grid-column: 1 / -1; text-align: left; font-weight: 400; }
 .cx-wide { width: 100%; justify-content: center; height: 44px; }
-.cx-warnline { color: var(--warn-fg); }
+.cx-warnline { color: var(--ink); font-weight: 600; }
 .cx-sum { position: sticky; top: 20px; }
 
 /* ── 7. 보고서 ── */
@@ -388,6 +389,27 @@
 .cx-hbar__trk { height: 12px; background: var(--cx-f3); border-radius: 2px; position: relative; overflow: hidden; }
 .cx-hbar__trk i { position: absolute; inset: 0 auto 0 0; background: var(--brand); border-radius: 2px; }
 .cx-hbar li > span:last-child { text-align: right; font-family: var(--font-mono); font-size: 12px; }
+/* 매출 예측: 달별 한 줄. 좁은 화면에서는 값 세 개를 이름표와 함께 아래로 */
+.cx-fc { list-style: none; margin: 0; padding: 0; display: grid; }
+.cx-fc li { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 4px 16px; align-items: baseline; padding: 10px 12px; font-size: 13.5px; color: var(--body); }
+.cx-fc li:nth-child(even) { background: var(--surface); }
+.cx-fc li > span:nth-child(n+3) { text-align: right; }
+.cx-fc li i { display: none; font-style: normal; }
+.cx-fc .cx-fc__h { font-size: 12px; color: var(--muted); padding-bottom: 6px; }
+.cx-fc__nm { color: var(--ink); font-weight: 500; }
+.cx-fc li[data-kind="late"] .cx-fc__nm { box-shadow: inset 0 -1px 0 var(--ink); justify-self: start; }
+.cx-fc .cx-fc__sum { border-top: 1px solid var(--ink); color: var(--ink); font-weight: 600; background: none; }
+.cx-fcr { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.cx-fcr > div { background: var(--surface); border-radius: var(--r-sm); padding: 10px 12px; display: grid; gap: 2px; font-size: 12.5px; color: var(--muted); }
+.cx-fcr dd:nth-of-type(1) { font-size: 19px; color: var(--ink); font-weight: 600; }
+@media (max-width: 640px) {
+  .cx-fc .cx-fc__h { display: none; }
+  .cx-fc li { grid-template-columns: 0.7fr 1.15fr 1.15fr; gap: 2px 10px; padding: 8px 10px; font-size: 13px; }
+  .cx-fc__nm { grid-column: 1 / -1; }
+  .cx-fc li > span:nth-child(n+3) { text-align: left; }
+  .cx-fc li small { display: block; }
+  .cx-fc li i { display: block; font-size: 11.5px; color: var(--muted); }
+}
 .cx-src2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cx-src2 > div { background: var(--surface); border-radius: var(--r-sm); padding: 10px 12px; display: grid; gap: 2px; font-size: 12.5px; color: var(--muted); }
 .cx-src2 dd:nth-of-type(1) { font-size: 19px; color: var(--ink); font-weight: 600; }

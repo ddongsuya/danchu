@@ -414,7 +414,7 @@ export function buildTimeline(a: {
   for (const x of a.activities) {
     const ppl = [...new Set([x.contact_id, ...x.attendee_contacts].filter(Boolean) as string[])].map(cname).filter(Boolean);
     const ours = [...new Set([x.created_by, ...x.attendee_members].filter(Boolean) as string[])].map((id) => mem.get(id) ?? "").filter(Boolean);
-    let who = ours[0] ?? "";
+    const who = ours[0] ?? "";
     let title = x.title;
     let sub = "";
     if (x.kind === "email") {
@@ -662,6 +662,79 @@ export function buildReport(a: { deals: CrmDeal[]; history: DealHistory[]; activ
   return {
     from: a.from, to: a.to, funnel, dwell, winRate: pct(won.length, closed.length), wonSum: won.reduce((s, d) => s + (d.won_amount ?? d.amount ?? 0), 0), won: won.length, lost: lost.length,
     reasons, bySource: [src("danchu"), src("direct")], activity, closed, created: cohort.length,
+  };
+}
+
+// ─── 매출 예측 ───
+/** 단계 수주율을 계산하는 데 필요한 끝난 안건 수. 이보다 적으면 수주율을 반영한 금액을 보여 주지 않는다 */
+export const FORECAST_MIN_CLOSED = 5;
+export type ForecastBucket = {
+  key: string;
+  /** ym: 그 달에 계약 예상 · late: 예상일이 이번 달 전 · later: 석 달 뒤 이후 · none: 예상일 없음 */
+  kind: "ym" | "late" | "later" | "none";
+  count: number;
+  /** 금액이 적힌 안건의 금액 합 */
+  sum: number;
+  /** 단계 수주율을 곱한 합. 수주율을 모르는 단계의 안건이 섞여 있으면 null */
+  weighted: number | null;
+  /** 금액이 비어 있는 안건 수 */
+  noAmount: number;
+  deals: CrmDeal[];
+};
+export type Forecast = {
+  buckets: ForecastBucket[];
+  /** 단계별 수주율 (이 기관의 끝난 안건 기준). 끝난 안건이 FORECAST_MIN_CLOSED 보다 적은 단계는 rate null */
+  rates: { stage: Stage; rate: number | null; won: number; closed: number }[];
+  open: number;
+  sum: number;
+  weighted: number | null;
+};
+
+/**
+ * 매출 예측. 진행 중인 안건을 계약 예상 달로 묶어 금액을 더한다.
+ * 수주율은 단추가 정하지 않는다. 이 기관에서 그 단계까지 간 안건 가운데 끝난 것 중 수주한 비율을 쓴다.
+ * 끝난 안건이 적은 단계는 수주율을 모르는 것으로 두고, 그 단계 안건이 든 묶음은 반영 금액을 비운다.
+ */
+export function buildForecast(a: { deals: CrmDeal[]; history: DealHistory[]; owner?: string | null; now?: number; months?: number }): Forecast {
+  const now = a.now ?? Date.now();
+  const months = a.months ?? 3;
+  const hBy = group(a.history, (h) => h.deal_id);
+  const reach = (d: CrmDeal) => Math.max(stageIdx(d.stage), ...(hBy.get(d.id) ?? []).map((h) => stageIdx(h.to_stage)), d.status === "won" ? STAGES.length - 1 : 0);
+  // 수주율은 기관 전체 기록으로 (담당자 한 명으로 좁히면 표본이 너무 작다)
+  const closedAll = a.deals.filter((d) => d.status === "won" || d.status === "lost").map((d) => ({ won: d.status === "won", reach: reach(d) }));
+  const rates = STAGES.map((stage, i) => {
+    const xs = closedAll.filter((x) => x.reach >= i);
+    const won = xs.filter((x) => x.won).length;
+    return { stage, rate: xs.length >= FORECAST_MIN_CLOSED ? won / xs.length : null, won, closed: xs.length };
+  });
+  const open = a.deals.filter((d) => d.status === "open" && (!a.owner || d.owner === a.owner));
+  const first = `${todayKst(now).slice(0, 7)}-01`;
+  const yms: string[] = [];
+  const d0 = new Date(`${first}T12:00:00+09:00`);
+  for (let i = 0; i < months; i++) { const d = new Date(d0); d.setUTCMonth(d.getUTCMonth() + i); yms.push(ymdKst(d).slice(0, 7)); }
+  const keyOf = (d: CrmDeal): [string, ForecastBucket["kind"]] => {
+    if (!d.expected_on) return ["none", "none"];
+    const ym = d.expected_on.slice(0, 7);
+    if (ym < yms[0]) return ["late", "late"];
+    if (ym > yms[yms.length - 1]) return ["later", "later"];
+    return [ym, "ym"];
+  };
+  const mk = (key: string, kind: ForecastBucket["kind"]): ForecastBucket => ({ key, kind, count: 0, sum: 0, weighted: 0, noAmount: 0, deals: [] });
+  const by = new Map<string, ForecastBucket>([["late", mk("late", "late")], ...yms.map((ym) => [ym, mk(ym, "ym")] as [string, ForecastBucket]), ["later", mk("later", "later")], ["none", mk("none", "none")]]);
+  for (const d of open) {
+    const b = by.get(keyOf(d)[0]) as ForecastBucket;
+    b.count++;
+    b.deals.push(d);
+    if (d.amount == null) { b.noAmount++; continue; }
+    b.sum += d.amount;
+    const r = rates[stageIdx(d.stage)]?.rate;
+    b.weighted = r == null || b.weighted == null ? null : b.weighted + d.amount * r;
+  }
+  const buckets = [...by.values()].filter((b) => b.kind === "ym" || b.count > 0).map((b) => ({ ...b, weighted: b.weighted == null ? null : Math.round(b.weighted) }));
+  const priced = buckets.filter((b) => b.sum > 0);
+  return {
+    buckets, rates, open: open.length, sum: buckets.reduce((t, b) => t + b.sum, 0),
+    weighted: priced.some((b) => b.weighted == null) ? null : priced.reduce((t, b) => t + (b.weighted ?? 0), 0),
   };
 }
 

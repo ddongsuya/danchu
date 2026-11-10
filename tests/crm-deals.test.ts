@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  board, buildReport, buildTimeline, danchuNext, danchuPatch, danchuSrcOf, danchuTarget, dealRows, filterDeals, guessField, guessStage, monthClosed, parseDeal, parseWon, parseYmd,
+  board, buildForecast, buildReport, buildTimeline, danchuNext, danchuPatch, danchuSrcOf, danchuTarget, dealRows, filterDeals, guessField, guessStage, monthClosed, parseDeal, parseWon, parseYmd,
   planImport, stageSpans, todayList, type DanchuSrc,
 } from "@/lib/crm-deals";
 import type { CrmDeal, CrmTask, DealHistory } from "@/lib/crm-shape";
@@ -166,6 +166,36 @@ describe("단계 진행 막대 · 보고서", () => {
     expect([r.winRate, r.won, r.lost, r.wonSum]).toEqual([50, 1, 1, 100]);
     expect(r.reasons).toEqual([{ reason: "가격", count: 1 }]);
     expect(r.bySource.map((x) => [x.key, x.won, x.closed])).toEqual([["danchu", 1, 1], ["direct", 0, 1]]);
+  });
+  it("매출 예측: 진행 중 안건을 계약 예상 달로 묶고, 수주율은 이 기관의 끝난 안건으로", () => {
+    // 끝난 안건 6건 (모두 견적까지 감): 수주 3, 실패 3 → 문의·견적 단계 수주율 50%. 협의까지 간 것은 수주 3건뿐이라 표본 부족
+    const closed = [0, 1, 2].map((i) => deal({ id: U(200 + i), stage: "contract", status: "won", closed_at: iso("2026-10-05T10:00:00") }))
+      .concat([0, 1, 2].map((i) => deal({ id: U(210 + i), stage: "quote", status: "lost", closed_at: iso("2026-10-05T10:00:00") })));
+    const open = [
+      deal({ id: U(1), stage: "quote", amount: 100_000_000, expected_on: "2026-11-20" }),
+      deal({ id: U(2), stage: "inquiry", amount: 50_000_000, expected_on: "2026-12-03", owner: "m1" }),
+      deal({ id: U(3), stage: "negotiation", amount: 80_000_000, expected_on: "2026-12-10" }),
+      deal({ id: U(4), stage: "quote", amount: null, expected_on: "2027-01-15" }),
+      deal({ id: U(5), stage: "quote", amount: 30_000_000, expected_on: "2026-10-20" }),
+      deal({ id: U(6), stage: "quote", amount: 10_000_000, expected_on: "2027-06-01" }),
+      deal({ id: U(7), stage: "quote", amount: 20_000_000 }),
+    ];
+    const f = buildForecast({ deals: [...closed, ...open], history: [], now: NOW });
+    expect(f.rates.map((r) => r.rate)).toEqual([0.5, 0.5, null, null, null]);
+    expect(f.buckets.map((b) => [b.key, b.count, b.sum, b.weighted, b.noAmount])).toEqual([
+      ["late", 1, 30_000_000, 15_000_000, 0],
+      ["2026-11", 1, 100_000_000, 50_000_000, 0],
+      ["2026-12", 2, 130_000_000, null, 0],
+      ["2027-01", 1, 0, 0, 1],
+      ["later", 1, 10_000_000, 5_000_000, 0],
+      ["none", 1, 20_000_000, 10_000_000, 0],
+    ]);
+    expect([f.open, f.sum, f.weighted]).toEqual([7, 290_000_000, null]);
+    // 담당자로 좁혀도 수주율은 기관 전체 기록
+    const mine = buildForecast({ deals: [...closed, ...open], history: [], owner: "m1", now: NOW });
+    expect([mine.open, mine.sum, mine.weighted]).toEqual([1, 50_000_000, 25_000_000]);
+    // 끝난 안건이 없으면 반영 금액을 비운다 (단추가 수주율을 정하지 않는다)
+    expect(buildForecast({ deals: open, history: [], now: NOW }).weighted).toBeNull();
   });
   it("타임라인: 단추 이벤트에 단추가 옮긴 단계가 붙고, 기관이 옮긴 단계는 따로 한 줄", () => {
     const s = src(inv({ status: "submitted", quote: quote() }), award());
