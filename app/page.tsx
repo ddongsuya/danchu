@@ -1,5 +1,5 @@
 import { Site } from "@/components/site/Site";
-import { Orbit } from "@/components/site/Orbit";
+import { MarkDrift } from "@/components/site/MarkDrift";
 import { HomeMotion } from "@/components/site/HomeMotion";
 import { KindStrip } from "@/components/site/KindStrip";
 import { EarlyPopup } from "@/components/site/EarlyPopup";
@@ -9,7 +9,7 @@ import "./home.css";
 /** 사전예약 팝업·D-day 가 날짜를 따라가도록 한 시간마다 다시 만든다 */
 export const revalidate = 3600;
 
-/** 랜딩. 첫 화면은 궤도(순수 CSS), 아래 세 장면은 GSAP(HomeMotion)이 화면에 들어올 때 재생한다. 고정 장면이 있어 스크롤 스냅은 쓰지 않는다. */
+/** 랜딩. 첫 화면은 떠도는 네 점이 마크로 맺히는 그림(MarkDrift, 캔버스), 아래 세 장면은 GSAP(HomeMotion)이 화면에 들어올 때 재생한다. 고정 장면이 있어 스크롤 스냅은 쓰지 않는다. */
 const FL_CYCLE = [{"tag": "Tox", "t": "반복투여독성 4주", "k": "동물", "v": "설치류", "a": [1000, 8], "b": [900, 7]}, {"tag": "PD", "t": "효력시험 · 대장염 모델", "k": "동물", "v": "마우스", "a": [1500, 10], "b": [1350, 9]}, {"tag": "PK", "t": "약동학 · 단회 투여", "k": "검체", "v": "랫드 혈장", "a": [600, 5], "b": [540, 4]}, {"tag": "Other", "t": "혈액생화학 분석", "k": "시료", "v": "보유한 랫드 혈청", "a": [300, 3], "b": [270, 2]}];
 
 export default function Home() {
@@ -17,7 +17,7 @@ export default function Home() {
   // 사전예약 기간에는 새 방문자의 첫 행동이 견적 요청이 아니라 사전예약이다 (lib/prereg.ts)
   const cta = prereg ? <a className="btn solid" href="/early">사전예약하기 <span className="ar">→</span></a> : <a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a>;
   return (
-    <Site onescreen={false}>
+    <Site onescreen={false} headerCta={false}>
 {prereg && <EarlyPopup days={daysToPilot()} />}
 <div className="first">
 <div className="hero">
@@ -28,7 +28,7 @@ export default function Home() {
 <p className="micro">의뢰자는 무료예요.</p>
 </div>
 
-<div className="fd fo" aria-hidden="true"><Orbit /></div>
+<div className="fd fo" aria-hidden="true"><MarkDrift /></div>
 </div>
 </div>
 
