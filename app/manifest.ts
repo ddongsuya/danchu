@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "단추 비임상 시험 견적",
     short_name: "단추",
-    description: "비임상 시험 견적을 한번 요청하고 한눈에 비교하세요.",
+    description: "비임상 시험 견적을 한 번 요청하고 한눈에 비교하세요.",
     start_url: "/app",
     scope: "/",
     display: "standalone",

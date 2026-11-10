@@ -48,7 +48,7 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
             )}
             <p className="rs-lead">
               {list.length === 0
-                ? "한번의 요청으로 분야가 맞는 여러 기관에 참여 안내가 가요."
+                ? "한 번의 요청으로 분야가 맞는 여러 기관에 참여 안내가 가요."
                 : t.joined === 0
                   ? "아직 참여한 기관은 없어요. 기관의 참여 결정을 기다리고 있어요."
                   : `${t.joined}곳이 참여했고, 견적 ${t.submitted}건이 도착했어요.${t.ready.length ? ` 비교 보고서 ${t.ready.length}건을 지금 볼 수 있어요.` : ""}`}

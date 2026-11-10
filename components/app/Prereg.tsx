@@ -36,7 +36,7 @@ function Count({ days }: { days: number }) {
 
 type Tab = "rfq" | "cmp" | "pick" | "lib";
 const TABS: { k: Tab; t: string; d: string }[] = [
-  { k: "rfq", t: "요청서", d: "한번의 요청으로 여러 기관에." },
+  { k: "rfq", t: "요청서", d: "한 번의 요청으로 여러 기관에." },
   { k: "cmp", t: "비교표", d: "금액만 비교 마시고 구성도 함께 비교하세요." },
   { k: "pick", t: "선정", d: "선정 전까지 회사명은 비공개로." },
   { k: "lib", t: "자료실", d: "ICH · 식약처 독성시험기준 원문을 확인하세요." },
