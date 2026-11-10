@@ -1,4 +1,4 @@
--- 성사수수료: 대상은 선정 견적 5,000만 원 이상. 예상 = 견적 × 요율(선정 달), 정산 = 계약 금액 × 요율(계약이 확인된 달, signed 만. 0025)
+-- 성사수수료: 정산 대상은 확정된 계약 금액 5,000만 원 이상 (0041). 예상 = 선정 견적 5,000만 원 이상만, 견적 × 요율(선정 달), 정산 = 계약 금액 × 요율(계약이 확인된 달, signed 만. 0025)
 do $$
 declare
   o uuid := pg_temp.t_org('성사기관', 300000, 0.03);
@@ -36,7 +36,7 @@ begin
   perform pg_temp.t_confirm(a_small);
 
   select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
-  perform pg_temp.t_eq(s.settled_count, 1, '정산 1건 (5,000만 미만 견적은 대상 아님)');
+  perform pg_temp.t_eq(s.settled_count, 1, '정산 1건 (계약 금액 5,000만 미만은 대상 아님)');
   perform pg_temp.t_eq(s.settled_contract_amount, 55000000::bigint, '계약 금액 기준');
   perform pg_temp.t_eq(s.settled_fee, 1650000::bigint, '정산 = 5,500만 × 3% (견적 금액이 아니라 계약 금액)');
   perform pg_temp.t_eq(s.total_due, 1650000::bigint, '합계에 정산 포함');
@@ -44,7 +44,7 @@ begin
   perform pg_temp.t_eq((select settled_count from public.billing_summary(pg_temp.t_month(-1), pg_temp.t_month(0)) where org_id = o), 0, '정산은 선정·전달 달이 아니다');
 
   select * into b from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a_big and kind = 'settlement';
-  perform pg_temp.t_eq(b.quote_amount, 60000000::bigint, '대상 판정은 견적 금액');
+  perform pg_temp.t_eq(b.quote_amount, 60000000::bigint, '선정 견적 금액도 함께 돌려준다');
   perform pg_temp.t_eq(b.fee, 1650000::bigint, '정산 행 금액');
 
   -- 정정(운영자)은 보고·확인 시각을 바꾸지 않는다: 정산 월이 옮겨 가지 않는다
@@ -89,4 +89,28 @@ begin
   perform pg_temp.t_eq(s.settled_fee, 800000::bigint, '정산 = 9,000만 원 중 5,000만 원 초과분 4,000만 원 × 2% (요금표, 0039)');
   perform pg_temp.t_eq(s.guidance_fee, 800000::bigint, '예상도 요금표 (구간 초과분 누진)');
   perform pg_temp.t_eq(s.terms_pending, false, '미정 없음');
+end $$;
+
+-- 0041: 정산 대상 판정은 확정된 계약 금액 하나. 선정 견적이 작아도 계약이 5,000만 원 이상이면 정산, 선정 견적이 커도 계약이 작으면 정산 없음
+do $$
+declare
+  o uuid := pg_temp.t_org('계약기준기관', 300000, null);
+  q_up uuid := pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-CB-1'), o), 40000000);
+  q_down uuid := pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-CB-2'), o), 60000000);
+  a_up uuid := pg_temp.t_award(q_up);
+  a_down uuid := pg_temp.t_award(q_down);
+  res jsonb;
+  s record;
+begin
+  res := public.report_contract(a_up, (now() at time zone 'Asia/Seoul')::date, 70000000, '범위 확대', false, 'scope');
+  perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고 (계약이 더 큼)');
+  res := public.report_contract(a_down, (now() at time zone 'Asia/Seoul')::date, 40000000, '범위 축소', false, 'scope');
+  perform pg_temp.t_eq(res->>'ok', 'true', '체결 보고 (계약이 더 작음)');
+  perform pg_temp.t_confirm(a_up);
+  perform pg_temp.t_confirm(a_down);
+  select * into s from public.billing_summary(pg_temp.t_month(0), pg_temp.t_month(1)) where org_id = o;
+  perform pg_temp.t_eq(s.settled_count, 1, '정산은 계약 7,000만 원 한 건');
+  perform pg_temp.t_eq(s.settled_fee, 400000::bigint, '정산 = 7,000만 원 중 5,000만 원 초과분 2,000만 원 × 2%');
+  perform pg_temp.t_eq((select count(*)::int from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a_down and kind = 'settlement'), 0, '계약 4,000만 원은 정산 행 없음');
+  perform pg_temp.t_eq((select count(*)::int from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a_up and kind = 'guidance'), 0, '선정 견적 4,000만 원은 예상 행 없음');
 end $$;

@@ -74,7 +74,7 @@ export function countsTowardLimit(status: string): boolean {
 /**
  * 기관이 참여할 때 보여 주고 참여 기록(rfq_invites.join_terms_version)에 남기는 이용 조건 판.
  * 판 이름은 여기 한 곳에서만 정한다. 참여 화면(components/cro/JoinPanel.tsx), 참여 라우트(app/api/quote/[token]/join, 화면의 판과 다르면 409),
- * 참여 전 요약(lib/quote-load.ts), 기관 이용 조건 문서(app/for-cro/page.tsx 의 #cro-terms)가 이 값을 그대로 쓴다.
+ * 참여 전 요약(lib/quote-load.ts), 기관 이용약관(app/terms/cro/page.tsx)가 이 값을 그대로 쓴다.
  * 시범운영 중 이 판으로 참여한 요청은 끝까지 무료다. 조건 문구(for-cro 이용 조건, 약관 제4조·제5조, JOIN_CONSENT)를 바꾸면 판 이름을 바꾼다.
  * 유료 전환 때는 유료 조건 판을 새로 만들고, 기관 서면 합의와 그 판으로 누른 참여를 함께 요구한다 (설계 4절 5번).
  * 판 이력
@@ -88,12 +88,15 @@ export function countsTowardLimit(status: string): boolean {
  *   청구 시작 30일 전 고지와 약관 개정, 조건이 바뀌면 다시 동의. 용어를 약관과 같게 "회사·기관"으로. JOIN_CONSENT 의 청구 문장도 바꿨다 (2026-11-05 대표 확인)
  * - pilot-2026-11-10: 계약 성사 수수료를 구간 초과분 누진으로 (0039. 계약 금액을 구간으로 나눠 구간별 요율을 곱해 더한다),
  *   고객 관리 기능과 개인정보(처리위탁) 조항을 더했다 (2026-11-10 대표 결정)
+ * - pilot-2026-12-11: 기관 이용약관(app/terms/cro, 2026-12-11 시행)을 따로 게시했다. 성사 수수료 대상 판정을 확정된 계약 금액으로 (0041),
+ *   선정 뒤 6개월 안 서비스 밖 계약에도 요금 적용(이전부터 거래한 의뢰자 제외), 이용 제한 사유 세 가지와 소명 7일 (2026-11-10 대표 결정 1~4).
+ *   판 이름의 날짜는 약관 시행일과 같다
  * 판 이름이 pilot- 으로 시작하면 청구 함수(0023 billing_lines·billing_awards)가 시범 참여로 보고 청구하지 않는다. 유료 조건 판은 pilot- 이 아닌 이름으로 만든다.
  */
-export const CRO_TERMS_VERSION = "pilot-2026-11-10";
+export const CRO_TERMS_VERSION = "pilot-2026-12-11";
 
 /** 참여 버튼 옆에 그대로 보여 주는 동의 문장 (설계 규칙표 "참여 버튼 문구"). 이 문장을 보고 누른 것이 참여 기록이다 */
-export const JOIN_CONSENT = "이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 이용 조건의 요금표에 따라 청구 대상이 됩니다(2027년 12월 31일까지 참여한 요청은 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.";
+export const JOIN_CONSENT = "이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 기관 이용약관의 요금표에 따라 청구 대상이 됩니다(2027년 12월 31일까지 참여한 요청은 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.";
 
 /** 참여 단계 판정에 쓰는 초대 열 */
 export type JoinFields = { status: string; joined_at?: string | null; withdrawn_at?: string | null; revoked_at?: string | null };

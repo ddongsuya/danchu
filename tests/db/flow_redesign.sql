@@ -224,12 +224,13 @@ begin
   perform set_config('danchu.contract_confirm_write', '', true);
   perform pg_temp.t_assert(raised like 'contract_confirm_protected%', '확정 취소 거절 (' || raised || ')');
 
-  -- 선정 견적 5,000만 원 미만은 확인해도 정산 대상 아님 (대상 판정은 선정 견적)
+  -- 0041: 대상 판정은 확정된 계약 금액. 선정 견적이 5,000만 원 미만이어도 계약이 9,000만 원이면 정산 행이 나온다 (예상 행은 없다)
   q := pg_temp.t_quote(pg_temp.t_invite(pg_temp.t_rfq('T-FR-K2'), o), 49999999);
   a := pg_temp.t_award(q);
   perform public.report_contract(a, (now() at time zone 'Asia/Seoul')::date, 90000000, '', false, 'scope');
   perform pg_temp.t_confirm(a);
-  perform pg_temp.t_eq((select count(*)::int from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a), 0, '5,000만 미만 선정 견적은 대상 아님');
+  perform pg_temp.t_eq((select count(*)::int from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a and kind = 'settlement'), 1, '계약 금액 5,000만 원 이상은 정산 대상');
+  perform pg_temp.t_eq((select count(*)::int from public.billing_awards(pg_temp.t_month(0), pg_temp.t_month(1)) where award_id = a and kind = 'guidance'), 0, '선정 견적 5,000만 원 미만은 예상 없음');
 end $$;
 
 -- 4) 이의는 정산을 멈춘다. 자동 확정도 하지 않는다. 운영자가 정리(감사 기록)하면 확정 또는 보고 취소

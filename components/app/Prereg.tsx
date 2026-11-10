@@ -153,7 +153,7 @@ const PREP_KEY = "danchu.prereg.cro";
 const PREP: { k: string; t: string; d: string; href: string }[] = [
   { k: "org", t: "기관 정보 등록", d: "견적 보낼 시험과 설비를 적어두세요.", href: "/cro/org" },
   { k: "sample", t: "예시 요청서 보기", d: "의뢰자의 요청서를 미리 확인하세요.", href: "/for-cro#st" },
-  { k: "terms", t: "이용 조건 확인", d: "2027년 말까지 무료로 이용해보세요.", href: "/for-cro#cro-terms" },
+  { k: "terms", t: "이용 조건 확인", d: "2027년 말까지 무료로 이용해보세요.", href: "/terms/cro" },
 ];
 
 /** 기관 대기 화면: 미리 준비하기 세 가지. 본 항목은 이 브라우저에 기억한다 (기관 정보는 등록 여부로) */

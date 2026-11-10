@@ -273,4 +273,6 @@
 .a .fee-t tbody th{color:var(--ink)}
 .a .fee-t tr.none td{color:var(--muted)}
 .a .fee .fee-c{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.a .fee-terms{margin:0;padding:18px 0;border-top:1px solid var(--acc);border-bottom:1px solid var(--line);font-size:15px}
+.a .fee-terms a{font-weight:500;text-decoration:underline;text-underline-offset:4px}
 @media (max-width:767px){.a .fee{margin-top:28px}.a .fee h3{font-size:19px}.a .fee-t{font-size:13px}.a .fee-t th,.a .fee-t td{padding:8px 6px}}

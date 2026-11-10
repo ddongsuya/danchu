@@ -111,14 +111,14 @@ const visible = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, "").replace(
 
 describe("참여 선택형 공개 문구", () => {
   it("기관 조건 판은 한 곳에서 정하고 기관 안내 문서가 같은 값을 보여 준다", () => {
-    expect(CRO_TERMS_VERSION).toBe("pilot-2026-11-10");
+    expect(CRO_TERMS_VERSION).toBe("pilot-2026-12-11");
     // 시범 판은 pilot- 으로 시작해야 청구 함수가 무료로 본다 (0023 billing_lines)
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
     const forCro = src("app/for-cro/page.tsx");
     expect(forCro).toContain('id="cro-terms"');
     // 2026-10-25 사용자 결정: 리디자인한 기관 참여 페이지에는 조건 판 표시를 두지 않는다. 판을 손으로 적어 넣지 않았는지만 본다
     expect(forCro).not.toMatch(/pilot-20\d\d-/);
-    expect(src("components/cro/JoinPanel.tsx")).toContain("/for-cro#cro-terms");
+    expect(src("components/cro/JoinPanel.tsx")).toContain("/terms/cro");
   });
   it("약관을 바꿨으므로 의뢰자 동의 판도 올렸다", () => expect(CONSENT_VERSION).toBe("2026-10-28"));
   it("약관 제4조는 참여 안내와 참여한 요청에 제출한 견적으로 설명한다", () => {

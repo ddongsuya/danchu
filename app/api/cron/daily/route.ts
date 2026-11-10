@@ -232,7 +232,7 @@ export async function GET(req: Request) {
   });
 
   // 4-1) 선정 뒤 계약 보고가 없는 수주: 기관에 14·30일 리마인더, 45일에는 운영자·의뢰자에게 진행 여부를 묻는다
-  //      성사수수료는 선정 견적 5,000만 원 이상이 체결(signed)로 확인된 계약에만, 계약 금액 기준으로 붙는다 (0020).
+  //      성사수수료는 체결(signed)로 확인된 계약 금액이 5,000만 원 이상일 때, 계약 금액 기준으로 붙는다 (0020, 0041).
   //      체결 확인한 달에 정산하므로, 보고 누락이 곧 매출 누락이다
   await run("contract-remind", async () => {
     const since = new Date(Date.now() - 14 * 864e5).toISOString();

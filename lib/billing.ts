@@ -12,7 +12,7 @@ import type { BillingAdjustmentRow, BillingReferenceRow, ReferenceSource } from 
  *     성사 수수료 (0039, 구간 초과분 누진): 확정된 계약 금액 중 5,000만 원 초과 1억 원까지 2%, 1억 원 초과 5억 원까지 5%, 5억 원 초과분 7% 를 더한다.
  *     구간 요율 하나를 금액 전체에 곱하지 않는다 (그러면 1억·5억 경계에서 수수료가 한꺼번에 뛴다).
  *     예: 8,000만 원 60만 원 / 1억 원 100만 원 / 3억 원 1,100만 원 / 5억 원 2,100만 원 / 7억 원 3,500만 원
- *   대상 판정은 선정 견적 금액 5,000만 원 이상. 예상은 선정 견적 금액으로, 정산은 확정된 계약 금액으로 계산한다.
+ *   대상 판정과 정산은 확정된 계약 금액 하나로 한다 (0041, 5,000만 원 이상). 계약 전 예상만 선정 견적 금액으로 계산한다.
  * - 그 초대에 기관 본인의 참여 기록이 있어야 청구한다 (0023). 운영자 대리 입력도 기관이 참여했으면 같다.
  * - 기관별 값(per_request_fee·fee_rate)은 요금표 대신 쓰는 특별 조건이다. 비어 있으면 요금표.
  * 기준 값은 tests/billing-rules.test.ts 가 SQL 과 같은지 확인한다.
@@ -117,9 +117,9 @@ export function chargesPerQuote(amount: number | null | undefined): boolean {
   return t === "per_quote" || t === "per_quote_success";
 }
 
-/** 성사수수료 대상인지. 판정은 선정 견적 금액으로 한다 (계약 금액이 아니다) */
-export function successFeeEligible(selectedQuoteAmount: number | null | undefined): boolean {
-  return billingTier(selectedQuoteAmount) === "per_quote_success";
+/** 성사수수료 대상 금액인지 (5,000만 원 이상). 체결 뒤에는 계약 금액을, 체결 전 예상에는 선정 견적 금액을 넣는다 (0041) */
+export function successFeeEligible(amount: number | null | undefined): boolean {
+  return billingTier(amount) === "per_quote_success";
 }
 
 /** `YYYY-MM` 을 [from, to) 서울 날짜 범위와 이전·다음 달로. 형식이 틀리면 이번 달 */
@@ -138,7 +138,7 @@ export function monthRangeOf(month: string | undefined): { label: string; from: 
 /**
  * 계약 확인 (2026-10-20 결정, 0025). 기관이 체결(체결일·금액)을 보고하면 의뢰자가 확인하거나 이의를 낸다.
  * 이 기간 안에 이의가 없으면 예약 작업(auto_confirm_contracts)이 보고 내용대로 확정한다. 이의가 있으면 운영자가 정리할 때까지 정산하지 않는다.
- * 성사수수료 정산은 확인된 계약만, 확인된 달(서울)에, 확인된 계약 금액으로 한다 (대상 판정은 여전히 선정 견적 5,000만 원 이상).
+ * 성사수수료 정산은 확인된 계약만, 확인된 달(서울)에, 확인된 계약 금액으로 한다 (대상 판정도 확인된 계약 금액 5,000만 원 이상, 0041).
  * DB 의 contract_confirm_due_at = 보고(또는 확인 전 정정) 시각 + 이 일수
  */
 export const CONTRACT_CONFIRM_DAYS = 7;
@@ -158,7 +158,7 @@ export function successFee(amount: number, feeRate: number | null | undefined): 
  * - 예상(견적 기준): 선정 견적 금액으로 계산한 수수료. 안내용이며 청구 합계에 넣지 않는다
  * - 정산(계약 기준): 체결 계약 금액으로 계산한 수수료. 계약 상태가 signed 이고 계약이 확인됐을 때만 (0025).
  *   confirmed 를 넘기지 않으면(0025 전 화면) signed 만 본다
- * 선정 견적이 5,000만 원 미만이면 둘 다 대상 아님(eligible false, 금액 0).
+ * 대상(eligible)은 체결을 보고한 뒤에는 계약 금액으로, 그 전에는 선정 견적 금액으로 본다 (0041). 대상이 아니면 금액 0.
  */
 export function successFeeView(a: { quoteAmount: number | null | undefined; contractAmount: number | null | undefined; contractStatus: string | null | undefined; feeRate: number | null | undefined; confirmed?: boolean }): {
   eligible: boolean;
@@ -168,11 +168,11 @@ export function successFeeView(a: { quoteAmount: number | null | undefined; cont
   settled: number | null;
   signed: boolean;
 } {
-  const eligible = successFeeEligible(a.quoteAmount);
   const signed = a.contractStatus === "signed" && a.contractAmount != null;
+  const eligible = successFeeEligible(signed ? a.contractAmount : a.quoteAmount);
   if (!eligible) return { eligible, expected: 0, settled: 0, signed };
   // 기관 특별 조건 요율이 있으면 금액 전체에 곱하고, 없으면 요금표의 구간 초과분 누진 (0039 billing_awards 와 같다)
-  const expected = a.contractStatus === "not_signed" ? 0 : effectiveSuccessFee(a.quoteAmount, a.feeRate);
+  const expected = a.contractStatus === "not_signed" || !successFeeEligible(a.quoteAmount) ? 0 : effectiveSuccessFee(a.quoteAmount, a.feeRate);
   const settled = signed && a.confirmed !== false ? effectiveSuccessFee(a.contractAmount, a.feeRate) : 0;
   return { eligible, expected, settled, signed };
 }

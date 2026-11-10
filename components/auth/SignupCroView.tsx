@@ -8,7 +8,7 @@ import { allConsented, ConsentChecks, type ConsentItem } from "./ConsentChecks";
 
 /** 가입 동의: 항목마다 따로 받는다 */
 const CONSENTS: ConsentItem[] = [
-  { id: "terms", label: <><a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>에 동의합니다.</> },
+  { id: "terms", label: <><a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>과 <a href="/terms/cro" target="_blank" rel="noopener noreferrer">기관 이용약관</a>에 동의합니다.</> },
   { id: "privacy", label: <><a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 수집·이용</a>에 동의합니다.</> },
   { id: "compare", label: "비교표는 의뢰자에게만 전달되고, 다른 기관의 견적은 볼 수 없다는 점을 확인합니다." },
 ];

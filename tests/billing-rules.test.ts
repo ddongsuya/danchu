@@ -38,7 +38,7 @@ vi.mock("@/lib/supabase", () => {
     return b;
   };
   // 배포 전 스키마 판 확인(lib/schema-version.ts)은 이 코드가 기대하는 판을 돌려준다
-  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 40, error: null } : { data: null, error: null }) }) };
+  return { getSupabaseAdmin: () => ({ from: builder, rpc: async (fn: string) => (fn === "danchu_schema_version" ? { data: 41, error: null } : { data: null, error: null }) }) };
 });
 vi.mock("@/lib/mail-preferences", () => ({ notificationRecipients: async (to: string[]) => to }));
 vi.mock("@/lib/mail", () => ({ mailWrap: (s: string) => s, esc: (s: string) => s, sendMail: fx.sendMail }));
@@ -134,7 +134,7 @@ describe("구간 기준 금액 (0031 요금표)", () => {
 });
 
 describe("성사수수료: 예상(견적 기준)과 정산(계약 기준)", () => {
-  it("판정은 선정 견적 금액, 정산은 체결 계약 금액 × 요율", () => {
+  it("체결 뒤 판정과 정산은 계약 금액, 예상은 선정 견적 금액", () => {
     const f = successFeeView({ quoteAmount: 60_000_000, contractAmount: 55_000_000, contractStatus: "signed", feeRate: 0.03 });
     expect(f).toEqual({ eligible: true, expected: 1_800_000, settled: 1_650_000, signed: true });
   });
@@ -144,8 +144,10 @@ describe("성사수수료: 예상(견적 기준)과 정산(계약 기준)", () =
   it("미체결은 예상도 정산도 없다", () => {
     expect(successFeeView({ quoteAmount: 80_000_000, contractAmount: null, contractStatus: "not_signed", feeRate: 0.03 })).toMatchObject({ expected: 0, settled: 0 });
   });
-  it("선정 견적 5,000만 원 미만은 계약 금액이 커도 대상 아님", () => {
-    expect(successFeeView({ quoteAmount: 49_999_999, contractAmount: 70_000_000, contractStatus: "signed", feeRate: 0.03 })).toMatchObject({ eligible: false, settled: 0 });
+  it("대상 판정은 계약 금액 하나로 (0041): 선정 견적이 작아도 계약이 5,000만 원 이상이면 대상, 선정 견적이 커도 계약이 작으면 대상 아님", () => {
+    expect(successFeeView({ quoteAmount: 49_999_999, contractAmount: 70_000_000, contractStatus: "signed", feeRate: null })).toEqual({ eligible: true, expected: 0, settled: 400_000, signed: true });
+    expect(successFeeView({ quoteAmount: 60_000_000, contractAmount: 40_000_000, contractStatus: "signed", feeRate: 0.03 })).toEqual({ eligible: false, expected: 0, settled: 0, signed: true });
+    expect(successFeeView({ quoteAmount: 49_999_999, contractAmount: null, contractStatus: "negotiating", feeRate: null })).toMatchObject({ eligible: false });
   });
   it("기관 요율이 없으면 요금표의 구간 초과분 누진 (미정 없음). 예상은 선정 견적, 정산은 계약 금액으로", () => {
     expect(successFeeView({ quoteAmount: 90_000_000, contractAmount: 90_000_000, contractStatus: "signed", feeRate: null })).toMatchObject({ expected: 800_000, settled: 800_000 });

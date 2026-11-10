@@ -24,7 +24,7 @@ describe("담당자가 모두 떠난 기관의 CRM 자료 (0040)", () => {
   it("30일은 처리방침·기관 이용 조건의 약속과 같다", () => {
     expect(CRM_PURGE_DAYS).toBe(30);
     expect(readFileSync("app/privacy/page.tsx", "utf8")).toContain("기관 등록을 해지하면 30일 뒤 삭제");
-    expect(readFileSync("app/for-cro/page.tsx", "utf8")).toContain("30일을 둔 뒤 지웁니다");
+    expect(readFileSync("app/terms/cro/page.tsx", "utf8")).toContain("30일을 둔 뒤 지웁니다");
   });
   it("지우는 표는 모두 org_id 로만 지운다", () => {
     const src = readFileSync("lib/crm-purge.ts", "utf8");

@@ -844,7 +844,7 @@ export type BillingLineRow = {
   joined_at?: string | null;
 };
 
-/** billing_awards() 한 행: 성사수수료 대상 (선정 견적 5,000만 원 이상) */
+/** billing_awards() 한 행: 성사수수료 행. 예상은 선정 견적, 정산은 확정된 계약 금액 5,000만 원 이상 (0041) */
 export type BillingAwardRow = {
   /** guidance 예상(견적 기준, 선정한 달) · settlement 정산(계약 기준, 계약이 확인된 달. 0025 전에는 체결 보고한 달) */
   kind: "guidance" | "settlement";
@@ -902,7 +902,7 @@ export type BillingReferenceRow = {
   per_quote_unit_source: ReferenceSource;
   /** 참고 송부 비용 합계 (요금표 또는 기관 특별 조건) */
   per_quote_fee: number;
-  /** 체결 확인된 수주 (선정 견적 5,000만 원 이상, signed) */
+  /** 체결 확인된 수주 (계약 금액 5,000만 원 이상, signed. 0041) */
   success_count: number;
   success_contract_amount: number;
   success_rate: number;

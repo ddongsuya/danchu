@@ -52,7 +52,7 @@ export type CroOrg = {
   auto_reply?: boolean;
   /** 약정 (0020): 송부 비용 특별 조건(원, 5,000만 원 이상 견적 1건마다, null 이면 요금표 0031) */
   per_request_fee?: number | null;
-  /** 성사수수료율 (0.03 = 3%). 선정 견적 5,000만 원 이상이 체결되면 계약 금액에 곱한다. null 이면 요금표 (0031) */
+  /** 성사수수료율 (0.03 = 3%). 확정된 계약 금액이 5,000만 원 이상이면 계약 금액에 곱한다 (0041). null 이면 요금표 (0031) */
   fee_rate?: number | null;
   /** 월 구독료 (원, 1,000만 원 미만 견적 포함). null 이면 구독하지 않음 */
   monthly_fee?: number | null;

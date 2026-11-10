@@ -65,7 +65,7 @@ vi.mock("@/lib/supabase", () => {
     from: builder,
     rpc: async (fn: string, args: Record<string, unknown>) => {
       fx.rpcCalls.push({ fn, args });
-      if (fn === "danchu_schema_version") return { data: 40, error: null };
+      if (fn === "danchu_schema_version") return { data: 41, error: null };
       return { data: fx.rpcResult[fn] ?? null, error: null };
     },
     storage: { from: () => ({ createSignedUrl: fx.signedUrl, list: async () => ({ data: [{ name: "x" }], error: null }), createSignedUploadUrl: async () => ({ data: { signedUrl: "u", token: "t" }, error: null }) }) },
@@ -335,7 +335,7 @@ describe("POST /api/quote/[token]/join", () => {
     expect(fx.rpcCalls.some((x) => x.fn === "join_offer")).toBe(false);
   });
   it("동의 문장은 설계 규칙표 문구 그대로", () => {
-    expect(JOIN_CONSENT).toBe("이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 이용 조건의 요금표에 따라 청구 대상이 됩니다(2027년 12월 31일까지 참여한 요청은 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.");
+    expect(JOIN_CONSENT).toBe("이 요청에 참여합니다. 요청서 내용은 이 견적에만 쓰고 외부에 알리지 않습니다. 견적을 제출하면 기관 이용약관의 요금표에 따라 청구 대상이 됩니다(2027년 12월 31일까지 참여한 요청은 무료). 제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않습니다.");
   });
 });
 

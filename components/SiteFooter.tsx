@@ -3,7 +3,7 @@ import { LogoMark, Wordmark } from "@/components/Logo";
 const COLS: [string, [string, string][]][] = [
   ["서비스", [["/about", "서비스 소개"], ["/how-it-works", "이용 안내"], ["/request", "견적 요청"]]],
   ["안내", [["/guide", "시험 가이드"], ["/faq", "자주 묻는 질문"]]],
-  ["기관", [["/for-cro", "기관 참여 안내"], ["/login", "기관 로그인"], ["/partners", "협력기관"]]],
+  ["기관", [["/for-cro", "기관 참여 안내"], ["/login", "기관 로그인"], ["/partners", "협력기관"], ["/terms/cro", "기관 이용약관"]]],
   ["문의", [["mailto:limjm900202@gmail.com", "limjm900202@gmail.com"], ["/terms", "이용약관"], ["/privacy", "개인정보처리방침"]]],
 ];
 
