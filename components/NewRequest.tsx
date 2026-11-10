@@ -46,6 +46,8 @@ type Contact = {
   orgType: string;
 };
 type FileMeta = { name: string; size: number };
+/** 분야의 시험 종류 칸 (ChatRequest 와 같은 기준) */
+const itemsField = (cat: Cat) => DETAILS[cat]?.find((f) => f.id === "items" || f.id === "segment");
 const STEPS = [
   "시험과 물질",
   "일정과 요청 조건",
@@ -192,6 +194,16 @@ export function NewRequest({
   const cats = (
     Array.isArray(values.categories) ? values.categories : []
   ) as Cat[];
+  // 독성시험은 시험만 고르면 대화형 빠른 견적으로 넘어간다. 상세 조건은 기관을 고른 뒤 2차로 (2026-11-05 결정).
+  // 효력·약동학·개별 분석은 설계 입력이 요청서의 본문이라 기존 단계를 그대로 쓴다
+  const quick = (!kind || kind === "tox") && !pendingNo && step === 0;
+  const toChat = () => {
+    if (!cats.length) return setError("시험 분야를 하나 이상 골라 주세요.");
+    if (!values.purpose) return setError("의뢰 목적을 골라 주세요.");
+    setValues((old) => ({ ...old, intent: old.intent || "비교 견적" }));
+    setError("");
+    setPhase("chat");
+  };
   const go = (n: number) => {
     setStep(n);
     setError("");
@@ -588,7 +600,7 @@ export function NewRequest({
           {saveState}
         </span>
       </div>
-      <nav className="request__steps" aria-label="견적 요청 작성 단계">
+      {!quick && <nav className="request__steps" aria-label="견적 요청 작성 단계">
         {STEPS.map((s, i) => (
           <button
             type="button"
@@ -601,13 +613,13 @@ export function NewRequest({
             {s}
           </button>
         ))}
-      </nav>
+      </nav>}
       <h1 ref={title} tabIndex={-1}>
-        {STEPS[step]}
+        {quick ? "시험 고르기" : STEPS[step]}
       </h1>
       <p className="request__lead">
         {step === 0
-          ? "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
+          ? quick ? "" : "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
           : step === 1
             ? "미정인 조건은 비워 둘 수 있어요."
             : step === 2
@@ -693,13 +705,24 @@ export function NewRequest({
               </details>
               )}
             </section>
+            {quick && cats.some((c) => itemsField(c)) && (
+              <section className="request__section">
+                <h2>시험 종류</h2>
+                <div className="request__fields">
+                  {cats.map((c) => {
+                    const f = itemsField(c);
+                    return f ? field({ ...f, label: c, help: undefined }, `${c}.${f.id}`) : null;
+                  })}
+                </div>
+              </section>
+            )}
             <section className="request__section">
-              <h2>물질과 의뢰 목적</h2>
+              <h2>{quick ? "의뢰 목적" : "물질과 의뢰 목적"}</h2>
               <div className="request__fields">
-                {baseFields(["substance", "purpose", "intent", "devField", "authority"])}
+                {baseFields(quick ? ["purpose", "devField", "authority"] : ["substance", "purpose", "intent", "devField", "authority"])}
               </div>
             </section>
-            {cats
+            {!quick && cats
               .filter((c) => DETAILS[c])
               .map((c) => (
                 <details className="request__details" key={c}>
@@ -719,13 +742,13 @@ export function NewRequest({
                   </div>
                 </details>
               ))}
-            <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
+            {!quick && <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
               <b style={{ fontWeight: 600 }}>{SUBSTANCE_TIP.lead}</b>
               <ul style={{ margin: 0, paddingLeft: "1.2em" }}>
                 {SUBSTANCE_TIP.items.map((t) => <li key={t}>{t}</li>)}
               </ul>
-            </div>
-            {STEP2.map((g) => (
+            </div>}
+            {!quick && STEP2.map((g) => (
               <details className="request__details" key={g.title}>
                 <summary>
                   {g.title} <span>선택 입력</span>
@@ -973,7 +996,11 @@ export function NewRequest({
             이전
           </button>
         )}
-        {step < 3 ? (
+        {quick ? (
+          <button className="b1" disabled={busy} onClick={toChat}>
+            다음: 받을 곳과 기한
+          </button>
+        ) : step < 3 ? (
           <button
             className="b1"
             disabled={busy}
