@@ -1228,6 +1228,7 @@ export type Database = {
           id: string
           intro: string | null
           managed: boolean
+          members_left_at: string | null
           monthly_fee: number | null
           monthly_fee_from: string | null
           name: string
@@ -1255,6 +1256,7 @@ export type Database = {
           id?: string
           intro?: string | null
           managed?: boolean
+          members_left_at?: string | null
           monthly_fee?: number | null
           monthly_fee_from?: string | null
           name: string
@@ -1282,6 +1284,7 @@ export type Database = {
           id?: string
           intro?: string | null
           managed?: boolean
+          members_left_at?: string | null
           monthly_fee?: number | null
           monthly_fee_from?: string | null
           name?: string
@@ -2343,6 +2346,7 @@ export type Database = {
           rfq_id: string
           size_bytes: number
           storage_path: string
+          uploaded_at: string | null
         }
         Insert: {
           created_at?: string
@@ -2352,6 +2356,7 @@ export type Database = {
           rfq_id: string
           size_bytes: number
           storage_path: string
+          uploaded_at?: string | null
         }
         Update: {
           created_at?: string
@@ -2361,6 +2366,7 @@ export type Database = {
           rfq_id?: string
           size_bytes?: number
           storage_path?: string
+          uploaded_at?: string | null
         }
         Relationships: [
           {
