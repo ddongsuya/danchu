@@ -2296,6 +2296,118 @@ export type Database = {
         }
         Relationships: []
       }
+      rfq_detail_targets: {
+        Row: {
+          created_at: string
+          cro_org_id: string | null
+          id: string
+          invite_id: string
+          items: Json
+          note: string
+          quote_id: string
+          responded_at: string | null
+          responded_by: string | null
+          rfq_id: string
+          status: string
+          total_amount: number | null
+          total_weeks: number | null
+        }
+        Insert: {
+          created_at?: string
+          cro_org_id?: string | null
+          id?: string
+          invite_id: string
+          items?: Json
+          note?: string
+          quote_id: string
+          responded_at?: string | null
+          responded_by?: string | null
+          rfq_id: string
+          status?: string
+          total_amount?: number | null
+          total_weeks?: number | null
+        }
+        Update: {
+          created_at?: string
+          cro_org_id?: string | null
+          id?: string
+          invite_id?: string
+          items?: Json
+          note?: string
+          quote_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          rfq_id?: string
+          status?: string
+          total_amount?: number | null
+          total_weeks?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_detail_targets_cro_org_id_fkey"
+            columns: ["cro_org_id"]
+            isOneToOne: false
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_detail_targets_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_invites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_detail_targets_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: true
+            referencedRelation: "cro_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_detail_targets_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_details"
+            referencedColumns: ["rfq_id"]
+          },
+        ]
+      }
+      rfq_details: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          detail: Json
+          note: string
+          reply_by: string
+          rfq_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          detail?: Json
+          note?: string
+          reply_by: string
+          rfq_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          detail?: Json
+          note?: string
+          reply_by?: string
+          rfq_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_details_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: true
+            referencedRelation: "rfq_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfq_events: {
         Row: {
           actor_id: string | null
@@ -2344,6 +2456,7 @@ export type Database = {
           id: string
           mime_type: string | null
           rfq_id: string
+          scope: string
           size_bytes: number
           storage_path: string
           uploaded_at: string | null
@@ -2354,6 +2467,7 @@ export type Database = {
           id?: string
           mime_type?: string | null
           rfq_id: string
+          scope?: string
           size_bytes: number
           storage_path: string
           uploaded_at?: string | null
@@ -2364,6 +2478,7 @@ export type Database = {
           id?: string
           mime_type?: string | null
           rfq_id?: string
+          scope?: string
           size_bytes?: number
           storage_path?: string
           uploaded_at?: string | null
@@ -2974,6 +3089,15 @@ export type Database = {
         Returns: Json
       }
       rotate_org_invite_tokens: { Args: { p_org: string }; Returns: number }
+      save_detail_reply: {
+        Args: {
+          p_actor: string
+          p_body: Json
+          p_invite_id: string
+          p_token: string
+        }
+        Returns: Json
+      }
       save_quote: {
         Args: {
           p_actor: string
@@ -2989,6 +3113,17 @@ export type Database = {
         Args: {
           p_quote_id: string
           p_revision: number
+          p_rfq_id: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      send_detail_request: {
+        Args: {
+          p_detail: Json
+          p_note: string
+          p_quote_ids: string[]
+          p_reply_by: string
           p_rfq_id: string
           p_user: string
         }
