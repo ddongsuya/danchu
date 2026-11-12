@@ -56,16 +56,16 @@ export default async function DetailPreview({ searchParams }: { searchParams: Pr
       userId: "detail-preview", email: "preview@example.invalid", org: null, pendingOrg: null,
       profile: { id: "detail-preview", email: "preview@example.invalid", role: "requester", name: "검토 계정", company: null, dept: null, phone: null, org_type: null, cro_org_id: null },
     };
-    const col = (id: string, name: string, k: number, detail: CompareCol["detail"]): CompareCol => ({
+    const col = (id: string, name: string, k: number, detail: CompareCol["detail"], over: Partial<CompareCol> = {}): CompareCol => ({
       id, name, total: Math.round(total * k), weeks: 22, final: null, finalReport: null, start: "2026-12-07", valid: "2026-12-31", pay: "30 · 40 · 30",
       includes: [], note: null, glpOk: true, glpMissing: [], glp: ["식약처(KGLP)"], unavailable: [], conditional: 0,
       items: ROWS.map((r) => ({ seq: r.seq, avail: "가능", amount: Math.round(r.amount * k), weeks: r.weeks })),
-      hasPdf: false, selected: false, auto: false, detail,
+      hasPdf: false, selected: false, auto: false, detail, ...over,
     });
     const cols = [
-      col("a", "기관 A", 1, { status: "submitted", total: total + 6_000_000, weeks: 24, note: null, items: [{ seq: 1, amount: 54_000_000, weeks: 22, mode: "as_requested", reason: "" }] }),
-      col("b", "기관 B", 1.08, { status: "kept", total: null, weeks: null, note: null, items: [] }),
-      col("c", "기관 C", 1.2, null),
+      col("a", "기관 A", 1, { status: "submitted", total: total + 6_000_000, weeks: 24, note: null, items: [{ seq: 1, amount: 54_000_000, weeks: 22, mode: "as_requested", reason: "" }] }, { includes: ["TK 분석", "조제물분석"] }),
+      col("b", "기관 B", 1.08, { status: "kept", total: null, weeks: null, note: null, items: [] }, { pay: "50 · 50", note: "분석법 밸리데이션", start: "2026-12-14", includes: ["TK 분석"] }),
+      col("c", "기관 C", 1.2, null, { valid: "2026-11-30", start: "2027-01-11", includes: ["TK 분석", "조제물분석"] }),
     ];
     return (
       <AppState>

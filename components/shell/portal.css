@@ -541,7 +541,6 @@
 
 /* 비교표: 기관마다 다른 부분(미포함·확인 필요)만 형광펜으로. 포함은 그대로 둔다 */
 .pt .cmp-gap { background: var(--brand-tint); color: var(--ink); padding: 0 3px; border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-.pt .cmp-head__link .btxt { padding-left: 0; text-decoration: underline; text-underline-offset: 4px; }
 
 /* ── 전체 일정 (경로형 간트, components/ScheduleGantt.tsx) ───────────────
  * 흑연 단색. 진한 막대 = 최종보고서 시점을 정하는 순서, 옅은 막대 = 함께 진행.
@@ -604,31 +603,66 @@
   .sg-tick--minor { color: transparent; }
 }
 
-/* 비교표 좁은 화면 보기 (components/CompareBoard.tsx): 항목마다 기관 값을 위아래로 쌓는다. 640px 이상은 표 */
-.cmp-m { display: none; }
+/* 비교표 (components/CompareBoard.tsx): 기관이 열. 가로선 없이 번갈아 깔리는 바탕으로 줄을 나눈다.
+   640px 미만은 같은 표를 요약, 차이 항목, 시험별 금액 세 화면으로 나눈다 */
+.cb { display: flex; flex-direction: column; gap: 16px; }
+.cb-ctl { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.pt .cb-sort { width: auto; min-width: 180px; margin-left: auto; }
+.cb-tag { font-size: 11px; font-weight: 600; background: var(--ink); color: var(--sf); padding: 0 6px; line-height: 18px; border-radius: var(--r-sm); margin-left: 6px; vertical-align: 1px; }
+.cb-sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); letter-spacing: 0; overflow-wrap: anywhere; }
+.pt .cb-odd { font-weight: 600; padding: 1px 6px; margin-left: -6px; }
+.cb-t { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 14px; }
+.cb-t th, .cb-t td { text-align: left; vertical-align: top; padding: 11px 12px; font-weight: 400; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cb-t tbody th[scope="row"] { width: 180px; color: var(--muted); }
+.cb-t thead td { width: 180px; }
+.cb-t tbody td { color: var(--ink); }
+.cb-t tbody tr:nth-child(even):not(.cb-g):not(.cb-total) > * { background: var(--wh); }
+.cb-t tbody tr > :first-child { border-radius: var(--r-lg) 0 0 var(--r-lg); padding-left: 16px; }
+.cb-t tbody tr > :last-child { border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+.cb-t thead th { padding-bottom: 20px; }
+.cb-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.cb-amt { display: block; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin-top: 6px; color: var(--ink); }
+.cb-t thead .cb-sub { min-height: 18px; }
+.cb-kv { display: block; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.cb-kv b { font-weight: 600; color: var(--ink); margin: 0 14px 0 2px; }
+.pt .cb-pick { display: flex; align-items: center; justify-content: center; height: 40px; margin-top: 14px; border: 1px solid var(--ink); border-radius: var(--r-md); font-size: 14px; font-weight: 600; color: var(--ink); text-decoration: none; transition: transform 160ms var(--ease-out); }
+.pt .cb-pick:active { transform: scale(0.97); }
+.pt .cb-pdf { display: inline-block; margin-top: 8px; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.cb-t .cb-g th { padding: 26px 16px 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.cb-t .cb-g span { font-weight: 400; color: var(--muted); margin-left: 8px; }
+.cb-t .cb-g button { display: flex; width: 100%; align-items: baseline; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.cb-t .cb-g i { margin-left: auto; font-style: normal; font-weight: 400; color: var(--muted); }
+.cb-t .cb-total > * { font-weight: 700; color: var(--ink); }
+.pt .cb-ask { align-self: flex-start; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.cb-m { display: none; }
 @media (max-width: 639px) {
-  .pt .cmp-wide { display: none; }
-  .cmp-m { display: flex; flex-direction: column; border-top: 1px solid var(--ink); }
-  .cmp-m__heads { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; padding: 14px 0; }
-  .pt .cmp-m__head { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px; background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-sm); min-width: 0; }
-  .cmp-m__head b { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
-  .cmp-m__more { font-size: 12.5px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; margin-top: auto; }
-  .cmp-m__group { font-size: 13px; font-weight: 600; color: var(--muted); padding: 22px 0 8px; border-bottom: 1px solid var(--ink); }
-  .cmp-m__row { padding: 14px 0; border-bottom: 1px solid var(--cline); }
-  .cmp-m__row > h3 { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
-  .cmp-m__row > h3 span { display: block; font-size: 11.5px; font-weight: 400; color: var(--faint); margin-top: 1px; }
-  .cmp-m__row dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
-  .cmp-m__row dl > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; align-items: baseline; }
-  .cmp-m__row dt { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
-  .cmp-m__row dd { margin: 0; font-size: 14px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
-  .cmp-m__row dd p { margin: 2px 0 0; font-size: 12.5px; color: var(--body); }
-  .cmp-m__row dd ul { padding-left: 16px; font-size: 13px; }
+  .pt .cb-wide, .pt .cb-sort { display: none; }
+  .cb-m { display: flex; flex-direction: column; }
+  .cb-mscroll { overflow-x: auto; scrollbar-width: none; }
+  .cb-mcols { display: grid; column-gap: 8px; }
+  .cb-mcols > * { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
+  .cb-mhead { padding: 18px 12px 8px; }
+  .pt .cb-mhead a { display: block; text-decoration: none; color: var(--ink); }
+  .cb-mhead b { display: block; font-size: 13px; font-weight: 600; }
+  .cb-mhead a > span { font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+  .cb-mr { padding: 11px 12px 12px; border-radius: var(--r-lg); }
+  .cb-mscroll > .cb-mr:nth-child(even) { background: var(--wh); }
+  .cb-mr > p { font-size: 12px; color: var(--muted); margin: 0 0 2px; position: sticky; left: 12px; width: max-content; }
+  .cb-mr .cb-mcols { font-size: 15px; color: var(--ink); align-items: start; white-space: pre-wrap; }
+  .cb-mr--big .cb-mcols { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .cb-mr--total .cb-mcols { font-weight: 700; }
+  .cb-mr--total > p { color: var(--ink); font-weight: 600; }
+  .cb-same { padding: 24px 12px 0; }
+  .cb-same button { display: flex; width: 100%; align-items: baseline; border: 0; background: none; padding: 0 0 8px; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
+  .cb-same button span { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .cb-same button i { margin-left: auto; font-style: normal; font-weight: 400; color: var(--muted); }
+  .cb-same dl { margin: 0; display: grid; gap: 6px; font-size: 14px; }
+  .cb-same dl > div { display: flex; justify-content: space-between; gap: 16px; }
+  .cb-same dt { color: var(--muted); flex: none; }
+  .cb-same dd { margin: 0; text-align: right; color: var(--ink); }
+  .cb-none { padding: 24px 12px; color: var(--muted); font-size: 14px; }
 }
-
-/* 비교표 미니 막대: 최종보고서 주. 가장 빠른 기관 뒤 차이만 노랑 */
-.cmp-mini { position: relative; display: block; height: 6px; margin-top: 6px; background: var(--track); border-radius: var(--r-sm); overflow: hidden; }
-.cmp-mini > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--brand); }
-.cmp-mini > b { position: absolute; top: 0; bottom: 0; background: var(--acc-fill); }
+@media (prefers-reduced-motion: reduce) { .pt .cb-pick { transition: none; } }
 
 /* 회신 화면 일정 입력 (components/cro/ReplySchedule.tsx) */
 .rs-item { display: flex; flex-direction: column; gap: 8px; }
@@ -1244,7 +1278,7 @@
 .crm-form--inline .ta { background: var(--wh); }
 .crm-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--surface2); border-radius: var(--r-md); padding: 3px; }
 .crm-seg button { border: 0; background: none; height: 34px; font-size: 14px; color: var(--muted); border-radius: var(--r-sm); cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
-.crm-seg button[aria-pressed="true"] { background: var(--wh); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(27, 27, 25, 0.1); }
+.crm-seg button[aria-pressed="true"], .crm-seg button[aria-selected="true"] { background: var(--wh); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(27, 27, 25, 0.1); }
 .crm-compose .crm-seg { background: var(--wh); }
 .crm-compose .crm-seg button[aria-pressed="true"] { background: var(--surface2); box-shadow: none; }
 .crm-check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink); cursor: pointer; }
@@ -1449,4 +1483,3 @@
 .pt .cmp-detail b { font-weight: 600; }
 .pt .cmp-detail span { color: var(--body); }
 .pt .cmp-detail a { margin-left: auto; }
-.pt .cmp-second { margin-top: 4px; }
