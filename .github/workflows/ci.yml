@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # 실제 PostgreSQL 로 마이그레이션과 DB 함수를 검사한다 (러너에 PostgreSQL 16 이 들어 있다)
+      - run: npm run test:db
       - run: npx next build
         env:
           # 빌드는 환경변수 없이도 돈다 (런타임에 미설정이면 안내 화면). 있으면 그대로 쓴다.
