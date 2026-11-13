@@ -18,14 +18,20 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      # 실제 PostgreSQL 로 마이그레이션과 DB 함수를 검사한다. 러너에 PostgreSQL 이 없으면 깐다
-      - name: PostgreSQL 준비
+      # 실제 PostgreSQL 로 마이그레이션과 DB 함수를 검사한다.
+      # 테스트는 PostgreSQL 16 기준이다 (러너의 다른 판에서는 billing_invoices.sql 한 개가 다르게 나온다). 16 이 없으면 깐다
+      - name: PostgreSQL 16 준비
         run: |
-          if ! ls -d /usr/lib/postgresql/*/bin >/dev/null 2>&1; then
-            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql
+          if [ ! -x /usr/lib/postgresql/16/bin/pg_ctl ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-common
+            sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+            sudo apt-get install -y -qq postgresql-16
           fi
-          ls -d /usr/lib/postgresql/*/bin
+          /usr/lib/postgresql/16/bin/pg_ctl --version
       - run: npm run test:db
+        env:
+          PG_BIN: /usr/lib/postgresql/16/bin
       - run: npx next build
         env:
           # 빌드는 환경변수 없이도 돈다 (런타임에 미설정이면 안내 화면). 있으면 그대로 쓴다.
