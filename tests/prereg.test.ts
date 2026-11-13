@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EARLY_DONE_SMS, earlyOpenSms, earlyPhone, parseEarly } from "@/lib/early";
+import { earlyDoneSms, earlyOpenSms, earlyPhone, parseEarly } from "@/lib/early";
 import { daysToPilot, inPrereg, PREREG_EXEMPT_BEFORE, preregActive, preregAllowedPath } from "@/lib/prereg";
 
 const bytes = (s: string) => Array.from(s).reduce((n, c) => n + (c.charCodeAt(0) > 127 ? 2 : 1), 0);
@@ -38,9 +38,12 @@ describe("사전예약 입력 (parseEarly)", () => {
 });
 
 describe("사전예약 문자", () => {
-  it("예약 완료 문자는 장문 한도(2,000바이트) 안이고 사이트 주소로 끝난다", () => {
-    expect(bytes(`[단추] ${EARLY_DONE_SMS}`)).toBeLessThanOrEqual(2000);
-    expect(EARLY_DONE_SMS.endsWith("danchu.kr")).toBe(true);
+  it("예약 완료 문자는 갈래마다 다르고 단문(90바이트) 안이며 이용 권유·링크가 없다", () => {
+    expect(earlyDoneSms("req")).not.toBe(earlyDoneSms("cro"));
+    for (const r of ["req", "cro"] as const) {
+      expect(bytes(`[단추] ${earlyDoneSms(r)}`)).toBeLessThanOrEqual(90);
+      expect(earlyDoneSms(r)).not.toMatch(/danchu\.kr|둘러보|http/);
+    }
   });
   it("시범 운영 문자는 갈래마다 다르다", () => {
     expect(earlyOpenSms("req")).not.toBe(earlyOpenSms("cro"));
@@ -80,5 +83,23 @@ describe("사전예약 모드 (inPrereg)", () => {
     expect(preregAllowedPath("/cro/org")).toBe(true);
     expect(preregAllowedPath("/app/new")).toBe(false);
     expect(preregAllowedPath("/cro/quotes")).toBe(false);
+  });
+});
+
+describe("사전예약 완료 메일", () => {
+  it("갈래별 제목·정보표, 입력값은 이스케이프, 링크·버튼 없음", async () => {
+    const { earlyDoneMail } = await import("@/lib/early-mail");
+    const at = new Date("2026-11-13T01:00:00Z");
+    const req = earlyDoneMail({ role: "req", name: "<b>가</b>", org: null, kinds: ["Tox", "PD"] }, at);
+    const cro = earlyDoneMail({ role: "cro", name: "나", org: "기관", kinds: ["PK"] }, at);
+    expect(req.subject).toBe("[단추] 사전예약 완료");
+    expect(req.html).toContain("의뢰자 사전예약 완료");
+    expect(req.html).toContain("독성, 효력");
+    expect(req.html).toContain("2026년 11월 13일");
+    expect(req.html).toContain("&lt;b&gt;");
+    expect(req.html).not.toContain("기관명");
+    expect(cro.html).toContain("시험 기관 사전예약 완료");
+    expect(cro.html).toContain("기관명");
+    for (const m of [req, cro]) expect(m.html).not.toMatch(/<a |href=/);
   });
 });

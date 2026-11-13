@@ -11,7 +11,7 @@ type H = Hand["public"]["Tables"];
 type G = Gen["public"]["Tables"];
 
 /** 운영 DB 에 아직 적용하지 않은 마이그레이션의 열. 적용하고 다시 만든 뒤 지운다 */
-type PENDING = never;
+type PENDING = "early_signups.done_mail_at";
 
 /** 손으로 적은 열 가운데 DB 에 없는 것 */
 type MissingInDb = { [T in keyof H & string]: T extends keyof G ? `${T}.${Exclude<keyof H[T]["Row"] & string, keyof G[T]["Row"]>}` : `${T} (표 없음)` }[keyof H & string];

@@ -696,8 +696,10 @@ export type Database = {
           ad_agreed_at: string | null;
           done_sms_at: string | null;
           open_sms_at: string | null;
+          /** 0043: 완료 메일 보낸 시각 */
+          done_mail_at: string | null;
         };
-        Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at" | "name" | "phone" | "yearly" | "quote_count" | "monthly" | "ad_agreed_at" | "done_sms_at" | "open_sms_at">;
+        Insert: Ins<Database["public"]["Tables"]["early_signups"]["Row"], "id" | "org" | "org_type" | "kinds" | "timing" | "glp" | "intent" | "ask" | "source" | "agreed_at" | "created_at" | "updated_at" | "name" | "phone" | "yearly" | "quote_count" | "monthly" | "ad_agreed_at" | "done_sms_at" | "open_sms_at" | "done_mail_at">;
         Update: Partial<Database["public"]["Tables"]["early_signups"]["Row"]>;
         Relationships: [];
       };

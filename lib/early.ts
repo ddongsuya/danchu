@@ -81,8 +81,17 @@ export function parseEarly(b: Record<string, unknown>): { ok: true; value: Early
   };
 }
 
-/** 예약 완료 문자 (승인 시안 문구, [단추] 를 붙이면 98바이트라 장문으로 간다). 앞의 [단추] 는 보낼 때 붙인다 */
-export const EARLY_DONE_SMS = "사전예약 완료\n시범 운영은 2027년 6월 1일에 시작해요.\n그 전에도 단추를 둘러보세요.\ndanchu.kr";
+/** 갈래 이름 (문자·메일 표기) */
+export const EARLY_ROLE_LABEL: Record<EarlyRole, string> = { req: "의뢰자", cro: "시험 기관" };
+
+/**
+ * 예약 완료 문자 (승인 시안 문구에 갈래 이름만 붙임, 2026-11-13). 앞의 "[단추] " 는 보낼 때 붙인다. 붙인 뒤 90바이트 이하라 단문으로 간다.
+ * 완료 확인만 담는다. 이용을 권하는 문장·링크를 넣으면 광고성 정보가 되어 (광고) 표기·수신 동의·야간 발송 제한이 붙는다
+ */
+export const EARLY_DONE_LINE = "시범 운영은 2027년 6월 1일에 시작해요.";
+export function earlyDoneSms(role: EarlyRole): string {
+  return `${EARLY_ROLE_LABEL[role]} 사전예약 완료\n${EARLY_DONE_LINE}`;
+}
 
 /** 시범 운영 시작 문자 (2027-06-01 예약 작업이 보낸다) */
 export function earlyOpenSms(role: EarlyRole): string {

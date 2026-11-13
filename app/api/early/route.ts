@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { EARLY_DONE_SMS, parseEarly } from "@/lib/early";
+import { earlyDoneSms, parseEarly } from "@/lib/early";
+import { sendEarlyDoneMail } from "@/lib/early-mail";
 import { clientIp, rateLimited, TOO_MANY } from "@/lib/rate-limit";
 import { smsPhone } from "@/lib/sms";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -9,7 +10,7 @@ export const runtime = "nodejs";
 /**
  * POST 사전예약 { role, name, phone, email, org?, orgType?, kinds[], timing?, yearly?, quoteCount?, glp?, monthly?, adAgree?, source?, agree }
  * 같은 갈래·이메일로 다시 보내면 답을 바꾼다. 이미 예약했는지는 응답으로 알려 주지 않는다 (이메일 확인 방지).
- * 예약 완료 문자는 그 행에 처음 한 번만 보낸다 (done_sms_at).
+ * 예약 완료 문자·메일은 그 행에 처음 한 번만 보낸다 (done_sms_at, done_mail_at). 둘은 따로 기록해 한쪽이 실패해도 다른 쪽을 다시 보내지 않는다.
  */
 export async function POST(req: Request) {
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -55,16 +56,22 @@ export async function POST(req: Request) {
       },
       { onConflict: "role,email" },
     )
-    .select("id, done_sms_at")
+    .select("id, done_sms_at, done_mail_at")
     .single();
   if (error || !data) {
     console.error("early signup", error?.message);
     return NextResponse.json({ error: "예약을 저장하지 못했어요. 잠시 뒤 다시 눌러 주세요." }, { status: 500 });
   }
 
-  if (!data.done_sms_at) {
-    const st = await smsPhone(v.phone, { kind: "early", text: EARLY_DONE_SMS });
-    if (st === "sent") await sb.from("early_signups").update({ done_sms_at: new Date().toISOString() }).eq("id", data.id);
-  }
+  await Promise.all([
+    !data.done_sms_at &&
+      smsPhone(v.phone, { kind: "early", text: earlyDoneSms(v.role) }).then(async (st) => {
+        if (st === "sent") await sb.from("early_signups").update({ done_sms_at: new Date().toISOString() }).eq("id", data.id);
+      }),
+    !data.done_mail_at &&
+      sendEarlyDoneMail(v.email, v).then(async (ok) => {
+        if (ok) await sb.from("early_signups").update({ done_mail_at: new Date().toISOString() }).eq("id", data.id);
+      }),
+  ]);
   return NextResponse.json({ ok: true });
 }
