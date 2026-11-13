@@ -19,6 +19,7 @@
 > 다만 맨 위 "이 프로젝트에서 먼저 알아야 할 것"(Tailwind 미사용, 중립, 리디자인 범위)과 DESIGN.md 토큰은 어떤 스킬보다 우선한다.
 > 2026-10-22에 추가한 `ui-ux-pro-max`(UX 근거 조회)와 `design-motion-principles`(모션 관점·점검)는 참고용이다. 이 문서와 다르면 이 문서를 따른다. 출처와 고친 내용은 각 스킬 폴더의 SOURCE.md.
 > 2026-11-12에 추가한 `graphify`(Apache-2.0, 출처 Graphify-Labs/graphify)는 디자인 스킬이 아니라 코드 연결 그래프 도구다. 큰 수정 전 영향 범위를 찾는 데 쓰고, 산출물 `graphify-out/`는 커밋하지 않는다.
+> 2026-11-13에 추가한 19개(모두 MIT, 각 폴더 SOURCE.md)도 참고용이고, 각 SKILL.md 맨 위 "단추에서 쓸 때" 블록이 원문보다 우선한다. DB: `supabase`, `supabase-postgres-best-practices`(supabase/agent-skills). 보안: `security-audit`(cloudflare, 안내 모드만, 전체 감사는 사용자 동의 뒤). 마케팅: `copywriting`, `copy-editing`, `marketing-cro`, `signup`, `onboarding`, `pricing`, `launch`, `emails`, `cold-email`, `sms`(coreyhaines31/marketingskills, 결과 문구는 `danchu-copy-check` 필수). 개발 습관: `grill-me`, `to-spec`, `diagnosing-bugs`(mattpocock/skills), `systematic-debugging`, `verification-before-completion`(obra/superpowers, 훅 없이). 한국어 문서: `stop-slop-ko`(훅 없이, 앱 밖 문서용).
 > 2026-11-06에 추가한 `replica-*` 11개(MIT, 출처 Jakeschincariol/replica-skill)도 참고용이다. 다른 서비스의 흐름 분석(`replica-recon`)과 시안 대비 구현 배치 비교(`replica-diff`의 `imgdiff.py`)에 주로 쓰고, 산출물 `replica/`는 커밋하지 않는다.
 > 2026-10-27에 추가한 `web-design-guidelines`(코드 줄 단위 점검), `hallmark`(검사 전용, "AI가 만든 티" 2차 점검), `frontend-design`(시안 비교안 전용)도 같다. 디자인 스킬은 역할을 하나씩 나눠 쓴다: 방향은 `design-taste-frontend`, 모션은 `emil-design-eng`, 코드 점검은 `web-design-guidelines`와 `/impeccable audit`, 출고 전 마지막 검사는 `hallmark`.
 
@@ -136,6 +137,11 @@
 | 다른 서비스 흐름 분석·시안과 구현 비교 | `/replica-recon`(화면·흐름·기능표), `python3 .claude/skills/replica-diff/imgdiff.py <시안.png> <구현.png> --out <diff.png>`(배치 비교, 색 무시). 각 스킬 맨 위 "단추에서 쓸 때" 블록 우선 |
 | "AI가 만든 티" 2차 점검 | `node .claude/skills/hallmark/scripts/sloplint.mjs <파일> --genre modern-minimal [--scope app]` → 스킬의 무시·예외 표로 거른 뒤 Before/After/Why 표. 62(스크립트가 있어야 보이는 문구)는 반드시 고친다 |
 | 출고 직전 | `/impeccable harden` → Playwright 1440/390 스크린샷 → 7절 체크 |
+| DB 스키마·마이그레이션·RLS 작성 | `supabase-postgres-best-practices` 규칙 확인 → 새 마이그레이션 → `npm run check:schema`, `npm run test:db` |
+| 보안 질문·부분 점검 (청구·`/q` 토큰·RLS) | `security-audit` 안내 모드. 전체 감사는 사용자가 비용을 듣고 동의한 뒤에만 |
+| 랜딩·가입·요금·출시·메일·문자 기획 | `marketing-cro`, `signup`, `onboarding`, `pricing`, `launch`, `emails`, `cold-email`, `sms`, `copywriting` → 국내 사례 조사 → `danchu-copy-check` |
+| 버그·실패 원인 찾기 | `systematic-debugging` 또는 `diagnosing-bugs`, 끝났다고 말하기 전 `verification-before-completion` |
+| 앱 밖 한국어 문서(섭외 메일·소개 자료·약관 초안) 다듬기 | `stop-slop-ko` (앱 화면 문구는 `danchu-copy-check`가 기준) |
 | 고치기 전에 영향 범위 찾기 (함수·파일·DB 테이블 연결) | `graphify` 스킬: `graphify update .` 뒤 `graphify explain "<이름>"`, `graphify path A B`. 결과 `graphify-out/`는 커밋하지 않는다 |
 | 피그마 시안 반영 | Figma MCP로 파일의 색·간격·타이포 토큰을 읽어 `tailwind.config`/`globals.css` 변수에 매핑 후 구현 |
 | 브라우저에서 변형 고르기 | `/impeccable live`, `/impeccable generate 3 variants <요소>` |
