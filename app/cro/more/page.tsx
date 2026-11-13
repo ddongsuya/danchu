@@ -21,7 +21,7 @@ const GROUPS: { title: string; items: { href: string; label: string; sub: string
   ] },
   { title: "설정", items: [
     { href: "/cro/org", label: "기관", sub: "기관 정보·담당자" },
-    { href: "/cro/billing", label: "청구", sub: "이용료 청구서" },
+    { href: "/cro/billing", label: "요금제·결제", sub: "요금제·청구서" },
     { href: "/cro/profile", label: "프로필", sub: "내 이름·연락처" },
   ] },
 ];

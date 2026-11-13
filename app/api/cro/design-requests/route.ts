@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { safeName } from "@/lib/upload";
 import { DESIGN_DIR } from "@/lib/quote-doc-db";
 import { esc, sendMail } from "@/lib/mail";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
   const orgId = s?.profile.cro_org_id;
   if (!s || !orgId) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
+  { const pe = featureError(s.org, "branding"); if (pe) return NextResponse.json({ error: pe }, { status: 403 }); }
   const sb = getSupabaseAdmin();
   if (!sb) return NextResponse.json({ error: "저장소가 설정되지 않았어요." }, { status: 503 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { copyDoc, deleteDoc, loadDoc, saveDoc } from "@/lib/quote-doc-db";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ type Ctx = { params: Promise<{ id: string }> };
 
 async function org() {
   const s = await sessionOrNull("cro");
-  return s?.profile.cro_org_id ? { s, orgId: s.profile.cro_org_id } : null;
+  return s?.profile.cro_org_id && !featureError(s.org, "quote_tool") ? { s, orgId: s.profile.cro_org_id } : null;
 }
 const denied = () => NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
 

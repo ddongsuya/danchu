@@ -33,7 +33,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
     { href: "/cro/calendar", label: "캘린더", icon: "calendar", group: "견적" },
     { href: "/cro/notifications", label: "알림", icon: "bell", badge: unread, group: "견적" },
     { href: "/cro/org", label: "기관", icon: "org", group: "설정" },
-    { href: "/cro/billing", label: "청구", icon: "receipt", group: "설정" },
+    { href: "/cro/billing", label: "요금제·결제", icon: "receipt", group: "설정" },
   ];
   // 휴대폰 아래 탭: 오늘 · 안건 · 기록 · 더보기 (나머지는 더보기 화면)
   const tabs: NavItem[] | undefined = prereg ? undefined : [

@@ -14,6 +14,7 @@ import { learnFromSubmission } from "@/lib/catalog-db";
 import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
 import { entrySourceFor, loadOptsFor, PROXY_BEFORE_JOIN, proxyEntryAllowed } from "@/lib/concierge";
 import { audit } from "@/lib/audit";
+import { quoteQuotaError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -339,7 +340,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났어요. 날짜를 확인해 주세요." }, { status: 400 });
   if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
+  // 무료 요금제 월 5건 (0044, 정식 서비스 뒤). 처음 제출하는 5,000만 원 미만 견적만 센다. 운영자 대리 입력은 세지 않고 막지 않는다
+  if (a?.role !== "admin" && got.croOrgId) {
+    const over = await quotaBlock(got.croOrgId, got.inviteId, parsed.items);
+    if (over) return NextResponse.json({ error: over }, { status: 409 });
+  }
+
   const r = await upsert(got, parsed, true, a, { ip: clientIp(req), ua: req.headers.get("user-agent") || "" });
   if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json({ ok: true, total: r.total ?? null, weeks: r.weeks ?? null });
+}
+
+async function quotaBlock(orgId: string, inviteId: string, items: Parsed["items"]): Promise<string | null> {
+  const sb = getSupabaseAdmin()!;
+  const [{ data: org }, { data: prev }] = await Promise.all([
+    sb.from("cro_orgs").select("id, plan, plan_next, plan_next_from").eq("id", orgId).maybeSingle(),
+    sb.from("cro_quotes").select("first_submitted_at").eq("invite_id", inviteId).not("first_submitted_at", "is", null).limit(1),
+  ]);
+  if (!org) return null;
+  const total = items.reduce((t, it) => t + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0);
+  return quoteQuotaError(org, total, !prev?.length);
 }

@@ -3,6 +3,7 @@ import { loadCrm } from "@/lib/crm";
 import { DEAL_KIND, SOURCE_LABEL, STAGE_LABEL, STATUS_LABEL, type Stage, type Status } from "@/lib/crm-deals";
 import { personLabel, ymdKst } from "@/lib/crm-shape";
 import { workbook, type Cell } from "@/lib/xlsx";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export async function GET(req: Request) {
   const s = await sessionOrNull("cro");
   const orgId = s?.org?.status === "approved" ? s.profile.cro_org_id : null;
   if (!s || !orgId) return new Response("권한이 없어요.", { status: 403 });
+  { const pe = featureError(s.org, "crm"); if (pe) return new Response(pe, { status: 403 }); }
   const u = new URL(req.url);
   const from = u.searchParams.get("from") ?? "";
   const to = u.searchParams.get("to") ?? "";

@@ -35,7 +35,7 @@ vi.mock("@/lib/supabase", () => {
       update: (p: unknown) => ((q.op = "update"), (q.payload = p), b),
       delete: () => ((q.op = "delete"), b),
       eq: (k: string, v: unknown) => (q.filters.push([k, v]), b),
-      in: chain, is: chain, lt: chain, gte: chain, neq: chain, order: chain, limit: chain,
+      in: chain, is: chain, lt: chain, gte: chain, neq: chain, not: chain, or: chain, order: chain, limit: chain,
       maybeSingle: finish,
       single: finish,
       then: (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => finish().then(res, rej),

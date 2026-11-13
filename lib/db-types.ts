@@ -423,6 +423,11 @@ export type Database = {
           business_no_norm: string | null;
           /** 청구서 받을 이메일 (0032). 비어 있으면 contact_email */
           billing_email?: string | null;
+          /** 지금 요금제 (0044) */
+          plan: "free" | "plus" | "pro";
+          /** 예약한 요금제 (0044). plan_next_from 부터 plan 대신 쓴다 */
+          plan_next: "free" | "plus" | "pro" | null;
+          plan_next_from: string | null;
         };
         Insert: Ins<Database["public"]["Tables"]["cro_orgs"]["Row"], Exclude<keyof Database["public"]["Tables"]["cro_orgs"]["Row"], "name">>;
         Update: Partial<Database["public"]["Tables"]["cro_orgs"]["Row"]>;
@@ -711,6 +716,13 @@ export type Database = {
         Relationships: [];
       };
       /** 월 청구서 (0032). 서버만 읽고 쓴다. 금액·내역은 발행 뒤 바꿀 수 없다(트리거) */
+      /** 기관 요금제 변경 기록 (0044). 서비스 키로만 */
+      cro_plan_changes: {
+        Row: { id: string; org_id: string; from_plan: string; to_plan: string; effective_from: string; prorated_amount: number; requested_by: string | null; created_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_plan_changes"]["Row"], "id" | "prorated_amount" | "requested_by" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_plan_changes"]["Row"]>;
+        Relationships: [];
+      };
       billing_invoices: {
         Row: BillingInvoiceRow;
         Insert: Partial<BillingInvoiceRow>;

@@ -38,7 +38,7 @@ export default async function CroInvoice({ params }: { params: Promise<{ id: str
     <>
       <div className="ph noprint">
         <div>
-          <Link href="/cro/billing" style={muted}>청구 목록</Link>
+          <Link href="/cro/billing?tab=invoices" style={muted}>청구서 목록</Link>
           <h1>{label} 이용료 청구서</h1>
         </div>
         <div className="ph__actions"><PrintButton /></div>

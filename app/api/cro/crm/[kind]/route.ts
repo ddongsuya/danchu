@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { checkRefs, mergeCompanies, moveDeal } from "@/lib/crm";
 import { isUuid, parseActivity, parseCompany, parseContact, parseEvent, parseTask, type CrmDeal, type Parsed } from "@/lib/crm-shape";
 import { LOST_REASONS, isStage, isStatus, parseDeal, parseWon } from "@/lib/crm-deals";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,8 @@ const fail = (what: string, e: unknown) => {
 
 async function ctx() {
   const s = await sessionOrNull("cro");
-  const orgId = s?.org?.status === "approved" ? s.profile.cro_org_id : null;
+  // 요금제에 고객 관리가 없으면 (정식 서비스 뒤 무료·Plus) 권한 없음과 같이 막는다 (0044)
+  const orgId = s?.org?.status === "approved" && !featureError(s.org, "crm") ? s.profile.cro_org_id : null;
   return { s, orgId, sb: getSupabaseAdmin() };
 }
 

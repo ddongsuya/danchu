@@ -36,7 +36,7 @@ export default function Page() {
 <h3 id="fee-h">이용 요금</h3>
 <p className="fee-s">2027년 12월 31일까지 참여한 요청은 무료예요. 2028년 1월 1일부터 아래 요금이 적용돼요.</p>
 <table className="fee-t"><thead><tr><th scope="col">금액 구간</th><th scope="col">견적서 송부</th><th scope="col">계약 성사</th></tr></thead><tbody>
-<tr><th scope="row">5,000만 원 미만</th><td colSpan={2}>월 구독료 100만 원에 포함</td></tr>
+<tr><th scope="row">5,000만 원 미만</th><td colSpan={2}>요금제에 포함 (무료 월 5건, Plus·Pro 무제한)</td></tr>
 <tr><th scope="row">5,000만~9,999만 원</th><td>3만 원</td><td>이 구간 금액의 2%</td></tr>
 <tr><th scope="row">1억~4억 9,999만 원</th><td>5만 원</td><td>이 구간 금액의 5%</td></tr>
 <tr><th scope="row">5억 원 이상</th><td>5만 원</td><td>이 구간 금액의 7%</td></tr>
@@ -44,7 +44,7 @@ export default function Page() {
 </tbody></table>
 <p className="fee-c">계약 성사 수수료는 계약 금액을 구간별로 나눠 계산해요. 계약 금액이 3억 원이면 5,000만 원의 2%와 2억 원의 5%를 더한 1,100만 원이에요. 부가가치세 별도</p>
 </div>
-<p className="fee-terms"><a href="/terms/cro">기관 이용약관</a></p>
+<p className="fee-terms"><a href="/pricing">요금제 보기</a> <a href="/terms/cro">기관 이용약관</a></p>
 </div>
 </div>
 </section>

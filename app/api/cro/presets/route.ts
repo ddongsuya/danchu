@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { loadOrgPresets, upsertOrgPreset } from "@/lib/catalog-db";
 import { presetByKey } from "@/lib/presets";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const s = await sessionOrNull("cro");
   if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
+  { const pe = featureError(s.org, "tests"); if (pe) return NextResponse.json({ error: pe }, { status: 403 }); }
   return NextResponse.json({ presets: await loadOrgPresets(s.profile.cro_org_id) });
 }
 
@@ -17,6 +19,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
   if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
+  { const pe = featureError(s.org, "tests"); if (pe) return NextResponse.json({ error: pe }, { status: 403 }); }
   const b = (await req.json().catch(() => ({}))) as { presetKey?: unknown; offered?: unknown; packagePrice?: unknown; note?: unknown };
   if (typeof b.presetKey !== "string" || !presetByKey(b.presetKey)) return NextResponse.json({ error: "알 수 없는 패키지예요." }, { status: 400 });
   const ok = await upsertOrgPreset(s.profile.cro_org_id, { preset_key: b.presetKey, offered: b.offered !== false, package_price: b.packagePrice, note: b.note });

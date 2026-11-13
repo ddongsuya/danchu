@@ -24,7 +24,7 @@ export const NAV: NavItem[] = [
   { href: CPATHS.calendar, label: "캘린더", icon: "calendar", group: "견적" },
   { href: "/cro/notifications", label: "알림", icon: "bell", group: "견적" },
   { href: "/cro/org", label: "기관", icon: "org", group: "설정" },
-  { href: "/cro/billing", label: "청구", icon: "receipt", group: "설정" },
+  { href: "/cro/billing", label: "요금제·결제", icon: "receipt", group: "설정" },
 ];
 export const TABS: NavItem[] = [
   { href: B, label: "오늘", icon: "today", exact: true },

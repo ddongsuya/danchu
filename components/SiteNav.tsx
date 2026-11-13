@@ -11,6 +11,7 @@ export const SITE_LINKS: [string, string][] = [
   ["/how-it-works", "이용 안내"],
   ["/guide", "시험 가이드"],
   ["/for-cro", "기관 참여"],
+  ["/pricing", "요금제"],
   ["/faq", "자주 묻는 질문"],
 ];
 

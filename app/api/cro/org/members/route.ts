@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { notifyUsers } from "@/lib/notify";
 import { distributeOpenRfqs } from "@/lib/distribute";
 import { captureError } from "@/lib/observe";
+import { seatError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 
@@ -33,6 +34,11 @@ export async function POST(req: Request) {
 
   if (action === "approve" || action === "reject") {
     if (target.pending_org_id !== orgId || target.cro_org_id) return NextResponse.json({ error: "이 기관에 합류를 신청한 계정이 아니에요." }, { status: 400 });
+    // 요금제 담당자 한도 (0044, 정식 서비스 뒤). 시범 운영 중에는 제한 없음
+    if (action === "approve" && s.org) {
+      const full = await seatError(s.org);
+      if (full) return NextResponse.json({ error: full }, { status: 409 });
+    }
     const patch = action === "approve" ? { cro_org_id: orgId, pending_org_id: null, role: "cro", org_role: "member" } : { pending_org_id: null };
     const { error } = await sb.from("profiles").update(patch).eq("id", userId);
     if (error) return NextResponse.json({ error: "저장하지 못했어요." }, { status: 500 });

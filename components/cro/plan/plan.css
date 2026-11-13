@@ -1,0 +1,97 @@
+/* 기관 요금제·결제 (app/cro/billing). 시안 v2 https://claude.ai/artifact/EbSMhPNSNi42ofrwJJGMd5
+   구분선 없이 띠·여백으로 나눈다. 형광펜은 변경 확인 표의 "변경 후" 칸에만 */
+.pln { max-width: 56rem; }
+.pln .ph { margin-bottom: 8px; }
+.pln-tabs { display: flex; gap: 24px; margin: 0 0 20px; }
+.pln-tabs a { font-size: 15px; color: var(--muted); text-decoration: none; padding: 10px 0; }
+.pln-tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 var(--ink); }
+
+.pln-cur { background: var(--white); border-radius: var(--r-lg); box-shadow: 0 1px 2px rgba(27, 27, 25, 0.06); padding: 20px 22px; }
+.pln-cur__k { font-size: 13px; color: var(--muted); }
+.pln-cur h2 { margin-top: 4px; font-size: 28px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; }
+.pln-cur h2 small { margin-left: 10px; font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.pln-cur__kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; margin-top: 16px; }
+.pln-cur__kv dt { font-size: 13px; color: var(--muted); margin-bottom: 2px; }
+.pln-cur__kv dd { font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (min-width: 960px) { .pln-cur__kv { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.pln-pick { margin-top: 28px; }
+.pln-pick h2 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+.pln-opts { display: grid; gap: 8px; }
+@media (min-width: 960px) { .pln-opts { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; } }
+.pln-opt { appearance: none; width: 100%; text-align: left; font: inherit; color: var(--ink); background: var(--track); border: 0; border-radius: var(--r-lg); padding: 14px 16px; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; align-items: start; cursor: pointer; transition: transform 160ms var(--ease-out), background-color 160ms ease; }
+.pln-opt:active:not(:disabled) { transform: scale(0.98); }
+.pln-opt:disabled { cursor: default; }
+.pln-opt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.pln-opt--on { background: var(--white); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.pln-opt__dot { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--muted); margin-top: 2px; }
+.pln-opt--on .pln-opt__dot { box-shadow: inset 0 0 0 6px var(--ink); }
+.pln-opt__n { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+.pln-opt__s { display: block; margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.pln-opt__p { font-size: 14px; font-weight: 600; white-space: nowrap; }
+@media (min-width: 960px) {
+  .pln-opt { grid-template-columns: 20px minmax(0, 1fr); padding: 18px; }
+  .pln-opt__p { grid-column: 2; font-size: 18px; }
+}
+.pln-fine { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.pln-fine a { color: var(--body); text-underline-offset: 3px; }
+.pln-done { margin-top: 12px; padding: 10px 14px; background: var(--ink); color: var(--on-brand); border-radius: var(--r-sm); font-size: 14px; }
+.pln-err { margin-top: 12px; padding: 10px 12px; background: var(--error-bg); color: var(--error-fg); border-radius: var(--r-sm); font-size: 14px; }
+
+/* 변경 확인: 휴대폰은 아래 시트, 넓은 화면은 가운데 창 */
+.pln-dlg { border: 0; padding: 0; margin: auto auto 0; width: 100vw; max-width: 100vw; background: var(--white); color: var(--ink); border-radius: 8px 8px 0 0; box-shadow: 0 -12px 32px rgba(27, 27, 25, 0.16); opacity: 1; transform: none; transition: opacity 220ms var(--ease-drawer), transform 260ms var(--ease-drawer), overlay 260ms allow-discrete, display 260ms allow-discrete; }
+@starting-style { .pln-dlg[open] { opacity: 0; transform: translateY(24px); } }
+.pln-dlg::backdrop { background: rgba(27, 27, 25, 0.36); }
+.pln-dlg__in { padding: 18px 22px calc(22px + env(safe-area-inset-bottom)); }
+.pln-dlg__hd { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pln-dlg__hd h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.pln-x { width: 44px; height: 44px; margin-right: -10px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); border-radius: var(--r-md); cursor: pointer; }
+.pln-diff { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.pln-diff th, .pln-diff td { text-align: left; padding: 9px 10px; font-size: 14px; }
+.pln-diff thead th { font-size: 12px; font-weight: 500; color: var(--muted); }
+.pln-diff tbody th { font-weight: 400; color: var(--body); }
+.pln-diff td.was { color: var(--muted); }
+.pln-diff td.chg { background: var(--brand-tint); font-weight: 600; }
+.pln-kv { margin-top: 14px; }
+.pln-kv > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; font-size: 14px; }
+.pln-kv > div:nth-child(odd) { background: var(--track); border-radius: var(--r-sm); }
+.pln-kv dt { color: var(--muted); }
+.pln-kv dt small { display: block; font-size: 12px; }
+.pln-kv dd { text-align: right; font-weight: 500; }
+.pln-kv dd small { font-weight: 400; color: var(--muted); font-size: 12px; }
+.pln-dlg__ft { margin-top: 16px; }
+.pln-dlg__ft .btn { width: 100%; }
+@media (min-width: 720px) {
+  .pln-dlg { margin: auto; width: min(520px, calc(100vw - 32px)); border-radius: var(--r-lg); box-shadow: 0 24px 64px rgba(27, 27, 25, 0.24); }
+  @starting-style { .pln-dlg[open] { opacity: 0; transform: scale(0.97); } }
+  .pln-dlg__in { padding: 24px 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pln-dlg, .pln-opt { transition: opacity 160ms ease; }
+  @starting-style { .pln-dlg[open] { transform: none; } }
+}
+
+/* 요금제 잠금 화면 (정식 서비스 뒤 요금제에 없는 기능) */
+.pln-lock { max-width: 36rem; padding: 40px 0; }
+.pln-lock h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.pln-lock p { margin-top: 8px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.pln-lock .btn { margin-top: 20px; }
+.pln-alert { margin-bottom: 12px; padding: 10px 12px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; border-radius: var(--r-sm); }
+.pln dd { margin: 0; }
+/* 휴대폰: 한 화면에 들어가도록 현재 요금제는 한 줄씩, 요금제 줄은 이름·요금만 (항목은 변경 확인 표와 요금제 비교에서) */
+@media (max-width: 959px) {
+  .pln .ph { margin-bottom: 0; }
+  .pln-tabs { margin-bottom: 12px; }
+  .pln-cur { padding: 14px 16px; }
+  .pln-cur h2 { font-size: 24px; }
+  .pln-cur__kv { grid-template-columns: 1fr; gap: 0; margin-top: 10px; }
+  .pln-cur__kv > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 0; }
+  .pln-cur__kv dt { margin: 0; font-size: 13px; }
+  .pln-cur__kv dd { font-size: 14px; justify-content: flex-end; text-align: right; }
+  .pln-pick { margin-top: 18px; }
+  .pln-opt { padding: 12px 14px; align-items: center; }
+  .pln-opt__s { display: none; }
+  .pln-opt__dot { margin-top: 0; }
+  .pln-alert { padding: 8px 12px; font-size: 13px; }
+}
+@media (min-width: 960px) { .pln-opt__p { align-self: end; } .pln-opt { align-content: space-between; } }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sessionOrNull } from "@/lib/auth";
 import { loadCatalog, upsertCatalog } from "@/lib/catalog-db";
 import { catalogItems } from "@/lib/catalog";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const s = await sessionOrNull("cro");
   if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
+  { const pe = featureError(s.org, "tests"); if (pe) return NextResponse.json({ error: pe }, { status: 403 }); }
   return NextResponse.json({ items: catalogItems(), rows: await loadCatalog(s.profile.cro_org_id) });
 }
 
@@ -17,6 +19,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
   if (!s || !s.profile.cro_org_id) return NextResponse.json({ error: "권한이 없어요." }, { status: 403 });
+  { const pe = featureError(s.org, "tests"); if (pe) return NextResponse.json({ error: pe }, { status: 403 }); }
   const b = (await req.json().catch(() => ({}))) as { rows?: unknown; removed?: unknown };
   if (!Array.isArray(b.rows)) return NextResponse.json({ error: "저장할 내용이 없어요." }, { status: 400 });
   const r = await upsertCatalog(s.profile.cro_org_id, b.rows, Array.isArray(b.removed) ? b.removed : []);

@@ -58,6 +58,11 @@ export type CroOrg = {
   monthly_fee?: number | null;
   /** 구독 시작 월 (그 달 1일). 이 달부터 명세에 월 구독료가 나온다 */
   monthly_fee_from?: string | null;
+  /** 지금 요금제 (0044). 마이그레이션 전 DB 에서는 비어 있다 */
+  plan?: "free" | "plus" | "pro" | null;
+  /** 예약한 요금제와 적용일 (0044) */
+  plan_next?: "free" | "plus" | "pro" | null;
+  plan_next_from?: string | null;
   /** 운영자가 등록·관리하는 기관 (담당자 계정 없음, 메일 링크는 /q 토큰) */
   managed?: boolean;
 };
