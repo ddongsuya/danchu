@@ -19,7 +19,7 @@ export default async function CroDocs() {
       <div className="ph">
         <div>
           <h1>견적서</h1>
-          <p>시험 목록의 표준가로 견적서를 채우고, 설계가 달라진 곳만 추가 비용으로 계산해요. 표지 · 견적서 · 시험 상세 설명 · 일정표 4부를 PDF와 엑셀로 내려받아요.</p>
+          <p>시험 목록의 표준가로 견적서를 채우고, 설계가 달라진 곳만 추가 비용으로 계산해요. 표지 · 견적서 · 시험 상세 설명 · 일정표 · 시험 안내 5부를 PDF와 엑셀로 내려받아요.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/docs/style" className="b2 bsm">견적서 양식</Link>

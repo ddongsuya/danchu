@@ -1,10 +1,11 @@
 /**
- * 견적서 → 엑셀 시트 3장 (견적서 · 시험 상세 · 일정표). PDF 와 같은 계산(lib/quote-doc)과 같은 "의뢰자에게 보이는 항목"을 따른다.
+ * 견적서 → 엑셀 시트 (견적서 · 시험 상세 · 일정표 · 시험 안내). PDF 와 같은 계산(lib/quote-doc)과 같은 "의뢰자에게 보이는 항목"을 따른다.
  * 내부 메모는 넣지 않는다.
  */
 import { docTotals, kindRows, kindSummary, mainAnimals, recoveryAnimals, scheduleWeeks, testKind, testLines, type DocData, type DocHead, type QuoteStyle } from "./quote-doc";
 import { PD_ROLE, pkSamples } from "./kind-design";
 import type { Cell, Sheet } from "./xlsx";
+import { docGuides } from "./test-guide";
 
 const b = (v: string | number): Cell => ({ v, bold: true });
 const PHASE: Record<string, string> = { run: "투여와 수행", recovery: "회복", report: "준비와 보고", point: "시점" };
@@ -107,9 +108,17 @@ export function docSheets(head: DocHead, data: DocData, style: QuoteStyle): Shee
   }
   s.push([], [`착수부터 최종 보고서까지 ${weeks}주. 시험물질 입고 주를 1주로 셉니다.`]);
 
+  // 5부 시험 안내 (PDF 와 같이 끄면 시트도 뺀다)
+  const guides = v.guide === false ? [] : docGuides(data);
+  const g: Cell[][] = [[{ v: "시험 안내", big: true }], ["견적에 포함된 시험의 일반적인 목적과 평가 내용입니다. 이 견적의 설계는 시험 상세 시트를 따릅니다."]];
+  for (const { g: x, nos } of guides) {
+    g.push([], [b(x.name), `시험 ${nos.join(", ")}`], ["설명", x.what], ["용도", x.why], ["주요 평가", x.looks.join(", ")], ["관련 기준", x.basis]);
+  }
+
   return [
     { name: "견적서", rows: q, widths: [14, 44, 34, 12, 16] },
     { name: "시험 상세", rows: d, widths: [18, 30, 12, 12, 12, 12, 10] },
     { name: "일정표", rows: s, widths: [26, 22, 16, 9, 9, ...Array.from({ length: W }, () => 3.5)] },
+    ...(guides.length ? [{ name: "시험 안내", rows: g, widths: [16, 90] }] : []),
   ];
 }

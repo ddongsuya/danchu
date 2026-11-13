@@ -10,7 +10,7 @@ import {
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
 import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
-import { COND_LABEL, Cover, DetailPage, Logo, brandVars, QuotePage, SchedulePage, condLine, pageKeys, type PageKey } from "./DocPages";
+import { COND_LABEL, Cover, DetailPage, GuidePage, Logo, brandVars, QuotePage, SchedulePage, condLine, guidePages, pageCount, pageKeys, type PageKey } from "./DocPages";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
 const signed = (v: number) => (v < 0 ? `- ${n(-v)}` : `+ ${n(v)}`);
@@ -99,9 +99,13 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
     setDoc({ tests: next });
   };
 
-  const total = 3 + data.tests.length;
+  const total = pageCount(data);
   const pageNo = keys.indexOf(page) + 1;
-  const section = page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
+  const guides = guidePages(data);
+  const gk = page.startsWith("guide:") ? Number(page.slice(6)) : -1;
+  const guide = gk >= 0 ? guides[gk] ?? null : null;
+  const guideEl = guide && <GuidePage head={head} items={guide} part={gk} parts={guides.length} style={style} i={pageNo} total={total} />;
+  const section = page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : gk >= 0 ? "5부 · 시험 안내" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
   const savedLabel = readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
 
   return (
@@ -154,6 +158,19 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
               </ol>
             )}
             <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험을 추가하세요"} thumb="schedule" />
+            {guides.length > 0 && <Toc on={gk >= 0} onClick={() => { setPage("guide:0"); setPane("desk"); }} title="시험 안내" sub={`시험 종류 ${guides.flat().length}건`} thumb="detail" />}
+            {guides.length > 1 && (
+              <ol className="qed__tests">
+                {guides.map((items, k) => (
+                  <li key={k}>
+                    <button type="button" aria-current={gk === k ? "true" : undefined} onClick={() => { setPage(`guide:${k}`); setPane("desk"); }}>
+                      <b>{k + 1}쪽</b>
+                      <span>{items.map((x) => x.g.name).join(", ")}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            )}
           </nav>
           {!readOnly && <button type="button" className="qed__add" onClick={() => setPicker(true)}><Plus size={16} aria-hidden="true" />시험 추가</button>}
           <p className="qed__railnote">시험을 추가하면 시험 목록의 <b>표준가와 포함 범위</b>로 채워져요. 달라진 곳만 추가 비용으로 계산해요.</p>
@@ -177,7 +194,8 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
               {page === "cover" && <Cover head={head} data={data} style={style} i={1} total={total} />}
               {page === "quote" && <QuotePage head={head} data={data} style={style} i={2} total={total} />}
               {test && <DetailPage head={head} t={test} idx={data.tests.indexOf(test)} count={data.tests.length} style={style} i={pageNo} total={total} />}
-              {page === "schedule" && <SchedulePage head={head} data={data} style={style} i={total} total={total} />}
+              {page === "schedule" && <SchedulePage head={head} data={data} style={style} i={3 + data.tests.length} total={total} />}
+              {guideEl}
             </div>
           ) : (
             <div className="qed__paper">
@@ -185,6 +203,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
               {page === "quote" && <QuoteEdit head={head} data={data} setDoc={setDoc} style={style} total={total} readOnly={readOnly} />}
               {test && <TestEdit t={test} idx={data.tests.indexOf(test)} count={data.tests.length} head={head} style={style} set={(p) => setTest(test.uid, p)} onRemove={() => removeTest(test)} onMove={(d) => move(test, d)} pageNo={pageNo} total={total} readOnly={readOnly} />}
               {page === "schedule" && <ScheduleEdit data={data} setTest={setTest} head={head} style={style} total={total} readOnly={readOnly} />}
+              {guideEl}
               {page.startsWith("detail:") && !test && <div className="qd"><p className="qed__empty">시험을 추가하면 여기에서 설계를 고칠 수 있어요.</p></div>}
             </div>
           )}
@@ -199,6 +218,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
             <Check on={data.visible.perTest} disabled={readOnly} onChange={(v) => setDoc({ visible: { ...data.visible, perTest: v } })}>시험별 금액</Check>
             <Check on={data.visible.adjust} disabled={readOnly || !data.visible.perTest} onChange={(v) => setDoc({ visible: { ...data.visible, adjust: v } })}>추가 비용 내역</Check>
             <Check on={data.visible.formula} disabled={readOnly || !data.visible.perTest || !data.visible.adjust} onChange={(v) => setDoc({ visible: { ...data.visible, formula: v } })}>단가와 계산식</Check>
+            <Check on={data.visible.guide !== false} disabled={readOnly} onChange={(v) => { setDoc({ visible: { ...data.visible, guide: v } }); if (!v && gk >= 0) setPage("schedule"); }}>시험 안내 (5부)</Check>
           </section>
 
           <section className="qed__sec">
@@ -573,7 +593,7 @@ function ScheduleEdit({ data, setTest, head, style, total, readOnly }: { data: D
         {!data.tests.length && <p className="qed__muted">시험을 추가하면 시험 목록의 기간으로 일정이 채워져요.</p>}
       </section>
       <p className="qed__under">PDF에서는 이렇게 보여요</p>
-      <SchedulePage head={head} data={data} style={style} i={total} total={total} />
+      <SchedulePage head={head} data={data} style={style} i={3 + data.tests.length} total={total} />
     </>
   );
 }

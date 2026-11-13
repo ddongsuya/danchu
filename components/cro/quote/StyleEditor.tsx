@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { inkOn, type DocData, type DocHead, type QuoteStyle } from "@/lib/quote-doc";
 import { uploadToSigned } from "@/lib/upload";
-import { Cover, QuotePage } from "./DocPages";
+import { Cover, QuotePage, pageCount } from "./DocPages";
 
 const SWATCHES = ["#1b1b19", "#23395b", "#1f4e46", "#5b2333", "#4a3f6b", "#6b4a1f"];
 const STEPS = [
@@ -146,8 +146,8 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
       <aside className="qsty__preview" aria-label="미리보기">
         <p className="qed__muted">{sampleIsReal ? "가장 최근 견적서로 보여요" : "견적서를 만들면 그 견적서로 보여요"}</p>
         <div className="qsty__pages">
-          <div className="qsty__page"><Cover head={sample.head} data={sample.data} style={st} i={1} total={3 + sample.data.tests.length} /></div>
-          <div className="qsty__page"><QuotePage head={sample.head} data={sample.data} style={st} i={2} total={3 + sample.data.tests.length} /></div>
+          <div className="qsty__page"><Cover head={sample.head} data={sample.data} style={st} i={1} total={pageCount(sample.data)} /></div>
+          <div className="qsty__page"><QuotePage head={sample.head} data={sample.data} style={st} i={2} total={pageCount(sample.data)} /></div>
         </div>
       </aside>
     </div>

@@ -11,7 +11,7 @@ import {
 import type { CatalogRow } from "@/lib/catalog";
 import { kindOfCategory, type Kind } from "@/lib/kind-design";
 import { KINDS } from "@/lib/study-kinds";
-import { Cover, DetailPage, QuotePage } from "./DocPages";
+import { Cover, DetailPage, QuotePage, pageCount } from "./DocPages";
 import { KindPriceQ, KindTab, OrigBox, Stepper, kdForCatalog, kindTabs, needsPrice, type KTab } from "./KindQ";
 
 /**
@@ -56,7 +56,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const isNew = !head0;
   const blankHead: DocHead = { id: "", docNo: "새 견적서", title: "견적서", client: crm?.client ?? "", substance: "", issuedOn: today(), validUntil: null, inviteId: null, rfqNo: null, memo: "", updatedAt: "" };
   const [head, setHead] = useState<DocHead>(head0 ?? blankHead);
-  const [data, setData] = useState<DocData>(initial ?? { tests: [], visible: { perTest: true, adjust: true, formula: false }, discount: 0, terms: style.terms, glp: "" });
+  const [data, setData] = useState<DocData>(initial ?? { tests: [], visible: { perTest: true, adjust: true, formula: false, guide: true }, discount: 0, terms: style.terms, glp: "" });
   const first: StepId = ORDER.includes(start as StepId) ? (start as StepId) : head0?.rfqNo ? "tests" : isNew ? "kind" : "client";
   const [step, setStep] = useState<StepId>(first);
   // 새 견적서는 갈래부터 고른다. 시험 고르기가 그 갈래의 시험만 보여 준다
@@ -331,9 +331,9 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
     : <button type="button" className="b1" disabled={!canNext} onClick={next}>{nextLabel}</button>;
   const savedLabel = readOnly ? "읽기 전용" : isNew ? "시험을 고르면 저장돼요" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
   const curIdx = cur ? data.tests.findIndex((t) => t.uid === cur.uid) : -1;
-  const preview = step === "client" || step === "kind" ? <Cover head={head} data={data} style={style} i={1} total={3 + data.tests.length} />
-    : step === "detail" && cur && curIdx >= 0 && testKind(cur) !== "tox" ? <DetailPage head={head} t={cur} idx={curIdx} count={data.tests.length} style={style} i={3 + curIdx} total={3 + data.tests.length} />
-    : <QuotePage head={head} data={data} style={style} i={2} total={3 + data.tests.length} />;
+  const preview = step === "client" || step === "kind" ? <Cover head={head} data={data} style={style} i={1} total={pageCount(data)} />
+    : step === "detail" && cur && curIdx >= 0 && testKind(cur) !== "tox" ? <DetailPage head={head} t={cur} idx={curIdx} count={data.tests.length} style={style} i={3 + curIdx} total={pageCount(data)} />
+    : <QuotePage head={head} data={data} style={style} i={2} total={pageCount(data)} />;
 
   return (
     <div className="qf">
@@ -629,6 +629,7 @@ function TermsQ({ head, data, setH, setDoc, readOnly }: { head: DocHead; data: D
           <button type="button" className="chip" aria-pressed={v.perTest} disabled={readOnly} onClick={() => setDoc({ visible: { ...v, perTest: !v.perTest } })}>시험별 금액</button>
           <button type="button" className="chip" aria-pressed={v.perTest && v.adjust} disabled={readOnly || !v.perTest} onClick={() => setDoc({ visible: { ...v, adjust: !v.adjust } })}>추가 비용 내역</button>
           <button type="button" className="chip" aria-pressed={v.perTest && v.adjust && v.formula} disabled={readOnly || !v.perTest || !v.adjust} onClick={() => setDoc({ visible: { ...v, formula: !v.formula } })}>단가와 계산식</button>
+          <button type="button" className="chip" aria-pressed={v.guide !== false} disabled={readOnly} onClick={() => setDoc({ visible: { ...v, guide: v.guide === false } })}>시험 안내 (5부)</button>
         </div>
       </div>
     </>

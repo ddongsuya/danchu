@@ -150,7 +150,7 @@ describe("저장 값 정리", () => {
     expect(t.rates).toEqual([]);
     expect(t.phases[0]).toMatchObject({ kind: "run", weeks: 1 });
     expect(d.discount).toBe(0);
-    expect(d.visible).toEqual({ perTest: true, adjust: true, formula: false });
+    expect(d.visible).toEqual({ perTest: true, adjust: true, formula: false, guide: true });
   });
   it("자동 계산 단가는 종류마다 하나", () => {
     const r = cleanRates([{ kind: "animal", add: 1 }, { kind: "animal", add: 2 }, { kind: "flat", add: "3", deduct: 9 }]);
@@ -160,7 +160,7 @@ describe("저장 값 정리", () => {
   });
   it("한 번 저장한 값은 다시 정리해도 같다", () => {
     const t = testFromCatalog(row, rates);
-    const d: DocData = { tests: [t], visible: { perTest: false, adjust: true, formula: true }, discount: 1000, terms: { pay: "착수 50%", extra: "", note: "" }, glp: "GLP" };
+    const d: DocData = { tests: [t], visible: { perTest: false, adjust: true, formula: true, guide: true }, discount: 1000, terms: { pay: "착수 50%", extra: "", note: "" }, glp: "GLP" };
     expect(cleanDocData(JSON.parse(JSON.stringify(d)))).toEqual(d);
   });
 });
@@ -182,12 +182,12 @@ describe("번호·날짜·색", () => {
 });
 
 describe("엑셀 파일", () => {
-  it("zip 구조와 시트 세 개", () => {
+  it("zip 구조와 시트 네 개 (시험 안내 포함)", () => {
     const t = testFromCatalog(row, rates);
     const d: DocData = { tests: [t], visible: { perTest: true, adjust: true, formula: false }, discount: 0, terms: { pay: "", extra: "", note: "" }, glp: "GLP" };
     const head = { id: "x", docNo: "Q-2611-001", title: "견적서", client: "의뢰 기관", substance: "시험물질", issuedOn: "2026-11-06", validUntil: "2026-12-06", inviteId: null, rfqNo: null, status: "draft", supply: 0, memo: "", updatedAt: "" };
     const sheets = docSheets(head as never, d, { brandColor: null, logo: null, logoPos: "left", supplier: { name: "", address: "", contact: "", person: "", email: "" }, terms: { pay: "", extra: "", note: "" } });
-    expect(sheets.map((s) => s.name)).toEqual(["견적서", "시험 상세", "일정표"]);
+    expect(sheets.map((s) => s.name)).toEqual(["견적서", "시험 상세", "일정표", "시험 안내"]);
     const bytes = workbook(sheets);
     // PK\x03\x04 로 시작하고 끝에 중앙 디렉터리 끝 표식(PK\x05\x06)이 있다
     expect([...bytes.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);

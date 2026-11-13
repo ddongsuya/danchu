@@ -92,6 +92,15 @@
 .qd__groups thead tr:last-child th { border-bottom: 1.5px solid var(--qd-brand); }
 .qd__groups td { padding: 7px 6px; border-bottom: 1px solid var(--d-line2); color: var(--d-ink); }
 .qd__groups tfoot td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--d-line); }
+/* 5부 시험 안내 */
+.qd__guide { padding-bottom: 4px; }
+.qd__guide .qd__h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 22px; }
+.qd__guide .qd__h2 small { font-size: 11px; font-weight: 400; color: var(--d-mut); }
+.qd__guide .qd__desc { margin: 0 0 6px; }
+.qd__gkv { margin: 0; border-top: 1px solid var(--d-line2); }
+.qd__gkv > div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--d-line2); }
+.qd__gkv dt { color: var(--d-mut); }
+.qd__gkv dd { margin: 0; color: var(--d-ink); }
 .qd__evals { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
 .qd__evals li { padding: 6px 0 6px 14px; border-bottom: 1px solid var(--d-line2); position: relative; color: var(--d-ink); }
 .qd__evals li::before { content: ""; position: absolute; left: 0; top: 13px; width: 5px; height: 5px; background: var(--qd-brand); }

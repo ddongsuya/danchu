@@ -1,15 +1,27 @@
 /**
- * 견적서 4부의 A4 페이지 (표지 · 견적서 · 시험 상세 설명 · 시험 수행 일정표).
+ * 견적서의 A4 페이지 (1부 표지 · 2부 견적서 · 3부 시험 상세 설명 · 4부 시험 수행 일정표 · 5부 시험 안내).
  * PDF 저장(인쇄)·편집 화면의 미리보기·양식 미리보기가 같은 페이지를 쓴다. 상태가 없는 표시 전용 컴포넌트.
  * 문서는 화면 테마와 상관없이 종이색으로 고정한다 (quote.css .qd).
  */
 import { docTotals, inkOn, kindRows, kindSummary, mainAnimals, recoveryAnimals, scheduleWeeks, testKind, testLines, type DocData, type DocHead, type DocTest, type QuoteStyle } from "@/lib/quote-doc";
 import { PD_ROLE, pkSamples } from "@/lib/kind-design";
+import { docGuides, GUIDES_PER_PAGE, type TestGuide } from "@/lib/test-guide";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
 
-export type PageKey = "cover" | "quote" | `detail:${string}` | "schedule";
-export const pageKeys = (d: DocData): PageKey[] => ["cover", "quote", ...d.tests.map((t) => `detail:${t.uid}` as PageKey), "schedule"];
+export type PageKey = "cover" | "quote" | `detail:${string}` | "schedule" | `guide:${number}`;
+
+/** 5부 시험 안내를 쪽 단위로 나눈다. 끄거나 안내할 시험이 없으면 빈 배열 */
+export function guidePages(d: DocData): { g: TestGuide; nos: number[] }[][] {
+  if (d.visible.guide === false) return [];
+  const all = docGuides(d);
+  const out: { g: TestGuide; nos: number[] }[][] = [];
+  for (let k = 0; k < all.length; k += GUIDES_PER_PAGE) out.push(all.slice(k, k + GUIDES_PER_PAGE));
+  return out;
+}
+/** 전체 쪽 수 */
+export const pageCount = (d: DocData) => 3 + d.tests.length + guidePages(d).length;
+export const pageKeys = (d: DocData): PageKey[] => ["cover", "quote", ...d.tests.map((t) => `detail:${t.uid}` as PageKey), "schedule", ...guidePages(d).map((_, k) => `guide:${k}` as PageKey)];
 
 export function Logo({ style }: { style: QuoteStyle }) {
   if (style.logo) {
@@ -284,20 +296,46 @@ export function SchedulePage({ head, data, style, i, total }: { head: DocHead; d
   );
 }
 
+/** 5부 시험 안내: 견적서에 든 시험이 어떤 시험인지 (공개 가이드라인의 일반 설명, lib/test-guide.ts) */
+export function GuidePage({ head, items, part, parts, style, i, total }: { head: DocHead; items: { g: TestGuide; nos: number[] }[]; part: number; parts: number; style: QuoteStyle; i: number; total: number }) {
+  return (
+    <section className="qd" style={brandVars(style)}>
+      <Head head={head} style={style} right={<><div>견적번호 <span className="qd__num">{head.docNo}</span></div><div>5부 시험 안내{parts > 1 ? ` (${part + 1}/${parts})` : ""}</div></>} />
+      <h1 className="qd__h1">시험 안내</h1>
+      <p className="qd__lead">견적에 포함된 시험의 일반적인 목적과 평가 내용입니다. 이 견적의 설계는 3부 시험 상세 설명을 따릅니다.</p>
+      {items.map(({ g, nos }) => (
+        <article className="qd__guide" key={g.key}>
+          <h2 className="qd__h2">{g.name}<small>시험 {nos.join(", ")}</small></h2>
+          <p className="qd__desc">{g.what}</p>
+          <dl className="qd__gkv">
+            <div><dt>용도</dt><dd>{g.why}</dd></div>
+            <div><dt>주요 평가</dt><dd>{g.looks.join(", ")}</dd></div>
+            <div><dt>관련 기준</dt><dd>{g.basis}</dd></div>
+          </dl>
+        </article>
+      ))}
+      <Foot label="5부 시험 안내" i={i} total={total} />
+    </section>
+  );
+}
+
 export function brandVars(style: QuoteStyle): React.CSSProperties {
   const c = style.brandColor && /^#[0-9a-f]{6}$/i.test(style.brandColor) ? style.brandColor : "#1b1b19";
   return { ["--qd-brand" as string]: c, ["--qd-on" as string]: inkOn(c) };
 }
 
-/** 4부 전체 (인쇄·PDF) */
+/** 5부 전체 (인쇄·PDF) */
 export function DocPages({ head, data, style }: { head: DocHead; data: DocData; style: QuoteStyle }) {
-  const total = 3 + data.tests.length;
+  const guides = guidePages(data);
+  const sched = 3 + data.tests.length;
+  const total = sched + guides.length;
   return (
     <div className="qd-pages">
       <Cover head={head} data={data} style={style} i={1} total={total} />
       <QuotePage head={head} data={data} style={style} i={2} total={total} />
       {data.tests.map((t, k) => <DetailPage key={t.uid} head={head} t={t} idx={k} count={data.tests.length} style={style} i={3 + k} total={total} />)}
-      <SchedulePage head={head} data={data} style={style} i={total} total={total} />
+      <SchedulePage head={head} data={data} style={style} i={sched} total={total} />
+      {guides.map((items, k) => <GuidePage key={k} head={head} items={items} part={k} parts={guides.length} style={style} i={sched + 1 + k} total={total} />)}
     </div>
   );
 }

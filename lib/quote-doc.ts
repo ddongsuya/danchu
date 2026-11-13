@@ -166,12 +166,13 @@ export type DocTest = {
  */
 export type Choices = { species: string[]; routes: string[]; repPrice: number | null; prices: CondPrice[] };
 
-export type DocVisible = { perTest: boolean; adjust: boolean; formula: boolean };
+/** guide: 5부 시험 안내 (2026-11-13, 없으면 켬) */
+export type DocVisible = { perTest: boolean; adjust: boolean; formula: boolean; guide?: boolean };
 export type DocTerms = { pay: string; extra: string; note: string };
 export type DocData = { tests: DocTest[]; visible: DocVisible; discount: number; terms: DocTerms; glp: string };
 
 export const EMPTY_TERMS: DocTerms = { pay: "", extra: "", note: "" };
-export const DEFAULT_VISIBLE: DocVisible = { perTest: true, adjust: true, formula: false };
+export const DEFAULT_VISIBLE: DocVisible = { perTest: true, adjust: true, formula: false, guide: true };
 
 /** 견적서 목록·편집 공통 머리 정보 (DB 열) */
 export type DocHead = {
@@ -655,7 +656,7 @@ export function cleanDocData(raw: unknown): DocData {
   const terms = (o.terms && typeof o.terms === "object" ? o.terms : {}) as Record<string, unknown>;
   return {
     tests,
-    visible: { perTest: vis.perTest !== false, adjust: vis.adjust !== false, formula: vis.formula === true },
+    visible: { perTest: vis.perTest !== false, adjust: vis.adjust !== false, formula: vis.formula === true, guide: vis.guide !== false },
     discount: num(o.discount, 0, MAX_WON, 0),
     terms: { pay: text(terms.pay, 300), extra: text(terms.extra, 300), note: text(terms.note, 600) },
     glp: text(o.glp, 20),
