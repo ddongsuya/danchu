@@ -33,7 +33,7 @@ export default function Page() {
 </section>
 <section className="close" aria-labelledby="go">
 <h2 id="go">궁금증이 풀렸다면,<br /><span>이제 견적을 받아보세요.</span></h2>
-<div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a><a className="btn ghost" href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a></div>
+<div className="ctas"><a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a><a className="btn ghost" href="mailto:support@danchu.kr">support@danchu.kr</a></div>
 </section>
     </Site>
   );

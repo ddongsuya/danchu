@@ -105,7 +105,7 @@ describe("메일 링크: 계정 없는 기관은 /q 토큰", () => {
   it("회신 주소는 운영 역할 주소(OPERATOR_REPLY_TO)이고 운영자 알림 목록(ADMIN_EMAIL)이 아니다", () => {
     vi.stubEnv("ADMIN_EMAIL", "person@gmail.com,other@danchu.kr");
     vi.stubEnv("OPERATOR_REPLY_TO", "");
-    expect(inviteReplyTo({ managed: true })).toBe("limjm900202@gmail.com");
+    expect(inviteReplyTo({ managed: true })).toBe("support@danchu.kr");
     vi.stubEnv("OPERATOR_REPLY_TO", "ops@danchu.kr");
     expect(inviteReplyTo({ managed: true })).toBe("ops@danchu.kr");
   });

@@ -17,7 +17,7 @@ export default function PrivacyPage() {
       notice={
         <>
           <p>
-            개정 방침을 2026년 11월 16일부터 시행합니다(2026년 10월 17일 공지, 10월 28일·11월 6일·11월 10일 보완). 2026년 10월 17일 이후 개정 방침에
+            개정 방침을 2026년 11월 16일부터 시행합니다(2026년 10월 17일 공지, 10월 28일·11월 6일·11월 10일·11월 13일 보완). 2026년 10월 17일 이후 개정 방침에
             동의하고 보낸 요청에는 보낸 때부터 개정 방침을, 그 전에 보낸 요청에는 종전 방침(2026년 9월 6일 시행)을 적용합니다.
           </p>
           <p>
@@ -35,6 +35,7 @@ export default function PrivacyPage() {
             <li>사전예약 때 받는 이름, 휴대폰 번호, 설문 응답과 안내 문자 발송 위탁(솔라피 주식회사)을 더했습니다(1·2·5항, 11월 6일 보완)</li>
             <li>서비스 오류 기록·분석 위탁(Functional Software, Inc.)을 더했습니다(5·6항, 11월 10일 보완)</li>
             <li>기관이 고객 관리 기능에 적은 고객사 담당자 정보를 기관의 위탁을 받아 처리한다는 내용을 더했습니다(5항, 11월 10일 보완)</li>
+            <li>권리 행사와 개인정보 보호책임자 연락처를 hello@danchu.kr로 바꿨습니다(7·11항, 11월 13일 보완)</li>
           </ul>
         </>
       }
@@ -346,7 +347,7 @@ export default function PrivacyPage() {
         종료된 뒤 탈퇴할 수 있습니다.
       </p>
       <p>
-        그 밖의 열람·정정·처리 정지 요구는 <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>로 요청하실 수 있으며, 회사는 지체
+        그 밖의 열람·정정·처리 정지 요구는 <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>로 요청하실 수 있으며, 회사는 지체
         없이 조치합니다. 다만 이미 기관에 제공된 정보에 대해서는 해당 기관에 별도로 요청하셔야 할 수 있으며, 회사는 이를
         안내합니다.
       </p>
@@ -379,7 +380,7 @@ export default function PrivacyPage() {
       <ul>
         <li>개인정보 보호책임자: {privacyOfficerName() ? `${privacyOfficerName()}, 대표` : "대표"}</li>
         <li>
-          연락처: <a href="mailto:limjm900202@gmail.com">limjm900202@gmail.com</a>
+          연락처: <a href="mailto:hello@danchu.kr">hello@danchu.kr</a>
         </li>
       </ul>
       <p>

@@ -10,7 +10,7 @@ export const BUSINESS = {
   bizNo: "",
   /** 사업장 주소 */
   address: "",
-  email: "limjm900202@gmail.com",
+  email: "hello@danchu.kr",
   /** 개인정보 보호책임자 성명. 비우면 대표 성명을 쓴다 */
   privacyOfficer: "",
 } as const;

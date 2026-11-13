@@ -17,14 +17,14 @@ function denied(code: string, joinBy?: string | null): { error: string; status: 
   switch (code) {
     case "closed": return { error: "비교표가 열렸거나 의뢰자가 기관을 선정해 이 요청에는 더 참여할 수 없어요.", status: 409 };
     case "revoked":
-    case "not_found": return { error: "유효하지 않거나 만료된 링크예요. 받은 요청 화면이나 단추(limjm900202@gmail.com)에서 새 링크를 받아 주세요.", status: 404 };
+    case "not_found": return { error: "유효하지 않거나 만료된 링크예요. 받은 요청 화면이나 단추(support@danchu.kr)에서 새 링크를 받아 주세요.", status: 404 };
     // 철회는 되돌릴 수 없다. 참여 전 불참은 참여 결정 기한 전에만 다시 참여할 수 있다 (2026-10-20 결정 3)
     case "withdrawn": return { error: "참여를 철회한 요청이라 다시 참여할 수 없어요.", status: 403 };
     case "declined": return { error: `불참으로 처리한 요청이에요. 참여 결정 기한${joinBy ? `(${md(joinBy)})` : ""}이 지나 다시 참여할 수 없어요.`, status: 403 };
-    case "expired": return { error: "링크가 만료되어 참여할 수 없어요. 단추(limjm900202@gmail.com)에 연장을 요청해 주세요.", status: 403 };
+    case "expired": return { error: "링크가 만료되어 참여할 수 없어요. 단추(support@danchu.kr)에 연장을 요청해 주세요.", status: 403 };
     case "operator_not_allowed": return { error: OPERATOR_JOIN_DENIED, status: 403 };
     case "not_member": return { error: "다른 기관 담당자 계정으로 로그인되어 있어 이 기관으로 참여할 수 없어요. 이 기관의 안내라면 로그아웃한 뒤 메일의 링크로 다시 열어 주세요.", status: 403 };
-    case "org_inactive": return { error: "기관 참여가 중지되어 참여할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 403 };
+    case "org_inactive": return { error: "기관 참여가 중지되어 참여할 수 없어요. 단추(support@danchu.kr)에 문의해 주세요.", status: 403 };
     case "cutoff": return { error: "참여 마감이 지났어요. 회신 기한 3영업일 전까지 참여할 수 있어요.", status: 409 };
     case "reserved": return { error: `남은 자리는 의뢰자가 지명한 기관 몫이에요.${joinBy ? ` 참여 결정 기한(${md(joinBy)})이 지나도 지명 기관이 참여하지 않으면 자리가 풀리니 그때 다시 눌러 주세요.` : ""}`, status: 409 };
     case "full": return { error: "참여 자리가 모두 찼어요. 참여한 기관이 철회하면 자리가 생겨요.", status: 409 };

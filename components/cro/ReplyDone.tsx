@@ -20,7 +20,7 @@ export function ReplyDone({ no, replyBy, total, weeks, editHref, backHref, backL
           <Link href={backHref} className="b2 bsm">{backLabel}</Link>
         </div>
       </div>
-      <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "var(--muted)" }}>문의 limjm900202@gmail.com</p>
+      <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "var(--muted)" }}>문의 support@danchu.kr</p>
     </div>
   );
 }

@@ -53,7 +53,7 @@ export default async function CroOrgPage() {
               )}
             </div>
           ) : (
-            <div className="empty">소속 기관이 없어요. limjm900202@gmail.com로 알려주세요.</div>
+            <div className="empty">소속 기관이 없어요. support@danchu.kr로 알려주세요.</div>
           )}
         </div>
         <div className="stack">
@@ -83,7 +83,7 @@ export default async function CroOrgPage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0" }}>
             <LogoutButton className="b2" style={{ alignSelf: "center", padding: "0 24px" }} />
-            <span style={{ fontSize: 12, color: "var(--ph)" }}>단추 · limjm900202@gmail.com</span>
+            <span style={{ fontSize: 12, color: "var(--ph)" }}>단추 · support@danchu.kr</span>
           </div>
         </div>
       </div>

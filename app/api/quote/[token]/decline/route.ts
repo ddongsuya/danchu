@@ -25,7 +25,7 @@ const WITHDRAW_DENIED: Record<string, { error: string; status: number }> = {
   not_found: { error: "유효하지 않거나 만료된 링크예요.", status: 404 },
   not_member: { error: "다른 기관 담당자 계정으로 로그인되어 있어 처리할 수 없어요.", status: 403 },
   not_joined: { error: STALE, status: 409 },
-  submitted: { error: "이미 제출한 견적은 철회할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요.", status: 400 },
+  submitted: { error: "이미 제출한 견적은 철회할 수 없어요. 단추(support@danchu.kr)에 문의해 주세요.", status: 400 },
   declined: { error: "이미 불참으로 처리한 요청이에요.", status: 409 },
   withdrawn: { error: "이미 참여를 철회한 요청이에요.", status: 409 },
   expired: { error: "링크가 만료됐어요.", status: 403 },
@@ -42,7 +42,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const s = await sessionOrNull();
   const got = await loadQuote(token, loadOptsFor(s?.profile.role));
   if (!got) return NextResponse.json({ error: "유효하지 않거나 만료된 링크예요." }, { status: 404 });
-  if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 견적은 철회할 수 없어요. 단추(limjm900202@gmail.com)에 문의해 주세요." }, { status: 400 });
+  if (got.draft?.status === "submitted") return NextResponse.json({ error: "이미 제출한 견적은 철회할 수 없어요. 단추(support@danchu.kr)에 문의해 주세요." }, { status: 400 });
   if (got.declined) return NextResponse.json({ ok: true, already: true });
   if (got.expired) return NextResponse.json({ error: "링크가 만료됐어요." }, { status: 403 });
   if (got.closed) return NextResponse.json({ error: closedMessage(got.closedReason, { submitted: false }) }, { status: 403 });

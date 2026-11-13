@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     // 환경변수 미설정. 운영에서는 "접수된 것처럼" 200 을 돌려주면 안 된다
     if (isProduction()) {
       captureError(new Error("SUPABASE 미설정"), "rfq:config");
-      return NextResponse.json({ error: "지금은 접수를 저장할 수 없어요. 잠시 후 다시 시도하거나 limjm900202@gmail.com로 알려 주세요." }, { status: 503 });
+      return NextResponse.json({ error: "지금은 접수를 저장할 수 없어요. 잠시 후 다시 시도하거나 support@danchu.kr로 알려 주세요." }, { status: 503 });
     }
     // 로컬: 임시 번호 발급 (9000번대). 폼 내용은 로그에 남기지 않는다
     const rfqNo = `DC-${year}-9${String(Date.now() % 1000).padStart(3, "0")}`;

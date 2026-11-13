@@ -73,7 +73,7 @@ export default async function Profile({ searchParams }: { searchParams?: Promise
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0" }}>
             <LogoutButton className="b2" style={{ alignSelf: "center", padding: "0 24px" }} />
-            <span style={{ fontSize: 12, color: "var(--ph)" }}>단추 · limjm900202@gmail.com</span>
+            <span style={{ fontSize: 12, color: "var(--ph)" }}>단추 · support@danchu.kr</span>
           </div>
         </div>
       </div>

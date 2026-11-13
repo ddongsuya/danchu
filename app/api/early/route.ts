@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const sb = getSupabaseAdmin();
   if (!sb) {
     console.warn("[danchu] 사전예약 미저장(DB 미설정)", v.role);
-    return NextResponse.json({ error: "지금은 예약을 받을 수 없어요. limjm900202@gmail.com로 알려 주세요." }, { status: 503 });
+    return NextResponse.json({ error: "지금은 예약을 받을 수 없어요. support@danchu.kr로 알려 주세요." }, { status: 503 });
   }
 
   const now = new Date().toISOString();
