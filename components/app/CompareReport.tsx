@@ -42,9 +42,9 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
         <p className="rs-lead">요청한 시험 {rows.length}개 기준이에요. {vat} 최종 조건은 각 기관의 정식 견적서로 확인하세요.</p>
         <dl className="rs-cover">
           <div><dt>참여 기관</dt><dd className="tnum">{cols.length}곳</dd></div>
-          <div><dt>총액{many ? " 범위" : ""}</dt><dd className="tnum">{totals ? (totals.min === totals.max ? won(totals.min) : `${won(totals.min)} ~ ${won(totals.max)}`) : "미입력"}</dd></div>
-          <div><dt>전체 기간{many ? " 범위" : ""}</dt><dd className="tnum">{spans ? (spans.min === spans.max ? `${spans.min}주` : `${spans.min} ~ ${spans.max}주`) : "미입력"}</dd></div>
-          <div><dt>기관끼리 다르게 답한 항목</dt><dd className="tnum">{many ? `${diff.length}개` : "-"}</dd></div>
+          <div><dt>견적 총액</dt><dd className="tnum">{totals ? (totals.min === totals.max ? won(totals.min) : <><span className="nw">{won(totals.min)} ~</span> <span className="nw">{won(totals.max)}</span></>) : "미입력"}</dd></div>
+          <div><dt>소요 기간</dt><dd className="tnum">{spans ? (spans.min === spans.max ? `${spans.min}주` : `${spans.min} ~ ${spans.max}주`) : "미입력"}</dd></div>
+          <div><dt>차이 항목</dt><dd className="tnum">{many ? `${diff.length}개` : "-"}</dd></div>
         </dl>
         <nav className="rs-toc" aria-label="보고서 차례">
           {sections.map((s) => (
@@ -96,7 +96,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
       <section className="rs-block" id="r3" aria-labelledby="r3-title">
         <p className="rs-bk">항목 분석</p>
         <h2 id="r3-title" className="rs-h2">
-          {!many ? "항목마다 수행 여부" : diff.length ? `기관끼리 다르게 답한 항목 ${diff.length}개` : "모든 항목에 같은 답을 했어요"}
+          {!many ? "항목마다 수행 여부" : diff.length ? `차이 항목 ${diff.length}개` : "모든 항목에 같은 답을 했어요"}
         </h2>
         {nowhere.length > 0 && <p className="rs-lead">모든 기관이 불가로 답한 항목: {nowhere.map((r) => r.name).join(", ")}. 따로 맡길 곳을 찾거나 기관과 범위를 다시 이야기해 보세요.</p>}
         <div className="rs-mx-wrap">

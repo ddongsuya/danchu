@@ -18,12 +18,18 @@ const DONE = ["closed", "cancelled"];
  * 화면 문구는 사용법을 설명하지 않는다 (범례와 명사형 표기만). 계산은 lib/request-story.ts.
  * 넓은 화면은 가로 축, 좁은 화면은 세로 축 (옆으로 밀지 않는다).
  */
+/** 가로 축에서 같은 날 겹친 일정을 아래로 내리는 한 칸의 높이. 일정 하나가 점·이름·상태·요청 번호 네 줄(약 80px)이다 */
+const TL_ROW = 84;
+
 export function RequestOverview({ name, list, today }: { name: string; list: RequestListItem[]; today: string }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
   const [search, setSearch] = useState("");
   const events = timelineEvents(list, today);
   const c = timelineCounts(events, today);
   const lay = timelineLayout(events, today);
+  // 가로 축에 올린 일정과, 같은 날에 몰려 축에 올리지 못한 수
+  const shown = lay.items.filter((e) => !e.hidden);
+  const more = lay.items.length - shown.length;
   const active = list.filter((r) => !DONE.includes(r.status));
   const source =
     filter === "진행 중" ? active : filter === "보고서 열림" ? list.filter((r) => reportReady(r)) : filter === "종료" ? list.filter((r) => DONE.includes(r.status)) : list;
@@ -69,16 +75,17 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
               <span><i className="tlh__dot tlh__dot--late" />기한 지남</span>
               <span><i className="tlh__dot" />일정</span>
               <span><i className="tlh__dot tlh__dot--open" />보고서 열림</span>
+              {more > 0 && <span className="only-wide tnum">외 {more}건</span>}
             </p>
             {/* 넓은 화면: 가로 축 */}
-            <div className="tlh__axis only-wide" role="list" aria-label="요청 일정" style={{ height: `${120 + Math.max(0, ...lay.items.map((e) => e.row)) * 48}px` }}>
+            <div className="tlh__axis only-wide" role="list" aria-label="요청 일정" style={{ height: `${120 + Math.max(0, ...shown.map((e) => e.row)) * TL_ROW}px` }}>
               {lay.ticks.map((t) => <span key={t.date} className="tlh__tick tnum" style={{ left: `${t.pct}%` }} aria-hidden="true">{short(t.date)}</span>)}
-              {lay.items.filter((e) => e.kind === "late").map((e) => (
-                <span key={`s-${e.key}`} className="tlh__span" style={{ left: `${e.pct}%`, width: `${Math.max(0, lay.todayPct - e.pct)}%`, top: `${34 + e.row * 48}px` }} aria-hidden="true" />
+              {shown.filter((e) => e.kind === "late").map((e) => (
+                <span key={`s-${e.key}`} className="tlh__span" style={{ left: `${e.pct}%`, width: `${Math.max(0, lay.todayPct - e.pct)}%`, top: `${34 + e.row * TL_ROW}px` }} aria-hidden="true" />
               ))}
               <span className="tlh__today" style={{ left: `${lay.todayPct}%` }}><b className="tnum">오늘 {short(today)}</b></span>
-              {lay.items.map((e) => (
-                <Link key={e.key} href={e.href} role="listitem" className={`tlh__ev tlh__ev--${e.kind}`} style={{ left: `${e.pct}%`, top: `${28 + e.row * 48}px` }}>
+              {shown.map((e) => (
+                <Link key={e.key} href={e.href} role="listitem" className={`tlh__ev tlh__ev--${e.kind}`} style={{ left: `${e.pct}%`, top: `${28 + e.row * TL_ROW}px` }}>
                   <i className={`tlh__dot tlh__dot--${e.kind}`} aria-hidden="true" />
                   <b>{e.label}</b>
                   <span>{e.sub}</span>

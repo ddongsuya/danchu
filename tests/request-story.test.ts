@@ -135,6 +135,14 @@ describe("홈 시간축", () => {
     expect(p.every((x) => x >= 0 && x <= 100)).toBe(true);
     expect(lay.items.every((i) => i.row >= 0 && i.row <= 2)).toBe(true);
   });
+  it("같은 날에 일정이 몰리면 세 줄까지만 축에 올리고 나머지는 숨김으로 센다 (글자 겹침 방지)", () => {
+    const same = Array.from({ length: 6 }, (_, i) => ({ ...ev[0], key: `k${i}`, date: today }));
+    const lay = timelineLayout(same, today);
+    const shown = lay.items.filter((i) => !i.hidden);
+    expect(shown.length).toBeLessThanOrEqual(3);
+    expect(new Set(shown.map((i) => i.row)).size).toBe(shown.length);
+    expect(lay.items.filter((i) => i.hidden).length).toBe(6 - shown.length);
+  });
   it("목록 줄은 사실만 짧게", () => {
     expect(terseRow(list[0], today, md)).toEqual({ text: "참여 0곳, 기한 10-20 지남", late: true, stage: 1, done: false, when: "12일 지남", go: "기한 변경" });
     expect(terseRow(list[1], today, md)).toMatchObject({ text: "견적 3건", stage: 3, go: "보고서" });

@@ -756,7 +756,7 @@
 .pt .rs-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 200px 96px; gap: 24px; align-items: center; background: var(--wh); border-radius: var(--r-lg); padding: 22px 24px; transition: transform 160ms var(--ease-out), background-color 160ms ease; }
 .pt .rs-row:active { transform: scale(.99); }
 .rs-row__no { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
-.rs-row__main b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.rs-row__main b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -.02em; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rs-row__line { display: block; font-size: 14px; color: var(--body); margin-top: 4px; }
 .rs-row__line--late { color: var(--err); font-weight: 600; }
 .rs-row__go { text-align: right; font-size: 14px; font-weight: 600; }
@@ -1442,6 +1442,8 @@
 .tlh__ev b { display: block; font-size: 14px; font-weight: 600; }
 .tlh__ev span { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; }
 .tlh__ev small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+/* 오늘 선 위에 놓인 일정: 글자 뒤에 바탕을 깔아 선이 글자를 지나가지 않게 한다 */
+.tlh__ev b, .tlh__ev span, .tlh__ev small { width: fit-content; margin-inline: auto; padding-inline: 4px; background: var(--sf); position: relative; }
 .tlh__ev--late b, .tlh__ev--late span { color: var(--err); }
 @media (hover: hover) and (pointer: fine) { .pt .tlh__ev:hover b { text-decoration: underline; text-underline-offset: 4px; } }
 .tlh__vax { margin: 20px 0 0 5px; border-left: 1px solid var(--cline); }
@@ -1491,3 +1493,10 @@
 .pt__usage b { font-weight: 600; }
 .pt__usage--full { background: var(--warn-bg); color: var(--warn-fg); }
 .pt__usage:has(.pt__usage--full) { background: var(--warn-bg); color: var(--warn-fg); }
+
+/* 견적 상세: 항목마다 기관이 적은 시험 설계와 설명 */
+.qd-design { margin: 2px 0 0; display: grid; gap: 4px; font-size: 13px; line-height: 1.5; }
+.qd-design > div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
+.qd-design dt { color: var(--muted); }
+.qd-design dd { margin: 0; color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 720px) { .qd-design > div { grid-template-columns: 1fr; gap: 0; } }

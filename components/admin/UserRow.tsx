@@ -24,14 +24,14 @@ export function UserRow({ user, orgs, self }: { user: U; orgs: { id: string; nam
       </td>
       <td style={{ fontSize: 13 }}>{user.company || "-"}</td>
       <td>
-        <select className="sel" style={{ height: 36, fontSize: 13, width: 120 }} value={role} disabled={self} onChange={(e) => setRole(e.target.value)}>
+        <select className="sel" aria-label={`${user.email} 역할`} style={{ height: 36, fontSize: 13, width: 120 }} value={role} disabled={self} onChange={(e) => setRole(e.target.value)}>
           <option value="requester">의뢰자</option>
           <option value="cro">CRO</option>
           <option value="admin">운영자</option>
         </select>
       </td>
       <td>
-        <select className="sel" style={{ height: 36, fontSize: 13, minWidth: 160 }} value={org} onChange={(e) => setOrg(e.target.value)} disabled={role !== "cro"}>
+        <select className="sel" aria-label={`${user.email} 소속 기관`} style={{ height: 36, fontSize: 13, minWidth: 160 }} value={org} onChange={(e) => setOrg(e.target.value)} disabled={role !== "cro"}>
           <option value="">없음</option>
           {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>

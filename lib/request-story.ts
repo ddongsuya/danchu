@@ -133,7 +133,7 @@ export function timelineCounts(events: TimelineEvent[], today: string): { todo: 
 }
 
 /** 가로 축에 놓을 자리. 축은 오늘을 포함해 앞뒤로 넉넉히 잡고, 가까운 점끼리는 줄(row)을 달리해 겹치지 않게 한다 */
-export function timelineLayout(events: TimelineEvent[], today: string, minGapPct = 14): { start: string; end: string; todayPct: number; ticks: { date: string; pct: number }[]; items: (TimelineEvent & { pct: number; row: number })[] } {
+export function timelineLayout(events: TimelineEvent[], today: string, minGapPct = 14): { start: string; end: string; todayPct: number; ticks: { date: string; pct: number }[]; items: (TimelineEvent & { pct: number; row: number; hidden: boolean })[] } {
   const shift = (ymd: string, n: number) => new Date(dayNo(ymd) * 864e5 + n * 864e5).toISOString().slice(0, 10);
   const clampDay = (d: string) => (d < shift(today, -45) ? shift(today, -45) : d > shift(today, 60) ? shift(today, 60) : d);
   const days = events.map((e) => clampDay(e.date));
@@ -151,9 +151,11 @@ export function timelineLayout(events: TimelineEvent[], today: string, minGapPct
     if (from && lastAt.length === 0) lastAt[0] = -100;
     let row = lastAt.findIndex((x, k) => k >= from && p - x >= minGapPct);
     if (row < 0 && from && lastAt.length === 1) row = 1;
-    if (row < 0) row = lastAt.length < 3 ? lastAt.length : lastAt.indexOf(Math.min(...lastAt));
+    // 세 줄이 다 찼는데 같은 자리에 또 오는 일정은 축에 올리지 않는다 (글자가 겹친다). 화면은 "외 n건"으로 알리고 아래 목록이 전부 보여 준다
+    if (row < 0 && lastAt.length >= 3) return { ...e, pct: p, row: 0, hidden: true };
+    if (row < 0) row = lastAt.length;
     lastAt[row] = p;
-    return { ...e, pct: p, row };
+    return { ...e, pct: p, row, hidden: false };
   });
   const ticks: { date: string; pct: number }[] = [];
   const step = span > 70 ? 14 : 7;
