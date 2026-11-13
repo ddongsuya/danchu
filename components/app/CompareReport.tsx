@@ -9,7 +9,7 @@ import { ReportTabs } from "./ReportTabs";
  * 비교 보고서 (2026-10-29 대표 지시: "우리의 견적서는 그런 견적서"). 머리 한 줄 아래 탭 네 개: 비교견적표, 금액·기간, 항목 분석, 시험 설명.
  * 숫자는 기관이 낸 값만 쓰고, 단추는 순위나 적정가를 말하지 않는다.
  */
-export function CompareReport({ no, substance, comparedAt, cols, rows, vat, board }: { no: string; substance: string; comparedAt: string | null; cols: ReportCol[]; rows: ReportRow[]; vat: string; board: ReactNode }) {
+export function CompareReport({ no, substance, comparedAt, cols, rows, vat, board, xlsxHref }: { no: string; substance: string; comparedAt: string | null; cols: ReportCol[]; rows: ReportRow[]; vat: string; board: ReactNode; xlsxHref?: string }) {
   const totals = range(cols.map((c) => c.total));
   const spans = range(cols.map(spanOf));
   const diff = differingRows(cols, rows);
@@ -128,6 +128,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
         <h1 className="rp-h1"><span className="tnum">{no}</span> {substance}</h1>
         <p className="rp-meta">비교 견적 보고서 <span>{comparedAt ? `${md(comparedAt)} 공개` : ""}</span><span>기관 {cols.length}곳</span><span>시험 {rows.length}건</span><span>VAT 별도</span></p>
         <p className="rp-meta">최종 조건은 각 기관의 정식 견적서로 확인하세요.</p>
+        {xlsxHref && <a className="b2 bsm rp-xlsx" href={xlsxHref}>엑셀 받기</a>}
       </header>
       <ReportTabs
         tabs={[
