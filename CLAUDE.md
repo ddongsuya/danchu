@@ -21,6 +21,7 @@
 > 2026-11-12에 추가한 `graphify`(Apache-2.0, 출처 Graphify-Labs/graphify)는 디자인 스킬이 아니라 코드 연결 그래프 도구다. 큰 수정 전 영향 범위를 찾는 데 쓰고, 산출물 `graphify-out/`는 커밋하지 않는다.
 > 2026-11-06에 추가한 `replica-*` 11개(MIT, 출처 Jakeschincariol/replica-skill)도 참고용이다. 다른 서비스의 흐름 분석(`replica-recon`)과 시안 대비 구현 배치 비교(`replica-diff`의 `imgdiff.py`)에 주로 쓰고, 산출물 `replica/`는 커밋하지 않는다.
 > 2026-10-27에 추가한 `web-design-guidelines`(코드 줄 단위 점검), `hallmark`(검사 전용, "AI가 만든 티" 2차 점검), `frontend-design`(시안 비교안 전용)도 같다. 디자인 스킬은 역할을 하나씩 나눠 쓴다: 방향은 `design-taste-frontend`, 모션은 `emil-design-eng`, 코드 점검은 `web-design-guidelines`와 `/impeccable audit`, 출고 전 마지막 검사는 `hallmark`.
+> **스킬 위치 (2026-11-13)**: 위 스킬들은 리포 `.claude/skills/`에서 빼고 claude.ai 계정 스킬로 옮겼다. 어느 프로젝트에서나 같은 스킬이 쓰인다. 스크립트 경로의 `<스킬 폴더>`는 세션에 동기화된 계정 스킬 폴더다(클라우드 세션은 `~/.claude/skills/synced/*/<스킬 이름>/`). 각 스킬 본문의 "단추에서 쓸 때" 블록은 그대로 유지된다.
 
 ## 0. UI 작업 순서 (매번)
 
@@ -129,12 +130,12 @@
 | 밋밋함 / 과함 | `/impeccable bolder` / `/impeccable quieter` |
 | 모션 추가·리뷰 | `emil-design-eng` 기준으로 `/impeccable animate`, 리뷰는 Before/After 표 |
 | 모션 관점 비교·점검 | `design-motion-principles` (Emil 쪽 가중, 결과는 Before/After/Why 표). 기준은 4절과 `emil-design-eng` |
-| UX 근거 찾기 (접근성·폼·내비게이션·차트·아이콘·Next.js 성능) | `ui-ux-pro-max` 조회: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<질의>" --domain ux` (`chart`·`icons`·`react`, `--stack nextjs`). 색·글꼴·디자인 시스템을 새로 정하는 데는 쓰지 않는다 |
+| UX 근거 찾기 (접근성·폼·내비게이션·차트·아이콘·Next.js 성능) | `ui-ux-pro-max` 조회: `python3 <ui-ux-pro-max 스킬 폴더>/scripts/search.py "<질의>" --domain ux` (`chart`·`icons`·`react`, `--stack nextjs`). 색·글꼴·디자인 시스템을 새로 정하는 데는 쓰지 않는다 |
 | 타이포·간격만 | `/impeccable typeset`, `/impeccable layout` |
 | 입력 화면 코드 점검 (요청서·회신·가입·로그인) | `web-design-guidelines`: 고정 규칙 `rules.md`로 `file:line` 점검. 한국어·Tailwind 미사용 예외는 스킬의 표 |
 | 시안 비교안 (코드 전 승인) | `frontend-design` 또는 `design-taste-frontend`. 고른 안은 DESIGN.md 토큰 안에서 구현 |
-| 다른 서비스 흐름 분석·시안과 구현 비교 | `/replica-recon`(화면·흐름·기능표), `python3 .claude/skills/replica-diff/imgdiff.py <시안.png> <구현.png> --out <diff.png>`(배치 비교, 색 무시). 각 스킬 맨 위 "단추에서 쓸 때" 블록 우선 |
-| "AI가 만든 티" 2차 점검 | `node .claude/skills/hallmark/scripts/sloplint.mjs <파일> --genre modern-minimal [--scope app]` → 스킬의 무시·예외 표로 거른 뒤 Before/After/Why 표. 62(스크립트가 있어야 보이는 문구)는 반드시 고친다 |
+| 다른 서비스 흐름 분석·시안과 구현 비교 | `/replica-recon`(화면·흐름·기능표), `python3 <replica-diff 스킬 폴더>/imgdiff.py <시안.png> <구현.png> --out <diff.png>`(배치 비교, 색 무시). 각 스킬 맨 위 "단추에서 쓸 때" 블록 우선 |
+| "AI가 만든 티" 2차 점검 | `node <hallmark 스킬 폴더>/scripts/sloplint.mjs <파일> --genre modern-minimal [--scope app]` → 스킬의 무시·예외 표로 거른 뒤 Before/After/Why 표. 62(스크립트가 있어야 보이는 문구)는 반드시 고친다 |
 | 출고 직전 | `/impeccable harden` → Playwright 1440/390 스크린샷 → 7절 체크 |
 | 고치기 전에 영향 범위 찾기 (함수·파일·DB 테이블 연결) | `graphify` 스킬: `graphify update .` 뒤 `graphify explain "<이름>"`, `graphify path A B`. 결과 `graphify-out/`는 커밋하지 않는다 |
 | 피그마 시안 반영 | Figma MCP로 파일의 색·간격·타이포 토큰을 읽어 `tailwind.config`/`globals.css` 변수에 매핑 후 구현 |

@@ -6,19 +6,19 @@ node_modules
 *.tsbuildinfo
 next-env.d.ts
 
-# 모션 점검 스킬이 만드는 로컬 보고서 (.claude/skills/design-motion-principles)
+# 모션 점검 스킬이 만드는 로컬 보고서 (design-motion-principles 스킬)
 motion-audits/
 # 스킬 검색 스크립트 캐시
 __pycache__/
-# hallmark 검사 결과 (.claude/skills/hallmark)
+# hallmark 검사 결과 (hallmark 스킬)
 .hallmark/
 # 가이드라인 스킬 생성기 출력 (scripts/build-guideline-skill.mjs)
 .guideline-skill/
 
 # Supabase CLI 로컬 캐시
 supabase/.temp/
-# replica 스킬 산출물 (.claude/skills/replica-*). 남의 화면 캡처가 들어가므로 커밋 금지
+# replica 스킬 산출물 (replica-* 스킬). 남의 화면 캡처가 들어가므로 커밋 금지
 /replica/
 
-# graphify 코드 그래프 결과 (.claude/skills/graphify). 다시 만들 수 있고 4MB가 넘어 커밋하지 않는다
+# graphify 코드 그래프 결과 (graphify 스킬). 다시 만들 수 있고 4MB가 넘어 커밋하지 않는다
 /graphify-out/
