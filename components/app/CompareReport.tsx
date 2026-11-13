@@ -3,12 +3,13 @@ import { Cite } from "@/components/Cite";
 import { availOf, differingRows, range, spanOf, topCategoryShare, unavailableEverywhere, widestItem, type ReportCol, type ReportRow } from "@/lib/compare-report";
 import { notesFor } from "@/lib/test-notes";
 import { md, won } from "@/lib/format";
+import { ReportTabs } from "./ReportTabs";
 
 /**
  * 비교 보고서 (2026-10-29 대표 지시: "우리의 견적서는 그런 견적서"). 표지 요약 → 비교견적표 → 금액·기간 분석 → 항목 분석 → 시험 설명과 근거.
  * 숫자는 기관이 낸 값만 쓰고, 단추는 순위나 적정가를 말하지 않는다.
  */
-export function CompareReport({ no, substance, comparedAt, cols, rows, vat, board }: { no: string; substance: string; comparedAt: string | null; cols: ReportCol[]; rows: ReportRow[]; vat: string; board: ReactNode }) {
+export function CompareReport({ no, substance, comparedAt, cols, rows, vat, board, layout = "cover" }: { no: string; substance: string; comparedAt: string | null; cols: ReportCol[]; rows: ReportRow[]; vat: string; board: ReactNode; layout?: "cover" | "table" }) {
   const totals = range(cols.map((c) => c.total));
   const spans = range(cols.map(spanOf));
   const diff = differingRows(cols, rows);
@@ -32,33 +33,14 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
     ...(notes.length ? [{ id: "r4", label: "시험 설명과 근거" }] : []),
   ];
 
-  return (
-    <div className="rs-report">
-      <section className="rs-scene rs-scene--cover" aria-labelledby="cover-title">
-        <p className="rs-k"><span className="tnum">{no}</span> {substance} 비교 견적 보고서{comparedAt ? `, ${md(comparedAt)} 공개` : ""}</p>
-        <h1 id="cover-title" className="rs-h1">
-          {many ? <>기관 {cols.length}곳의 견적을<br /><span className="rs-mark">같은 항목</span>으로 맞춰 봤어요</> : <>기관 1곳의 견적을<br />항목별로 정리했어요</>}
-        </h1>
-        <p className="rs-lead">요청한 시험 {rows.length}개 기준이에요. {vat} 최종 조건은 각 기관의 정식 견적서로 확인하세요.</p>
-        <dl className="rs-cover">
-          <div><dt>참여 기관</dt><dd className="tnum">{cols.length}곳</dd></div>
-          <div><dt>견적 총액</dt><dd className="tnum">{totals ? (totals.min === totals.max ? won(totals.min) : <><span className="nw">{won(totals.min)} ~</span> <span className="nw">{won(totals.max)}</span></>) : "미입력"}</dd></div>
-          <div><dt>소요 기간</dt><dd className="tnum">{spans ? (spans.min === spans.max ? `${spans.min}주` : `${spans.min} ~ ${spans.max}주`) : "미입력"}</dd></div>
-          <div><dt>차이 항목</dt><dd className="tnum">{many ? `${diff.length}개` : "-"}</dd></div>
-        </dl>
-        <nav className="rs-toc" aria-label="보고서 차례">
-          {sections.map((s) => (
-            <a key={s.id} href={`#${s.id}`}>{s.label}</a>
-          ))}
-        </nav>
-      </section>
-
+  const secTable = (
       <section className="rs-block" id="r1" aria-labelledby="r1-title">
         <p className="rs-bk">비교견적표</p>
         <h2 id="r1-title" className="rs-h2">항목마다 금액과 기간</h2>
         {board}
       </section>
-
+  );
+  const secMoney = (
       <section className="rs-block" id="r2" aria-labelledby="r2-title">
         <p className="rs-bk">금액·기간 분석</p>
         <h2 id="r2-title" className="rs-h2">
@@ -92,7 +74,8 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
           </div>
         </div>
       </section>
-
+  );
+  const secItems = (
       <section className="rs-block" id="r3" aria-labelledby="r3-title">
         <p className="rs-bk">항목 분석</p>
         <h2 id="r3-title" className="rs-h2">
@@ -133,9 +116,9 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
           </table>
         </div>
       </section>
-
-      {notes.length > 0 && (
-        <section className="rs-block" id="r4" aria-labelledby="r4-title">
+  );
+  const secNotes = notes.length > 0 ? (
+    <section className="rs-block" id="r4" aria-labelledby="r4-title">
           <p className="rs-bk">시험 설명과 근거</p>
           <h2 id="r4-title" className="rs-h2">견적에 들어간 시험, 무엇을 보나요</h2>
           <p className="rs-lead">참고용 설명이에요. 실제 설계는 기관의 견적서와 시험계획서로 확인하세요.</p>
@@ -150,7 +133,53 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
             ))}
           </div>
         </section>
-      )}
+  ) : null;
+
+  if (layout === "table") {
+    // 시안(2026-11-13): 표지 없이 첫 화면에 비교견적표. 요약 숫자는 표 머리(기관별 총액·기간)와 겹쳐서 뺐다
+    return (
+      <div className="rs-report rs-report--table">
+        <header className="rp-head">
+          <h1 className="rp-h1"><span className="tnum">{no}</span> {substance}</h1>
+          <p className="rp-meta">비교 견적 보고서 <span>{comparedAt ? `${md(comparedAt)} 공개` : ""}</span><span>기관 {cols.length}곳</span><span>시험 {rows.length}건</span><span>VAT 별도</span></p>
+        </header>
+        <ReportTabs
+          tabs={[
+            { id: "r1", label: "비교견적표", node: board },
+            { id: "r2", label: "금액·기간", node: secMoney },
+            { id: "r3", label: many && diff.length ? `항목 분석 ${diff.length}` : "항목 분석", node: secItems },
+            ...(secNotes ? [{ id: "r4", label: "시험 설명", node: secNotes }] : []),
+          ]}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="rs-report">
+      <section className="rs-scene rs-scene--cover" aria-labelledby="cover-title">
+        <p className="rs-k"><span className="tnum">{no}</span> {substance} 비교 견적 보고서{comparedAt ? `, ${md(comparedAt)} 공개` : ""}</p>
+        <h1 id="cover-title" className="rs-h1">
+          {many ? <>기관 {cols.length}곳의 견적을<br /><span className="rs-mark">같은 항목</span>으로 맞춰 봤어요</> : <>기관 1곳의 견적을<br />항목별로 정리했어요</>}
+        </h1>
+        <p className="rs-lead">요청한 시험 {rows.length}개 기준이에요. {vat} 최종 조건은 각 기관의 정식 견적서로 확인하세요.</p>
+        <dl className="rs-cover">
+          <div><dt>참여 기관</dt><dd className="tnum">{cols.length}곳</dd></div>
+          <div><dt>견적 총액</dt><dd className="tnum">{totals ? (totals.min === totals.max ? won(totals.min) : <><span className="nw">{won(totals.min)} ~</span> <span className="nw">{won(totals.max)}</span></>) : "미입력"}</dd></div>
+          <div><dt>소요 기간</dt><dd className="tnum">{spans ? (spans.min === spans.max ? `${spans.min}주` : `${spans.min} ~ ${spans.max}주`) : "미입력"}</dd></div>
+          <div><dt>차이 항목</dt><dd className="tnum">{many ? `${diff.length}개` : "-"}</dd></div>
+        </dl>
+        <nav className="rs-toc" aria-label="보고서 차례">
+          {sections.map((s) => (
+            <a key={s.id} href={`#${s.id}`}>{s.label}</a>
+          ))}
+        </nav>
+      </section>
+
+      {secTable}
+      {secMoney}
+      {secItems}
+      {secNotes}
     </div>
   );
 }
