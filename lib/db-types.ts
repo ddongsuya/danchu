@@ -575,7 +575,7 @@ export type Database = {
         Relationships: [{ foreignKeyName: "cro_quote_docs_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
       cro_quote_style: {
-        Row: { org_id: string; brand_color: string | null; logo_data: string | null; logo_pos: string; supplier: Obj; terms: Obj; updated_at: string; /** 기관 기본 견적서 판 (0045) */ layout: string };
+        Row: { org_id: string; brand_color: string | null; logo_data: string | null; logo_pos: string; supplier: Obj; terms: Obj; updated_at: string; /** 기관 기본 견적서 판 (0046) */ layout: string };
         Insert: Ins<Database["public"]["Tables"]["cro_quote_style"]["Row"], "brand_color" | "logo_data" | "logo_pos" | "supplier" | "terms" | "updated_at" | "layout">;
         Update: Partial<Database["public"]["Tables"]["cro_quote_style"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_quote_style_org_id_fkey"; columns: ["org_id"]; isOneToOne: true; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
