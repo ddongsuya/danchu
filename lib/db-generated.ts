@@ -1908,6 +1908,7 @@ export type Database = {
           agreed_at: string
           ask: string | null
           created_at: string
+          done_mail_at: string | null
           done_sms_at: string | null
           email: string
           glp: string[]
@@ -1932,6 +1933,7 @@ export type Database = {
           agreed_at?: string
           ask?: string | null
           created_at?: string
+          done_mail_at?: string | null
           done_sms_at?: string | null
           email: string
           glp?: string[]
@@ -1956,6 +1958,7 @@ export type Database = {
           agreed_at?: string
           ask?: string | null
           created_at?: string
+          done_mail_at?: string | null
           done_sms_at?: string | null
           email?: string
           glp?: string[]
