@@ -20,6 +20,8 @@ export type StoryProps = {
   canCompare: boolean;
   /** 기관이 체결을 보고했고 의뢰자 확인을 기다린다. 첫 장면을 확인 한 가지로 바꾼다 (2026-11-02 가상 35명 테스트 2번) */
   confirm?: boolean;
+  /** 질의응답 바로가기 (0045). 참여한 기관이 있을 때. 없으면 운영자 문의 */
+  qna?: { total: number; pending: number } | null;
   /** 첫 장면 아래, 지나온 길 위에 둘 것 (다음 할 일 띠) */
   next?: ReactNode;
   /** 지나온 길 아래에 붙는 설명 (지명 기관, 공개 시점 안내 등) */
@@ -102,7 +104,13 @@ export function RequestStory(p: StoryProps) {
             <div className="rs-acts">
               {p.confirm && <a href="#contract-confirm" className="b1 blg">계약 내용 확인</a>}
               {p.canCompare && <Link href={`/app/r/${p.no}/compare`} className={p.award ? "b2 blg" : "b1 blg"}>비교 보고서 받아보기</Link>}
-              <Link href={`/app/support?rfq=${p.no}`} className="b2 blg">이 요청 문의하기</Link>
+              {p.qna ? (
+                <Link href={`/app/r/${p.no}/qna`} className={p.qna.pending && !p.confirm ? "b1 blg" : "b2 blg"}>
+                  질의응답{p.qna.pending ? <span className="tnum"> 답변 대기 {p.qna.pending}</span> : p.qna.total ? <span className="tnum"> {p.qna.total}</span> : null}
+                </Link>
+              ) : (
+                <Link href={`/app/support?rfq=${p.no}`} className="b2 blg">이 요청 문의하기</Link>
+              )}
             </div>
           </div>
           {f.sent > 0 && <Orbit rings={[{ key: "r", dots: dotsOf(f, 32) }]} center={f.sent} label={`기관 ${f.sent}곳에 요청했어요. 참여 ${f.joined}곳, 견적 ${f.submitted}건.`} />}

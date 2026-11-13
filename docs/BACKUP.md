@@ -27,11 +27,21 @@
 | `BACKUP_PASSPHRASE` | 20자 이상 암호. 비밀번호 관리자에도 따로 적어 둔다. 잃으면 백업을 열 수 없다 |
 | `BACKUP_SUPABASE_URL` | `https://<프로젝트>.supabase.co` |
 | `BACKUP_SUPABASE_SERVICE_ROLE_KEY` | Supabase service role 키 |
-| `BACKUP_S3_ENDPOINT` | 저장소의 S3 주소 |
+| `BACKUP_S3_ENDPOINT` | `https://s3.ap-northeast-2.amazonaws.com` (AWS S3 서울) |
+| `BACKUP_S3_REGION` | `ap-northeast-2` |
 | `BACKUP_S3_BUCKET` | 비공개 버킷 이름 |
 | `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | 그 버킷에만 쓰는 키 |
 
 비밀값이 없으면 작업은 경고만 남기고 건너뛴다. 등록한 뒤 Actions → 매일 백업 → Run workflow 로 한 번 돌려 확인한다.
+
+저장소는 AWS S3 서울 리전의 비공개 버킷이다 (2026-11-14 결정. 처리방침이 밝힌 국내 저장을 지킨다). 키는 그 버킷의 `daily/` 에만 쓰는 IAM 사용자 것으로 만든다.
+
+```json
+{ "Version": "2012-10-17", "Statement": [
+  { "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::<버킷>" },
+  { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::<버킷>/daily/*" }
+] }
+```
 
 저장소는 운영 Supabase 프로젝트 밖의 비공개 버킷이어야 한다. 이 깃허브 저장소는 공개이므로 백업 파일을 Actions 산출물이나 릴리스로 올리지 않는다.
 

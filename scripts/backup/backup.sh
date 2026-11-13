@@ -8,6 +8,7 @@
 #   BACKUP_PASSPHRASE            암호화 암호. 잃으면 백업을 열 수 없다
 #   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 #   BACKUP_S3_ENDPOINT, BACKUP_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY   (없으면 올리지 않고 BACKUP_OUT 에 둔다)
+#   AWS_DEFAULT_REGION            저장소 리전 (AWS S3 서울: ap-northeast-2). 비우면 auto
 # 선택: BACKUP_KEEP_DAYS(기본 30), PG_DUMP·PG_RESTORE(실행 파일 경로), BACKUP_OUT(결과 폴더)
 #
 # 실행 기록에는 개수와 크기만 적는다. 이름·내용·접속 주소는 적지 않는다.

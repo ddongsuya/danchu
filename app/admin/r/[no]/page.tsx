@@ -234,7 +234,10 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
           </details>
 
           <div className="card card--pad">
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>이력</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700 }}>이력</h2>
+              <Link href={`/admin/r/${rfq.rfq_no}/qna`} style={{ fontSize: 13 }}>질의응답 기록</Link>
+            </div>
             <div className="stack" style={{ gap: 8 }}>
               {d.events.length === 0 && <span style={{ fontSize: 13, color: "var(--muted)" }}>없음</span>}
               {[...d.events].reverse().map((e) => (

@@ -27,6 +27,8 @@ jobs:
       BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
       AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      # AWS S3 는 리전이 맞아야 서명이 통과한다 (서울: ap-northeast-2). 비우면 auto
+      AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION }}
     steps:
       - name: 비밀값 확인
         id: ready

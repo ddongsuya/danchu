@@ -1,4 +1,5 @@
 import { maskedText } from "./contact-guard";
+import { qnaWindow } from "./qna";
 import { getSupabaseAdmin } from "./supabase";
 import { glpCoverage } from "./quote-items";
 import { designOfStored, explainOf } from "./catalog";
@@ -54,6 +55,7 @@ export async function loadCompare(rfq: Rfq, d: Detail) {
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
       items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOfStored(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
       hasPdf: !!q.pdf_path,
+      askHref: qnaWindow(rfq).sponsorAsk ? `/app/r/${rfq.rfq_no}/qna?to=${q.invite_id}` : null,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
       operator: q.entry_source === "operator",

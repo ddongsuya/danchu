@@ -284,3 +284,26 @@ export const DETAIL_REPLY_ERRORS: Record<string, { message: string; status: numb
   not_member: { message: "다른 기관 담당자 계정으로 로그인되어 있어 회신할 수 없어요.", status: 403 },
   bad_body: { message: "금액과 기간을 다시 확인해 주세요.", status: 400 },
 };
+
+/* ── 의뢰자·기관 직접 질의응답 (0045) ── */
+/** 질의 보내기. 기관(direction cro)은 참여 뒤 비교표 전까지, 의뢰자(direction sponsor)는 비교표 뒤 견적 낸 기관에만 */
+export function askQuestion(a: { inviteId: string; userId: string | null; direction: "cro" | "sponsor"; topic: string; testSeq: number | null; body: string; hasContact: boolean }) {
+  return call<{ ok: true; id: string }, "ask_question">("ask_question", { p_invite_id: a.inviteId, p_user: a.userId, p_direction: a.direction, p_topic: a.topic, p_test_seq: a.testSeq, p_body: a.body, p_has_contact: a.hasContact });
+}
+/** 답변 (한 번). 기관 질의는 의뢰자가 공개 범위를 고르고, 의뢰자 질의의 답은 언제나 질의 기관만 */
+export function answerQuestion(a: { questionId: string; userId: string | null; inviteId: string | null; answer: string; hasContact: boolean; scope: "private" | "all" | null }) {
+  return call<{ ok: true; scope: "private" | "all"; direction: "cro" | "sponsor"; invite_id: string }, "answer_question">("answer_question", { p_question_id: a.questionId, p_user: a.userId, p_invite_id: a.inviteId, p_answer: a.answer, p_has_contact: a.hasContact, p_scope: a.scope });
+}
+export const QNA_ERRORS: Record<string, { message: string; status: number }> = {
+  not_found: { message: "질의를 찾을 수 없어요.", status: 404 },
+  operator_not_allowed: { message: "운영자 계정으로는 질의하거나 답변할 수 없어요.", status: 403 },
+  bad_body: { message: "내용을 1,000자 안으로 적어 주세요.", status: 400 },
+  closed: { message: "선정했거나 마무리한 요청이라 질의응답이 닫혔어요.", status: 409 },
+  org_inactive: { message: "기관 참여가 중지되어 질의응답을 쓸 수 없어요. support@danchu.kr로 문의해 주세요.", status: 403 },
+  not_joined: { message: "참여한 요청에만 질의할 수 있어요.", status: 403 },
+  compared: { message: "비교 보고서가 열려 질의가 마감됐어요.", status: 409 },
+  not_compared: { message: "비교 보고서가 열린 뒤에 기관에 질의할 수 있어요.", status: 409 },
+  no_quote: { message: "견적을 낸 기관에만 질의할 수 있어요.", status: 409 },
+  too_many: { message: "답변 대기 질의가 10건이에요. 답변을 받은 뒤 다시 보내 주세요.", status: 429 },
+  answered: { message: "이미 답변한 질의예요.", status: 409 },
+};
