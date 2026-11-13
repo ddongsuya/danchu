@@ -1234,6 +1234,9 @@ export type Database = {
           name: string
           other_certs: string | null
           per_request_fee: number | null
+          plan: string
+          plan_next: string | null
+          plan_next_from: string | null
           status: string
           updated_at: string
           website: string | null
@@ -1262,6 +1265,9 @@ export type Database = {
           name: string
           other_certs?: string | null
           per_request_fee?: number | null
+          plan?: string
+          plan_next?: string | null
+          plan_next_from?: string | null
           status?: string
           updated_at?: string
           website?: string | null
@@ -1290,11 +1296,62 @@ export type Database = {
           name?: string
           other_certs?: string | null
           per_request_fee?: number | null
+          plan?: string
+          plan_next?: string | null
+          plan_next_from?: string | null
           status?: string
           updated_at?: string
           website?: string | null
         }
         Relationships: []
+      }
+      cro_plan_changes: {
+        Row: {
+          created_at: string
+          effective_from: string
+          from_plan: string
+          id: string
+          org_id: string
+          prorated_amount: number
+          requested_by: string | null
+          to_plan: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from: string
+          from_plan: string
+          id?: string
+          org_id: string
+          prorated_amount?: number
+          requested_by?: string | null
+          to_plan: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string
+          from_plan?: string
+          id?: string
+          org_id?: string
+          prorated_amount?: number
+          requested_by?: string | null
+          to_plan?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cro_plan_changes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cro_plan_changes_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cro_quote_addons: {
         Row: {
