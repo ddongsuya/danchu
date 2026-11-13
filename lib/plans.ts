@@ -13,6 +13,12 @@ import { PAID_FROM, SUBSCRIPTION_MAX_EXCL } from "./billing";
  * 결제(카드 자동결제)는 PG 연동 뒤 붙는다. 지금은 변경 기록(cro_plan_changes)에 차액만 남긴다.
  */
 
+/**
+ * 요금 금액 공개 여부 (2026-11-13 결정). 시범 운영 중에는 요금제·송부료·수수료 금액을 화면에 보이지 않는다.
+ * 정식 요금표를 알리는 날(적용일 30일 전, 기관 이용약관 제9조)에 true 로 바꾼다. 요금 계산과 운영자 화면은 이 값과 관계없다.
+ */
+export const PRICE_OPEN: boolean = false;
+
 export type PlanId = "free" | "plus" | "pro";
 export type PlanFeature = "tests" | "quote_tool" | "branding" | "crm";
 

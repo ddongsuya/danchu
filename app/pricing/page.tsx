@@ -1,15 +1,40 @@
 import type { Metadata } from "next";
 import { Check, CaretDown } from "@phosphor-icons/react/dist/ssr";
 import { Site } from "@/components/site/Site";
-import { PLANS, PLAN_IDS, type PlanId } from "@/lib/plans";
+import { PLANS, PLAN_IDS, PRICE_OPEN, type PlanId } from "@/lib/plans";
 import { PricingMobile } from "./PricingMobile";
 import { FAQ, FEE_ROWS, FEE_NOTE, PLAN_META, priceOf } from "./data";
 import "./page.css";
 
 export const metadata: Metadata = {
   title: "요금제 · 단추",
-  description: "의뢰자는 무료예요. 기관은 무료, Plus, Pro 가운데 고르고, 2027년 12월 31일까지는 전 요금제 무료예요.",
+  description: PRICE_OPEN
+    ? "의뢰자는 무료예요. 기관은 무료, Plus, Pro 가운데 고르고, 2027년 12월 31일까지는 전 요금제 무료예요."
+    : "의뢰자는 무료예요. 기관도 2027년 12월 31일까지 모든 기능이 무료예요.",
 };
+
+/** 시범 운영 중 쓰는 기능 (금액 공개 전 화면) */
+const PILOT_ITEMS = ["견적 요청 수신·회신", "견적 송부", "시험 관리", "견적서 작성 툴", "고객 관리", "담당자 계정"];
+
+/** 금액 공개 전 (PRICE_OPEN false): 요금제·수수료 금액 없이 시범 운영 안내만 */
+function PilotOnly() {
+  return (
+    <Site current="/pricing" cue={false}>
+      <section className="pr pr-c" aria-labelledby="pr-h">
+        <div className="pr-c__in">
+          <h1 id="pr-h">시범 운영 기간에는<br />모든 기능이 무료예요</h1>
+          <p className="lead tnum">2027년 12월 31일까지 참여한 요청에는 요금이 없어요. 이 기간에 참여한 요청은 그 뒤에 계약해도 무료예요.</p>
+          <p className="pr-c__next">정식 서비스 요금은 시작 30일 전에 이 페이지와 메일로 알려요. 의뢰자는 계속 무료예요.</p>
+          <ul className="pr-feat pr-c__feat">
+            {PILOT_ITEMS.map((it) => <li key={it}><Check size={16} weight="bold" aria-hidden="true" />{it}</li>)}
+          </ul>
+          <a className="btn solid pr-c__cta" href="/signup/cro">참여 신청</a>
+          <p className="pr-links"><a href="/terms/cro">기관 이용약관</a><a href="/for-cro">기관 참여 안내</a></p>
+        </div>
+      </section>
+    </Site>
+  );
+}
 
 const CMP: { group: string; rows: { k: string; v: Record<PlanId, React.ReactNode> }[] }[] = [
   { group: "견적", rows: [
@@ -38,6 +63,7 @@ function Cell({ v }: { v: React.ReactNode }) {
 
 /** 공개 요금제 (2026-11-13 확정, 시안 v2). 넓은 화면은 요금제·비교·수수료·질문을 차례로, 휴대폰은 한 화면 안에서 탭으로 */
 export default function Page() {
+  if (!PRICE_OPEN) return <PilotOnly />;
   return (
     <Site current="/pricing" cue={false}>
       <section className="pr pr-d" aria-labelledby="pr-h">
