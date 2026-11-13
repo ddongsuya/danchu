@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { isProduction } from "@/lib/env";
 import { captureError } from "@/lib/observe";
@@ -11,6 +12,11 @@ import { PREREG_BLOCKED } from "@/lib/prereg";
 import { sessionInPrereg } from "@/lib/prereg-server";
 
 export const runtime = "nodejs";
+
+/** 요청서 내용의 지문. 같은 내용이 잇달아 들어왔는지 볼 때만 쓴다 */
+function payloadKey(values: Values): string {
+  return createHash("sha256").update(JSON.stringify(values)).digest("hex").slice(0, 32);
+}
 export const dynamic = "force-dynamic";
 
 /**
@@ -64,6 +70,14 @@ export async function POST(req: Request) {
     const rfqNo = `DC-${year}-9${String(Date.now() % 1000).padStart(3, "0")}`;
     console.warn("[danchu] SUPABASE 미설정 - 임시 접수", rfqNo);
     return NextResponse.json({ rfqNo, persisted: false, uploads: [] });
+  }
+
+  // 같은 요청서가 잇달아 두 번 들어오면(버튼 두 번, 응답을 못 받은 재시도) 한 건만 만든다
+  const sb = getSupabaseAdmin()!;
+  if (await rateLimited("rfq:same", `${sess.userId}:${payloadKey(values)}`, 1, 30)) {
+    const { data: prev } = await sb.from("rfq_requests").select("rfq_no").eq("user_id", sess.userId).eq("substance", String(values.substance ?? "").trim()).gte("created_at", new Date(Date.now() - 60_000).toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (prev?.rfq_no) return NextResponse.json({ rfqNo: prev.rfq_no, persisted: true, uploads: [], duplicate: true });
+    return NextResponse.json({ error: "같은 요청서를 저장하고 있어요. 잠시 뒤 내 요청에서 확인해 주세요." }, { status: 409 });
   }
 
   try {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { allowedRfqFile } from "@/lib/upload";
 import { sessionOrNull } from "@/lib/auth";
 import { getRfqByNo, ownsRfq } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -35,7 +36,7 @@ export async function POST(
   if (
     typeof b.name !== "string" ||
     b.name.length > 200 ||
-    !/\.(pdf|png|jpe?g|docx?|xlsx?|hwp)$/i.test(b.name) ||
+    !allowedRfqFile(b.name) ||
     !Number.isInteger(b.size) ||
     b.size <= 0 ||
     b.size > 20 * 1024 * 1024

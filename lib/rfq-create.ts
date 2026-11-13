@@ -10,7 +10,7 @@ import { cleanNominees, joinDeadline } from "./request-policy";
 import { getSupabaseAdmin } from "./supabase";
 import { CONSENT_VERSION, validateRequired, type Values } from "./rfq-schema";
 import { addBusinessDays, nowSeoul } from "./dates";
-import { opaqueObjectName, type UploadTicket } from "./upload";
+import { allowedRfqFile, opaqueObjectName, RFQ_FILE_EXTS, type UploadTicket } from "./upload";
 import { captureError } from "./observe";
 import { adminEmails, adminUserIds, logEvent, notifyUsers } from "./notify";
 import { autoDistribute } from "./distribute";
@@ -46,6 +46,26 @@ export function prepareValues(values: Values, files: FileMeta[]): string {
   if (err) return err;
   if (files.length > MAX_FILES) return `첨부는 최대 ${MAX_FILES}개까지 가능해요.`;
   if (files.some((f) => f.size > MAX_FILE || f.size <= 0)) return "파일당 20MB 이하만 첨부할 수 있어요.";
+  // 화면의 파일 고르기와 같은 형식만 받는다. 화면을 거치지 않은 요청도 여기서 걸린다
+  if (files.some((f) => !allowedRfqFile(f.name))) return `첨부는 ${RFQ_FILE_EXTS.join(", ")} 형식만 올릴 수 있어요.`;
+  const long = tooLong(values);
+  if (long) return long;
+  return "";
+}
+
+/** 한 줄 입력 칸의 길이 한도. 화면·메일·비교표에 그대로 실리는 값이라 서버에서도 막는다 */
+const SHORT_TEXT: Record<string, [string, number]> = { substance: ["시험물질 이름", 200], company: ["회사·기관명", 120], name: ["담당자 성명", 60], dept: ["부서·직위", 120], phone: ["휴대전화", 40] };
+const LONG_TEXT = 5000;
+const PAYLOAD_MAX = 200_000;
+export function tooLong(values: Values): string {
+  for (const [id, [label, max]] of Object.entries(SHORT_TEXT)) {
+    const v = values[id];
+    if (typeof v === "string" && v.trim().length > max) return `${label}: ${max}자까지 적을 수 있어요.`;
+  }
+  for (const v of Object.values(values)) {
+    if (typeof v === "string" && v.length > LONG_TEXT) return `한 칸에 ${LONG_TEXT.toLocaleString("ko-KR")}자까지 적을 수 있어요. 긴 내용은 파일로 첨부해 주세요.`;
+  }
+  if (JSON.stringify(values).length > PAYLOAD_MAX) return "요청서 내용이 너무 길어요. 긴 내용은 파일로 첨부해 주세요.";
   return "";
 }
 

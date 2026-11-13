@@ -48,3 +48,10 @@ export async function storageHas(sb: { storage: { from: (b: string) => { list: (
   const { data, error } = await sb.storage.from(bucket).list(dir, { search: name, limit: 20 });
   return !error && !!data?.some((o) => o.name === name);
 }
+
+/** 의뢰자 첨부로 받는 형식. 화면의 파일 고르기(accept)와 같은 목록이다. 서버도 같은 목록으로 다시 본다 */
+export const RFQ_FILE_EXTS = ["pdf", "png", "jpg", "jpeg", "doc", "docx", "xls", "xlsx", "hwp"] as const;
+export function allowedRfqFile(name: string): boolean {
+  const m = /\.([A-Za-z0-9]+)$/.exec(name.trim());
+  return !!m && (RFQ_FILE_EXTS as readonly string[]).includes(m[1].toLowerCase());
+}
