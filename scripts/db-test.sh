@@ -16,6 +16,8 @@ PG_BIN="${PG_BIN:-}"
 if [[ -z "$PG_BIN" ]]; then
   if [[ -x /usr/lib/postgresql/16/bin/pg_ctl ]]; then PG_BIN=/usr/lib/postgresql/16/bin
   elif command -v pg_ctl >/dev/null 2>&1; then PG_BIN="$(dirname "$(command -v pg_ctl)")"
+  # 16 이 아닌 판만 깔린 곳 (CI 러너 등): 깔린 것 가운데 가장 높은 판을 쓴다
+  elif ls -d /usr/lib/postgresql/*/bin >/dev/null 2>&1; then PG_BIN="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
   else echo "pg_ctl 을 찾지 못했습니다. PG_BIN 을 지정해 주세요." >&2; exit 2; fi
 fi
 PSQL="$(command -v psql || echo "$PG_BIN/psql")"

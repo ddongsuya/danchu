@@ -18,7 +18,13 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      # 실제 PostgreSQL 로 마이그레이션과 DB 함수를 검사한다 (러너에 PostgreSQL 16 이 들어 있다)
+      # 실제 PostgreSQL 로 마이그레이션과 DB 함수를 검사한다. 러너에 PostgreSQL 이 없으면 깐다
+      - name: PostgreSQL 준비
+        run: |
+          if ! ls -d /usr/lib/postgresql/*/bin >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql
+          fi
+          ls -d /usr/lib/postgresql/*/bin
       - run: npm run test:db
       - run: npx next build
         env:
