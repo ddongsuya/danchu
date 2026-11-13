@@ -241,6 +241,20 @@ export function explainOf(category: string, extra: unknown): [string, string][] 
   return [...(EXPLAIN_FIELDS[category as Cat] ?? []).flatMap((f) => (typeof e[f.id] === "string" && (e[f.id] as string).trim() ? [[f.label ?? f.id, e[f.id] as string] as [string, string]] : [])), ...costs];
 }
 
+/** 견적 항목에 저장된 설계(jsonb) → 한 줄 요약. 비교표와 견적 상세가 같은 요약을 쓴다 */
+export function designOfStored(d: Record<string, unknown> | null | undefined): string | undefined {
+  if (!d || typeof d !== "object") return undefined;
+  const n = (k: string) => (typeof d[k] === "number" ? (d[k] as number) : null);
+  const s = designSummary({
+    species: Array.isArray(d.species) ? (d.species as string[]) : [],
+    groups_ctrl: n("groups_ctrl"), groups_test: n("groups_test"), per_sex: n("per_sex"),
+    recovery_weeks: n("recovery_weeks"), recovery_per_sex: n("recovery_per_sex"),
+    route: typeof d.route === "string" ? d.route : null, dosing: typeof d.dosing === "string" ? d.dosing : null,
+    method: typeof d.method === "string" ? d.method : null,
+  });
+  return s || undefined;
+}
+
 let seq = 0;
 /** 새 조합 (저장 전). 축 값은 프리셋이나 복제 원본에서 받을 수 있다 */
 export function newVariant(it: CatalogItem, init: Partial<CatalogRow> = {}): CatalogRow {

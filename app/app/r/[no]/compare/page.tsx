@@ -6,7 +6,7 @@ import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, ownsRfq } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { glpCoverage } from "@/lib/quote-items";
-import { designSummary, explainOf } from "@/lib/catalog";
+import { designOfStored, explainOf } from "@/lib/catalog";
 import { Crumb } from "@/components/app/ui";
 import { CompareBoard, type CompareCol } from "@/components/CompareBoard";
 import { CompareReport } from "@/components/app/CompareReport";
@@ -106,7 +106,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOf(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOfStored(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
       hasPdf: !!q.pdf_path,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
@@ -169,18 +169,4 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       )}
     </>
   );
-}
-
-/** 저장된 설계 jsonb → 한 줄 요약 */
-function designOf(d: Record<string, unknown> | null | undefined): string | undefined {
-  if (!d || typeof d !== "object") return undefined;
-  const n = (k: string) => (typeof d[k] === "number" ? (d[k] as number) : null);
-  const s = designSummary({
-    species: Array.isArray(d.species) ? (d.species as string[]) : [],
-    groups_ctrl: n("groups_ctrl"), groups_test: n("groups_test"), per_sex: n("per_sex"),
-    recovery_weeks: n("recovery_weeks"), recovery_per_sex: n("recovery_per_sex"),
-    route: typeof d.route === "string" ? d.route : null, dosing: typeof d.dosing === "string" ? d.dosing : null,
-    method: typeof d.method === "string" ? d.method : null,
-  });
-  return s || undefined;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Caret, CheckMark } from "@/components/app/ui";
@@ -25,6 +25,7 @@ const dspecies = (d: Design) => (Array.isArray(d.species) ? (d.species as string
 /** 항목별 설계 요약 - 접힌 상태에서는 한 줄, 펼치면 칸별 수정 */
 function DesignEditor({ value, category, disabled, onChange }: { value: Design; category: string; disabled: boolean; onChange: (d: Design) => void }) {
   const [open, setOpen] = useState(false);
+  const memoId = useId();
   const explain = EXPLAIN_FIELDS[category as Cat] ?? [];
   const extra = (value.extra && typeof value.extra === "object" ? value.extra : {}) as Record<string, unknown>;
   const filledExp = explain.filter((f) => typeof extra[f.id] === "string" && (extra[f.id] as string).trim()).length;
@@ -102,8 +103,8 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
         </details>
       )}
       <div className="fld" style={{ gap: 4, marginTop: 10 }}>
-        <label className="fld__lab" style={{ fontSize: 12 }}>그 밖의 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 비교표에 그대로 표시돼요</span></label>
-        <textarea className="ta" rows={2} style={{ fontSize: 13 }} placeholder="예: 회복 동물은 대조군·고용량군의 마지막 5마리/성 지정. 분석법 검증 1회 포함." disabled={disabled} value={dstr(value, "note")} onChange={(e) => onChange({ ...value, note: e.target.value.slice(0, 1000) })} />
+        <label className="fld__lab" style={{ fontSize: 12 }} htmlFor={memoId}>그 밖의 설명 <span style={{ fontWeight: 400, color: "var(--muted)" }}>· 의뢰자의 견적 상세에 그대로 표시</span></label>
+        <textarea id={memoId} className="ta" rows={2} style={{ fontSize: 13 }} placeholder="예: 회복 동물은 대조군·고용량군의 마지막 5마리/성 지정. 분석법 검증 1회 포함." disabled={disabled} value={dstr(value, "note")} onChange={(e) => onChange({ ...value, note: e.target.value.slice(0, 1000) })} />
       </div>
     </div>
   );

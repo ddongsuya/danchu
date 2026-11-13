@@ -14,6 +14,7 @@ import { hasSchedule, planOfStored } from "@/lib/quote-schedule";
 import { scaleWeeks } from "@/lib/schedule";
 import { ScheduleGantt } from "@/components/ScheduleGantt";
 import { loadDetail } from "@/lib/detail-data";
+import { designOfStored, explainOf } from "@/lib/catalog";
 import { DETAIL_STATUS_LABEL } from "@/lib/detail-quote";
 
 export const dynamic = "force-dynamic";
@@ -110,6 +111,21 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
                   {it.weeks ? <span className="pill pill--sf">{it.weeks}주</span> : null}
                   {it.reason && <span style={{ fontSize: 13, color: "var(--body)" }}>{reveal ? it.reason : maskedText(it.reason)}</span>}
                 </div>
+                {/* 기관이 적은 시험 설계와 설명. 비교표는 금액·조건만 나란히 놓고, 설계는 여기서 기관이 쓴 그대로 보인다 */}
+                {(() => {
+                  const d = (it.design ?? null) as Record<string, unknown> | null;
+                  const sum = designOfStored(d);
+                  const memo = d && typeof d.note === "string" ? d.note.trim() : "";
+                  const ex = explainOf(it.category ?? "", d?.extra);
+                  if (!sum && !memo && !ex.length) return null;
+                  return (
+                    <dl className="qd-design">
+                      {sum && <div><dt>시험 설계</dt><dd>{sum}</dd></div>}
+                      {ex.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{reveal ? v : maskedText(v)}</dd></div>)}
+                      {memo && <div><dt>기관 설명</dt><dd>{reveal ? memo : maskedText(memo)}</dd></div>}
+                    </dl>
+                  );
+                })()}
                 {(() => {
                   const e = second?.status === "submitted" ? second.items.find((x) => x.seq === it.seq) : undefined;
                   if (!e || (e.amount === it.amount && e.weeks === it.weeks)) return null;
