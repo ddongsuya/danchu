@@ -17,6 +17,7 @@ import { NextStep } from "@/components/app/NextStep";
 import { RequestStory } from "@/components/app/RequestStory";
 import { CompareReport } from "@/components/app/CompareReport";
 import { ADMIN_FUNNEL, croItems, croStoryFixture, REPORT_COLS, REPORT_ROWS, STORY_FUNNEL } from "./report-fixtures";
+import { previewEnabled } from "./cro-crm/fixtures";
 import { CroHome } from "@/components/cro/CroHome";
 import { AdminHero } from "@/components/admin/AdminHero";
 import { AdminStory } from "@/components/admin/AdminStory";
@@ -37,7 +38,7 @@ const REQUESTS: RequestListItem[] = [
 
 /** Isolated visual fixtures. No auth bypass, DB reads, or mutations. Off by default. */
 export default async function DesignPreview({ searchParams }: { searchParams: Promise<{ role?: string; empty?: string; view?: string }> }) {
-  if (process.env.DANCHU_DESIGN_PREVIEW !== "1") notFound();
+  if (!previewEnabled()) notFound();
   const params = await searchParams;
   const role: Role = params.role === "cro" || params.role === "admin" ? params.role : "requester";
   const session: Session = { userId: "design-preview", email: "preview@example.invalid", org: null, pendingOrg: null, profile: { id: "design-preview", email: "preview@example.invalid", role, name: "디자인 검토", company: "예시 워크스페이스", dept: null, phone: null, org_type: null, cro_org_id: null } };
