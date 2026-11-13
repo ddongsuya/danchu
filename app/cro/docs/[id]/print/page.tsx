@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
 import { loadDoc, loadStyle } from "@/lib/quote-doc-db";
+import { featureError } from "@/lib/plan-usage";
 import { DocPages } from "@/components/cro/quote/DocPages";
 import { PrintButton } from "@/components/cro/PrintButton";
 import "@/components/cro/quote/quote.css";
 
 export const dynamic = "force-dynamic";
 
-/** 견적서 4부 PDF 저장 화면. 인쇄 대화상자에서 "PDF로 저장"을 고른다 (메뉴는 인쇄에서 숨는다, quote.css @media print) */
+/** 견적서 PDF 저장 화면. 인쇄 대화상자에서 "PDF로 저장"을 고른다 (메뉴는 인쇄에서 숨는다, quote.css @media print) */
 export default async function DocPrint({ params }: { params: Promise<{ id: string }> }) {
   const s = await requireSession("cro");
   if (!s.org || !dbReady()) notFound();
@@ -17,6 +18,8 @@ export default async function DocPrint({ params }: { params: Promise<{ id: strin
   const got = await loadDoc(s.org.id, id);
   if (!got) notFound();
   const style = await loadStyle(s.org.id, s.org.name);
+  // 판 고르기는 Pro(branding). 잠겨 있으면 단추 기본 판으로
+  const lock = !!featureError(s.org, "branding");
   return (
     <div className="qprint">
       <div className="ph noprint">
@@ -30,7 +33,7 @@ export default async function DocPrint({ params }: { params: Promise<{ id: strin
           <PrintButton />
         </div>
       </div>
-      <DocPages head={got.head} data={got.data} style={style} />
+      <DocPages head={got.head} data={lock ? { ...got.data, layout: null } : got.data} style={lock ? { ...style, layout: "basic" } : style} />
     </div>
   );
 }

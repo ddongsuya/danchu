@@ -7,7 +7,7 @@ import { pickVariant, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type Catal
 import { todaySeoul } from "./format";
 import {
   blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog, testKind,
-  type DocData, type DocTest, type DocHead, type QuoteStyle, type Rate, type Supplier,
+  type DocData, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
 import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
@@ -81,8 +81,9 @@ export async function loadStyle(orgId: string, orgName = ""): Promise<QuoteStyle
     brandColor: data.brand_color,
     logo: data.logo_data,
     logoPos: data.logo_pos === "right" ? "right" : "left",
-    supplier: { name: sstr(s.name, 120) || orgName, address: sstr(s.address, 200), contact: sstr(s.contact, 80), person: sstr(s.person, 60), email: sstr(s.email, 120) },
+    supplier: { name: sstr(s.name, 120) || orgName, address: sstr(s.address, 200), contact: sstr(s.contact, 80), person: sstr(s.person, 60), email: sstr(s.email, 120), reg: sstr(s.reg, 20), ceo: sstr(s.ceo, 60) },
     terms: { pay: sstr(t.pay, 300), extra: sstr(t.extra, 300), note: sstr(t.note, 600) },
+    layout: isLayout(data.layout) ? data.layout : "basic",
   };
 }
 
@@ -100,10 +101,11 @@ export async function saveStyle(orgId: string, raw: unknown): Promise<{ ok: bool
   }
   const s = (o.supplier && typeof o.supplier === "object" ? o.supplier : {}) as Record<string, unknown>;
   const t = (o.terms && typeof o.terms === "object" ? o.terms : {}) as Record<string, unknown>;
-  const supplier: Supplier = { name: sstr(s.name, 120), address: sstr(s.address, 200), contact: sstr(s.contact, 80), person: sstr(s.person, 60), email: sstr(s.email, 120) };
+  const supplier: Supplier = { name: sstr(s.name, 120), address: sstr(s.address, 200), contact: sstr(s.contact, 80), person: sstr(s.person, 60), email: sstr(s.email, 120), reg: sstr(s.reg, 20), ceo: sstr(s.ceo, 60) };
   const { error } = await sb.from("cro_quote_style").upsert({
     org_id: orgId, brand_color: color, logo_data: logo, logo_pos: o.logoPos === "right" ? "right" : "left",
     supplier, terms: { pay: sstr(t.pay, 300), extra: sstr(t.extra, 300), note: sstr(t.note, 600) },
+    layout: isLayout(o.layout) ? o.layout : "basic",
     updated_at: new Date().toISOString(),
   }, { onConflict: "org_id" });
   if (error) {
