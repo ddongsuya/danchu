@@ -152,6 +152,32 @@ export type Database = {
           { foreignKeyName: "rfq_detail_targets_invite_id_fkey"; columns: ["invite_id"]; isOneToOne: false; referencedRelation: "rfq_invites"; referencedColumns: ["id"] },
         ];
       };
+      rfq_questions: {
+        /** 의뢰자·기관 직접 질의응답 (0045). 고치기·지우기 금지 트리거, 서비스 키로만 읽고 쓴다 */
+        Row: {
+          id: string;
+          rfq_id: string;
+          invite_id: string;
+          cro_org_id: string | null;
+          /** cro = 기관이 묻고 의뢰자가 답함, sponsor = 의뢰자가 묻고 기관이 답함 */
+          direction: "cro" | "sponsor";
+          topic: "terms" | "substance" | "schedule" | "quote" | "other";
+          test_seq: number | null;
+          body: string;
+          body_has_contact: boolean;
+          asked_by: string | null;
+          created_at: string;
+          answer: string | null;
+          answer_has_contact: boolean;
+          answered_by: string | null;
+          answered_at: string | null;
+          /** private = 질의 기관만, all = 참여 기관 전체 (질의 기관은 밝히지 않음) */
+          scope: "private" | "all" | null;
+        };
+        Insert: Ins<Database["public"]["Tables"]["rfq_questions"]["Row"], "id" | "cro_org_id" | "test_seq" | "body_has_contact" | "asked_by" | "created_at" | "answer" | "answer_has_contact" | "answered_by" | "answered_at" | "scope">;
+        Update: Partial<Database["public"]["Tables"]["rfq_questions"]["Row"]>;
+        Relationships: [];
+      };
       rfq_counters: {
         Row: { year: number; seq: number };
         Insert: { year: number; seq?: number };
@@ -761,6 +787,10 @@ export type Database = {
       send_detail_request: { Args: { p_rfq_id: string; p_user: string; p_quote_ids: string[]; p_detail: Json; p_reply_by: string; p_note: string }; Returns: Json };
       /** 0042: 기관의 2차 회신 (한 번). { ok, target_id, rfq_id, left } 또는 { ok: false, code: not_found·revoked·not_target·closed·done·expired·org_inactive·not_member·bad_body } */
       save_detail_reply: { Args: { p_invite_id: string; p_token: string; p_actor: string | null; p_body: Json }; Returns: Json };
+      /** 0045: 질의 보내기. { ok, id } 또는 { ok: false, code: not_found·operator_not_allowed·bad_body·closed·org_inactive·not_joined·compared·not_compared·no_quote·too_many } */
+      ask_question: { Args: { p_invite_id: string; p_user: string | null; p_direction: string; p_topic: string; p_test_seq: number | null; p_body: string; p_has_contact: boolean }; Returns: Json };
+      /** 0045: 답변 (한 번). { ok, scope, direction, invite_id } 또는 { ok: false, code: not_found·operator_not_allowed·answered·bad_body·closed·org_inactive } */
+      answer_question: { Args: { p_question_id: string; p_user: string | null; p_invite_id: string | null; p_answer: string; p_has_contact: boolean; p_scope: string | null }; Returns: Json };
       /** 0022: 마지막으로 적용한 마이그레이션 번호 (lib/schema-version.ts) */
       danchu_schema_version: { Args: Record<string, never>; Returns: number };
       /** 0028: 의뢰자가 열린 비교표를 연 기록. 비교표가 열리지 않은 요청에는 아무것도 하지 않는다 */

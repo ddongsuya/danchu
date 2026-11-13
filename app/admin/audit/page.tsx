@@ -12,7 +12,7 @@ const ACTION_KO: Record<string, string> = {
   "invite.billing": "청구 제외·복원", "billing.close": "청구 월 마감", "billing.adjust": "청구 조정 항목 추가", "invite.decline_proxy": "불참 대리 기록", "invite.withdraw_proxy": "참여 철회 대리 기록",
   "rfq.deadline": "회신 기한 변경", "rfq.join_by": "참여 결정 기한 연장", "rfq.distribute_override": "지명 기관 밖 참여 안내(의뢰자 요청)", "rfq.opt_in_transition": "참여 선택형 전환",
   "rfq.close_replies": "회신 마감",
-  "quote.proxy": "견적 대리 입력",
+  "quote.proxy": "견적 대리 입력", "qna.view": "질의응답 기록 열람",
   "award.contract": "계약 체결 기록·정정", "award.contract_status": "계약 상태 기록",
 };
 /** 대상 라벨이 "요청번호 · 기관명" 인 행은 요청 화면으로 보낸다 */

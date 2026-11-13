@@ -17,6 +17,7 @@ import { labelMap } from "@/lib/rfq-schema";
 import { comparisonOpened } from "@/lib/reply-window";
 import { funnel } from "@/lib/request-story";
 import { RequestStory } from "@/components/app/RequestStory";
+import { qnaCounts } from "@/lib/qna-data";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
     needsCda(rfq.confidentiality) ? "CDA 필요" : "",
   ].filter(Boolean);
 
+  // 질의응답 (0045): 참여한 기관이 있으면 요청 화면에서 바로 간다
+  const qc = story.sent > 0 ? await qnaCounts(rfq.id) : null;
+  const qna = qc && (story.joined > 0 || qc.total > 0) ? qc : null;
+
   // 요청이 기관에 전달된 시각 (예전 요청은 기록에만 남아 있다)
   const distributedAt = rfq.distributed_at ?? d.events.filter((e) => e.kind === "distributed").at(-1)?.created_at ?? null;
 
@@ -106,6 +111,7 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         f={story}
         canCompare={canCompare}
         confirm={needsConfirm}
+        qna={qna}
         next={
           (noJoinPastDue || contractOpen) && (
             <div className="rs-next">

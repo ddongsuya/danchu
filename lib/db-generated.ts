@@ -2715,6 +2715,85 @@ export type Database = {
         }
         Relationships: []
       }
+      rfq_questions: {
+        Row: {
+          answer: string | null
+          answer_has_contact: boolean
+          answered_at: string | null
+          answered_by: string | null
+          asked_by: string | null
+          body: string
+          body_has_contact: boolean
+          created_at: string
+          cro_org_id: string | null
+          direction: string
+          id: string
+          invite_id: string
+          rfq_id: string
+          scope: string | null
+          test_seq: number | null
+          topic: string
+        }
+        Insert: {
+          answer?: string | null
+          answer_has_contact?: boolean
+          answered_at?: string | null
+          answered_by?: string | null
+          asked_by?: string | null
+          body: string
+          body_has_contact?: boolean
+          created_at?: string
+          cro_org_id?: string | null
+          direction: string
+          id?: string
+          invite_id: string
+          rfq_id: string
+          scope?: string | null
+          test_seq?: number | null
+          topic: string
+        }
+        Update: {
+          answer?: string | null
+          answer_has_contact?: boolean
+          answered_at?: string | null
+          answered_by?: string | null
+          asked_by?: string | null
+          body?: string
+          body_has_contact?: boolean
+          created_at?: string
+          cro_org_id?: string | null
+          direction?: string
+          id?: string
+          invite_id?: string
+          rfq_id?: string
+          scope?: string | null
+          test_seq?: number | null
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_questions_cro_org_id_fkey"
+            columns: ["cro_org_id"]
+            isOneToOne: false
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_questions_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_invites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_questions_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfq_requests: {
         Row: {
           admin_note: string | null
@@ -2893,6 +2972,29 @@ export type Database = {
           p_month: string
           p_org: string
           p_reason: string
+        }
+        Returns: Json
+      }
+      answer_question: {
+        Args: {
+          p_answer: string
+          p_has_contact: boolean
+          p_invite_id: string
+          p_question_id: string
+          p_scope: string
+          p_user: string
+        }
+        Returns: Json
+      }
+      ask_question: {
+        Args: {
+          p_body: string
+          p_direction: string
+          p_has_contact: boolean
+          p_invite_id: string
+          p_test_seq: number
+          p_topic: string
+          p_user: string
         }
         Returns: Json
       }

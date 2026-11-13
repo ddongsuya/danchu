@@ -4,14 +4,14 @@ import { Lock } from "@/components/app/ui";
 import { md, won } from "@/lib/format";
 import { seatsLabel } from "@/lib/request-policy";
 import { JoinPanel } from "./JoinPanel";
-import { CroStory, type DetailCue } from "./CroStory";
+import { CroStory, type DetailCue, type QnaCue } from "./CroStory";
 
 /**
  * CRO가 보는 요청서. 토큰 링크(/q)와 CRO 포털(/cro/r) 양쪽에서 쓴다.
  * 참여 전(got.joined false, 0023): 요약(설계 규칙표 "참여 전에 보이는 것")과 참여 결정(JoinPanel)만 보인다.
  * 참여 뒤: 의뢰 개요 · 요청 시험 항목(항목마다 회신) · 공통 조건 · 첨부와 회신 작성, 제출 전 참여 철회.
  */
-export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDeclineHref, declineEndpoint, detail }: { got: Loaded; replyHref: string; withdrawHref?: string; fileToken?: string; afterDeclineHref: string; declineEndpoint?: string; detail?: DetailCue | null }) {
+export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDeclineHref, declineEndpoint, detail, qna }: { got: Loaded; replyHref: string; withdrawHref?: string; fileToken?: string; afterDeclineHref: string; declineEndpoint?: string; detail?: DetailCue | null; qna?: QnaCue | null }) {
   const { rfq, draft } = got;
   const submitted = draft?.status === "submitted";
   const total = draft?.items.reduce((a, it) => a + (it.avail !== "불가" && it.amount ? Number(it.amount) : 0), 0) ?? 0;
@@ -22,7 +22,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
 
   return (
     <>
-      <CroStory got={got} replyHref={replyHref} detail={detail}>
+      <CroStory got={got} replyHref={replyHref} detail={detail} qna={qna}>
         <div className="rs-next">
       {deciding && <JoinPanel token={got.token} seats={seatsLabel(got.seats)} afterDeclineHref={afterDeclineHref} operator={got.operator} declineEndpoint={declineEndpoint} />}
       {/* 불참 되돌리기 (2026-10-20 결정 3): 참여 전 불참만, 참여 결정 기한 전, 자리가 남았을 때. 참여와 같은 동의·같은 길(join_offer) */}
@@ -33,7 +33,7 @@ export function RequestView({ got, replyHref, withdrawHref, fileToken, afterDecl
       {!summary && rfq.identityMasked && !rfq.masked && (
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <Lock />
-          <span>의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 이 기관을 선정하면 공개돼요. 요청 내용에 대한 질문은 회신의 문의 항목으로 남겨 주세요. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.</span>
+          <span>의뢰자 회사명과 담당자 연락처는 의뢰자가 비교표에서 이 기관을 선정하면 공개돼요. 요청 내용에 대한 질문은 질의응답으로 보내 주세요. 요청서 내용은 이 요청의 견적 산출과 회신에만 써 주시고, 다른 목적으로 쓰거나 다른 곳에 공개하지 말아 주십시오.</span>
         </div>
       )}
       {!summary && rfq.masked && (

@@ -129,7 +129,9 @@ declare
     'public.dispute_contract(uuid, uuid, text)',
     'public.resolve_contract_dispute(uuid, uuid, text, text)',
     'public.auto_confirm_contracts()',
-    'public.auth_user_confirmed(uuid)'
+    'public.auth_user_confirmed(uuid)',
+    'public.ask_question(uuid, uuid, text, text, integer, text, boolean)',
+    'public.answer_question(uuid, uuid, uuid, text, boolean, text)'
   ];
   f text;
   p regprocedure;

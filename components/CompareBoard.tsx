@@ -42,6 +42,8 @@ export type CompareCol = {
   auto: boolean;
   /** 운영자가 기관 PDF 를 보고 옮겨 적은 견적 (기준 문서는 PDF 원본) */
   operator?: boolean;
+  /** 이 기관에 질의 (0045). 질의할 수 있을 때만 */
+  askHref?: string | null;
   /** 2차 상세 견적 (0042). 상세 견적을 요청한 기관만 */
   detail?: { status: DetailStatus; total: number | null; weeks: number | null; note: string | null; items: DetailReplyItem[] } | null;
 };
@@ -202,6 +204,7 @@ export function CompareBoard({
                   <span className="cb-kv">기간 <b className="tnum">{weeks(c)}</b>착수 <b className="tnum">{start(c)}</b></span>
                   <Link href={quoteHref(c)} className="cb-pick">{canSelect ? "견적서 확인, 선정" : "견적서 보기"}</Link>
                   {c.hasPdf && <a href={`/api/quotes/${c.id}/pdf`} className="cb-pdf">PDF 원본</a>}
+                  {c.askHref && <Link href={c.askHref} className="cb-pdf">질의</Link>}
                 </th>
               ))}
             </tr>
@@ -295,7 +298,7 @@ export function CompareBoard({
       {sorted.some((c) => c.operator && !c.auto) && (
         <p className="fld__help">기관이 보낸 견적서 PDF를 단추가 같은 양식으로 옮겨 정리했어요. 금액·조건이 다르면 PDF 원본이 우선하며, 옮겨 적은 내용의 오류는 비교표가 열리기 전에는 단추가 바로잡고, 열린 뒤에는 비교표를 고치지 않고 알려요.</p>
       )}
-      <Link href={`/app/support?rfq=${no}`} className="cb-ask">견적 내용 문의</Link>
+      <Link href={`/app/r/${no}/qna`} className="cb-ask">질의응답</Link>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { viewerLoadOpts } from "@/lib/auth";
 import { RequestView } from "@/components/cro/RequestView";
 import { DeclineForm } from "@/components/cro/DeclineForm";
 import { detailCueOfInvite } from "@/lib/detail-data";
+import { qnaCounts } from "@/lib/qna-data";
 
 export const dynamic = "force-dynamic";
 
@@ -39,5 +40,6 @@ export default async function TokenRequest({ params, searchParams }: { params: P
     );
   }
   const detail = got.joined ? await detailCueOfInvite(got.inviteId, got.rfqId, `/q/${token}`) : null;
-  return <RequestView got={got} replyHref={`/q/${token}/reply`} withdrawHref={`/q/${token}?decline=1`} afterDeclineHref={`/q/${token}`} fileToken={token} detail={detail} />;
+  const qna = got.joined && !got.withdrawn ? { href: `/q/${token}/qna`, ...(await qnaCounts(got.rfqId, got.inviteId)) } : null;
+  return <RequestView got={got} replyHref={`/q/${token}/reply`} withdrawHref={`/q/${token}?decline=1`} afterDeclineHref={`/q/${token}`} fileToken={token} detail={detail} qna={qna} />;
 }
