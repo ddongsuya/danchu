@@ -8,6 +8,10 @@ import { PREREG_NAV_CRO } from "@/components/app/prereg-nav";
 import { daysToPilot } from "@/lib/prereg";
 import { sessionInPrereg } from "@/lib/prereg-server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { croNav, croTier } from "@/lib/cro-nav";
+import { PLANS, inPilotPeriod, monthlyQuoteLimit } from "@/lib/plans";
+import { quotesThisMonth } from "@/lib/plan-usage";
+import { todaySeoul } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "단추 CRO",
@@ -21,27 +25,16 @@ export default async function CroLayout({ children }: { children: React.ReactNod
   const session = await requireSession("cro", "/cro");
   const prereg = await sessionInPrereg(session);
   const unread = dbReady() && !prereg ? await unreadCount(session.userId) : 0;
-  const nav: NavItem[] = prereg ? [...PREREG_NAV_CRO] : [
-    // 2026-11-07 CRM 1단계 (시안 v5): 오늘 · 안건 · 고객사 · 보고서가 중심. 받은 요청(옛 견적 진행)은 견적 묶음으로, 단추 요청은 안건 보드에도 들어온다
-    { href: "/cro", label: "오늘", icon: "today", exact: true },
-    { href: "/cro/deals", label: "안건", icon: "deals" },
-    { href: "/cro/clients", label: "고객사", icon: "clients" },
-    { href: "/cro/reports", label: "보고서", icon: "report" },
-    { href: "/cro/requests", label: "받은 요청", icon: "inbox", group: "견적" },
-    { href: "/cro/docs", label: "견적서", icon: "quote", group: "견적" },
-    { href: "/cro/catalog", label: "시험 목록", icon: "list", group: "견적" },
-    { href: "/cro/calendar", label: "캘린더", icon: "calendar", group: "견적" },
-    { href: "/cro/notifications", label: "알림", icon: "bell", badge: unread, group: "견적" },
-    { href: "/cro/org", label: "기관", icon: "org", group: "설정" },
-    { href: "/cro/billing", label: "요금제·결제", icon: "receipt", group: "설정" },
-  ];
-  // 휴대폰 아래 탭: 오늘 · 안건 · 기록 · 더보기 (나머지는 더보기 화면)
-  const tabs: NavItem[] | undefined = prereg ? undefined : [
-    { href: "/cro", label: "오늘", icon: "today", exact: true },
-    { href: "/cro/deals", label: "안건", icon: "deals" },
-    { href: "/cro/log", label: "기록", icon: "note" },
-    { href: "/cro/more", label: "더보기", icon: "more", badge: unread },
-  ];
+  // 2026-11-13 요금제별 화면 구성 (lib/cro-nav.ts). 시범 운영 중에는 모두 Pro 구성이고 요금제 표시도 없다
+  const today = todaySeoul();
+  const tier = croTier(session.org, today);
+  const built = croNav(tier, unread);
+  const nav: NavItem[] = prereg ? [...PREREG_NAV_CRO] : built.nav;
+  const tabs: NavItem[] | undefined = prereg ? undefined : built.tabs;
+  const paid = !prereg && !inPilotPeriod(today) && session.org?.status === "approved";
+  const limit = paid ? monthlyQuoteLimit(session.org, today) : null;
+  const used = limit != null && dbReady() && session.org ? await quotesThisMonth(session.org.id) : 0;
+  const usage = limit != null ? <span className={used >= limit ? "pt__usage--full" : undefined}>견적 {used} / {limit}건</span> : undefined;
   if (session.profile.role === "admin") nav.push({ href: "/admin", label: "운영자 콘솔", icon: "settings" });
   return (
     <AppState>
@@ -51,7 +44,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
             "(function(){try{var s=JSON.parse(localStorage.getItem('danchu.app.settings')||'{}');var t=s.theme||'system';var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})()",
         }}
       />
-      <Shell session={session} nav={nav} tabs={tabs}>
+      <Shell session={session} nav={nav} tabs={tabs} plan={paid ? PLANS[tier].name : undefined} usage={usage}>
         {prereg ? <PreregGate role="cro" days={daysToPilot()} reserved={await reserved(session.email)} hasOrg={!!(session.org || session.pendingOrg)}>{children}</PreregGate> : children}
       </Shell>
     </AppState>

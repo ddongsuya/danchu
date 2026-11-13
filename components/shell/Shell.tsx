@@ -20,7 +20,8 @@ const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관"
  * 각 역할 layout이 nav 목록을 넘긴다.
  */
 /** tabs: 휴대폰 아래 탭을 따로 줄 때 (없으면 nav 앞 다섯 개) */
-export function Shell({ session, nav, tabs, children }: { session: Session; nav: NavItem[]; tabs?: NavItem[]; children: React.ReactNode }) {
+/** plan: 기관 요금제 표시 (무료·Plus·Pro). usage: 위 바의 사용량 표시 (무료 요금제 이번 달 견적 수) */
+export function Shell({ session, nav, tabs, plan, usage, children }: { session: Session; nav: NavItem[]; tabs?: NavItem[]; plan?: string; usage?: React.ReactNode; children: React.ReactNode }) {
   const role = session.profile.role;
   const who = session.profile.name || session.email;
   const org = role === "cro" ? session.org?.name : session.profile.company;
@@ -36,6 +37,7 @@ export function Shell({ session, nav, tabs, children }: { session: Session; nav:
         <Link href={nav[0]?.href ?? "/"} className="pt__sbrand">
           <Lockup size={24} />
           <span className="pt__role" style={{ marginLeft: "auto" }}>{ROLE_LABEL[role]}</span>
+          {plan && <span className="pt__role pt__plan">{plan}</span>}
         </Link>
         <div className="pt__nav-label">내 워크스페이스</div>
         <nav className="pt__nav" aria-label="주요 메뉴">
@@ -69,9 +71,11 @@ export function Shell({ session, nav, tabs, children }: { session: Session; nav:
             <Link href={nav[0]?.href ?? "/"} className="pt__brand">
               <Lockup size={20} />
               <span className="pt__role">{ROLE_LABEL[role]}</span>
+              {plan && <span className="pt__role pt__plan">{plan}</span>}
             </Link>
             <span className="pt__workspace-title">{ROLE_LABEL[role]} 워크스페이스</span>
             <div className="pt__topr">
+              {usage && <Link href="/cro/billing" className="pt__usage">{usage}</Link>}
               {/* 좁은 화면에는 사이드바가 없어 자료실 링크를 위 바에 둔다 */}
               <a href="/guide/library" className="pt__toplib only-narrow" aria-label="가이드라인 자료실"><BookOpenText size={22} aria-hidden="true" /></a>
               <Link href={profileHref} className="pt__who" aria-label={`프로필 · ${who}`} style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{org || who}</Link>

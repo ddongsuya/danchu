@@ -24,6 +24,7 @@ import { startRfq } from "@/lib/rfq-create";
 import { cleanupPending } from "@/lib/rfq-pending";
 import { deliverInvoice, reminderStageFor } from "@/lib/invoices";
 import type { BillingInvoiceRow } from "@/lib/db-types";
+import { canUse } from "@/lib/plans";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -362,26 +363,32 @@ export async function GET(req: Request) {
     ]);
     const pBy = new Map((ps ?? []).map((p) => [p.id, p]));
     const coBy = new Map((cos ?? []).map((c) => [c.id, c.name]));
+    // 요금제 (0044): 캘린더가 없는 요금제(무료)는 알리지 않고, 고객 관리가 없으면(Plus) 고객사 이름·화면을 쓰지 않는다
+    const orgIds = [...new Set([...(evs ?? []), ...(tasks ?? [])].map((x) => x.org_id))];
+    const { data: orgRows } = orgIds.length ? await sb.from("cro_orgs").select("id, plan, plan_next, plan_next_from").in("id", orgIds) : { data: [] as { id: string; plan: string; plan_next: string | null; plan_next_from: string | null }[] };
+    const orgBy = new Map((orgRows ?? []).map((o) => [o.id, o]));
+    const cal = (org: string) => canUse(orgBy.get(org), "tests", today);
+    const crmOn = (org: string) => canUse(orgBy.get(org), "crm", today);
     const inOrg = (ids: (string | null)[], org: string) => [...new Set(ids.filter((x): x is string => !!x))].filter((id) => pBy.get(id)?.cro_org_id === org);
     const hm = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" });
     const MODE: Record<string, string> = { in_person: "대면", video: "화상", phone: "전화" };
     for (const e of evs ?? []) {
       const { data: claimed } = await sb.from("cro_crm_events").update({ reminded_at: new Date().toISOString() }).eq("id", e.id).is("reminded_at", null).select("id");
-      if (!claimed?.length) continue;
+      if (!claimed?.length || !cal(e.org_id)) continue;
       const ids = inOrg([e.created_by, ...e.attendee_members], e.org_id);
       if (!ids.length) continue;
-      const co = e.company_id ? coBy.get(e.company_id) ?? "" : "";
+      const co = e.company_id && crmOn(e.org_id) ? coBy.get(e.company_id) ?? "" : "";
       const body = [`내일 ${e.all_day ? "하루 종일" : hm(e.starts_at)}`, co, e.mode ? MODE[e.mode] ?? "" : "", e.location].filter(Boolean).join(" · ");
       await notifyUsers(ids, { kind: "기관", title: `내일 일정 · ${e.title}`, body, href: `/cro/calendar?w=${tomorrow}&e=${e.id}` }, { to: ids.map((id) => pBy.get(id)?.email ?? "").filter(Boolean), subject: `[단추] 내일 일정 · ${e.title}` });
       out.crmReminders++;
     }
     for (const t of tasks ?? []) {
       const { data: claimed } = await sb.from("cro_crm_tasks").update({ notified_on: today }).eq("id", t.id).or(`notified_on.is.null,notified_on.neq.${today}`).select("id");
-      if (!claimed?.length) continue;
+      if (!claimed?.length || !cal(t.org_id)) continue;
       const ids = inOrg([t.assignee ?? t.created_by], t.org_id);
       if (!ids.length) continue;
-      const co = t.company_id ? coBy.get(t.company_id) ?? "" : "";
-      await notifyUsers(ids, { kind: "기관", title: `오늘까지 할 일 · ${t.title}`, body: co || undefined, href: t.company_id ? `/cro/clients/${t.company_id}?tab=tasks` : "/cro/calendar" }, { to: ids.map((id) => pBy.get(id)?.email ?? "").filter(Boolean), subject: `[단추] 오늘까지 할 일 · ${t.title}` });
+      const co = t.company_id && crmOn(t.org_id) ? coBy.get(t.company_id) ?? "" : "";
+      await notifyUsers(ids, { kind: "기관", title: `오늘까지 할 일 · ${t.title}`, body: co || undefined, href: t.company_id && crmOn(t.org_id) ? `/cro/clients/${t.company_id}?tab=tasks` : "/cro/calendar" }, { to: ids.map((id) => pBy.get(id)?.email ?? "").filter(Boolean), subject: `[단추] 오늘까지 할 일 · ${t.title}` });
       out.crmReminders++;
     }
   });

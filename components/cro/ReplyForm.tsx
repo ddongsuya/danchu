@@ -131,7 +131,8 @@ type Loaded = {
 /** 견적서 생성 툴(0036)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
 export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null; extra?: Record<string, string> }[] };
 
-export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string } }) {
+/** catalogHref: 시험 목록 링크. null 이면 그 요금제에 시험 목록이 없어 링크를 두지 않는다 */
+export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink, catalogHref = "/cro/catalog" }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string }; catalogHref?: string | null }) {
   const router = useRouter();
   const [data, setData] = useState<Loaded | null>(null);
   const [items, setItems] = useState<ReplyItem[]>([]);
@@ -380,7 +381,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         <div className="note" style={{ marginBottom: 16 }}>
           <b>시험 목록으로 초안을 채웠어요.</b>{" "}
           {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
-          <Link href="/cro/catalog" style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>
+          {catalogHref && <Link href={catalogHref} style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>}
         </div>
       )}
 

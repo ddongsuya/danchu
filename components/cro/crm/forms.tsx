@@ -22,6 +22,8 @@ export type CrmOpts = {
   quotes: (Opt & { companyId: string | null; dealId: string | null })[];
   deals: (Opt & { companyId: string | null })[];
   me: string;
+  /** 고객 관리가 없는 요금제 (정식 서비스 뒤 Plus): 고객사·안건·견적 칸을 감춘다 */
+  lite?: boolean;
 };
 
 // ─── 저장 ───
@@ -287,13 +289,13 @@ export function EventForm({ opts, event, preset = {} }: { opts: CrmOpts; event?:
           <Field label={v.mode === "video" ? "회의 링크" : v.mode === "phone" ? "연락처" : "장소"} htmlFor="ev-loc"><input id="ev-loc" className="inp" value={v.location} maxLength={300} onChange={(e) => set({ location: e.target.value })} /></Field>
         </div>
       )}
-      <Field label="고객사" htmlFor="ev-co">
+      {!opts.lite && <Field label="고객사" htmlFor="ev-co">
         <Select id="ev-co" value={v.company_id} onChange={(company_id) => set({ company_id, attendee_contacts: [], quote_doc_id: "" })}>
           <option value="">고르지 않음 (내부 일정)</option>
           {opts.companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
-      </Field>
-      {deals.length > 0 && (
+      </Field>}
+      {!opts.lite && deals.length > 0 && (
         <Field label="안건" htmlFor="ev-deal">
           <Select id="ev-deal" value={v.deal_id} onChange={(deal_id) => set({ deal_id, company_id: opts.deals.find((d) => d.id === deal_id)?.companyId ?? v.company_id })}>
             <option value="">안건 없음</option>
@@ -304,12 +306,12 @@ export function EventForm({ opts, event, preset = {} }: { opts: CrmOpts; event?:
       {v.company_id && <Field label="고객사 참석"><Pick opts={contacts} value={v.attendee_contacts} onChange={(attendee_contacts) => set({ attendee_contacts })} label="고객사 참석" empty="이 고객사에 담당자가 없어요. 고객사 화면에서 먼저 추가해 주세요." /></Field>}
       <Field label="우리 참석" help="체크한 사람에게 전날 아침 9시에 메일과 앱 알림이 가요."><Pick opts={opts.members} value={v.attendee_members} onChange={(attendee_members) => set({ attendee_members })} label="우리 참석" empty="" /></Field>
       <Field label="그 밖의 참석" htmlFor="ev-extra"><input id="ev-extra" className="inp" value={v.attendees_extra} maxLength={300} placeholder="외부 참석자 이름" onChange={(e) => set({ attendees_extra: e.target.value })} /></Field>
-      <Field label="관련 견적" htmlFor="ev-q">
+      {!opts.lite && <Field label="관련 견적" htmlFor="ev-q">
         <Select id="ev-q" value={v.quote_doc_id} onChange={(quote_doc_id) => set({ quote_doc_id })}>
           <option value="">없음</option>
           {quotes.map((q) => <option key={q.id} value={q.id}>{q.name}{q.sub ? ` · ${q.sub}` : ""}</option>)}
         </Select>
-      </Field>
+      </Field>}
       <Field label="요청사항" htmlFor="ev-req"><textarea id="ev-req" className="ta" rows={3} value={v.requests} maxLength={2000} placeholder="미팅에서 다룰 것, 고객사가 미리 부탁한 것" onChange={(e) => set({ requests: e.target.value })} /></Field>
       <label className="crm-check"><input type="checkbox" checked={v.remind} onChange={(e) => set({ remind: e.target.checked })} /> 전날 아침 9시에 메일·앱 알림 받기</label>
       <Err msg={err} />

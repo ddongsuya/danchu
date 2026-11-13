@@ -6,6 +6,8 @@ import { ThemeSettings } from "@/components/ThemeSettings";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { autoReplyEnabled } from "@/lib/env";
 import Link from "next/link";
+import { canUse } from "@/lib/plans";
+import { todaySeoul } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -60,10 +62,12 @@ export default async function CroOrgPage() {
           <OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} />
           <ThemeSettings />
           <div className="card card--rows">
-            <Link href="/cro/catalog" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>시험 목록 <span style={{ fontSize: 12, color: "var(--muted)" }}>자주 하는 조건, 소요 기간, 표준가</span></span>
-              <span style={{ color: "var(--dash)" }}>›</span>
-            </Link>
+            {canUse(s.org, "tests", todaySeoul()) && (
+              <Link href="/cro/catalog" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
+                <span>시험 목록 <span style={{ fontSize: 12, color: "var(--muted)" }}>자주 하는 조건, 소요 기간, 표준가</span></span>
+                <span style={{ color: "var(--dash)" }}>›</span>
+              </Link>
+            )}
             <Link href="/cro/awards" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
               <span>수주·계약 보고</span>
               <span style={{ color: "var(--dash)" }}>›</span>

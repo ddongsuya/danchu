@@ -1,7 +1,9 @@
 import { requireSession } from "@/lib/auth";
 import { dbReady, listAwardsForOrg, listInvitesForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
-import { Pipeline } from "@/components/cro/Pipeline";
+import { CRO_PATHS, Pipeline } from "@/components/cro/Pipeline";
+import { canUse } from "@/lib/plans";
+import { todaySeoul } from "@/lib/format";
 import { buildPipeline } from "@/lib/pipeline";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
@@ -26,8 +28,11 @@ export default async function CroRequests({ searchParams }: { searchParams: Prom
   const [invites, awards] = dbReady() ? await Promise.all([listInvitesForOrg(org.id), listAwardsForOrg(org.id)]) : [[], []];
   const items = buildPipeline(invites, awards);
   // 선정된 의뢰자 → 고객사 화면 (0038). 아직 고객사로 들어오지 않았으면 고객사 목록으로 (목록을 열면 들어온다)
-  const sb = dbReady() ? getSupabaseAdmin() : null;
+  // 요금제에 없는 화면(고객사: Pro, 시험 목록: Plus)으로는 링크하지 않는다 (0044)
+  const today = todaySeoul();
+  const crm = canUse(org, "crm", today);
+  const sb = dbReady() && crm ? getSupabaseAdmin() : null;
   const { data: links } = sb ? await sb.from("cro_crm_contacts").select("danchu_key, company_id").eq("org_id", org.id).not("danchu_key", "is", null) : { data: null };
   const companyOf = Object.fromEntries((links ?? []).map((l) => [l.danchu_key as string, l.company_id]));
-  return <Pipeline items={items} sel={sel && /^[0-9a-f-]{36}$/.test(sel) ? sel : null} companyOf={companyOf} />;
+  return <Pipeline items={items} sel={sel && /^[0-9a-f-]{36}$/.test(sel) ? sel : null} companyOf={companyOf} paths={{ ...CRO_PATHS, clients: crm ? CRO_PATHS.clients : null, catalog: canUse(org, "tests", today) ? CRO_PATHS.catalog : null }} />;
 }

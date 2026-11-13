@@ -7,8 +7,9 @@ import { dday } from "@/lib/format";
  * 견적 진행 (2026-11-07). 넓은 화면: 왼쪽 목록 + 오른쪽 상세. 휴대폰: 목록 화면 → 누르면 상세 화면(?sel=).
  * 상세 맨 아래에는 그 요청에서 할 일 버튼 하나만 둔다.
  */
-export type CroPaths = { pipe: string; clients: string };
-export const CRO_PATHS: CroPaths = { pipe: "/cro/requests", clients: "/cro/clients" };
+/** clients·catalog 가 null 이면 그 요금제에 없는 화면이라 링크를 두지 않는다 (0044, lib/cro-nav.ts) */
+export type CroPaths = { pipe: string; clients: string | null; catalog?: string | null };
+export const CRO_PATHS: CroPaths = { pipe: "/cro/requests", clients: "/cro/clients", catalog: "/cro/catalog" };
 
 export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { items: PipeItem[]; sel: string | null; paths?: CroPaths; companyOf?: Record<string, string> }) {
   const groups = groupPipeline(items);
@@ -23,8 +24,8 @@ export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { it
         <div className="ph"><div><h1>받은 요청</h1></div></div>
         <div className="empty">
           <b>아직 받은 요청이 없어요</b>
-          시험 목록의 분야와 맞는 요청이 오면 참여 안내를 메일과 알림으로 보내요.
-          <div style={{ marginTop: 14 }}><Link href="/cro/catalog" className="b2 bsm">시험 목록 보기</Link></div>
+          수행 분야와 맞는 요청이 오면 참여 안내를 메일과 알림으로 보내요.
+          <div style={{ marginTop: 14 }}>{paths.catalog ? <Link href={paths.catalog} className="b2 bsm">시험 목록 보기</Link> : <Link href="/cro/org" className="b2 bsm">수행 분야 보기</Link>}</div>
         </div>
       </>
     );
@@ -74,7 +75,7 @@ function Detail({ item, paths, companyOf }: { item: PipeItem; paths: CroPaths; c
             <h2 id="pl-title">{item.title}</h2>
             <span className="pl__who">
               {item.client
-                ? item.clientKey ? <Link href={companyOf[item.clientKey] ? `${paths.clients}/${companyOf[item.clientKey]}` : paths.clients}>{item.client}</Link> : item.client
+                ? item.clientKey && paths.clients ? <Link href={companyOf[item.clientKey] ? `${paths.clients}/${companyOf[item.clientKey]}` : paths.clients}>{item.client}</Link> : item.client
                 : <><LockSimple size={13} aria-hidden="true" /> 선정 시 공개 · {item.clientHint.replace(" · 이름은 선정 뒤 공개", "")}</>}
             </span>
           </div>

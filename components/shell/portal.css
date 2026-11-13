@@ -1483,3 +1483,11 @@
 .pt .cmp-detail b { font-weight: 600; }
 .pt .cmp-detail span { color: var(--body); }
 .pt .cmp-detail a { margin-left: auto; }
+
+/* 기관 요금제 표시 (0044). 이름표는 역할 표시 옆, 사용량은 위 바 (무료 요금제만) */
+.pt__plan { margin-left: 6px; }
+.pt__sbrand .pt__plan { margin-left: 6px; }
+.pt__usage { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: var(--r-sm); background: var(--surface2); color: var(--ink); font-size: 13px; text-decoration: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pt__usage b { font-weight: 600; }
+.pt__usage--full { background: var(--warn-bg); color: var(--warn-fg); }
+.pt__usage:has(.pt__usage--full) { background: var(--warn-bg); color: var(--warn-fg); }

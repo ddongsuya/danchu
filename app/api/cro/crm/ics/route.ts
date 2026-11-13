@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { siteUrl } from "@/lib/notify";
 import { icsForEvent, isUuid, personLabel } from "@/lib/crm-shape";
 import { memberName } from "@/lib/crm";
+import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +17,13 @@ export async function GET(req: Request) {
   const orgId = s?.profile.cro_org_id;
   const sb = getSupabaseAdmin();
   const id = new URL(req.url).searchParams.get("id");
-  if (!s || !orgId || !sb) return new Response("권한이 없어요.", { status: 403 });
+  if (!s || !orgId || !sb || featureError(s.org, "tests")) return new Response("권한이 없어요.", { status: 403 });
   if (!isUuid(id)) return new Response("일정을 찾지 못했어요.", { status: 400 });
   const { data: e } = await sb.from("cro_crm_events").select("*").eq("id", id).eq("org_id", orgId).maybeSingle();
   if (!e) return new Response("일정을 찾지 못했어요.", { status: 404 });
   const [{ data: co }, { data: cs }, { data: ms }] = await Promise.all([
-    e.company_id ? sb.from("cro_crm_companies").select("name").eq("id", e.company_id).maybeSingle() : Promise.resolve({ data: null }),
-    e.attendee_contacts.length ? sb.from("cro_crm_contacts").select("name, title").in("id", e.attendee_contacts).eq("org_id", orgId) : Promise.resolve({ data: [] }),
+    e.company_id && !featureError(s.org, "crm") ? sb.from("cro_crm_companies").select("name").eq("id", e.company_id).maybeSingle() : Promise.resolve({ data: null }),
+    e.attendee_contacts.length && !featureError(s.org, "crm") ? sb.from("cro_crm_contacts").select("name, title").in("id", e.attendee_contacts).eq("org_id", orgId) : Promise.resolve({ data: [] }),
     e.attendee_members.length ? sb.from("profiles").select("name, email").in("id", e.attendee_members).eq("cro_org_id", orgId) : Promise.resolve({ data: [] }),
   ]);
   const attendees = [

@@ -44,11 +44,15 @@ const fail = (what: string, e: unknown) => {
   return bad(`${eul(what)} 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.`, 500);
 };
 
-async function ctx() {
+/** 캘린더의 일정·할 일. Plus(시험 관리)부터 쓴다. 나머지 항목은 고객 관리(Pro) */
+const CAL_KINDS = new Set(["events", "tasks", "task-actions"]);
+
+async function ctx(kind: string) {
   const s = await sessionOrNull("cro");
-  // 요금제에 고객 관리가 없으면 (정식 서비스 뒤 무료·Plus) 권한 없음과 같이 막는다 (0044)
-  const orgId = s?.org?.status === "approved" && !featureError(s.org, "crm") ? s.profile.cro_org_id : null;
-  return { s, orgId, sb: getSupabaseAdmin() };
+  // 요금제에 없는 항목은 권한 없음과 같이 막는다 (0044). crm: 고객 관리까지 쓰는지 (아니면 고객사·안건 연결을 지운다)
+  const ok = s?.org?.status === "approved" && !featureError(s.org, CAL_KINDS.has(kind) ? "tests" : "crm");
+  const orgId = ok ? s!.profile.cro_org_id : null;
+  return { s, orgId, crm: ok && !featureError(s!.org, "crm"), sb: getSupabaseAdmin() };
 }
 
 function parse(kind: Kind, b: Body, partial: boolean): Parsed<Record<string, unknown>> {
@@ -60,6 +64,11 @@ function parse(kind: Kind, b: Body, partial: boolean): Parsed<Record<string, unk
     case "events": return parseEvent(b, partial);
     case "tasks": return parseTask(b, partial);
   }
+}
+
+/** 고객 관리가 없는 요금제의 일정·할 일: 고객사·안건·담당자·견적서 연결을 지운다 */
+function unlink(v: Record<string, unknown>) {
+  for (const f of ["company_id", "deal_id", "contact_id", "quote_doc_id", "activity_id"]) if (f in v) v[f] = null;
 }
 
 async function readBody(req: Request): Promise<Body> {
@@ -80,10 +89,10 @@ async function dealCompany(sb: Admin, orgId: string, dealId: unknown): Promise<s
 }
 
 export async function POST(req: Request, { params }: Ctx) {
-  const { s, orgId, sb } = await ctx();
+  const kind = (await params).kind;
+  const { s, orgId, crm, sb } = await ctx(kind);
   if (!s || !orgId) return bad("권한이 없어요.", 403);
   if (!sb) return bad("저장소가 설정되지 않았어요.", 503);
-  const kind = (await params).kind;
   const b = await readBody(req);
 
   if (kind === "merge") {
@@ -128,6 +137,7 @@ export async function POST(req: Request, { params }: Ctx) {
   const p = parse(k, b, false);
   if (!p.ok) return bad(p.error);
   const v = p.value as Record<string, unknown>;
+  if (!crm) unlink(v);
   // 안건에 붙이는 기록·일정·할 일: 고객사는 안건의 고객사
   if (k !== "deals" && k !== "companies" && k !== "contacts" && v.deal_id) {
     const c = await dealCompany(sb, orgId, v.deal_id);
@@ -170,10 +180,10 @@ export async function POST(req: Request, { params }: Ctx) {
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
-  const { s, orgId, sb } = await ctx();
+  const kind = (await params).kind;
+  const { s, orgId, crm, sb } = await ctx(kind);
   if (!s || !orgId) return bad("권한이 없어요.", 403);
   if (!sb) return bad("저장소가 설정되지 않았어요.", 503);
-  const kind = (await params).kind;
   const b = await readBody(req);
   if (!isUuid(b.id)) return bad("고칠 항목을 찾지 못했어요.");
 
@@ -208,6 +218,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const p = parse(k, b, true);
     if (!p.ok) return bad(p.error);
     v = p.value;
+    if (!crm) unlink(v);
     if (k === "tasks" && typeof b.done === "boolean") Object.assign(v, b.done ? { done_at: new Date().toISOString(), done_by: s.userId } : { done_at: null, done_by: null });
   }
   if (!Object.keys(v).length) return NextResponse.json({ ok: true, id: b.id });
@@ -238,10 +249,10 @@ export async function PATCH(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(req: Request, { params }: Ctx) {
-  const { s, orgId, sb } = await ctx();
+  const kind = (await params).kind;
+  const { s, orgId, sb } = await ctx(kind);
   if (!s || !orgId) return bad("권한이 없어요.", 403);
   if (!sb) return bad("저장소가 설정되지 않았어요.", 503);
-  const kind = (await params).kind;
   const b = await readBody(req);
   if (!isUuid(b.id)) return bad("지울 항목을 찾지 못했어요.");
   if (kind === "task-actions") {
