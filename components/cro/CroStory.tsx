@@ -14,7 +14,10 @@ type Step = { n: string; t: string; s: string; state: "done" | "now" | "next" };
  * 기관이 보는 요청 이야기 (2026-10-30, 의뢰자 요청 이야기와 같은 틀). 포털(/cro/r)과 토큰 링크(/q)가 함께 쓴다.
  * 첫 장면은 지금 상태 한 문장(참여 결정 / 남은 회신 항목 / 제출함 / 닫힘), 아래는 이 요청이 지나온 길.
  */
-export function CroStory({ got, replyHref, detail, children }: { got: Loaded; replyHref: string; detail?: DetailCue | null; children?: ReactNode }) {
+/** 질의응답 바로가기 (0045). 참여한 기관만 */
+export type QnaCue = { href: string; total: number; pending: number };
+
+export function CroStory({ got, replyHref, detail, qna, children }: { got: Loaded; replyHref: string; detail?: DetailCue | null; qna?: QnaCue | null; children?: ReactNode }) {
   const { rfq, draft } = got;
   const submitted = draft?.status === "submitted";
   const summary = !rfq.full;
@@ -86,6 +89,13 @@ export function CroStory({ got, replyHref, detail, children }: { got: Loaded; re
               <div className="rs-acts">
                 <Link href={replyHref} className="b1 blg">{submitted ? (got.locked ? "제출한 회신 보기" : "제출한 회신 고치기") : draft ? "이어 쓰기" : "견적 쓰기"}</Link>
                 <span className="rs-acts__note tnum">{rfq.ddayLabel}</span>
+              </div>
+            )}
+            {qna && (
+              <div className="rs-acts">
+                <Link href={qna.href} className={qna.pending ? "b1" : "b2"}>
+                  질의응답{qna.pending ? <span className="tnum"> 답변 대기 {qna.pending}</span> : qna.total ? <span className="tnum"> {qna.total}</span> : null}
+                </Link>
               </div>
             )}
           </div>
