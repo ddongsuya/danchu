@@ -101,7 +101,7 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
                   ))}
                 </ol>
               ) : <p className="cx-none">이 기간에 들어온 안건이 없어요.</p>}
-              {top > 0 && <p className="cx-cap">막대 사이 숫자는 바로 앞 단계에서 넘어간 비율이에요. 수주한 안건은 계약까지 간 것으로 셉니다.</p>}
+              {top > 0 && <p className="cx-cap">단계 전환율. 수주한 안건은 계약까지 간 것으로 셉니다.</p>}
             </section>
             <section className="cx-panel" aria-labelledby="r-dwell">
               <div><h2 id="r-dwell">단계에 머문 평균 일수</h2><p className="cx-cap">{longest ? `${STAGE_LABEL[longest.stage as keyof typeof STAGE_LABEL]}에 가장 오래 머물러요.` : "단계를 옮긴 기록이 쌓이면 보여요."}</p></div>

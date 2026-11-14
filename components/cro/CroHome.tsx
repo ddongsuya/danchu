@@ -43,7 +43,7 @@ export function CroHome({ orgName, items, awards, now }: { orgName: string; item
               <p className="rs-acts__why">
                 {todo.kind === "invite"
                   ? <><span className="tnum">{todo.item.no}</span> {todo.item.stage === "undecided" ? "참여 여부를 정해 주세요" : "회신을 마무리해 주세요"} <span style={{ whiteSpace: "nowrap" }}>· 회신 기한 {md(todo.item.replyBy)} {dday(todo.item.replyBy).label}</span></>
-                  : <><span className="tnum">{todo.award.no}</span> 선정된 지 {todo.award.days}일이에요. 계약 결과를 알려 주세요</>}
+                  : <><span className="tnum">{todo.award.no}</span> 선정 후 {todo.award.days}일. 계약 결과를 알려 주세요</>}
               </p>
             )}
           </div>

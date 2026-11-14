@@ -91,7 +91,7 @@ export function SignupCroView() {
           </Field>
         </div>
 
-        <Field id="glp" label="보유 GLP 인증" help="의뢰자에게 제공되는 정보예요.">
+        <Field id="glp" label="보유 GLP 인증" help="의뢰자에게 공개돼요.">
           <div className="chipset" role="group" aria-label="보유 GLP 인증">
             {GLP_OPTS.map((o) => (
               <button key={o} type="button" className="chip" aria-pressed={glp.includes(o)} onClick={() => toggle(glp, setGlp, o)}>{o}</button>

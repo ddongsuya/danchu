@@ -6,7 +6,7 @@ import "./page.css";
 
 export const metadata: Metadata = pageMeta(
   "기관 참여 안내 · 단추",
-  "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 2027년 말까지는 기관도 무료예요.",
+  "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 2027년 말까지는 기관도 무료로 이용해요.",
   "/for-cro",
 );
 
@@ -36,7 +36,7 @@ export default function Page() {
 <div className="ctas"><a className="btn solid gate" href="/signup/cro">기관 참여 신청 <span className="ar">→</span></a><a className="btn ghost" href="mailto:hello@danchu.kr">hello@danchu.kr</a></div><p className="gatehint">모두 준비되셨다면 바로 신청해 주세요.</p><a className="later" href="/signup/cro">먼저 가입하고 채워 넣을게요</a></div>
 <div className="fee" aria-labelledby="fee-h">
 <h3 id="fee-h">이용 요금</h3>
-<p className="fee-s">2027년 12월 31일까지 참여한 요청에는 요금이 없어요. 이 기간에 참여한 요청은 그 뒤에 계약해도 무료예요.</p>
+<p className="fee-s">2027년 12월 31일까지 참여한 요청에는 요금이 없어요. 이 기간에 참여한 요청은 그 뒤에 계약해도 수수료가 없어요.</p>
 <p className="fee-s">정식 서비스 요금은 시작 30일 전에 요금제 페이지와 메일로 알려요.</p>
 </div>
 <p className="fee-terms"><a href="/pricing">요금제 보기</a> <a href="/terms/cro">기관 이용약관</a></p>

@@ -17,7 +17,7 @@ export function PricingMobile() {
     <div className="prm">
       <div className="prm-h">
         <h1 id="pr-mh">무료로 시작하고,<br />필요할 때 바꾸세요.</h1>
-        <p className="tnum">의뢰자는 무료예요. 2027년 12월 31일까지 전 요금제 무료예요.</p>
+        <p className="tnum">의뢰자는 무료로 이용해요. 2027년 12월 31일까지 전 요금제를 무료로 이용해요.</p>
       </div>
       <div className="prm-tabs" role="tablist" aria-label="요금 안내">
         {TABS.map(([id, label]) => (

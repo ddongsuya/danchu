@@ -108,7 +108,7 @@ function PdGroupsQ({ pd, std, orig, readOnly, setPd }: { pd: PdDesign; std?: PdD
         );
       })}
       <span className="qf__help tnum">
-        {pd.groups.length}군, {total}마리{std ? (pd.groups.length !== std.groups.length ? `. 기관 표준 ${std.groups.length}군에서 ${pd.groups.length > std.groups.length ? "늘었어요" : "줄었어요"}` : ". 기관 표준과 같은 군 수예요") : ""}
+        {pd.groups.length}군, {total}마리{std ? (pd.groups.length !== std.groups.length ? `. 기관 표준 ${std.groups.length}군에서 ${pd.groups.length > std.groups.length ? "늘었어요" : "줄었어요"}` : ". 기관 표준과 동일한 군 수") : ""}
         {orig?.groups ? ` (원안 ${orig.groups}군${orig.perGroup ? `, 군당 ${orig.perGroup}마리` : ""})` : ""}.
       </span>
       {hasNormal && hasVeh && <span className="qf__help">정상군은 유발하지 않고, 부형제군은 유발한 뒤 부형제를 줘요.</span>}

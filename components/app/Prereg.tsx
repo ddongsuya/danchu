@@ -117,7 +117,6 @@ function CmpPreview() {
           </tbody>
         </table>
       </div>
-      <p className="pr-note"><mark>노란 칸</mark>이 기관마다 다른 부분이에요.</p>
       <a className="pr-btn" href="/#cmp">예시 비교표 열기</a>
     </>
   );

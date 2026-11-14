@@ -25,7 +25,7 @@ export default function Home() {
 <h1><span className="h1l" style={{ color: "inherit" }}>비임상 시험 견적,<br />단추에서 비교하세요.</span></h1>
 <p className="sub">클릭 한 번으로 여러 기관의 견적을 받아보세요.</p>
 <div className="ctas">{cta}<a className="btn ghost" href="/#fields">시험 종류 보기</a></div>
-<p className="micro">의뢰자는 무료예요.</p>
+<p className="micro">의뢰자는 무료로 이용해요.</p>
 </div>
 
 <div className="fd fo" aria-hidden="true"><MarkDrift /></div>

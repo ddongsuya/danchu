@@ -286,10 +286,10 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
     body = <DetailQ key={cur.uid} t={cur} readOnly={readOnly} set={(p) => setTest(cur.uid, p)} />;
     const zero = c.lines.filter((l) => l.amount === 0 && l.kind !== "extra");
     const rows = kindRows(cur);
-    if (testKind(cur) !== "tox") lead = changing.length > 1 ? `바꿀 시험 ${changing.length}개 중 ${at + 1}번째예요. 노란 칸이 기관 표준과 달라진 곳이에요.` : "노란 칸이 기관 표준과 달라진 곳이에요.";
+    if (testKind(cur) !== "tox") lead = changing.length > 1 ? `바꿀 시험 ${changing.length}개 중 ${at + 1}번째예요.` : "";
     cost = (
       <div className="qf__cost" aria-live="polite">
-        <span className="qf__help tnum">{rows ? (c.total !== c.base ? `기관 표준 ${n(c.base)}원에서 ${c.total > c.base ? "+" : "-"}${n(Math.abs(c.total - c.base))}원` : `기관 표준 ${n(c.base)}원 그대로예요`) : [`표준가 ${cur.std.price != null ? n(cur.std.price) : "없음"}`, ...c.lines.map((l) => `${l.label} ${l.amount < 0 ? `- ${n(-l.amount)}` : n(l.amount)}`)].join(" + ").replace(/\+ -/g, "-")}</span>
+        <span className="qf__help tnum">{rows ? (c.total !== c.base ? `기관 표준 ${n(c.base)}원에서 ${c.total > c.base ? "+" : "-"}${n(Math.abs(c.total - c.base))}원` : `기관 표준 ${n(c.base)}원과 동일`) : [`표준가 ${cur.std.price != null ? n(cur.std.price) : "없음"}`, ...c.lines.map((l) => `${l.label} ${l.amount < 0 ? `- ${n(-l.amount)}` : n(l.amount)}`)].join(" + ").replace(/\+ -/g, "-")}</span>
         <b>이 시험 금액 <mark className="tnum">{n(c.total)}원</mark></b>
         {!rows && zero.length > 0 && <span className="qf__warn">{zero.map((l) => l.label.split(" · ")[0]).join(", ")} 단가가 비어 있어 0원이에요. <Link href={`/cro/catalog?item=${encodeURIComponent(cur.itemKey)}`}>시험 목록에서 적기</Link></span>}
       </div>
@@ -352,7 +352,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
           <div className="qf__body" ref={bodyRef}>
             <div className="qf__steps" aria-label={`6단계 중 ${BAR[step]}단계`}>{[1, 2, 3, 4, 5, 6].map((i) => <span key={i} data-on={i <= BAR[step] ? "1" : undefined} />)}</div>
             <h1 id="qf-h" className="qf__h">{h}</h1>
-            <p className="qf__lead">{lead}</p>
+            {lead && <p className="qf__lead">{lead}</p>}
             {body}
           </div>
           {cost}
@@ -525,7 +525,7 @@ function DetailQ({ t, readOnly, set }: { t: DocTest; readOnly: boolean; set: (p:
             );
           })}
           <span className="qf__help tnum">
-            {total0 !== total1 ? `동물 ${total0}마리에서 ${total1}마리로 ${total1 > total0 ? "늘었어요" : "줄었어요"}` : `동물 ${total1}마리, 표준 그대로예요`}
+            {total0 !== total1 ? `동물 ${total0}마리에서 ${total1}마리로 ${total1 > total0 ? "늘었어요" : "줄었어요"}` : `동물 ${total1}마리, 표준과 동일`}
             {recoveryAnimals(t.groups) !== recStd ? ` (회복군 ${recoveryAnimals(t.groups)}마리)` : ""}.
           </span>
           {!readOnly && (

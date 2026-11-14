@@ -779,7 +779,7 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
       {step === 1 && kind === "tox" && (
         <>
           <h1>표준 설계를 적어 주세요</h1>
-          <p className="tw__lead">표준가가 어떤 설계 기준인지 알려 주는 값이에요. 모르는 칸은 비워 두세요.</p>
+          <p className="tw__lead">표준가 기준 설계. 모르는 칸은 비워 두세요.</p>
           <div className="tw__q"><DesignFields row={d} onChange={set} k={k} /></div>
         </>
       )}
