@@ -1,5 +1,5 @@
 /**
- * 링크 미리보기(OG) 이미지 생성: 로고 + "비임상 시험 비교 견적표" (public/og-share.png, 1200x630)
+ * 링크 미리보기(OG) 이미지 생성: 로고 + 한 줄 문구 (public/og-share.png, 1200x630)
  *   node scripts/og-share.mjs
  * 서버 없이 public/ 을 잠깐 띄워 scripts/og-share/og-share.html 을 2배로 찍고 1200x630으로 줄인다.
  * 로고 SVG는 /mnt/project-files/danchu-logo-export 와 같은 components/Logo.tsx 경로(WORDMARK·MARK_PATH)다.

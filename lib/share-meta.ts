@@ -13,7 +13,7 @@ export const SHARE_IMAGE = {
   url: "/og-share.png",
   width: 1200,
   height: 630,
-  alt: "단추. 비임상 시험 비교 견적표",
+  alt: "단추. 연구 사이를 잇는 B2B 플랫폼",
 };
 
 export function shareMeta(title: string, description: string, path: string): Pick<Metadata, "openGraph" | "twitter"> {
