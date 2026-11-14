@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
 import { loadCatalog } from "@/lib/catalog-db";
 import { loadDoc, loadRates, loadStyle } from "@/lib/quote-doc-db";
+import { featureError } from "@/lib/plan-usage";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { QuoteFill } from "@/components/cro/quote/QuoteFill";
 import "@/components/cro/quote/quote.css";
@@ -18,6 +19,7 @@ export default async function FillPage({ params, searchParams }: { params: Promi
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const [got, catalog, rates, style] = await Promise.all([loadDoc(org.id, id), loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name)]);
   if (!got) notFound();
+  const lock = !!featureError(org, "branding");
   const replyHref = got.head.inviteId ? `/cro/r/${got.head.inviteId}/reply?doc=${got.head.id}` : null;
-  return <QuoteFill head={got.head} initial={got.data} style={style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={replyHref} start={sp.step} readOnly={!!s.demo} />;
+  return <QuoteFill head={got.head} initial={lock ? { ...got.data, layout: null } : got.data} style={lock ? { ...style, layout: "basic" } : style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={replyHref} start={sp.step} readOnly={!!s.demo} />;
 }

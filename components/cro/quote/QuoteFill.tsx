@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Plus, X } from "@phosphor-icons/react";
 import {
+  docStyle,
   addDays, blankTest, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
   type DocData, type DocGroup, type DocHead, type DocTest, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
@@ -331,9 +332,10 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
     : <button type="button" className="b1" disabled={!canNext} onClick={next}>{nextLabel}</button>;
   const savedLabel = readOnly ? "읽기 전용" : isNew ? "시험을 고르면 저장돼요" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
   const curIdx = cur ? data.tests.findIndex((t) => t.uid === cur.uid) : -1;
-  const preview = step === "client" || step === "kind" ? <Cover head={head} data={data} style={style} i={1} total={pageCount(data)} />
-    : step === "detail" && cur && curIdx >= 0 && testKind(cur) !== "tox" ? <DetailPage head={head} t={cur} idx={curIdx} count={data.tests.length} style={style} i={3 + curIdx} total={pageCount(data)} />
-    : <QuotePage head={head} data={data} style={style} i={2} total={pageCount(data)} />;
+  const ds = docStyle(style, data);
+  const preview = step === "client" || step === "kind" ? <Cover head={head} data={data} style={ds} i={1} total={pageCount(data)} />
+    : step === "detail" && cur && curIdx >= 0 && testKind(cur) !== "tox" ? <DetailPage head={head} t={cur} idx={curIdx} count={data.tests.length} style={ds} i={3 + curIdx} total={pageCount(data)} data={data} />
+    : <QuotePage head={head} data={data} style={ds} i={2} total={pageCount(data)} />;
 
   return (
     <div className="qf">

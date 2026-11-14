@@ -169,7 +169,8 @@ export type Choices = { species: string[]; routes: string[]; repPrice: number | 
 /** guide: 5부 시험 안내 (2026-11-13, 없으면 켬) */
 export type DocVisible = { perTest: boolean; adjust: boolean; formula: boolean; guide?: boolean };
 export type DocTerms = { pay: string; extra: string; note: string };
-export type DocData = { tests: DocTest[]; visible: DocVisible; discount: number; terms: DocTerms; glp: string };
+/** layout: 이 견적서만 다른 판 (없으면 기관 기본 판, 2026-11-13) */
+export type DocData = { tests: DocTest[]; visible: DocVisible; discount: number; terms: DocTerms; glp: string; layout?: QuoteLayout | null };
 
 export const EMPTY_TERMS: DocTerms = { pay: "", extra: "", note: "" };
 export const DEFAULT_VISIBLE: DocVisible = { perTest: true, adjust: true, formula: false, guide: true };
@@ -660,6 +661,7 @@ export function cleanDocData(raw: unknown): DocData {
     discount: num(o.discount, 0, MAX_WON, 0),
     terms: { pay: text(terms.pay, 300), extra: text(terms.extra, 300), note: text(terms.note, 600) },
     glp: text(o.glp, 20),
+    ...(isLayout(o.layout) ? { layout: o.layout } : {}),
   };
 }
 
@@ -680,8 +682,48 @@ export function addDays(ymd: string, n: number): string {
 
 /* ── 양식 ───────────────────────────────────────────── */
 
-export type Supplier = { name: string; address: string; contact: string; person: string; email: string };
-export type QuoteStyle = { brandColor: string | null; logo: string | null; logoPos: "left" | "right"; supplier: Supplier; terms: DocTerms };
+/** reg: 사업자 등록번호, ceo: 대표자 (2026-11-13, 없으면 표시하지 않는다) */
+export type Supplier = { name: string; address: string; contact: string; person: string; email: string; reg?: string; ceo?: string };
+/**
+ * 견적서 판 (2026-11-13). 판마다 표지·견적서 머리·합계 자리·쪽 머리와 꼬리가 다르고,
+ * 시험 상세(독성·효력·약동학·개별 분석)·일정표·시험 안내의 내용은 모든 판이 같다.
+ */
+export type QuoteLayout = "basic" | "summary" | "sentence" | "steps" | "side" | "sign";
+export const LAYOUTS: { key: QuoteLayout; name: string }[] = [
+  { key: "basic", name: "단추 기본" },
+  { key: "summary", name: "요약 줄" },
+  { key: "sentence", name: "한 줄 문장" },
+  { key: "steps", name: "진행 안내" },
+  { key: "side", name: "옆 띠" },
+  { key: "sign", name: "확인란" },
+];
+export const isLayout = (v: unknown): v is QuoteLayout => typeof v === "string" && LAYOUTS.some((l) => l.key === v);
+export const layoutName = (k: QuoteLayout | null | undefined) => LAYOUTS.find((l) => l.key === k)?.name ?? LAYOUTS[0].name;
+
+export type QuoteStyle = { brandColor: string | null; logo: string | null; logoPos: "left" | "right"; supplier: Supplier; terms: DocTerms; layout?: QuoteLayout };
+
+/** 이 견적서에 쓰는 양식: 견적서에 판을 따로 골랐으면 그 판, 아니면 기관 기본 판 */
+export function docStyle(style: QuoteStyle, d: Pick<DocData, "layout">): QuoteStyle {
+  return d.layout && d.layout !== style.layout ? { ...style, layout: d.layout } : style;
+}
+
+/** 금액 한글 표기: 249656000 → "금 이억사천구백육십오만육천 원정" */
+export function wonKorean(v: number): string {
+  const n = Math.floor(Math.abs(v));
+  if (n === 0) return "금 영 원정";
+  const D = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"], S = ["", "십", "백", "천"], B = ["", "만", "억", "조"];
+  let out = "", k = 0, x = n;
+  while (x > 0 && k < B.length) {
+    const part = x % 10000;
+    if (part) {
+      let w = "";
+      String(part).padStart(4, "0").split("").forEach((c, i) => { const d = Number(c); if (d) w += D[d] + S[3 - i]; });
+      out = w + B[k] + out;
+    }
+    x = Math.floor(x / 10000); k++;
+  }
+  return `금 ${out} 원정`;
+}
 export const EMPTY_SUPPLIER: Supplier = { name: "", address: "", contact: "", person: "", email: "" };
 
 /** 브랜드 색 위 글자색: 밝은 색이면 먹색, 어두운 색이면 종이색 (WCAG 상대 휘도) */

@@ -5,6 +5,7 @@ import { listDesignRequests, listDocs, loadDoc, loadStyle } from "@/lib/quote-do
 import { addDays, blankTest, DEFAULT_VISIBLE, nextDocNo, type DocData, type DocHead } from "@/lib/quote-doc";
 import { todaySeoul } from "@/lib/format";
 import { PendingOrg } from "@/components/cro/PendingOrg";
+import { featureError } from "@/lib/plan-usage";
 import { StyleEditor } from "@/components/cro/quote/StyleEditor";
 import "@/components/cro/quote/quote.css";
 
@@ -38,6 +39,7 @@ export default async function QuoteStylePage() {
         sampleIsReal={!!latest}
         requests={reqs.map((r) => ({ id: r.id, status: r.status, note: r.note, files: r.files.map((f) => ({ name: f.name, size: f.size })), reply: r.reply, createdAt: r.createdAt }))}
         readOnly={!!s.demo}
+        canLayout={!featureError(org, "branding")}
       />
     </>
   );
