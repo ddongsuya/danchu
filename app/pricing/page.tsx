@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Check, CaretDown } from "@phosphor-icons/react/dist/ssr";
 import { Site } from "@/components/site/Site";
 import { PLANS, PLAN_IDS, PRICE_OPEN, type PlanId } from "@/lib/plans";
@@ -6,12 +7,13 @@ import { PricingMobile } from "./PricingMobile";
 import { FAQ, FEE_ROWS, FEE_NOTE, PLAN_META, priceOf } from "./data";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "요금제 · 단추",
-  description: PRICE_OPEN
+export const metadata: Metadata = pageMeta(
+  "요금제 · 단추",
+  PRICE_OPEN
     ? "의뢰자는 무료예요. 기관은 무료, Plus, Pro 가운데 고르고, 2027년 12월 31일까지는 전 요금제 무료예요."
     : "의뢰자는 무료예요. 기관도 2027년 12월 31일까지 모든 기능이 무료예요.",
-};
+  "/pricing",
+);
 
 /** 시범 운영 중 쓰는 기능 (금액 공개 전 화면) */
 const PILOT_ITEMS = ["견적 요청 수신·회신", "견적 송부", "시험 관리", "견적서 작성 툴", "고객 관리", "담당자 계정"];

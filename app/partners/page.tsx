@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "협력기관 · 단추",
-  description: "바이오 클러스터, 협회, 창업 지원기관과의 제휴를 준비하고 있어요.",
-};
+export const metadata: Metadata = pageMeta(
+  "협력기관 · 단추",
+  "바이오 클러스터, 협회, 창업 지원기관과의 제휴를 준비하고 있어요.",
+  "/partners",
+);
 
 export default function Partners() {
   return (

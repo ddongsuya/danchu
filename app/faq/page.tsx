@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "자주 묻는 질문 · 단추",
-  description: "자주 묻는 질문을 모았어요.",
-};
+export const metadata: Metadata = pageMeta(
+  "자주 묻는 질문 · 단추",
+  "자주 묻는 질문을 모았어요.",
+  "/faq",
+);
 
 export default function Page() {
   return (

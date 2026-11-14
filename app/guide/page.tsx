@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import { GuideWeeksReel, GuideIndReel, GuideTestsReel } from "@/components/site/reel/Reels";
 import { BasisLinks } from "@/components/guide/BasisLinks";
 import { LIBRARY, TOPICS } from "@/lib/guideline-library";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "시험 가이드 · 단추",
-  description: "어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주가 필요한지 ICH·식약처 가이드라인으로 확인하세요.",
-};
+export const metadata: Metadata = pageMeta(
+  "시험 가이드 · 단추",
+  "어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주가 필요한지 ICH·식약처 가이드라인으로 확인하세요.",
+  "/guide",
+);
 
 export default function Page() {
   return (

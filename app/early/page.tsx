@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import { EarlyFlow } from "@/components/site/EarlyFlow";
 import { EarlySpec } from "@/components/site/EarlySpec";
@@ -6,8 +7,11 @@ import { daysToPilot, preregActive } from "@/lib/prereg";
 import "./early.css";
 
 export const metadata: Metadata = {
-  title: "사전예약 · 단추",
-  description: "2027년 6월 1일 시범 운영 전에 단추를 사전예약하세요. 예약 완료와 시범 운영 시작을 문자로 알려요.",
+  ...pageMeta(
+    "사전예약 · 단추",
+    "2027년 6월 1일 시범 운영 전에 단추를 사전예약하세요. 예약 완료와 시범 운영 시작을 문자로 알려요.",
+    "/early",
+  ),
   robots: { index: false },
 };
 

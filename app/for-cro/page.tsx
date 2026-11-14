@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import { CroHeroReel, CroStepsReel, CroReplyReel, CroRulesReel } from "@/components/site/reel/Reels";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "기관 참여 안내 · 단추",
-  description: "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 2027년 말까지는 기관도 무료예요.",
-};
+export const metadata: Metadata = pageMeta(
+  "기관 참여 안내 · 단추",
+  "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 2027년 말까지는 기관도 무료예요.",
+  "/for-cro",
+);
 
 export default function Page() {
   return (

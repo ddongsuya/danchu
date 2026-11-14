@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { Site } from "@/components/site/Site";
 import { TocSpy } from "@/components/guide/TocSpy";
 import { LIBRARY, PRODUCTS, TOPICS } from "@/lib/guideline-library";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "가이드라인 자료실 · 단추",
-  description: "ICH, 식약처 고시, OECD 시험지침 등 비임상 시험 공개 가이드라인 원문을 시험 종류와 제품 유형별로 모았어요.",
-};
+export const metadata: Metadata = pageMeta(
+  "가이드라인 자료실 · 단추",
+  "ICH, 식약처 고시, OECD 시험지침 등 비임상 시험 공개 가이드라인 원문을 시험 종류와 제품 유형별로 모았어요.",
+  "/guide/library",
+);
 
 /**
  * 공개 가이드라인 원문 목록. 원문은 발행 기관 사이트로 연결한다(파일을 올리지 않음).

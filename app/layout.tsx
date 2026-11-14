@@ -1,26 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SITE_DESC, SITE_TITLE, SITE_URL, shareMeta } from "@/lib/share-meta";
 
-const TITLE = "단추 · 비임상 시험의 시작, 단추를 채우다.";
-const DESC =
-  "한 번의 요청으로 필요한 시험부터 기관별 견적 비교까지.";
+const TITLE = SITE_TITLE;
+const DESC = SITE_DESC;
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://danchu.kr"),
+  metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESC,
-  // 카카오톡·슬랙 등 링크 미리보기
-  openGraph: {
-    title: TITLE,
-    description: DESC,
-    url: "https://danchu.kr",
-    siteName: "단추 Danchu",
-    locale: "ko_KR",
-    type: "website",
-    // 카카오톡·슬랙 등 링크 미리보기 썸네일 (public/og-orbit.png · scripts/og-orbit.mjs로 생성)
-    images: [{ url: "/og-orbit.png", width: 1200, height: 630, alt: "단추 · 비임상 시험의 시작, 단추를 채우다." }],
-  },
-  twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: ["/og-orbit.png"] },
+  // 카카오톡·Threads·슬랙 등 링크 미리보기. 하위 공개 페이지는 lib/share-meta pageMeta()로 따로 준다
+  ...shareMeta(TITLE, DESC, ""),
   robots: { index: true, follow: true },
   other: { "color-scheme": "light dark" },
   manifest: "/manifest.webmanifest",

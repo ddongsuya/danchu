@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import { HowReel } from "@/components/site/reel/Reels";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "이용 안내 · 단추",
-  description: "요청서 접수부터 기관 회신, 비교 견적 전달까지 한 흐름으로 확인하세요.",
-};
+export const metadata: Metadata = pageMeta(
+  "이용 안내 · 단추",
+  "요청서 접수부터 기관 회신, 비교 견적 전달까지 한 흐름으로 확인하세요.",
+  "/how-it-works",
+);
 
 export default function Page() {
   return (

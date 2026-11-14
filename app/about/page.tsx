@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import { AboutReel } from "@/components/site/reel/Reels";
 import "./page.css";
 
-export const metadata: Metadata = {
-  title: "서비스 소개 · 단추",
-  description: "한 번 요청으로 여러 기관에. 비임상 시험 견적을 편하게 비교하세요.",
-};
+export const metadata: Metadata = pageMeta(
+  "서비스 소개 · 단추",
+  "한 번 요청으로 여러 기관에. 비임상 시험 견적을 편하게 비교하세요.",
+  "/about",
+);
 
 export default function Page() {
   return (

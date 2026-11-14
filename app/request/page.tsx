@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/share-meta";
 import { Site } from "@/components/site/Site";
 import { StudyFork } from "@/components/site/StudyFork";
 import { preregActive } from "@/lib/prereg";
@@ -6,10 +7,11 @@ import "./page.css";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "견적 요청 시작 · 단추",
-  description: "독성, 효력, 약동학, 개별 분석 중 받을 견적을 고르고 요청서를 시작하세요. 로그인 없이 작성하고 보내기 직전에 이메일만 확인해요.",
-};
+export const metadata: Metadata = pageMeta(
+  "견적 요청 시작 · 단추",
+  "독성, 효력, 약동학, 개별 분석 중 받을 견적을 고르고 요청서를 시작하세요. 로그인 없이 작성하고 보내기 직전에 이메일만 확인해요.",
+  "/request",
+);
 
 /** 견적 요청 첫 화면: Tox / PD / PK / Other 네 갈래. 고른 종류에 맞는 요청서로 이어진다 */
 export default function Page() {
