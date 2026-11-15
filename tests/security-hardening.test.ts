@@ -468,14 +468,20 @@ describe("리뷰 수정 (2026-10-18)", () => {
     expect(op?.closed).toBe(true);
   });
   it("중지된 기관 담당자는 첨부를 내려받지 못한다 (계정·토큰 모두)", async () => {
-    fx.tables.cro_orgs[0].status = "suspended";
-    fx.tables.rfq_invites = [invite({ status: "submitted" })];
-    fx.session = { userId: "cro-1", email: "m@example.test", profile: { id: "cro-1", role: "cro", cro_org_id: ORG } };
-    expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}`), ctx({ id: FILE_A }))).status).toBe(403);
-    fx.session = null;
-    expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}?token=${TOKEN}`), ctx({ id: FILE_A }))).status).toBe(403);
-    fx.tables.cro_orgs[0].status = "approved";
-    expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}?token=${TOKEN}`), ctx({ id: FILE_A }))).status).not.toBe(403);
+    // The approved path streams a signed URL. Keep this authorization test offline.
+    const upstream = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("fixture"));
+    try {
+      fx.tables.cro_orgs[0].status = "suspended";
+      fx.tables.rfq_invites = [invite({ status: "submitted" })];
+      fx.session = { userId: "cro-1", email: "m@example.test", profile: { id: "cro-1", role: "cro", cro_org_id: ORG } };
+      expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}`), ctx({ id: FILE_A }))).status).toBe(403);
+      fx.session = null;
+      expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}?token=${TOKEN}`), ctx({ id: FILE_A }))).status).toBe(403);
+      expect(upstream).not.toHaveBeenCalled();
+      fx.tables.cro_orgs[0].status = "approved";
+      expect((await fileGet(new Request(`https://danchu.kr/api/files/${FILE_A}?token=${TOKEN}`), ctx({ id: FILE_A }))).status).toBe(200);
+      expect(upstream).toHaveBeenCalledOnce();
+    } finally { upstream.mockRestore(); }
   });
 
   // M3: 다른 기관 담당자로 로그인한 경우 거절 문구가 로그아웃 방법을 알려 준다
