@@ -6,7 +6,7 @@ import { ArrowUp, ArrowRight, Check, FileText, ChatCircleText, Buildings, ArrowC
 import { LAB_ROLES, ROLE_LABEL, type LabRole, type Quote, type RequestDraft } from "@/lib/agent-lab/domain";
 import type { LabResponse } from "@/lib/agent-lab/runtime";
 
-type Payload = LabResponse & { configured?: boolean; error?: string };
+type Payload = LabResponse & { configured?: boolean; error?: string; inProgress?: boolean };
 const money = (value: number | null) => value === null ? "확인 필요" : `${value.toLocaleString("ko-KR")}원`;
 const EXAMPLE = "테스트 요청서를 작성해 줘. 개별 분석이고, 제목은 혈청 임상생화학 분석이야. 검체는 혈청, 검체 수는 30개, 분석 항목은 ALT, AST, BUN, CREA야. 희망 완료일은 2026-12-10이고 국문 결과 요약도 필요해. 아직 전달하지 말고 초안만 준비해 줘.";
 
@@ -57,6 +57,7 @@ export function AgentLab() {
   }, [role]);
 
   useEffect(() => { const controller = new AbortController(); void refresh(controller.signal); return () => controller.abort(); }, [refresh]);
+  useEffect(() => { if (!data?.inProgress) return; const timer = window.setTimeout(() => void refresh(), 2000); return () => window.clearTimeout(timer); }, [data, refresh]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" }); }, [data?.view.chat.length, data?.approval, busy]);
   useEffect(() => { document.documentElement.dataset.theme = dark ? "dark" : "light"; return () => { document.documentElement.dataset.theme = "light"; }; }, [dark]);
 
@@ -80,7 +81,7 @@ export function AgentLab() {
 
   const view = data?.view.role === role ? data.view : null;
   const isRequester = role === "requester";
-  const blocked = busy || loading || !!data?.waitingFor || !data?.configured || data.remainingTurns <= 0;
+  const blocked = busy || loading || !!data?.inProgress || !!data?.waitingFor || !data?.configured || data.remainingTurns <= 1;
   const prompts = !view ? [] : isRequester
     ? !view.draft && !view.request ? [{ label: "예시 요청으로 시작", text: EXAMPLE }]
       : !view.request ? [{ label: "기관에 요청 전달", text: "작성한 요청서를 두 예시 기관에 전달할 수 있게 확인 화면을 열어 줘." }]
@@ -103,7 +104,7 @@ export function AgentLab() {
         <div className="al-panel-title"><div><h2 id="al-chat-title">{isRequester ? "의뢰자 에이전트" : "기관 에이전트"}</h2><p>{isRequester ? "요청 준비 · 기관 문의 · 견적 비교" : "요청 검토 · 견적 작성 · 고객관리"}</p></div><span className="al-private"><LockSimple size={15} aria-hidden="true" />역할별 대화</span></div>
         <div className="al-messages" role="log" aria-label="에이전트 대화" aria-live="polite" aria-busy={busy || loading}>
           {loading ? <div className="al-skeleton" role="status"><span>대화를 불러오고 있어요.</span><i /><i /><i /></div> : view && !view.chat.length ? <div className="al-welcome"><span className="al-glyph"><ChatCircleText size={32} aria-hidden="true" /></span><h3>{isRequester ? "어떤 의뢰를 준비할까요?" : view.request ? "접수된 요청을 함께 검토해요." : "의뢰자의 요청을 기다리고 있어요."}</h3><p>{isRequester ? "조건을 알려 주면 요청서로 정리하고, 필요한 확인 사항을 찾아요." : view.request ? "참여에 동의하면 요청서 전체를 보고 우리 기관의 조건으로 견적을 준비할 수 있어요." : "의뢰자 역할에서 예시 요청서를 작성하고 전달해 보세요."}</p></div> : view?.chat.map(item => <article className={`al-message al-message--${item.from}`} key={item.id}><span className="al-message-label">{item.from === "user" ? ROLE_LABEL[role] : "단추 에이전트"}</span><div><MessageText text={item.text} /></div></article>)}
-          {busy && <div className="al-working" role="status"><span className="al-working-line" />업무를 확인하고 있어요. 완료되면 문서에 반영돼요.</div>}
+          {(busy || data?.inProgress) && <div className="al-working" role="status"><span className="al-working-line" />업무를 확인하고 있어요. 완료되면 문서에 반영돼요.</div>}
           {data?.approval?.role === role && <section className="al-approval" aria-label="실행 전 확인"><h3>실행 전에 확인해 주세요</h3>{data.approval.actions.map((action, i) => <div key={i}><strong>{action.label}</strong>{Object.entries(action.arguments).map(([key, value]) => <p key={key}>{key === "question" ? "질문" : key === "answer" ? "답변" : "질문 번호"}: {String(value)}</p>)}</div>)}<p>아래 작업 문서와 내용을 확인해 주세요. 이 테스트 안에서만 전달돼요.</p><div className="al-approval-actions"><button className="al-secondary" disabled={busy} onClick={() => void act({ action: "approval", approvalId: data.approval!.id, approve: false })}>취소</button><button className="al-primary" disabled={busy} onClick={() => void act({ action: "approval", approvalId: data.approval!.id, approve: true })}>확인하고 실행<Check size={17} aria-hidden="true" /></button></div></section>}
           {data?.waitingFor && !data.approval && <p className="al-waiting">{data.waitingFor} 역할에서 대기 중인 작업을 확인해 주세요.</p>}
           <div ref={endRef} />
@@ -123,6 +124,6 @@ export function AgentLab() {
         </>}
       </aside>
     </div>
-    <footer className="al-footer"><p>예시 요청과 기관 두 곳으로 진행하는 개발용 테스트입니다. 실제 의뢰·메일 발송·계약은 이루어지지 않습니다.</p><p>테스트 기록은 서버 메모리에 최대 2시간 보관되며 서버가 재시작되면 초기화됩니다.</p></footer>
+    <footer className="al-footer"><p>예시 요청과 기관 두 곳으로 진행하는 테스트입니다. 실제 의뢰·메일 발송·계약은 이루어지지 않습니다.</p><p>테스트 세션은 2시간 동안 유지됩니다. 새 테스트를 시작하면 요청·대화가 초기화됩니다.</p></footer>
   </main>;
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Agent, Runner, tool, type AgentInputItem, type AgentOutputType, type RunResult } from "@openai/agents";
+import { Agent, Runner, RunState, tool, type AgentInputItem, type AgentOutputType, type RunResult } from "@openai/agents";
 import { z } from "zod";
 import {
   APPROVAL_LABELS, ROLE_LABEL, answerQuestion, askQuestion, comparisonOpen,
@@ -11,7 +11,7 @@ type Approval = {
   id: string; role: LabRole; actions: { label: string; arguments: Record<string, unknown> }[];
 };
 type LabAgent = Agent<undefined, AgentOutputType>;
-type Pending = { approval: Approval; result: RunResult<undefined, LabAgent>; agent: LabAgent };
+type Pending = { approval: Approval; runState: RunState<undefined, LabAgent>; agent: LabAgent };
 export type LabSession = {
   id: string; expiresAt: number; state: LabCase; busy: boolean; turns: number;
   histories: Record<LabRole, AgentInputItem[]>; pending: Pending | null;
@@ -27,11 +27,37 @@ export function getLabSession(id: string | undefined): LabSession | undefined {
   return id ? sessions.get(id) : undefined;
 }
 
-export function createLabSession(): LabSession {
+export function createLabSession(registerInMemory = true): LabSession {
   getLabSession(undefined);
-  if (sessions.size >= 30) throw new Error("테스트 세션이 많습니다. 기존 세션을 종료해 주세요.");
+  if (registerInMemory && sessions.size >= 30) throw new Error("테스트 세션이 많습니다. 기존 세션을 종료해 주세요.");
   const session: LabSession = { id: randomUUID(), expiresAt: Date.now() + 2 * 60 * 60 * 1000, state: newLabCase(), busy: false, turns: 0, histories: { requester: [], "cro-a": [], "cro-b": [] }, pending: null };
-  sessions.set(session.id, session);
+  if (registerInMemory) sessions.set(session.id, session);
+  return session;
+}
+
+export type SavedLabSession = Omit<LabSession, "pending" | "busy"> & {
+  version: 1;
+  pending: { approval: Approval; runState: string } | null;
+};
+
+/** Server-side private storage only. This snapshot must never reach the browser. */
+export function saveLabSnapshot(session: LabSession): SavedLabSession {
+  const { pending, busy: _busy, ...data } = session;
+  void _busy;
+  return structuredClone({ ...data, version: 1, pending: pending ? {
+    approval: pending.approval, runState: pending.runState.toString({ includeTracingApiKey: false }),
+  } : null });
+}
+
+export async function restoreLabSnapshot(saved: SavedLabSession): Promise<LabSession> {
+  if (saved.version !== 1 || saved.expiresAt <= Date.now()) throw new Error("테스트 세션이 만료되었습니다.");
+  const { version: _version, pending, ...data } = structuredClone(saved);
+  void _version;
+  const session: LabSession = { ...data, busy: false, pending: null };
+  if (pending) {
+    const agent = agentFor(session, pending.approval.role);
+    session.pending = { approval: pending.approval, agent, runState: await RunState.fromString(agent, pending.runState) };
+  }
   return session;
 }
 
@@ -99,7 +125,7 @@ function agentFor(session: LabSession, role: LabRole): LabAgent {
 export async function runLabTurn(session: LabSession, role: LabRole, input: { message: string } | { approvalId: string; approve: boolean }) {
   if (session.busy) throw new Error("이전 작업이 진행 중입니다. 완료된 뒤 다시 시도해 주세요.");
   const callTimes = (globalLab.danchuAgentLabCalls ?? []).filter(at => at > Date.now() - 3600000);
-  if (session.turns >= 40 || callTimes.length >= 120) throw new Error("테스트 호출 한도에 도달했습니다. 잠시 후 다시 테스트해 주세요.");
+  if (session.turns >= ("message" in input ? 39 : 40) || callTimes.length >= 120) throw new Error("테스트 호출 한도에 도달했습니다. 잠시 후 다시 테스트해 주세요.");
   if ("message" in input && session.pending) throw new Error("먼저 대기 중인 작업을 승인하거나 취소해 주세요.");
   const pending = session.pending;
   if ("approvalId" in input && (!pending || pending.approval.id !== input.approvalId || pending.approval.role !== role)) throw new Error("유효한 승인 요청이 아닙니다. 화면을 새로고침해 주세요.");
@@ -112,11 +138,11 @@ export async function runLabTurn(session: LabSession, role: LabRole, input: { me
     let result: RunResult<undefined, LabAgent>;
     if ("approvalId" in input && pending) {
       session.pending = null; // single-use approval: never replay a submitted action
-      for (const item of pending.result.interruptions) {
-        if (input.approve) pending.result.state.approve(item);
-        else pending.result.state.reject(item);
+      for (const item of pending.runState.getInterruptions()) {
+        if (input.approve) pending.runState.approve(item);
+        else pending.runState.reject(item);
       }
-      result = await runner.run(agent, pending.result.state, { maxTurns: 6, signal: AbortSignal.timeout(60000) });
+      result = await runner.run(agent, pending.runState, { maxTurns: 6, signal: AbortSignal.timeout(60000) });
     } else if ("message" in input) {
       session.state.chats[role].push({ id: randomUUID(), from: "user", text: input.message });
       result = await runner.run(agent, [...session.histories[role], { role: "user", content: input.message }], { maxTurns: 6, signal: AbortSignal.timeout(60000) });
@@ -128,7 +154,7 @@ export async function runLabTurn(session: LabSession, role: LabRole, input: { me
         if (!APPROVAL_LABELS[item.name || ""]) throw new Error("지원하지 않는 승인 작업입니다.");
         return { label: APPROVAL_LABELS[item.name!], arguments: args as Record<string, unknown> };
       });
-      session.pending = { approval: { id: randomUUID(), role, actions }, result, agent };
+      session.pending = { approval: { id: randomUUID(), role, actions }, runState: result.state, agent };
     }
     const text = result.finalOutput;
     if (typeof text === "string" && text.trim()) session.state.chats[role].push({ id: randomUUID(), from: "agent", text });

@@ -182,5 +182,11 @@ export const APPROVAL_LABELS: Record<string, string> = {
 };
 
 export function labEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.NODE_ENV === "development" && env.DANCHU_AGENT_LAB === "1";
+  if (env.DANCHU_AGENT_LAB !== "1") return false;
+  if (env.NODE_ENV === "development") return true;
+  return env.VERCEL_ENV === "preview"
+    && env.VERCEL_GIT_COMMIT_REF === "feat/dual-ai-agents"
+    && !!env.DANCHU_AGENT_BLOB_STORE_ID
+    && /^[a-f0-9]{64}$/.test(env.DANCHU_AGENT_ACCESS_HASH ?? "")
+    && Date.parse(env.DANCHU_AGENT_ACCESS_EXPIRES_AT ?? "") > Date.now();
 }
