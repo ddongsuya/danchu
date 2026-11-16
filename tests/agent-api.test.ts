@@ -117,4 +117,13 @@ describe("공개 규칙", () => {
     expect(v.open).toBe(true);
     if (v.open) expect(v.columns.map((c) => c.lab)).toEqual(["먼저 온 비싼 곳", "늦은 싼 곳"]);
   });
+  it("열린 뒤 열에는 승인 동작에 넘길 견적 id·판·초대 id와 선정 가능 여부", () => {
+    const v = compareView({ compared_at: "2026-11-21", selected_quote_id: "q-1", reply_by: "2026-11-20" }, [], [
+      { id: "q-1", invite_id: "i-1", revision: 2, status: "submitted", cro_name: "가", total_amount: 1, final_weeks: 1, first_submitted_at: "2026-11-03", auto: false, pdf_path: "a.pdf", start_date: "2026-12-01", valid_until: "2099-01-01" },
+      { id: "q-2", invite_id: "i-2", revision: 1, status: "submitted", cro_name: "나", total_amount: 1, final_weeks: 1, first_submitted_at: "2026-11-04", auto: false, pdf_path: null, start_date: null, valid_until: null },
+    ]);
+    if (!v.open) throw new Error("open");
+    expect(v.columns[0]).toMatchObject({ quoteId: "q-1", inviteId: "i-1", revision: 2, selected: true });
+    expect(v.columns[1]).toMatchObject({ quoteId: "q-2", selectable: false, selected: false });
+  });
 });

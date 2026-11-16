@@ -16,6 +16,7 @@ import type { InviteRow, QuoteRow, RfqRow, RfqSummary } from "./data";
 import type { PipeItem } from "./pipeline";
 import { comparisonOpened } from "./reply-window";
 import { occupiesSeat } from "./request-policy";
+import { quoteSelectable } from "./quote-policy";
 import { clientIp, rateLimited } from "./rate-limit";
 
 export type AgentError = "unauthorized" | "forbidden" | "org_not_ready" | "not_found" | "rate_limited" | "unavailable";
@@ -159,13 +160,17 @@ export function croItem(p: PipeItem): AgentCroItem {
 
 export type AgentCompare =
   | { open: false; joined: number; submitted: number; replyBy: string | null }
-  | { open: true; columns: { lab: string; total: number | null; weeks: number | null; submittedAt: string | null }[] };
+  | {
+      open: true;
+      /** quoteId·revision·inviteId 는 선정·2차 요청·질의 같은 승인 동작(연동 4·5단계)에 그대로 넘긴다. selectable 은 단추 선정 조건(정식 견적서·유효기간) */
+      columns: { lab: string; total: number | null; weeks: number | null; submittedAt: string | null; quoteId: string | null; inviteId: string | null; revision: number | null; selectable: boolean; selected: boolean }[];
+    };
 
 /**
  * 의뢰자 비교표. 열리기 전에는 숫자만. 열린 뒤에는 제출한 견적을 회신 도착 순으로(추천·순위 없음).
  * 금액은 단추가 저장한 값 그대로다(에이전트가 다시 계산하거나 고치지 않는다).
  */
-export function compareView(rfq: Pick<RfqRow, "compared_at" | "selected_quote_id" | "reply_by">, invites: Pick<InviteRow, "status" | "withdrawn_at" | "revoked_at" | "joined_at">[], quotes: Pick<QuoteRow, "status" | "cro_name" | "total_amount" | "final_weeks" | "first_submitted_at">[]): AgentCompare {
+export function compareView(rfq: Pick<RfqRow, "compared_at" | "selected_quote_id" | "reply_by">, invites: Pick<InviteRow, "status" | "withdrawn_at" | "revoked_at" | "joined_at">[], quotes: (Pick<QuoteRow, "status" | "cro_name" | "total_amount" | "final_weeks" | "first_submitted_at"> & Partial<Pick<QuoteRow, "id" | "invite_id" | "revision" | "auto" | "pdf_path" | "start_date" | "valid_until">>)[]): AgentCompare {
   if (!comparisonOpened(rfq)) {
     const seats = invites.filter((i) => occupiesSeat(i));
     return { open: false, joined: seats.length, submitted: seats.filter((i) => i.status === "submitted").length, replyBy: rfq.reply_by ?? null };
@@ -173,7 +178,17 @@ export function compareView(rfq: Pick<RfqRow, "compared_at" | "selected_quote_id
   const cols = quotes
     .filter((q) => q.status === "submitted")
     .sort((a, b) => (a.first_submitted_at ?? "").localeCompare(b.first_submitted_at ?? ""))
-    .map((q) => ({ lab: q.cro_name, total: q.total_amount ?? null, weeks: q.final_weeks ?? null, submittedAt: q.first_submitted_at ?? null }));
+    .map((q) => ({
+      lab: q.cro_name,
+      total: q.total_amount ?? null,
+      weeks: q.final_weeks ?? null,
+      submittedAt: q.first_submitted_at ?? null,
+      quoteId: q.id ?? null,
+      inviteId: q.invite_id ?? null,
+      revision: q.revision ?? null,
+      selectable: !!q.id && quoteSelectable(q),
+      selected: !!q.id && q.id === rfq.selected_quote_id,
+    }));
   return { open: true, columns: cols };
 }
 
