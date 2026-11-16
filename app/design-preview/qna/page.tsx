@@ -23,7 +23,7 @@ const INV = [
   { id: "inv-c", cro_name: "기관 다", joined_at: "2026-11-11T02:00:00Z", sent_at: "2026-11-09T01:00:00Z" },
 ];
 const row = (o: Partial<QnaRow> & Pick<QnaRow, "id" | "invite_id" | "direction" | "topic" | "body" | "created_at">): QnaRow => ({
-  rfq_id: "rfq", cro_org_id: null, test_seq: null, body_has_contact: false, asked_by: null, answer: null, answer_has_contact: false, answered_by: null, answered_at: null, scope: null, ...o,
+  rfq_id: "rfq", via: "web", cro_org_id: null, test_seq: null, body_has_contact: false, asked_by: null, answer: null, answer_has_contact: false, answered_by: null, answered_at: null, scope: null, ...o,
 });
 const ROWS: QnaRow[] = [
   row({ id: "00000000-0000-4000-8000-000000000004", invite_id: "inv-c", direction: "cro", topic: "substance", test_seq: 1, body: "시험물질 용해도 자료가 있으면 부형제 선정에 참고하겠습니다. 물에 녹는지 여부만이라도 알려 주세요. 자료가 길면 qa-test@example.com 으로 보내 주셔도 됩니다.", body_has_contact: true, created_at: "2026-11-14T01:12:00Z" }),

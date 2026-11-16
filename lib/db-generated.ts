@@ -59,6 +59,35 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_consents: {
+        Row: {
+          agreed_at: string
+          revoked_at: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          agreed_at?: string
+          revoked_at?: string | null
+          user_id: string
+          version: string
+        }
+        Update: {
+          agreed_at?: string
+          revoked_at?: string | null
+          user_id?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_consents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_adjustments: {
         Row: {
           amount: number
@@ -374,6 +403,7 @@ export type Database = {
           quote_doc_id: string | null
           title: string
           updated_at: string
+          via: string
         }
         Insert: {
           attendee_contacts?: string[]
@@ -393,6 +423,7 @@ export type Database = {
           quote_doc_id?: string | null
           title?: string
           updated_at?: string
+          via?: string
         }
         Update: {
           attendee_contacts?: string[]
@@ -412,6 +443,7 @@ export type Database = {
           quote_doc_id?: string | null
           title?: string
           updated_at?: string
+          via?: string
         }
         Relationships: [
           {
@@ -1787,6 +1819,7 @@ export type Database = {
           updated_at: string
           valid_until: string | null
           vat: string | null
+          via: string
         }
         Insert: {
           aaalac?: boolean | null
@@ -1843,6 +1876,7 @@ export type Database = {
           updated_at?: string
           valid_until?: string | null
           vat?: string | null
+          via?: string
         }
         Update: {
           aaalac?: boolean | null
@@ -1899,6 +1933,7 @@ export type Database = {
           updated_at?: string
           valid_until?: string | null
           vat?: string | null
+          via?: string
         }
         Relationships: [
           {
@@ -2231,6 +2266,7 @@ export type Database = {
           substance_qty: string | null
           substance_updated_at: string | null
           substance_when: string | null
+          via: string
         }
         Insert: {
           awarded_at?: string
@@ -2270,6 +2306,7 @@ export type Database = {
           substance_qty?: string | null
           substance_updated_at?: string | null
           substance_when?: string | null
+          via?: string
         }
         Update: {
           awarded_at?: string
@@ -2309,6 +2346,7 @@ export type Database = {
           substance_qty?: string | null
           substance_updated_at?: string | null
           substance_when?: string | null
+          via?: string
         }
         Relationships: [
           {
@@ -2441,6 +2479,7 @@ export type Database = {
           note: string
           reply_by: string
           rfq_id: string
+          via: string
         }
         Insert: {
           created_at?: string
@@ -2449,6 +2488,7 @@ export type Database = {
           note?: string
           reply_by: string
           rfq_id: string
+          via?: string
         }
         Update: {
           created_at?: string
@@ -2457,6 +2497,7 @@ export type Database = {
           note?: string
           reply_by?: string
           rfq_id?: string
+          via?: string
         }
         Relationships: [
           {
@@ -2478,6 +2519,7 @@ export type Database = {
           meta: Json
           rfq_id: string
           title: string
+          via: string
         }
         Insert: {
           actor_id?: string | null
@@ -2488,6 +2530,7 @@ export type Database = {
           meta?: Json
           rfq_id: string
           title: string
+          via?: string
         }
         Update: {
           actor_id?: string | null
@@ -2498,6 +2541,7 @@ export type Database = {
           meta?: Json
           rfq_id?: string
           title?: string
+          via?: string
         }
         Relationships: [
           {
@@ -2733,6 +2777,7 @@ export type Database = {
           scope: string | null
           test_seq: number | null
           topic: string
+          via: string
         }
         Insert: {
           answer?: string | null
@@ -2751,6 +2796,7 @@ export type Database = {
           scope?: string | null
           test_seq?: number | null
           topic: string
+          via?: string
         }
         Update: {
           answer?: string | null
@@ -2769,6 +2815,7 @@ export type Database = {
           scope?: string | null
           test_seq?: number | null
           topic?: string
+          via?: string
         }
         Relationships: [
           {
@@ -2836,6 +2883,7 @@ export type Database = {
           substance: string
           user_agent: string | null
           user_id: string | null
+          via: string
         }
         Insert: {
           admin_note?: string | null
@@ -2878,6 +2926,7 @@ export type Database = {
           substance: string
           user_agent?: string | null
           user_id?: string | null
+          via?: string
         }
         Update: {
           admin_note?: string | null
@@ -2920,6 +2969,7 @@ export type Database = {
           substance?: string
           user_agent?: string | null
           user_id?: string | null
+          via?: string
         }
         Relationships: []
       }

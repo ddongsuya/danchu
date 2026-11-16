@@ -30,13 +30,16 @@ export type ContractConfirmVia = "sponsor" | "auto" | "operator" | "legacy";
 export type JoinStatus = "joined" | "legacy" | "not_joined" | "pilot";
 
 /** Row 에서 Insert 를 만든다: 기본값이 있는 컬럼은 선택 */
-type Ins<Row, Optional extends keyof Row> = Omit<Row, Optional> & Partial<Pick<Row, Optional>>;
+type Ins<Row, Optional extends keyof Row> = Omit<Row, Optional | "via"> & Partial<Pick<Row, Optional | Extract<"via", keyof Row>>>;
+/** 어디서 처리했나 (0046). 기본 web, 에이전트 입구로 들어온 쓰기만 agent */
+export type Via = "web" | "agent";
 
 export type Database = {
   public: {
     Tables: {
       rfq_requests: {
         Row: {
+          via: Via;
           id: string;
           rfq_no: string;
           created_at: string;
@@ -114,6 +117,7 @@ export type Database = {
       /** 0042: 2차 상세 견적 요청 (요청마다 한 번) */
       rfq_details: {
         Row: {
+          via: Via;
           rfq_id: string;
           created_by: string | null;
           created_at: string;
@@ -155,6 +159,7 @@ export type Database = {
       rfq_questions: {
         /** 의뢰자·기관 직접 질의응답 (0045). 고치기·지우기 금지 트리거, 서비스 키로만 읽고 쓴다 */
         Row: {
+          via: Via;
           id: string;
           rfq_id: string;
           invite_id: string;
@@ -237,6 +242,7 @@ export type Database = {
       };
       cro_quotes: {
         Row: {
+          via: Via;
           id: string;
           invite_id: string;
           rfq_id: string;
@@ -357,6 +363,7 @@ export type Database = {
       };
       rfq_awards: {
         Row: {
+          via: Via;
           id: string;
           rfq_id: string;
           quote_id: string;
@@ -488,8 +495,15 @@ export type Database = {
           { foreignKeyName: "profiles_pending_org_id_fkey"; columns: ["pending_org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
         ];
       };
+      /** 견적 에이전트 이용 동의 (0046) */
+      agent_consents: {
+        Row: { user_id: string; version: string; agreed_at: string; revoked_at: string | null };
+        Insert: Ins<Database["public"]["Tables"]["agent_consents"]["Row"], "agreed_at" | "revoked_at">;
+        Update: Partial<Database["public"]["Tables"]["agent_consents"]["Row"]>;
+        Relationships: [];
+      };
       rfq_events: {
-        Row: { id: string; rfq_id: string; kind: string; title: string; body: string | null; actor_id: string | null; meta: Obj; created_at: string };
+        Row: { via: Via; id: string; rfq_id: string; kind: string; title: string; body: string | null; actor_id: string | null; meta: Obj; created_at: string };
         Insert: Ins<Database["public"]["Tables"]["rfq_events"]["Row"], "id" | "body" | "actor_id" | "meta" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["rfq_events"]["Row"]>;
         Relationships: [{ foreignKeyName: "rfq_events_rfq_id_fkey"; columns: ["rfq_id"]; isOneToOne: false; referencedRelation: "rfq_requests"; referencedColumns: ["id"] }];
@@ -630,7 +644,7 @@ export type Database = {
       };
       /** 기관 CRM 기록 (0038). 미팅·통화·메일·메모 (모두 기관 담당자가 직접 남긴다) */
       cro_crm_activities: {
-        Row: { id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; event_id: string | null; kind: string; occurred_at: string; duration_min: number | null; title: string; body: string; attendee_contacts: string[]; attendee_members: string[]; created_by: string | null; created_at: string; updated_at: string };
+        Row: { via: Via; id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; event_id: string | null; kind: string; occurred_at: string; duration_min: number | null; title: string; body: string; attendee_contacts: string[]; attendee_members: string[]; created_by: string | null; created_at: string; updated_at: string };
         Insert: Ins<Database["public"]["Tables"]["cro_crm_activities"]["Row"], "id" | "created_by" | "created_at" | "updated_at" | "company_id" | "deal_id" | "contact_id" | "quote_doc_id" | "event_id" | "occurred_at" | "duration_min" | "title" | "body" | "attendee_contacts" | "attendee_members">;
         Update: Partial<Database["public"]["Tables"]["cro_crm_activities"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_crm_activities_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_activities_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "cro_crm_companies"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_activities_deal_id_fkey"; columns: ["deal_id"]; isOneToOne: false; referencedRelation: "cro_crm_deals"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_activities_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "cro_crm_contacts"; referencedColumns: ["id"] } ];

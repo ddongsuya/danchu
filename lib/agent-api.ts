@@ -27,8 +27,8 @@ export function agentError(code: AgentError): NextResponse {
   return NextResponse.json({ error: code }, { status: STATUS[code], headers: { "Cache-Control": "no-store" } });
 }
 
-export function agentJson(body: unknown): NextResponse {
-  return NextResponse.json(body, { headers: { "Cache-Control": "no-store" } });
+export function agentJson(body: unknown, status = 200): NextResponse {
+  return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 /** `Authorization: Bearer <token>` 에서 토큰만. 형식이 틀리면 null */

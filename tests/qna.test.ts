@@ -3,7 +3,7 @@ import { cleanText, croItems, partyLabels, qnaWindow, sponsorItems, type QnaRow 
 import { CONTACT_MASK } from "@/lib/contact-guard";
 
 const row = (o: Partial<QnaRow> & Pick<QnaRow, "id" | "invite_id" | "direction">): QnaRow => ({
-  rfq_id: "r", cro_org_id: null, topic: "terms", test_seq: null, body: "질의", body_has_contact: false, asked_by: null, created_at: "2026-11-13T00:00:00Z",
+  rfq_id: "r", via: "web", cro_org_id: null, topic: "terms", test_seq: null, body: "질의", body_has_contact: false, asked_by: null, created_at: "2026-11-13T00:00:00Z",
   answer: null, answer_has_contact: false, answered_by: null, answered_at: null, scope: null, ...o,
 });
 const tests = new Map([[1, "반복투여 4주"]]);
