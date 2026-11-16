@@ -30,6 +30,7 @@ export async function GET(req: Request) {
 /**
  * POST { payload } — 의뢰자: 사람이 승인한 요청서를 접수하고 바로 기관 안내를 시작한다 (연동 4단계).
  * 웹 위자드와 같은 검증(/api/rfq)을 지난다. 첨부는 아직 받지 않는다(웹 요청 화면에서 더할 수 있다).
+ * 회사명·성명·부서·휴대전화·이메일은 단추 프로필 값으로 채운다(본문 값은 쓰지 않는다). 회사명·성명이 비면 409 profile_incomplete
  * 응답: 웹 처리의 상태·본문 그대로. 성공하면 { rfqNo, started }
  */
 export async function POST(req: Request) {
@@ -37,8 +38,12 @@ export async function POST(req: Request) {
   if (s instanceof Response) return s;
   if (s.role !== "requester") return agentError("forbidden");
   const b = (await req.json().catch(() => null)) as { payload?: unknown } | null;
-  if (!b?.payload || typeof b.payload !== "object") return agentJson({ error: "bad_request" }, 400);
-  const made = await callAs(s, req, createRfq, {}, { payload: b.payload, files: [] });
+  if (!b?.payload || typeof b.payload !== "object" || Array.isArray(b.payload)) return agentJson({ error: "bad_request" }, 400);
+  // 회사명·담당자 연락처는 AI를 거치지 않는다. 에이전트가 보낸 값은 버리고 단추 프로필에서 채운다
+  const p = s.profile;
+  if (!p.company?.trim() || !p.name?.trim()) return agentJson({ error: "profile_incomplete" }, 409);
+  const payload = { ...(b.payload as Record<string, unknown>), company: p.company, name: p.name, dept: p.dept ?? "", phone: p.phone ?? "", email: s.email, orgType: p.org_type ?? (b.payload as Record<string, unknown>).orgType };
+  const made = await callAs(s, req, createRfq, {}, { payload, files: [] });
   const rfqNo = typeof made.body.rfqNo === "string" ? made.body.rfqNo : null;
   if (made.status !== 200 || !rfqNo || made.body.persisted !== true) return agentJson(made.body, made.status);
   if (!made.body.duplicate) await markVia("rfq_requests", "rfq_no", rfqNo);
