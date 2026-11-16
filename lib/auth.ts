@@ -95,6 +95,12 @@ export const getSession = cache(async (): Promise<Session | null> => {
   // 로그인하지 않았고 미리보기 쿠키가 있으면 그 역할의 기존 계정으로 본다 (개발 단계 임시, lib/demo.ts)
   if ((!user || !user.email) && demoEnabled()) return demoSession();
   if (!user || !user.email) return null;
+  return sessionForUser(user);
+});
+
+/** Supabase 인증 사용자 → 단추 세션(프로필·기관). 쿠키 세션(getSession)과 에이전트 Bearer 토큰(lib/agent-api.ts)이 함께 쓴다 */
+export async function sessionForUser(user: { id: string; email?: string | null; email_confirmed_at?: string | null; user_metadata?: unknown }): Promise<Session | null> {
+  if (!user.email) return null;
   // 이메일 확인이 끝나지 않은 계정은 세션 쿠키가 있어도 로그인하지 않은 것으로 본다 (보호된 화면·API 모두 이 함수를 거친다)
   if (!user.email_confirmed_at) return null;
 
@@ -127,7 +133,7 @@ export const getSession = cache(async (): Promise<Session | null> => {
     pendingOrg = (o as CroOrg | null) ?? null;
   }
   return { userId: user.id, email: user.email, profile: profile as Profile, org, pendingOrg };
-});
+}
 
 /**
  * 미리보기 세션 (lib/demo.ts). 쿠키의 역할에 맞는 기존 계정을 하나 고른다.
