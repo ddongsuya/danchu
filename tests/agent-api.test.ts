@@ -59,6 +59,7 @@ describe("토큰", () => {
     if (typeof s === "object") {
       expect(s.role).toBe("requester");
       expect(meView(s).org).toBeNull();
+      expect(meView(s).id).toBe("u-1");
     }
   });
 });

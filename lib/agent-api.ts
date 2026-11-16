@@ -71,6 +71,8 @@ export function gateRole(s: Session): AgentSession | AgentError {
 /* ── 보여 줄 모양 (순수 함수) ── */
 
 export type AgentMe = {
+  /** 단추 계정 id. 에이전트 서버가 대화·이용량을 계정별로 묶는 열쇠 */
+  id: string;
   role: AgentRole;
   name: string | null;
   email: string;
@@ -79,6 +81,7 @@ export type AgentMe = {
 
 export function meView(s: AgentSession): AgentMe {
   return {
+    id: s.userId,
     role: s.role,
     name: s.profile.name,
     email: s.email,
