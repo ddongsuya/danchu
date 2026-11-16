@@ -2,6 +2,7 @@ import { notificationRecipients } from "./mail-preferences";
 import { getSupabaseAdmin } from "./supabase";
 import { sendMail, mailWrap, esc } from "./mail";
 import { smsUsers, type SmsKind } from "./sms";
+import { currentVia } from "./agent-context";
 
 export type NotifyKind = "접수" | "배포" | "견적" | "비교" | "선정" | "계약" | "기관" | "시스템";
 
@@ -53,7 +54,7 @@ export async function logEvent(
 ): Promise<void> {
   const sb = getSupabaseAdmin();
   if (!sb) return;
-  const { error } = await sb.from("rfq_events").insert({ rfq_id: rfqId, kind, title, body: body ?? null, actor_id: actorId ?? null, meta: meta ?? {} });
+  const { error } = await sb.from("rfq_events").insert({ rfq_id: rfqId, kind, title, body: body ?? null, actor_id: actorId ?? null, meta: meta ?? {}, via: currentVia() });
   if (error) console.error("rfq_events insert", error);
 }
 

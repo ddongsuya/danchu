@@ -5,6 +5,7 @@ import { DEMO_COOKIE, demoEnabled, isDemoRole } from "./demo";
 import { createSessionClient } from "./supabase-server";
 import { getSupabaseAdmin } from "./supabase";
 import { loadOptsFor } from "./concierge";
+import { agentContext } from "./agent-context";
 
 export type Role = "requester" | "cro" | "admin";
 
@@ -87,7 +88,7 @@ export function homeOf(role: Role): string {
  * 현재 로그인 사용자 + 프로필. 없으면 null.
  * 요청 한 번 안에서는 캐시된다.
  */
-export const getSession = cache(async (): Promise<Session | null> => {
+const getSessionCached = cache(async (): Promise<Session | null> => {
   const sb = await createSessionClient();
   if (!sb) return null;
   const { data } = await sb.auth.getUser();
@@ -97,6 +98,16 @@ export const getSession = cache(async (): Promise<Session | null> => {
   if (!user || !user.email) return null;
   return sessionForUser(user);
 });
+
+/**
+ * 현재 로그인 사용자 + 프로필. 없으면 null. 요청 한 번 안에서는 캐시된다.
+ * 에이전트 입구가 부른 처리 안에서는 토큰으로 만든 세션을 쓴다 (lib/agent-context.ts).
+ */
+export async function getSession(): Promise<Session | null> {
+  const a = agentContext();
+  if (a) return a.session;
+  return getSessionCached();
+}
 
 /** Supabase 인증 사용자 → 단추 세션(프로필·기관). 쿠키 세션(getSession)과 에이전트 Bearer 토큰(lib/agent-api.ts)이 함께 쓴다 */
 export async function sessionForUser(user: { id: string; email?: string | null; email_confirmed_at?: string | null; user_metadata?: unknown }): Promise<Session | null> {
