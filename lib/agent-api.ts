@@ -129,14 +129,32 @@ export type AgentCroItem = {
   /** 선정된 요청만 회사명. 그 밖에는 null */
   client: string | null;
   clientHint: string;
+  /** 진행판 묶음: todo(이번 주 할 일)·decide(참여 결정 전)·work(작성 중)·sent(제출)·won(선정)·done(끝남) */
+  group: PipeItem["group"];
   stage: string;
   next: string;
   due: string | null;
+  /** 진행 단계(요청 받음 → 참여 → 견적 제출 → 비교표 → 선정). 날짜는 MM.DD 표시값 */
+  steps: { label: string; at: string; state: "done" | "now" | "next" }[];
+  /** 우리 기관 금액만(제출 총액·선정 금액 등). 다른 기관 금액은 없다 */
+  money: [string, string][];
 };
 
-/** 기관 받은 요청 한 줄. 의뢰자 계정 id(clientKey)·선정 id 는 내보내지 않는다 */
+/** 기관 받은 요청 한 줄. 의뢰자 계정 id(clientKey)·선정 id·화면 주소는 내보내지 않는다 */
 export function croItem(p: PipeItem): AgentCroItem {
-  return { no: p.no, title: p.title, categories: p.cats, client: p.client, clientHint: p.clientHint, stage: p.stageLabel, next: p.next, due: p.due };
+  return {
+    no: p.no,
+    title: p.title,
+    categories: p.cats,
+    client: p.client,
+    clientHint: p.clientHint,
+    group: p.group,
+    stage: p.stageLabel,
+    next: p.next,
+    due: p.due,
+    steps: p.steps.map((x) => ({ label: x.label, at: x.at, state: x.state })),
+    money: p.money.map(([k, v]) => [k, v] as [string, string]),
+  };
 }
 
 export type AgentCompare =
