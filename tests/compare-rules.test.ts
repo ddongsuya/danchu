@@ -113,7 +113,9 @@ describe("개인정보처리방침: 선정 때 연락처를 두 방향으로 제
   it("방침 시행일은 그대로(판 번호는 화면에 적지 않음), 요청마다 남는 동의 판과 기관 조건 판은 올렸다", () => {
     const raw = src("app/privacy/page.tsx");
     expect(raw).not.toContain("version=");
-    expect(raw).toContain('effectiveDate="2026년 11월 16일"');
+    // 2026-12-17 개정(견적 에이전트 위탁·국외 이전)은 에이전트 이용에 따로 동의한 사람에게만 해당해 요청 동의 판은 그대로다
+    expect(raw).toContain('effectiveDate="2026년 12월 17일"');
+    expect(src("app/privacy/2026-11-16/page.tsx")).toContain('effectiveDate="2026년 11월 16일"');
     expect(CONSENT_VERSION).toBe("2026-10-28");
     expect(CRO_TERMS_VERSION).toBe("pilot-2026-12-11");
     expect(CRO_TERMS_VERSION.startsWith("pilot-")).toBe(true);
