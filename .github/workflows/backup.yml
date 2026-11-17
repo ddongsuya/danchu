@@ -1,0 +1,64 @@
+name: 매일 백업
+
+# 운영 DB 와 올린 파일을 암호화해 별도 저장소에 올린다 (scripts/backup/backup.sh, 복구는 docs/BACKUP.md).
+# 이 저장소는 공개라 실행 기록도 공개다. 기록에는 개수와 크기만 남기고, 백업 파일은 Actions 에 올리지 않는다.
+on:
+  schedule:
+    - cron: "30 18 * * *" # 매일 03:30 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BACKUP_DB_URL: ${{ secrets.BACKUP_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      SUPABASE_URL: ${{ secrets.BACKUP_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.BACKUP_SUPABASE_SERVICE_ROLE_KEY }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+      # AWS S3 는 리전이 맞아야 서명이 통과한다 (서울: ap-northeast-2). 비우면 auto
+      AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION }}
+    steps:
+      - name: 비밀값 확인
+        id: ready
+        run: |
+          if [ -z "$BACKUP_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$BACKUP_S3_BUCKET" ]; then
+            echo "::warning::백업 비밀값이 등록되지 않아 건너뜁니다 (docs/BACKUP.md)"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          node-version: 22
+      # 운영 DB 는 PostgreSQL 17 이다. pg_dump 는 서버와 같거나 높은 판이어야 한다
+      - name: PostgreSQL 17 클라이언트
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          if [ ! -x /usr/lib/postgresql/17/bin/pg_dump ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-common
+            sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+            sudo apt-get install -y -qq postgresql-client-17
+          fi
+          /usr/lib/postgresql/17/bin/pg_dump --version
+      - name: 백업
+        if: steps.ready.outputs.ok == 'true'
+        run: bash scripts/backup/backup.sh
+        env:
+          PG_DUMP: /usr/lib/postgresql/17/bin/pg_dump
+          PG_RESTORE: /usr/lib/postgresql/17/bin/pg_restore

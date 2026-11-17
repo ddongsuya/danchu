@@ -1503,7 +1503,8 @@
 @media (max-width: 720px) { .qd-design > div { grid-template-columns: 1fr; gap: 0; } }
 
 /* 비교 보고서 시안 (2026-11-13): 표지 없이 첫 화면에 비교견적표 */
-.rp-head { padding: 4px 0 20px; }
+.rp-head { position: relative; padding: 4px 0 20px; }
+.rp-xlsx { position: absolute; right: 0; top: 4px; }
 .pt .rp-h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.03em; font-weight: 600; margin: 0 0 8px; }
 .pt .rp-h1 .tnum { font-family: var(--font-mono); font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--muted); margin-right: 10px; vertical-align: 3px; }
 .rp-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: var(--muted); }
@@ -1518,6 +1519,7 @@
 .pt .rs-report--table .rs-h2 { font-size: 22px; letter-spacing: -.02em; margin-bottom: 20px; }
 @media (max-width: 719px) {
   .rp-head { padding-bottom: 12px; }
+  .rp-xlsx { top: -4px; }
   .pt .rp-h1 { font-size: 22px; }
   .pt .rp-h1 .tnum { display: block; margin: 0 0 4px; }
   .rp-meta { font-size: 13px; gap: 2px 12px; }
