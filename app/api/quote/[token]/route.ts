@@ -316,7 +316,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ token: string }
   return NextResponse.json({ ok: true, skipped: !!r.skipped });
 }
 
-/** POST — 제출 (JSON: { items, note, common, pdf? }). 전 항목 답변 + 공통 필수 + PDF 필수. */
+/** POST — 제출 (JSON: { items, note, common, pdf? }). 전 항목 답변 + 공통 필수. 견적서 PDF는 선택 첨부(2026-11-18 사용자 결정). */
 export async function POST(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
   const a = await actorOf();
@@ -338,7 +338,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const today = todaySeoul();
   if (parsed.common.startDate < today) return NextResponse.json({ error: "착수 가능일은 오늘 이후 날짜여야 해요." }, { status: 400 });
   if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났어요. 날짜를 확인해 주세요." }, { status: 400 });
-  if (!parsed.pdf && !got.draft?.pdfName) return NextResponse.json({ error: "정식 견적서 PDF를 첨부해 주세요." }, { status: 400 });
 
   // 무료 요금제 월 5건 (0044, 정식 서비스 뒤). 처음 제출하는 5,000만 원 미만 견적만 센다. 운영자 대리 입력은 세지 않고 막지 않는다
   if (a?.role !== "admin" && got.croOrgId) {

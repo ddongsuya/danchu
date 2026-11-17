@@ -11,7 +11,8 @@ describe("요금제 (0044)", () => {
     expect([PLANS.free.seats, PLANS.plus.seats, PLANS.pro.seats]).toEqual([1, 3, null]);
     // 위 단계 목록은 아래 단계 항목을 줄이지 않고 다 적는다
     expect(PLANS.plus.items.length).toBe(4);
-    expect(PLANS.pro.items.length).toBe(7);
+    // Pro: 단추 에이전트 추가 (2026-11-18 사용자 결정)
+    expect(PLANS.pro.items.length).toBe(8);
   });
 
   it("시범 운영 중에는 제한이 없다", () => {
@@ -50,7 +51,7 @@ describe("요금제 (0044)", () => {
   });
 
   it("차이 항목은 바뀌는 것만", () => {
-    expect(planDiff("plus", "pro").map((r) => r.label)).toEqual(["견적서 작성 툴", "견적서 디자인 브랜딩", "고객 관리", "담당자 계정"]);
+    expect(planDiff("plus", "pro").map((r) => r.label)).toEqual(["견적서 작성 툴", "견적서 디자인 브랜딩", "고객 관리", "단추 에이전트", "담당자 계정"]);
     expect(planDiff("free", "plus").map((r) => r.label)).toEqual(["5,000만 원 미만 견적", "시험 관리", "담당자 계정"]);
   });
 });
