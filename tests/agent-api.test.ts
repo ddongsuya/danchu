@@ -26,7 +26,8 @@ vi.mock("@/lib/supabase", () => {
 });
 vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error(`redirect:${to}`); } }));
 
-import { agentSession, bearerToken, compareView, croItem, gateRole, meView, requesterItem } from "@/lib/agent-api";
+import { agentSession, bearerToken, compareView, croItem, gateRole, joinTerms, meView, requesterItem } from "@/lib/agent-api";
+import { CRO_TERMS_VERSION, JOIN_CONSENT } from "@/lib/request-policy";
 import type { Session } from "@/lib/auth";
 
 const TOKEN = "eyJhbGciOiJIUzI1NiJ9.payload-part-xx.signature-part-yy";
@@ -88,6 +89,11 @@ describe("공개 규칙", () => {
     expect(out.client).toBeNull();
     expect(out).not.toHaveProperty("action");
     expect(out.group).toBe("decide");
+  });
+  it("참여 결정 전에만 웹과 같은 참여 동의 문장·약관 판을 준다", () => {
+    expect(joinTerms({ stageLabel: "참여 결정 전" })).toEqual({ terms: CRO_TERMS_VERSION, consent: JOIN_CONSENT, termsUrl: "/terms/cro" });
+    expect(joinTerms({ stageLabel: "작성 중" })).toBeNull();
+    expect(joinTerms({ stageLabel: "참여" })).toBeNull();
   });
   it("의뢰자 목록 한 줄에는 합계만 있다", () => {
     const row = { id: "r", rfq_no: "DC-2026-0002", substance: "물질", categories: ["독성"], status: "open", created_at: "2026-11-01", join_by: null, reply_by: "2026-11-20", sent: 5, opened: 3, joined: 2, cap: 5, submitted: 1, compared_at: null, selected_quote_id: null, company: "회사", email: "x@y" };

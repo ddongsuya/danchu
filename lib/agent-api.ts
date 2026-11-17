@@ -15,7 +15,7 @@ import { getSupabaseAdmin } from "./supabase";
 import type { InviteRow, QuoteRow, RfqRow, RfqSummary } from "./data";
 import type { PipeItem } from "./pipeline";
 import { comparisonOpened } from "./reply-window";
-import { occupiesSeat } from "./request-policy";
+import { CRO_TERMS_VERSION, JOIN_CONSENT, occupiesSeat } from "./request-policy";
 import { quoteSelectable } from "./quote-policy";
 import { clientIp, rateLimited } from "./rate-limit";
 
@@ -139,7 +139,17 @@ export type AgentCroItem = {
   steps: { label: string; at: string; state: "done" | "now" | "next" }[];
   /** 우리 기관 금액만(제출 총액·선정 금액 등). 다른 기관 금액은 없다 */
   money: [string, string][];
+  /**
+   * 참여 결정 전에만. 에이전트 앱 참여 카드가 웹 참여 화면(components/cro/JoinPanel)과 같은 동의 문장·약관을 보여 주고,
+   * 본 판(terms)을 join 동작에 그대로 넘긴다. 판이 바뀌면 join 라우트가 409로 다시 보게 한다.
+   */
+  join: { terms: string; consent: string; termsUrl: string } | null;
 };
+
+/** 참여 결정 전인 요청의 참여 동의 문장과 약관 판 (순수 함수) */
+export function joinTerms(p: Pick<PipeItem, "stageLabel">): AgentCroItem["join"] {
+  return p.stageLabel === "참여 결정 전" ? { terms: CRO_TERMS_VERSION, consent: JOIN_CONSENT, termsUrl: "/terms/cro" } : null;
+}
 
 /** 기관 받은 요청 한 줄. 의뢰자 계정 id(clientKey)·선정 id·화면 주소는 내보내지 않는다 */
 export function croItem(p: PipeItem): AgentCroItem {
@@ -155,6 +165,7 @@ export function croItem(p: PipeItem): AgentCroItem {
     due: p.due,
     steps: p.steps.map((x) => ({ label: x.label, at: x.at, state: x.state })),
     money: p.money.map(([k, v]) => [k, v] as [string, string]),
+    join: joinTerms(p),
   };
 }
 
