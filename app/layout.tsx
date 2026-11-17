@@ -12,7 +12,10 @@ export const metadata: Metadata = {
   // 카카오톡·Threads·슬랙 등 링크 미리보기. 하위 공개 페이지는 lib/share-meta pageMeta()로 따로 준다
   ...shareMeta(TITLE, DESC, ""),
   robots: { index: true, follow: true },
-  other: { "color-scheme": "light dark" },
+  other: {
+    "color-scheme": "light dark",
+    "naver-site-verification": "5a56536b2fe46768b09d7ffb97e335882ddcd168",
+  },
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon.svg", apple: "/icons/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추" },
