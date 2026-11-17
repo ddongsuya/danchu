@@ -2,11 +2,11 @@ import { Site } from "@/components/site/Site";
 import { MarkDrift } from "@/components/site/MarkDrift";
 import { HomeMotion } from "@/components/site/HomeMotion";
 import { KindStrip } from "@/components/site/KindStrip";
-import { EarlyPopup } from "@/components/site/EarlyPopup";
+import { EarlyNotice } from "@/components/site/EarlyNotice";
 import { daysToPilot, preregActive } from "@/lib/prereg";
 import "./home.css";
 
-/** 사전예약 팝업·D-day 가 날짜를 따라가도록 한 시간마다 다시 만든다 */
+/** 사전예약 알림·D-day 가 날짜를 따라가도록 한 시간마다 다시 만든다 */
 export const revalidate = 3600;
 
 /** 랜딩. 첫 화면은 떠도는 네 점이 마크로 맺히는 그림(MarkDrift, 캔버스), 아래 세 장면은 GSAP(HomeMotion)이 화면에 들어올 때 재생한다. 고정 장면이 있어 스크롤 스냅은 쓰지 않는다. */
@@ -15,17 +15,17 @@ const FL_CYCLE = [{"tag": "Tox", "t": "반복투여독성 4주", "k": "동물", 
 export default function Home() {
   const prereg = preregActive();
   // 사전예약 기간에는 새 방문자의 첫 행동이 견적 요청이 아니라 사전예약이다 (lib/prereg.ts)
-  const cta = prereg ? <a className="btn solid" href="/early">사전예약하기 <span className="ar">→</span></a> : <a className="btn solid" href="/request">견적 요청하기 <span className="ar">→</span></a>;
+  const cta = prereg ? <a className="btn solid" href="/early">사전예약하기</a> : <a className="btn solid" href="/request">견적 요청하기</a>;
   return (
     <Site onescreen={false} headerCta={false}>
-{prereg && <EarlyPopup days={daysToPilot()} />}
+{prereg && <EarlyNotice days={daysToPilot()} />}
 <div className="first">
 <div className="hero">
 <div>
-<h1><span className="h1l" style={{ color: "inherit" }}>비임상 시험 견적,<br />단추에서 비교하세요.</span></h1>
-<p className="sub">클릭 한 번으로 여러 기관의 견적을 받아보세요.</p>
+<h1><span className="h1l">비임상 시험 견적,</span><span className="h1l">단추에서 비교하세요.</span></h1>
+<p className="sub">한 번 요청으로 여러 기관의 견적을 받아보세요.</p>
 <div className="ctas">{cta}<a className="btn ghost" href="/#fields">시험 종류 보기</a></div>
-<p className="micro">의뢰자는 무료로 이용해요.</p>
+<p className="micro">의뢰자는 무료로 이용해요. <a href="/for-cro">기관으로 참여하기</a></p>
 </div>
 
 <div className="fd fo" aria-hidden="true"><MarkDrift /></div>
@@ -49,7 +49,7 @@ export default function Home() {
 <tr className="g-r1"><th scope="row">반복투여독성 4주</th><td>1,000만 원</td><td>900만 원</td></tr>
 <tr className="g-r2"><th scope="row">TK 분석</th><td>200만 원</td><td><span className="g-v"><i className="g-mk"></i>빠짐</span></td></tr>
 <tr className="g-r3"><th scope="row">영문 보고서</th><td>별도 견적</td><td>미포함</td></tr>
-<tr className="g-total"><th scope="row">합계</th><td><b data-to="1200">1,200</b>만 원</td><td><b data-to="900">900</b>만 원</td></tr>
+<tr className="g-total"><th scope="row">견적 총액</th><td><b data-to="1200">1,200</b>만 원</td><td><b data-to="900">900</b>만 원</td></tr>
 </tbody>
 </table>
 <p className="gm-gap">차이 <s className="g-old">300만 원</s> <span className="g-chip">같은 항목 기준 100만 원</span></p>
@@ -58,7 +58,7 @@ export default function Home() {
 </div>
 </section>
 
-{/* 요청서 예시가 Tox → PD → PK → Other 로 바뀌며 반복 재생된다 (HomeMotion). 금액은 그림용 예시 */}
+{/* 요청서 예시가 Tox → PD → PK → Other 로 한 바퀴 바뀌고 마지막 예시에서 멈춘다 (HomeMotion). 금액은 그림용 예시 */}
 <section className="gm gm-fl" data-gm="fl" aria-labelledby="fl-h" data-cycle={JSON.stringify(FL_CYCLE)}>
 <h2 id="fl-h">한 장의 요청서가<br /><span>여러 기관을 찾아가요.</span></h2>
 <div className="gm-dia">
@@ -78,7 +78,7 @@ export default function Home() {
 <div className="g-mrow"><span>기관 A</span><span className="g-bt"><i style={{ "--w": "1" }}></i></span><em data-to="1000">1,000</em></div>
 <div className="g-mrow"><span>기관 B</span><span className="g-bt"><i style={{ "--w": ".9" }}></i></span><em data-to="900">900</em></div>
 <div className="g-mrow g-wait"><span>기관 C</span><span className="g-bt"><i style={{ "--w": "0" }}></i></span><em>대기</em></div>
-<small>요청한 견적서가 모이면 비교 견적서가 도착해요. 직접 확인하고 기관을 선택할 수 있어요.</small>
+<small>요청한 견적서가 모이면 비교표가 도착해요. 직접 확인하고 기관을 선정할 수 있어요.</small>
 </div>
 <span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span>
 <span className="g-rp" aria-hidden="true">1,000</span><span className="g-rp" aria-hidden="true">900</span>
@@ -110,7 +110,7 @@ export default function Home() {
 <div className="fin-grid">
 <div className="copyin">
 <h2 id="fin-h">비임상 시험의 시작은<br /><span>단추</span></h2>
-<p className="lead">원하는 조건이 있으신가요? 단추에 요청하세요.</p>
+<p className="lead">원하는 조건으로 여러 기관에 견적을 요청하세요.</p>
 <div className="ctas">{cta}</div>
 </div>
 <div className="bm" aria-hidden="true">
@@ -129,7 +129,7 @@ export default function Home() {
 </svg>
 </div>
 </div>
-<div className="cro"><p>시험 기관 담당자이신가요? 더 다양한 고객을 단추에서 만나보세요.</p><a className="btn ghost" href="/for-cro">기관으로 참여하기 <span className="ar">→</span></a></div>
+<div className="cro"><p>시험 기관 담당자이신가요? 더 다양한 고객을 단추에서 만나보세요.</p><a className="btn ghost" href="/for-cro">기관으로 참여하기</a></div>
 </div>
 </section>
       <HomeMotion />

@@ -11,13 +11,14 @@
 .a .btn:focus-visible,.a a:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
 /* hero */
 .a .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:88px 0 72px}
-.a h1{font-size:clamp(34px,4.9vw,72px);line-height:1.08;font-weight:500;letter-spacing:-.035em;margin:0;text-wrap:balance}
-.a .h1l{display:block;animation:lineIn 640ms var(--eo) both}
+.a h1{font-size:clamp(34px,4.05vw,56px);line-height:1.08;font-weight:500;letter-spacing:-.035em;margin:0;text-wrap:balance}
+.a h1 .h1l{display:block;color:inherit;animation:lineIn 320ms var(--eo) both}
 .a .h1l + .h1l{animation-delay:70ms}
-.a .sub{font-size:18px;line-height:1.7;color:var(--muted);max-width:30em;margin:28px 0 36px;animation:lineIn 640ms var(--eo) 140ms both}
-.a .hero .ctas{animation:lineIn 640ms var(--eo) 200ms both}
-.a .hero .micro{margin:12px 0 0;font-size:13px;color:var(--muted);animation:lineIn 640ms var(--eo) 240ms both}
-@keyframes lineIn{from{transform:translateY(14px)}}
+.a .hero .micro a{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
+.a .sub{font-size:18px;line-height:1.7;color:var(--muted);max-width:30em;margin:28px 0 36px;animation:lineIn 320ms var(--eo) 140ms both}
+.a .hero .ctas{animation:lineIn 320ms var(--eo) 210ms both}
+.a .hero .micro{margin:12px 0 0;font-size:13px;color:var(--muted);animation:lineIn 320ms var(--eo) 280ms both}
+@keyframes lineIn{from{transform:translateY(8px)}}
 .a .iso svg{width:100%;height:auto;display:block;overflow:visible}
 .a .iso .layer{transform-box:fill-box;animation:layIn 760ms var(--eo) both}
 .a .iso .l3{animation-delay:120ms}
@@ -180,7 +181,6 @@
 @keyframes turn{from{transform:rotate(-90deg)}}
 @media (hover:hover) and (pointer:fine){
  .a .btn.solid:hover{background:#33332F}.a .btn.ghost:hover{background:var(--band)}
- .a .btn:hover .ar{transform:translateX(3px)}
  .a nav.top .links a:hover{text-decoration:underline}
 }
 @media (prefers-reduced-motion: reduce){
@@ -574,6 +574,8 @@
 .a .gm-items .g-total b{font-weight:700}
 .a .gm-items .g-v{position:relative;isolation:isolate;padding:2px 5px;margin:-2px -5px}
 .a .gm-items .g-mk,.a .gm-ev .g-mk{position:absolute;inset:0;background:var(--accfill);z-index:-1;transform-origin:left;border-radius:1px}
+/* 노랑은 기관끼리 다른 곳(TK 빠짐, 같은 항목 기준 차이)에만. 출처 표시는 옅은 회색 */
+.a .gm-ev .g-mk{background:var(--band)}
 /* 차이: 총액 차이에 취소선, 같은 항목 기준 차이만 형광펜 칩 */
 .a .gm-gap{margin:16px 0 0;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;font-size:14px;color:var(--muted)}
 .a .gm-gap .g-old{position:relative;text-decoration:none;color:var(--faint)}
@@ -600,7 +602,7 @@
 .a .g-org .g-pre{border:1px solid var(--ink)}
 .a .g-org .g-wip{color:var(--muted)}
 .a .g-org .g-dots{display:inline-flex;gap:3px}
-.a .g-org .g-dots b{width:4px;height:4px;border-radius:50%;background:currentColor;display:block;animation:gmDot 1s infinite both}
+.a .g-org .g-dots b{width:4px;height:4px;border-radius:50%;background:currentColor;display:block;animation:gmDot 1s 6 both}
 .a .g-org .g-dots b:nth-child(2){animation-delay:.15s}.a .g-org .g-dots b:nth-child(3){animation-delay:.3s}
 @keyframes gmDot{0%,60%,100%{opacity:.25}30%{opacity:1}}
 .a .gm-card .g-mrow{display:grid;grid-template-columns:48px minmax(0,1fr) 44px;gap:10px;align-items:center;margin-top:14px;font-size:13.5px}
@@ -615,7 +617,7 @@
 .a .gm-dia .g-cp{position:absolute;left:0;top:0;width:44px;height:56px;background:var(--sheet);border-radius:2px;box-shadow:0 10px 20px -10px rgba(27,27,25,.35),0 0 0 1px rgba(27,27,25,.12);padding:10px 8px;display:grid;align-content:start;gap:5px;z-index:3;opacity:0;pointer-events:none}
 .a .gm-dia .g-cp i{height:3px;background:var(--line);display:block}
 .a .gm-dia .g-cp i:first-child{background:var(--ink);width:70%}
-.a .gm-dia .g-rp{position:absolute;left:0;top:0;z-index:3;opacity:0;pointer-events:none;background:var(--accfill);font-size:13px;font-weight:600;padding:3px 8px;border-radius:2px;font-variant-numeric:tabular-nums;box-shadow:0 8px 16px -8px rgba(27,27,25,.35)}
+.a .gm-dia .g-rp{position:absolute;left:0;top:0;z-index:3;opacity:0;pointer-events:none;background:var(--paper);border:1px solid var(--ink);font-size:13px;font-weight:600;padding:2px 7px;border-radius:2px;font-variant-numeric:tabular-nums;box-shadow:0 8px 16px -8px rgba(27,27,25,.35)}
 .a .gm-steps{list-style:none;margin:56px 0 0;padding:16px 0 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));position:relative;border-top:1px solid var(--line)}
 .a .gm-steps li{font-size:15px;font-weight:500;text-align:center}
 .a .gm-steps .prog{position:absolute;left:0;top:-1px;height:1px;width:100%;background:var(--ink);transform-origin:left}
@@ -626,14 +628,14 @@
 .a .gm-ans .mono{margin-right:6px}
 .a .gm-ans .g-chip{font-size:13.5px;padding:6px 11px;border-radius:2px;background:var(--ink);color:var(--paper)}
 .a .gm-sg{list-style:none;margin:0;padding:0}
-.a .gm-sg .g-sr{display:grid;grid-template-columns:minmax(0,1fr) auto 60px;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
+.a .gm-sg .g-sr{display:grid;grid-template-columns:minmax(0,1fr) auto 68px;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
 .a .gm-sg .g-t b{display:block;font-size:16px;font-weight:500}
 .a .gm-sg .g-t small{display:block;font-size:13px;color:var(--muted);margin-top:4px}
 .a .gm-sg .g-src{position:relative;isolation:isolate;font-size:13px;font-weight:500;padding:3px 6px;white-space:nowrap;font-family:var(--font-mono)}
-.a .gm-sg .g-pg{width:60px;height:70px;background:var(--paper);box-shadow:0 0 0 1px var(--line),0 10px 18px -12px rgba(27,27,25,.35);padding:9px 8px;display:grid;align-content:start;gap:6px;transform-origin:left center}
+.a .gm-sg .g-pg{width:68px;height:70px;background:var(--paper);box-shadow:0 0 0 1px var(--line),0 10px 18px -12px rgba(27,27,25,.35);padding:9px 8px;display:grid;align-content:start;gap:6px;transform-origin:left center}
 .a .gm-sg .g-pg span{font:500 8.5px/1.2 var(--font-mono);color:var(--muted);margin-bottom:3px;white-space:nowrap;overflow:hidden}
 .a .gm-sg .g-pg i{display:block;height:4px;background:var(--line);width:calc(var(--w)*100%);transform-origin:left}
-.a .gm-sg .g-pg i.g-hl{background:var(--accfill);height:6px;margin:-1px 0;box-shadow:0 0 0 1px rgba(27,27,25,.08)}
+.a .gm-sg .g-pg i.g-hl{background:var(--ink)}
 .a .gm-adv .g-foot{margin:14px 0 0;font-size:12.5px;color:var(--muted)}
 @media (max-width:860px){
  .a .gm{padding:72px 0}
@@ -663,6 +665,10 @@
 
 /* 첫 화면 글은 어떤 환경에서도 등장 효과에 기대지 않는다 */
 @media (max-width:860px){.a .h1l,.a .sub,.a .hero .ctas,.a .hero .micro{animation:none}}
+/* 휴대폰은 한 화면에 채운 버튼 하나. 두 번째 행동은 같은 누름 높이(44px)의 글자 링크로 */
+@media (max-width:860px){
+ .a .hero .ctas .btn.ghost,.a .fin .cro .btn.ghost{border-color:transparent;background:none;padding:0 4px;text-decoration:underline;text-underline-offset:5px}
+}
 
 /* ---- 모바일 첫 화면은 뷰포트 높이 단위에 기대지 않는다. 앱 내 브라우저가 vh 계열을 크게 계산하면 내용이 한참 아래로 밀려 첫 화면이 비어 보인다 ---- */
 @media (max-width:860px){

@@ -50,6 +50,16 @@ export function SiteNav() {
     };
   }, [open]);
 
+  // 닫기 단추·바깥 누름은 0.2초 닫힘 모션 뒤 닫는다(site.css .mnav[data-closing]). Esc·링크 이동·화면 넓힘은 바로 닫는다(키보드로 시작한 동작은 애니메이션하지 않는다)
+  const closeSoft = () => {
+    const d = dialog.current;
+    if (!d || d.hasAttribute("data-closing")) return;
+    d.setAttribute("data-closing", "");
+    const done = () => setOpen(false);
+    d.querySelector(".mnav__panel")?.addEventListener("animationend", done, { once: true });
+    window.setTimeout(done, 260);
+  };
+
   const closeOnLink = (e: React.MouseEvent) => {
     if ((e.target as Element).closest("a")) {
       document.documentElement.style.overflow = "";
@@ -77,11 +87,11 @@ export function SiteNav() {
 
       {open && (
         <dialog className="mnav" ref={dialog} aria-label="메뉴" onCancel={() => setOpen(false)}>
-          <div className="mnav__bg" onClick={() => setOpen(false)} />
+          <div className="mnav__bg" onClick={closeSoft} />
           <div className="mnav__panel">
             <div className="mnav__top">
               <span className="mnav__ttl">메뉴</span>
-              <button type="button" className="mnav__x" aria-label="메뉴 닫기" onClick={() => setOpen(false)}>×</button>
+              <button type="button" className="mnav__x" aria-label="메뉴 닫기" onClick={closeSoft}>×</button>
             </div>
             {/* 링크를 누르면 이동 전에 먼저 닫는다. 열린 채로 이동하면 잠가 둔 스크롤이 새 페이지에서 풀리며 제목 아래로 밀린다 */}
             <nav className="mnav__links" aria-label="사이트 메뉴" onClick={closeOnLink}>
@@ -93,7 +103,7 @@ export function SiteNav() {
               ))}
             </nav>
             <div className="mnav__foot" onClick={closeOnLink}>
-              {guestPrereg ? <a href={PREREG_HREF} className="btn solid">사전예약하기 <span className="ar">→</span></a> : <a href={requestHref} className="btn solid">견적 요청하기 <span className="ar">→</span></a>}
+              {guestPrereg ? <a href={PREREG_HREF} className="btn solid">사전예약하기</a> : <a href={requestHref} className="btn solid">견적 요청하기</a>}
               <a href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</a>
               <div className="mnav__sub">
                 <a href="/privacy"><strong>개인정보처리방침</strong></a>

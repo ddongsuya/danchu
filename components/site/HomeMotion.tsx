@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 import gsap from "gsap";
-import { endCard } from "@/components/site/reel/kit";
 
 /**
  * 랜딩 아래 세 장면(금액 비교 · 한번 요청 · 근거)의 GSAP 타임라인.
  * CSS 기본값이 완성 상태이므로, 동작 줄이기에서는 아무것도 하지 않는다.
  * 장면 그림이 화면 아래 12% 선을 넘어 들어오면 바로 재생하고, 완전히 벗어나면 초기화해 다시 재생한다.
+ * 재생이 끝나면 완성된 그림에 멈춘다(로고 덮개 없음). 예시가 바뀌는 장면도 한 바퀴만 돌고 마지막 예시에서 멈춘다
+ * (5초 넘게 스스로 움직이는 내용은 멈출 수 있어야 한다는 WCAG 2.2.2 와 비교표를 끝까지 읽게 하려는 뜻).
  */
 export function HomeMotion() {
   useEffect(() => {
@@ -40,9 +41,7 @@ export function HomeMotion() {
         .fromTo($(".gm-gap", s), { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "power2.out" }, 1.2)
         .fromTo(chip, { opacity: 0, scale: 0.95 }, { opacity: 0, scale: 0.95, duration: 0.01 }, 0)
         .fromTo(old, { "--st": 0 }, { "--st": 1, duration: 0.28, ease: "power2.out" }, 1.5)
-        .to(chip, { opacity: 1, scale: 1, duration: 0.22, ease: "power2.out" }, 1.85)
-        // 엔드카드 전에 완성된 표를 읽을 시간
-        .to({}, { duration: 3.2 }, 2.1);
+        .to(chip, { opacity: 1, scale: 1, duration: 0.22, ease: "power2.out" }, 1.85);
       return tl;
     }
 
@@ -88,7 +87,7 @@ export function HomeMotion() {
         ride(tl, c, paths[i], at, 0.75, 44, 56);
         tl.to(c, { opacity: 0, scale: 0.6, duration: 0.2, ease: "power2.out" }, at + 0.72)
           .to(orgs[i], { opacity: 1, duration: 0.2, ease: "power2.out" }, at + 0.72)
-          .fromTo(orgs[i], { backgroundColor: "#F5F6B4" }, { backgroundColor: "#F4F4F0", duration: 0.6, ease: "power2.out", immediateRender: false }, at + 0.72);
+          .fromTo(orgs[i], { backgroundColor: "#E9E9E4" }, { backgroundColor: "#F4F4F0", duration: 0.6, ease: "power2.out", immediateRender: false }, at + 0.72);
       });
       const t2 = 2.0;
       stepTo(1, t2);
@@ -140,7 +139,7 @@ export function HomeMotion() {
       const kind = s.dataset.gm || "";
       if (!build[kind]) return;
       let tl: gsap.core.Timeline | null = null, played = false;
-      // data-cycle: 재생이 끝나면 잠시 멈췄다가 다음 예시로 바꿔 다시 재생 (한 장의 요청서 장면: Tox → PD → PK → Other)
+      // data-cycle: 재생이 끝나면 잠시 멈췄다가 다음 예시로 바꿔 다시 재생 (한 장의 요청서 장면: Tox → PD → PK → Other). 마지막 예시에서 멈춘다
       type Ex = { tag: string; t: string; k: string; v: string; a: [number, number]; b: [number, number] };
       let cycle: Ex[] = [];
       try { cycle = s.dataset.cycle ? (JSON.parse(s.dataset.cycle) as Ex[]) : []; } catch { cycle = []; }
@@ -159,30 +158,21 @@ export function HomeMotion() {
           if (em) { em.dataset.to = String(amt); em.textContent = won(amt); }
         });
       };
-      const host = s.querySelector<HTMLElement>(".gm-sheet, .gm-dia, .gm-adv");
-      let endEls: HTMLElement[] = [];
       const fresh = () => {
         if (tl) tl.progress(0).kill();
-        endEls.forEach((e) => e.remove());
-        endEls = [];
         gsap.set(s.querySelectorAll("*"), { clearProps: "transform,opacity,clipPath,backgroundColor,color,borderLeftWidth,--st" });
         tl = build[kind](s);
-        // 마무리 로고 엔드카드: 그림 영역을 덮고 가운데 로고만 남긴다. 예시가 바뀌며 반복되는 장면은 한 바퀴(마지막 예시) 끝에만
-        if (host && (cycle.length < 2 || idx === cycle.length - 1)) {
-          const bg = getComputedStyle(host).backgroundColor;
-          endEls = endCard(tl, host, host.clientWidth, host.clientHeight, null, bg && bg !== "rgba(0, 0, 0, 0)" ? bg : "var(--paper,#F4F4F0)");
-        }
         tl.progress(0);
         timelines.push(tl);
-        if (cycle.length > 1) tl.eventCallback("onComplete", () => {
+        if (cycle.length > 1 && idx < cycle.length - 1) tl.eventCallback("onComplete", () => {
           window.clearTimeout(timer);
           timer = window.setTimeout(() => {
             if (!played) return;
-            idx = (idx + 1) % cycle.length;
+            idx += 1;
             apply(cycle[idx]);
             fresh();
             tl!.play(0);
-          }, endEls.length ? 300 : 2400);
+          }, 2400);
         });
       };
       let timer = 0;
@@ -192,7 +182,7 @@ export function HomeMotion() {
       if (!vis) return;
       const start = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting && !played) { played = true; fresh(); tl!.play(0); } }), { rootMargin: "0px 0px -12% 0px" });
       start.observe(vis);
-      const reset = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && played) { played = false; window.clearTimeout(timer); fresh(); } }));
+      const reset = new IntersectionObserver((es) => es.forEach((e) => { if (!e.isIntersecting && played) { played = false; window.clearTimeout(timer); if (idx !== 0) { idx = 0; apply(cycle[0]); } fresh(); } }));
       reset.observe(s);
       observers.push(start, reset);
     });
