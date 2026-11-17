@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SITE_DESC, SITE_TITLE, SITE_URL, shareMeta } from "@/lib/share-meta";
+import { SITE_DESC, SITE_KEYWORDS, SITE_TITLE, SITE_URL, shareMeta } from "@/lib/share-meta";
 
 const TITLE = SITE_TITLE;
 const DESC = SITE_DESC;
@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESC,
+  // 검색 낱말. 하위 공개 페이지는 pageMeta()가 페이지 낱말을 더해 다시 준다
+  keywords: SITE_KEYWORDS,
   // 카카오톡·Threads·슬랙 등 링크 미리보기. 하위 공개 페이지는 lib/share-meta pageMeta()로 따로 준다
   ...shareMeta(TITLE, DESC, ""),
   robots: { index: true, follow: true },

@@ -10,6 +10,7 @@ export const metadata: Metadata = pageMeta(
   "가이드라인 자료실 · 단추",
   "ICH, 식약처 고시, OECD 시험지침 등 비임상 시험 공개 가이드라인 원문을 시험 종류와 제품 유형별로 모았어요.",
   "/guide/library",
+  ["ICH 가이드라인", "식약처 독성시험기준", "OECD 시험지침"],
 );
 
 /**

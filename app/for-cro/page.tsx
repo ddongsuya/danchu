@@ -5,9 +5,10 @@ import { CroHeroReel, CroStepsReel, CroReplyReel, CroRulesReel } from "@/compone
 import "./page.css";
 
 export const metadata: Metadata = pageMeta(
-  "기관 참여 안내 · 단추",
-  "수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신하세요. 2027년 말까지는 기관도 무료로 이용해요.",
+  "비임상 CRO 기관 참여 안내 · 단추",
+  "비임상 CRO·비임상 시험기관이 수행 분야에 맞는 요청서를 받고 같은 양식으로 견적을 회신해요. 2027년 말까지는 기관도 무료로 이용해요.",
   "/for-cro",
+  ["비임상 CRO 기관", "비임상 시험기관 참여", "CRO 견적 회신"],
 );
 
 export default function Page() {

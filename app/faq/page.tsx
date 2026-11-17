@@ -5,8 +5,9 @@ import "./page.css";
 
 export const metadata: Metadata = pageMeta(
   "자주 묻는 질문 · 단추",
-  "자주 묻는 질문을 모았어요.",
+  "비임상 시험 견적 요청, 기관 회신, 비교표, 기밀, 계약에 대해 자주 묻는 질문을 모았어요.",
   "/faq",
+  ["비임상 시험 견적", "CRO 견적 비교"],
 );
 
 export default function Page() {
