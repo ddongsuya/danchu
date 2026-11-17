@@ -7,6 +7,7 @@ export const metadata: Metadata = pageMeta(
   "협력기관 · 단추",
   "바이오 클러스터, 협회, 창업 지원기관과의 제휴를 준비하고 있어요.",
   "/partners",
+  ["비임상 CRO 제휴", "바이오 클러스터"],
 );
 
 export default function Partners() {

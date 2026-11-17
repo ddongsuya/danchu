@@ -5,9 +5,10 @@ import { AboutReel } from "@/components/site/reel/Reels";
 import "./page.css";
 
 export const metadata: Metadata = pageMeta(
-  "서비스 소개 · 단추",
-  "한 번 요청으로 여러 기관에. 비임상 시험 견적을 편하게 비교하세요.",
+  "비임상 시험 견적 비교 서비스 소개 · 단추",
+  "비임상 CRO·비임상 시험기관에 요청서 한 장을 보내고, 독성시험 견적부터 효력·약동학까지 같은 양식으로 받아 비교하는 서비스예요.",
   "/about",
+  ["비임상 CRO 견적", "비임상 시험 견적 비교"],
 );
 
 export default function Page() {
