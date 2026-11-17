@@ -9,11 +9,12 @@ import { replyPath } from "@/lib/concierge";
 import { inviteMailTo, notifyInvitedOrgs, orgMailTargets } from "@/lib/distribute";
 import { won } from "@/lib/format";
 import { SELECT_QUOTE_ERRORS, selectQuote } from "@/lib/rpc";
+import { parseSelectReasons } from "@/lib/select-reasons";
 
 export const runtime = "nodejs";
 
 /**
- * POST { quoteId, revision } — 의뢰자가 CRO를 선택한다. revision 은 선정 확인 화면이 보여 준 견적 판이다.
+ * POST { quoteId, revision, reasons?, reasonNote? } — 의뢰자가 CRO를 선택한다. reasons·reasonNote 는 선정 사유(선택, 진행 기록 meta 에만). revision 은 선정 확인 화면이 보여 준 견적 판이다.
  * 화면을 연 뒤 기관이 견적을 고쳤으면 선정하지 않고 409 quote_changed 로 다시 확인하게 한다 (0022).
  * rfq_awards 생성, 상태 selected, 선택된 CRO에 의뢰자 연락처 공개 알림, 의뢰자에게 기관 담당자 연락처, 나머지 CRO에 결과 안내.
  * 선택은 비교표가 열린 뒤에만 된다 (2026-10-20 결정 1, 0025 select_quote not_compared). 기한 전 확인 단계 선택은 없다.
@@ -25,7 +26,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) return NextResponse.json({ error: "요청을 찾을 수 없어요." }, { status: 404 });
 
-  const b = (await req.json().catch(() => ({}))) as { quoteId?: unknown; revision?: unknown };
+  const b = (await req.json().catch(() => ({}))) as { quoteId?: unknown; revision?: unknown; reasons?: unknown; reasonNote?: unknown };
+  // 선정 사유(선택). 고르지 않아도 선정한다. 기록만 하고 기관에는 보내지 않는다 (lib/select-reasons.ts)
+  const why = parseSelectReasons(b);
   const quoteId = typeof b.quoteId === "string" && /^[0-9a-f-]{36}$/.test(b.quoteId) ? b.quoteId : "";
   if (!quoteId) return NextResponse.json({ error: "선택할 수 없는 견적이에요." }, { status: 400 });
   // 확인 화면이 본 판이 없으면 무엇에 동의했는지 알 수 없다. 화면을 다시 열게 한다
@@ -48,7 +51,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const picked = sel.amount ?? quote.total_amount ?? 0;
   const { data: inv } = await sb.from("rfq_invites").select("*").eq("id", quote.invite_id).maybeSingle();
   const invite = inv;
-  await logEvent(rfq.id, "selected", `${quote.cro_name} 선택`, `총 ${won(picked)} · 의뢰자 연락처가 CRO에 전달됐어요.`, s.userId, { quoteId: quote.id });
+  await logEvent(rfq.id, "selected", `${quote.cro_name} 선택`, `총 ${won(picked)} · 의뢰자 연락처가 CRO에 전달됐어요.`, s.userId, {
+    quoteId: quote.id,
+    ...(why.reasons.length ? { reasons: why.reasons } : {}),
+    ...(why.note ? { reasonNote: why.note } : {}),
+  });
 
   // 선택된 CRO: 연락처 공개
   // 담당자 계정이 없거나 운영자 관리 기관은 포털(/cro, 로그인 필요)을 열 수 없다. 로그인 없는 회신 링크로 보내고 체결 여부는 운영자가 메일로 묻는다
