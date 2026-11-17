@@ -16,12 +16,14 @@ import type { InviteRow, QuoteRow, RfqRow, RfqSummary } from "./data";
 import type { PipeItem } from "./pipeline";
 import { comparisonOpened } from "./reply-window";
 import { CRO_TERMS_VERSION, JOIN_CONSENT, occupiesSeat } from "./request-policy";
+import { canUse } from "./plans";
+import { todaySeoul } from "./format";
 import { quoteSelectable } from "./quote-policy";
 import { clientIp, rateLimited } from "./rate-limit";
 
-export type AgentError = "unauthorized" | "forbidden" | "org_not_ready" | "not_found" | "rate_limited" | "unavailable";
+export type AgentError = "unauthorized" | "forbidden" | "org_not_ready" | "plan_required" | "not_found" | "rate_limited" | "unavailable";
 
-const STATUS: Record<AgentError, number> = { unauthorized: 401, forbidden: 403, org_not_ready: 403, not_found: 404, rate_limited: 429, unavailable: 503 };
+const STATUS: Record<AgentError, number> = { unauthorized: 401, forbidden: 403, org_not_ready: 403, plan_required: 403, not_found: 404, rate_limited: 429, unavailable: 503 };
 
 /** 오류 응답. 본문은 코드만 (사유 문장은 에이전트 앱이 정한다) */
 export function agentError(code: AgentError): NextResponse {
@@ -58,12 +60,17 @@ export async function agentSession(req: Request): Promise<AgentSession | AgentEr
   return gateRole(s);
 }
 
-/** 역할 판정 (순수 함수, 테스트 대상) */
-export function gateRole(s: Session): AgentSession | AgentError {
+/**
+ * 역할 판정 (순수 함수, 테스트 대상).
+ * 기관은 Pro 요금제에서만 에이전트를 쓴다(lib/plans.ts agent). 시범 운영 중에는 다른 Pro 기능처럼 모든 기관이 쓴다(canUse).
+ * 의뢰자는 요금제 없이 쓴다 (2026-11-18 사용자 결정).
+ */
+export function gateRole(s: Session, today = todaySeoul()): AgentSession | AgentError {
   const role = s.profile.role;
   if (role === "requester") return { ...s, role };
   if (role === "cro") {
     if (!s.org || s.org.status !== "approved" || s.org.managed) return "org_not_ready";
+    if (!canUse(s.org, "agent", today)) return "plan_required";
     return { ...s, role };
   }
   return "forbidden";

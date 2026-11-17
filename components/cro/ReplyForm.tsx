@@ -299,7 +299,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
   const allNo = items.length > 0 && items.every((it) => it.avail === "불가");
   const commonOk = !!common.startDate;
   const pending = items.filter((it) => it.checks && it.checks.length).length;
-  const canSubmit = !readOnly && filled === items.length && !allNo && commonOk && pending === 0 && (!!pdf || !!pdfName);
+  // 견적서 PDF는 선택 첨부 (2026-11-18 사용자 결정)
+  const canSubmit = !readOnly && filled === items.length && !allNo && commonOk && pending === 0;
   const blockedLabel = readOnly
     ? "수정할 수 없어요"
     : filled < items.length
@@ -310,11 +311,9 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
           ? `확인 필요 ${pending}건 남음`
         : !commonOk
           ? "착수 가능일을 입력하세요"
-          : !pdf && !pdfName
-            ? "PDF를 첨부하세요"
-            : isSubmitted
-              ? "수정 내용 제출"
-              : "견적 제출";
+          : isSubmitted
+            ? "수정 내용 제출"
+            : "견적 제출";
 
   const submit = async () => {
     if (busy || !canSubmit) return;
@@ -367,7 +366,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         <div className="note note--tint" style={{ marginBottom: 16 }}>
           <span>
             <b>견적서 {docFill.docNo}의 금액으로 시험 {docApplied}개를 채웠어요.</b>{" "}
-            견적서 PDF를 저장해 아래에 첨부하세요.{" "}
+            견적서 PDF를 함께 보내려면 저장해 아래에 첨부하세요.{" "}
             <Link href={docFill.printHref} style={{ color: "var(--brand)", fontWeight: 600 }}>PDF 저장</Link>{" · "}
             <Link href={docFill.href} style={{ color: "var(--brand)", fontWeight: 600 }}>견적서 고치기</Link>
           </span>
@@ -536,7 +535,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
               style={{ width: "100%", border: `1px dashed ${pdf || pdfName ? "var(--brand)" : "var(--dash)"}`, background: pdf || pdfName ? "var(--tint)" : "var(--wh)", borderRadius: 12, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 14, color: "var(--muted)", textAlign: "left" }}
             >
               <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {pdf ? pdf.name : pdfName || <>정식 견적서 PDF (원본)<span className="req">*</span></>}
+                {pdf ? pdf.name : pdfName || <>정식 견적서 PDF (원본, 선택)</>}
               </span>
               <span style={{ color: "var(--brand)", fontWeight: 600, flex: "none" }}>{readOnly ? "" : pdf || pdfName ? "교체" : "첨부"}</span>
             </button>

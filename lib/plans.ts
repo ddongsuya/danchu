@@ -4,7 +4,8 @@ import { PAID_FROM, SUBSCRIPTION_MAX_EXCL } from "./billing";
  * 기관 요금제 (2026-11-13 확정). DB 0044_cro_plans.sql 과 같은 값이다. 금액은 부가세 별도.
  * - 무료 0원: 5,000만 원 미만 견적 월 5건, 담당자 1명
  * - Plus 월 50만 원: 5,000만 원 미만 견적 무제한, 시험 관리, 담당자 3명
- * - Pro 월 100만 원: Plus 전체 + 견적서 작성 툴, 견적서 디자인 브랜딩 연 1회, 고객 관리(견적서 작성 툴 연동), 담당자 무제한
+ * - Pro 월 100만 원: Plus 전체 + 견적서 작성 툴, 견적서 디자인 브랜딩 연 1회, 고객 관리(견적서 작성 툴 연동), 담당자 무제한,
+ *   단추 에이전트(2026-11-18 사용자 결정: 기관은 Pro에서만 쓴다. 에이전트 안 기능은 등급으로 나누지 않는다. 의뢰자는 무료)
  * 5,000만 원 이상 견적의 송부료·성사 수수료는 요금제와 관계없이 같다 (lib/billing.ts).
  * 요청 수신 범위와 비교표 노출은 요금제와 관계없이 같다 (중립). 요금제로 배포·정렬을 바꾸지 않는다.
  *
@@ -20,7 +21,7 @@ import { PAID_FROM, SUBSCRIPTION_MAX_EXCL } from "./billing";
 export const PRICE_OPEN: boolean = false;
 
 export type PlanId = "free" | "plus" | "pro";
-export type PlanFeature = "tests" | "quote_tool" | "branding" | "crm";
+export type PlanFeature = "tests" | "quote_tool" | "branding" | "crm" | "agent";
 
 export const PLAN_IDS: readonly PlanId[] = ["free", "plus", "pro"];
 
@@ -48,8 +49,8 @@ export const PLANS: Record<PlanId, PlanDef> = {
     items: ["견적 요청 수신·회신", "5,000만 원 미만 견적 무제한", "시험 관리", "담당자 3명"],
   },
   pro: {
-    id: "pro", name: "Pro", price: 1_000_000, monthlyQuotes: null, seats: null, features: ["tests", "quote_tool", "branding", "crm"],
-    items: ["견적 요청 수신·회신", "5,000만 원 미만 견적 무제한", "시험 관리", "견적서 작성 툴 (엑셀·PDF)", "견적서 디자인 브랜딩 연 1회", "고객 관리, 견적서 작성 툴 연동", "담당자 무제한"],
+    id: "pro", name: "Pro", price: 1_000_000, monthlyQuotes: null, seats: null, features: ["tests", "quote_tool", "branding", "crm", "agent"],
+    items: ["견적 요청 수신·회신", "5,000만 원 미만 견적 무제한", "시험 관리", "견적서 작성 툴 (엑셀·PDF)", "견적서 디자인 브랜딩 연 1회", "고객 관리, 견적서 작성 툴 연동", "단추 에이전트", "담당자 무제한"],
   },
 };
 
@@ -58,6 +59,7 @@ export const FEATURE_LABEL: Record<PlanFeature, string> = {
   quote_tool: "견적서 작성 툴",
   branding: "견적서 디자인 브랜딩",
   crm: "고객 관리",
+  agent: "단추 에이전트",
 };
 
 /** 이 기능이 처음 들어가는 요금제 */
@@ -172,7 +174,7 @@ export function planDiff(from: PlanId, to: PlanId): { label: string; from: strin
   const seats = (p: PlanDef) => (p.seats == null ? "무제한" : `${p.seats}명`);
   const has = (p: PlanDef, f: PlanFeature) => (p.features.includes(f) ? (f === "branding" ? "연 1회" : "포함") : "미제공");
   if (q(a) !== q(b)) rows.push({ label: "5,000만 원 미만 견적", from: q(a), to: q(b) });
-  for (const f of ["tests", "quote_tool", "branding", "crm"] as const) {
+  for (const f of ["tests", "quote_tool", "branding", "crm", "agent"] as const) {
     if (has(a, f) !== has(b, f)) rows.push({ label: FEATURE_LABEL[f], from: has(a, f), to: has(b, f) });
   }
   if (seats(a) !== seats(b)) rows.push({ label: "담당자 계정", from: seats(a), to: seats(b) });

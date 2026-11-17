@@ -46,9 +46,10 @@ describe("기관 선정", () => {
   };
   it("확인된 정식 견적만 선정", () => {
     expect(quoteSelectable(confirmed, "2026-09-30")).toBe(true);
+    // 견적서 PDF는 선택 첨부 (2026-11-18): PDF가 없어도 선정할 수 있다
+    expect(quoteSelectable({ ...confirmed, pdf_path: null }, "2026-09-30")).toBe(true);
     for (const patch of [
       { auto: true },
-      { pdf_path: null },
       { start_date: null },
       { valid_until: "2026-09-29" },
     ])

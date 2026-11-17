@@ -78,6 +78,16 @@ describe("역할 경계", () => {
     expect(typeof ok === "object" && ok.role).toBe("cro");
     if (typeof ok === "object") expect(meView(ok).org).toEqual({ id: "o", name: "기관", plan: "plus" });
   });
+  it("기관은 정식 서비스 뒤 Pro 요금제에서만, 시범 운영 중에는 모든 기관", () => {
+    const org = (plan: string) => base("cro", { id: "o", name: "기관", status: "approved", managed: false, plan });
+    expect(gateRole(org("plus"), "2028-02-01")).toBe("plan_required");
+    expect(gateRole(org("free"), "2028-02-01")).toBe("plan_required");
+    expect(typeof gateRole(org("pro"), "2028-02-01")).toBe("object");
+    expect(typeof gateRole(org("free"), "2026-11-18")).toBe("object");
+  });
+  it("의뢰자는 요금제와 관계없이 쓴다", () => {
+    expect(typeof gateRole(base("requester", null), "2028-02-01")).toBe("object");
+  });
 });
 
 describe("공개 규칙", () => {
