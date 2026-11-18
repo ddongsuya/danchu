@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { buffer, drawCard, setReduced, W, H, type Kind } from "@/components/site/study-fork-motion";
 
 /** 네 갈래 첫 화면에서 고른 종류의 상징 그래픽 하나. 다음 화면 머리에 두어 어디서 왔는지 이어 준다 */
-export function StudyMark({ kind, className }: { kind: Kind; className?: string }) {
+export function StudyMark({ kind, className, scenes }: { kind: Kind; className?: string; scenes?: string[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = ref.current;
@@ -20,7 +20,7 @@ export function StudyMark({ kind, className }: { kind: Kind; className?: string 
     let raf = 0, vis = true;
     const t0 = performance.now();
     const frame = (now: number) => {
-      if (vis) drawCard(c, kind, now - t0, A, B, reduce);
+      if (vis) drawCard(c, kind, now - t0, A, B, reduce, scenes);
       if (!reduce) raf = requestAnimationFrame(frame);
     };
     const run = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); };
@@ -30,6 +30,6 @@ export function StudyMark({ kind, className }: { kind: Kind; className?: string 
     mq.addEventListener("change", onMq);
     run();
     return () => { cancelAnimationFrame(raf); io.disconnect(); mq.removeEventListener("change", onMq); };
-  }, [kind]);
+  }, [kind, scenes]);
   return <canvas ref={ref} className={className} aria-hidden="true" />;
 }
