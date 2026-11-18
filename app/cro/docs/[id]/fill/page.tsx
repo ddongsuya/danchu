@@ -3,6 +3,8 @@ import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
 import { loadCatalog } from "@/lib/catalog-db";
 import { loadDoc, loadRates, loadStyle } from "@/lib/quote-doc-db";
+import { loadPriceBook } from "@/lib/price-book-db";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { QuoteFill } from "@/components/cro/quote/QuoteFill";
 import "@/components/cro/quote/quote.css";
@@ -16,8 +18,9 @@ export default async function FillPage({ params, searchParams }: { params: Promi
   if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   if (!dbReady()) notFound();
   const [{ id }, sp] = await Promise.all([params, searchParams]);
-  const [got, catalog, rates, style] = await Promise.all([loadDoc(org.id, id), loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name)]);
+  const sb = getSupabaseAdmin();
+  const [got, catalog, rates, style, book] = await Promise.all([loadDoc(org.id, id), loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name), sb ? loadPriceBook(sb, org.id).catch(() => null) : null]);
   if (!got) notFound();
   const replyHref = got.head.inviteId ? `/cro/r/${got.head.inviteId}/reply?doc=${got.head.id}` : null;
-  return <QuoteFill head={got.head} initial={got.data} style={style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={replyHref} start={sp.step} readOnly={!!s.demo} />;
+  return <QuoteFill head={got.head} initial={got.data} style={style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={replyHref} start={sp.step} readOnly={!!s.demo} book={book ? { items: book.items, marginPct: book.marginPct } : null} />;
 }

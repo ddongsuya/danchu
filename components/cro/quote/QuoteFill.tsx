@@ -11,7 +11,9 @@ import {
 import type { CatalogRow } from "@/lib/catalog";
 import { kindOfCategory, type Kind } from "@/lib/kind-design";
 import { KINDS } from "@/lib/study-kinds";
-import { Cover, DetailPage, QuotePage, pageCount } from "./DocPages";
+import { Cover, DetailPage, DocPages, QuotePage, pageCount } from "./DocPages";
+import { PdReflect } from "./PdReflect";
+import type { PriceItem } from "@/lib/price-book";
 import { KindPriceQ, KindTab, OrigBox, Stepper, kdForCatalog, kindTabs, needsPrice, type KTab } from "./KindQ";
 
 /**
@@ -49,9 +51,11 @@ type Props = {
   readOnly?: boolean;
   /** 고객사 화면에서 "견적서 만들기"로 왔을 때 (0038): 의뢰자 칸을 채우고 만든 견적서를 그 고객사·담당자에 묶는다 */
   crm?: { companyId: string | null; contactId: string | null; client: string; dealId?: string | null } | null;
+  /** 기관 단가표 (0047). 효력 모델 표준에 사용량 규칙이 있으면 바꾸기 단계가 요청 반영 화면이 된다 */
+  book?: { items: PriceItem[]; marginPct: number } | null;
 };
 
-export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHref, start, readOnly = false, crm = null }: Props) {
+export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHref, start, readOnly = false, crm = null, book = null }: Props) {
   const router = useRouter();
   const isNew = !head0;
   const blankHead: DocHead = { id: "", docNo: "새 견적서", title: "견적서", client: crm?.client ?? "", substance: "", issuedOn: today(), validUntil: null, inviteId: null, rfqNo: null, memo: "", updatedAt: "" };
@@ -69,6 +73,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [peek, setPeek] = useState(false);
+  const [pv, setPv] = useState(false);
   const timer = useRef<number>(0);
   const abort = useRef<AbortController | null>(null);
   const rev = useRef(0);
@@ -156,6 +161,36 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
       await fetch("/api/cro/rates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemKey: t.itemKey, prices: [{ id: t.catalogId, std_price: t.std.price, ...(kd ? { kd } : {}) }] }) }).catch(() => null);
     }
   };
+
+  /* ── 효력 요청 반영 (0047): 모델 표준에 사용량 규칙이 있는 효력 시험은 넓은 한 화면으로 ── */
+  if (step === "detail" && cur && testKind(cur) === "pd" && cur.kd?.pd && cur.std.kd?.pd?.uses?.length && (cur.prices || book)) {
+    const last = at >= changing.length - 1;
+    return (
+      <div className="qf">
+        <header className="qf__top">
+          <Link className="qf__x" href="/cro/docs" aria-label="닫기"><X size={20} aria-hidden="true" /></Link>
+          <span className="qf__t">{head.title}</span>
+          <span role="status" className="qf__sv" data-s={saved}>{readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨"}</span>
+          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          <span className="qf__sp" />
+          {head.id && <Link className="qf__lk qf__pc" href={`/cro/docs/${head.id}`}>문서에서 직접 고치기</Link>}
+          <button type="button" className="b2 bsm" onClick={back}>이전</button>
+        </header>
+        <div className="qf__wide">
+          <PdReflect key={cur.uid} head={head} t={cur} book={book} readOnly={readOnly} set={(p) => setTest(cur.uid, p)} onNext={() => void next()} onPreview={() => setPv(true)} nextLabel={last ? "견적서 만들기" : "다음 시험"} />
+        </div>
+        {pv && (
+          <div className="qf__pv" role="dialog" aria-modal="true" aria-label="견적서 미리보기" onKeyDown={(e) => { if (e.key === "Escape") setPv(false); }}>
+            <div className="qf__pvbar">
+              <b>견적서 미리보기</b>
+              <button type="button" className="b2 bsm" autoFocus onClick={() => setPv(false)}>닫기</button>
+            </div>
+            <div className="qf__pvbody"><Paper><DocPages head={head} data={data} style={style} /></Paper></div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   /* ── 질문 ── */
   let h = "", lead = "", body: React.ReactNode = null, nextLabel = "다음", alt: React.ReactNode = null, cost: React.ReactNode = null;
