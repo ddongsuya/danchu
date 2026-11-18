@@ -1385,6 +1385,143 @@ export type Database = {
           },
         ]
       }
+      cro_price_items: {
+        Row: {
+          archived: boolean
+          attrs: Json
+          category: string
+          created_at: string
+          id: string
+          memo: string
+          name: string
+          org_id: string
+          price: number
+          sort: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          attrs?: Json
+          category: string
+          created_at?: string
+          id?: string
+          memo?: string
+          name: string
+          org_id: string
+          price: number
+          sort?: number
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          attrs?: Json
+          category?: string
+          created_at?: string
+          id?: string
+          memo?: string
+          name?: string
+          org_id?: string
+          price?: number
+          sort?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cro_price_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cro_price_log: {
+        Row: {
+          after: number | null
+          before: number | null
+          changed_at: string
+          changed_by: string | null
+          id: number
+          item_id: string | null
+          item_name: string
+          org_id: string
+          via: string
+        }
+        Insert: {
+          after?: number | null
+          before?: number | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: number
+          item_id?: string | null
+          item_name?: string
+          org_id: string
+          via?: string
+        }
+        Update: {
+          after?: number | null
+          before?: number | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: number
+          item_id?: string | null
+          item_name?: string
+          org_id?: string
+          via?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cro_price_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cro_price_log_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "cro_price_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cro_price_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cro_price_settings: {
+        Row: {
+          margin_pct: number
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          margin_pct?: number
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          margin_pct?: number
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cro_price_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cro_quote_addons: {
         Row: {
           amount: number | null
