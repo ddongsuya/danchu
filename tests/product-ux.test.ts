@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { FAQ } from "@/lib/faq";
+import { FAQ_ITEMS } from "@/lib/faq-page";
 import { CRO_TERMS_VERSION, JOIN_CONSENT } from "@/lib/request-policy";
 import { CONSENT_VERSION } from "@/lib/rfq-schema";
 import {
@@ -139,16 +139,16 @@ describe("참여 선택형 공개 문구", () => {
     expect(forCro).not.toContain("합의 이후에 전달된 요청");
   });
   it("FAQ 는 참여 안내와 참여 자리로 설명한다", () => {
-    const all = FAQ.flatMap((f) => [f.q, ...f.a]).join("\n");
+    const all = FAQ_ITEMS.flatMap((f) => [f.q, f.lead, ...f.points]).join("\n");
     expect(all).toContain("참여 안내");
-    expect(all).toContain("참여 자리");
+    expect(all).toContain("참여한 순서대로 자리가 차요");
     expect(all).not.toContain("선택한 기관 수 범위");
     expect(all).not.toContain("요청서가 배포");
     expect(all).not.toContain("전달받은 기관이 모두 회신");
   });
   it("바뀐 화면 문구에 긴 대시가 없다", () => {
     const texts = [
-      FAQ.flatMap((f) => [f.q, ...f.a]).join("\n"),
+      FAQ_ITEMS.flatMap((f) => [f.q, f.lead, ...f.points]).join("\n"),
       JOIN_CONSENT,
       visible(src("app/terms/page.tsx")),
       visible(src("app/for-cro/page.tsx")),
