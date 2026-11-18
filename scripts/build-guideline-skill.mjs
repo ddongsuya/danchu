@@ -34,7 +34,7 @@ async function loadLib() {
   }
   const imp = (n) => import(pathToFileURL(join(out, `${n}.mjs`)).href);
   try {
-    const [advisor, guide, presets, efficacy, faq] = await Promise.all(["advisor", "design-guide", "presets", "efficacy", "faq"].map(imp));
+    const [advisor, guide, presets, efficacy, faq] = await Promise.all(["advisor", "design-guide", "presets", "efficacy", "faq-page"].map(imp));
     return { advisor, guide, presets, efficacy, faq };
   } finally {
     rmSync(out, { recursive: true, force: true });
@@ -222,8 +222,8 @@ function build06({ efficacy, faq }) {
     "단추가 정하는 것은 영역 분류와 비용 구분 틀까지다. 모델과 설계는 기관이 등록하고 제안한다. 아래 모델은 국내 기관 공개 자료에서 확인된 예시이며 단추가 권하는 모델이 아니다.",
     table(["질환 영역", "모델 예"], efficacy.AREAS.map(([n, ms]) => [n, ms.join(", ")])),
     `비용 구분: ${efficacy.COST_PARTS.map(([, label, desc]) => `${label}(${desc})`).join(" · ")}`,
-    "## 서비스 FAQ (lib/faq.ts)",
-    ...faq.FAQ.map((f) => [`### ${f.q}`, ...f.a].join("\n\n")),
+    "## 서비스 FAQ (lib/faq-page.ts, /faq 화면과 같은 문장)",
+    ...faq.FAQ_ITEMS.map((f) => [`### ${f.q}`, f.lead, ...f.points.map((p) => `- ${p}`)].join("\n\n")),
   );
 }
 
