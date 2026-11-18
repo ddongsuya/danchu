@@ -44,9 +44,10 @@ export const PD_MODEL: PdDesign = {
   ],
   evals: [
     { id: "e1", item: "체중", when: "D0~D10", freq: "하루 1회", method: "전자저울", target: "전 군" },
-    { id: "e2", item: "질환 활성 점수(DAI)", when: "D0~D10", freq: "하루 1회", method: "체중 감소·변 굳기·혈변 0~4점 합산", target: "전 군" },
+    { id: "e2", item: "질환 활성 점수(DAI)", when: "D0~D10", freq: "하루 1회", method: "체중 감소·변 굳기·혈변 0~4점 합산", target: "전 군",
+      scale: { cols: ["점수", "체중 감소", "변 굳기", "혈변"], rows: [["0", "없음", "정상", "없음"], ["1", "1~5%", "", ""], ["2", "5~10%", "무른 변", "약간"], ["3", "10~20%", "", ""], ["4", "20% 초과", "설사", "육안 출혈"]] } },
     { id: "e3", item: "대장 길이", when: "D10", freq: "1회", method: "맹장에서 항문까지 측정", target: "전 군" },
-    { id: "e4", item: "조직병리", when: "D10", freq: "1회", method: "원위 대장 H&E, 염증·궤양 점수", target: "전 군" },
+    { id: "e4", item: "조직병리", when: "D10", freq: "1회", method: "원위 대장 H&E, 염증·궤양 점수", target: "전 군", use: "he|H&E 염색" },
     { id: "e5", item: "사이토카인 ELISA", when: "D10", freq: "1회", method: "혈청 IL-6, TNF-α, IL-1β", target: "전 군", optional: true },
   ],
   uses: [
@@ -63,6 +64,7 @@ export const PD_MODEL: PdDesign = {
     { itemId: "read", who: "none", times: 1, per: 1, label: "판독·병리 보고" },
     { itemId: "rep", who: "none", times: 1, per: 1, label: "최종 보고서" },
   ],
+  report: "군별 평균과 표준오차를 표와 그래프로 제시하고, 부형제군 대비 통계 비교 결과를 함께 적습니다.\n최종 보고서는 국문이며, 부검 후 5주 안에 드립니다.",
   endpoints: [],
   costs: { cost_animal: null, cost_dosing: null, cost_eval: null, cost_path: null, cost_report: null },
   perGroup: { cost_animal: null, cost_dosing: null, cost_eval: null, cost_path: null, cost_report: null },
@@ -87,7 +89,7 @@ export const PD_REQ: PdDesign = {
   ],
   evals: [
     ...(PD_MODEL.evals ?? []).slice(0, 4),
-    { id: "e6", item: "혈청 사이토카인", when: "D10", freq: "1회", method: "부검 시 채혈한 혈청에서 IL-6, TNF-α, IL-1β를 ELISA로 정량", target: "전 군" },
+    { id: "e6", item: "혈청 사이토카인", when: "D10", freq: "1회", method: "부검 시 채혈한 혈청에서 IL-6, TNF-α, IL-1β를 ELISA로 정량", target: "전 군", use: "elisa|사이토카인 ELISA" },
   ],
   uses: [...(PD_MODEL.uses ?? []), { itemId: "elisa", who: "all", times: 1, per: 3, label: "사이토카인 ELISA" }],
 };

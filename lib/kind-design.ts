@@ -37,7 +37,16 @@ export const EMPTY5: Money5 = { cost_animal: null, cost_dosing: null, cost_eval:
 /** 일 단위 스키마 한 줄 (0047 모델 표준). from·to 는 D0 기준 일(순화는 음수). mark: 기간 막대, 매일 점, 한 시점 */
 export type DayLane = { id: string; name: string; from: number; to: number; mark: "bar" | "dots" | "point" };
 /** 평가항목 한 줄 (0047). 문장 칸은 견적서 평가항목 쪽에 그대로 나간다. optional 은 표준가에 넣지 않는 선택 항목 */
-export type PdEval = { id: string; item: string; when: string; freq: string; method: string; target: string; optional?: boolean };
+export type PdEval = {
+  id: string; item: string; when: string; freq: string; method: string; target: string; optional?: boolean;
+  /** 검체 수를 셀 단가 사용량 줄 (pdUseKey). 없으면 이름이 맞는 줄 */
+  use?: string;
+  /** 점수 기준표 (예: DAI). 첫 열이 점수 */
+  scale?: PdScale;
+};
+export type PdScale = { cols: string[]; rows: string[][] };
+/** 사용량 줄 이름표 (평가항목이 가리킬 때) */
+export const pdUseKey = (u: { itemId: string; label?: string }) => `${u.itemId}|${u.label ?? ""}`;
 /** 모델 표준 머리 요약 (동물·투여·기간 한 줄씩. 유발은 induction) */
 export type PdBrief = { animal: string; dosing: string; period: string };
 /** 단가표 사용량 규칙 (lib/pd-price.ts PriceUse 와 같은 모양) */
@@ -65,6 +74,8 @@ export type PdDesign = {
   evals?: PdEval[];
   uses?: PdUse[];
   brief?: PdBrief;
+  /** 견적서 평가항목 쪽 "결과 보고" 문단 (줄바꿈으로 문단) */
+  report?: string;
 };
 
 /* ── 약동학 ─────────────────────────────────────────── */
@@ -272,8 +283,17 @@ const WHO = ["all", "induced", "dosed", "none"] as const;
 const MARKS = ["bar", "dots", "point"] as const;
 
 /** 0047 모델 표준 칸 정리. 없으면 빈 객체 (예전 설계는 그대로) */
-function cleanPdStd(o: Record<string, unknown>): Pick<PdDesign, "days" | "evals" | "uses" | "brief"> {
-  const out: Pick<PdDesign, "days" | "evals" | "uses" | "brief"> = {};
+function cleanScale(v: unknown): PdScale | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const cols = (Array.isArray(o.cols) ? o.cols : []).slice(0, 6).map((c) => s(c, 30));
+  if (cols.length < 2) return undefined;
+  const rows = (Array.isArray(o.rows) ? o.rows : []).slice(0, 12).filter(Array.isArray).map((r) => cols.map((_, i) => s((r as unknown[])[i], 40)));
+  return { cols, rows };
+}
+
+function cleanPdStd(o: Record<string, unknown>): Pick<PdDesign, "days" | "evals" | "uses" | "brief" | "report"> {
+  const out: Pick<PdDesign, "days" | "evals" | "uses" | "brief" | "report"> = {};
   if (Array.isArray(o.days)) {
     out.days = o.days.slice(0, 12).filter((l) => l && typeof l === "object").map((l, i) => {
       const x = l as Record<string, unknown>;
@@ -284,7 +304,9 @@ function cleanPdStd(o: Record<string, unknown>): Pick<PdDesign, "days" | "evals"
   if (Array.isArray(o.evals)) {
     out.evals = o.evals.slice(0, 30).filter((e) => e && typeof e === "object").map((e, i) => {
       const x = e as Record<string, unknown>;
-      return { id: s(x.id, 40) || `e${i + 1}`, item: s(x.item, 60), when: s(x.when, 40), freq: s(x.freq, 40), method: s(x.method, 160), target: s(x.target, 40), ...(x.optional === true ? { optional: true } : {}) };
+      const use = s(x.use, 110);
+      const scale = cleanScale(x.scale);
+      return { id: s(x.id, 40) || `e${i + 1}`, item: s(x.item, 60), when: s(x.when, 40), freq: s(x.freq, 40), method: s(x.method, 160), target: s(x.target, 40), ...(x.optional === true ? { optional: true } : {}), ...(use ? { use } : {}), ...(scale ? { scale } : {}) };
     }).filter((e) => e.item);
   }
   if (Array.isArray(o.uses)) {
@@ -303,6 +325,10 @@ function cleanPdStd(o: Record<string, unknown>): Pick<PdDesign, "days" | "evals"
   if (o.brief && typeof o.brief === "object") {
     const b = o.brief as Record<string, unknown>;
     out.brief = { animal: s(b.animal, 80), dosing: s(b.dosing, 80), period: s(b.period, 80) };
+  }
+  if (typeof o.report === "string") {
+    const r = o.report.split(/\n+/).map((x) => x.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 8).join("\n").slice(0, 1200);
+    if (r) out.report = r;
   }
   return out;
 }

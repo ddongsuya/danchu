@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cleanPriceSnap, pdBuckets, pdQuote, snapFor, wonKo } from "@/lib/pd-quote";
+import { cleanPriceSnap, evalSamples, pdBuckets, pdQuote, scaleTitle, snapFor, wonKo } from "@/lib/pd-quote";
+import { cleanKd } from "@/lib/kind-design";
 import { cleanDocData, docTotals, kindRows, scheduleWeeks, testFromCatalog, testLines, type DocTest } from "@/lib/quote-doc";
 import { PD_ITEMS, PD_MODEL, PD_REQ, PD_ROW } from "@/app/design-preview/pd-fixtures";
 
@@ -62,5 +63,32 @@ describe("효력 요청 반영 견적", () => {
     expect(wonKo(31_055_750)).toBe("삼천일백오만오천칠백오십");
     expect(wonKo(100_000_000)).toBe("일억");
     expect(wonKo(0)).toBe("영");
+  });
+});
+
+describe("평가항목 검체 수·기준표·결과 보고", () => {
+  it("검체 수는 가리키는 사용량 줄에서 계산한다 (시안 v15)", () => {
+    const n = (PD_REQ.evals ?? []).map((e) => evalSamples(PD_REQ, e, PD_ITEMS));
+    expect(n).toEqual([660, 660, 60, 60, 180]);
+  });
+
+  it("가리키는 줄이 없거나 대상이 없음이면 비운다", () => {
+    const e = { id: "x", item: "행동 관찰", when: "D1", freq: "1회", method: "", target: "전 군" };
+    expect(evalSamples(PD_REQ, e, PD_ITEMS)).toBeNull();
+    expect(evalSamples(PD_REQ, { ...e, use: "rep|최종 보고서" }, PD_ITEMS)).toBeNull();
+  });
+
+  it("기준표 제목은 괄호 속 약칭을 쓴다", () => {
+    expect(scaleTitle("질환 활성 점수(DAI)")).toBe("DAI 점수 기준");
+    expect(scaleTitle("관절염 점수")).toBe("관절염 점수 기준");
+  });
+
+  it("저장할 때 검체 기준·기준표·결과 보고가 남는다", () => {
+    const kd = cleanKd({ pd: PD_MODEL })!;
+    const ev = kd.pd!.evals!;
+    expect(ev[1].scale?.cols).toEqual(["점수", "체중 감소", "변 굳기", "혈변"]);
+    expect(ev[1].scale?.rows).toHaveLength(5);
+    expect(ev[3].use).toBe("he|H&E 염색");
+    expect(kd.pd!.report?.split("\n")).toHaveLength(2);
   });
 });

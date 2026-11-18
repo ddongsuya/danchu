@@ -6,7 +6,7 @@
  */
 import { docTotals, testKind, type DocData, type DocHead, type DocTest, type QuoteStyle } from "@/lib/quote-doc";
 import type { DayLane, PdDesign } from "@/lib/kind-design";
-import { dayRange, pdBuckets, pdQuote, wonKo, type PdQuote } from "@/lib/pd-quote";
+import { dayRange, evalSamples, pdBuckets, pdQuote, scaleTitle, wonKo, type PdQuote } from "@/lib/pd-quote";
 import { Foot, Head, Logo, brandVars } from "./DocPages";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
@@ -232,6 +232,10 @@ export function PdEvalPage({ head, t, style, i }: P & { i: number }) {
   const stdEvals = new Set((t.std.kd?.pd?.evals ?? []).filter((e) => !e.optional).map((e) => e.item.trim()));
   const evals = (pd.evals ?? []).filter((e) => !e.optional);
   const target = [...new Set(evals.map((e) => e.target).filter(Boolean))];
+  const items = t.prices?.items ?? [];
+  const hasN = evals.some((e) => evalSamples(pd, e, items) != null);
+  const scales = evals.filter((e) => e.scale && e.scale.rows.length);
+  const report = (pd.report ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
   return (
     <section className="qd qp" style={brandVars(style)}>
       <Head head={head} style={style} right={metaRight(head)} />
@@ -239,7 +243,7 @@ export function PdEvalPage({ head, t, style, i }: P & { i: number }) {
       <Sec title="측정 일정과 방법" sub={target.length === 1 ? `${target[0]} 대상` : undefined}>
         {evals.length ? (
           <table className="qp__t">
-            <thead><tr><th className="qp__ev">항목</th><th className="qp__nw">시점</th><th className="qp__nw">횟수</th><th>방법</th>{target.length > 1 && <th>대상</th>}</tr></thead>
+            <thead><tr><th className="qp__ev">항목</th><th className="qp__nw">시점</th><th className="qp__nw">횟수</th><th>방법</th>{target.length > 1 && <th>대상</th>}{hasN && <th className="r qp__nw">검체</th>}</tr></thead>
             <tbody>
               {evals.map((e) => (
                 <tr key={e.id}>
@@ -248,12 +252,30 @@ export function PdEvalPage({ head, t, style, i }: P & { i: number }) {
                   <td className="qp__nw">{e.freq}</td>
                   <td>{e.method}</td>
                   {target.length > 1 && <td>{e.target}</td>}
+                  {hasN && <td className="r qd__num qp__nw">{(() => { const n = evalSamples(pd, e, items); return n != null ? n.toLocaleString("ko-KR") : "-"; })()}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
         ) : <p className="qp__p qp__mut">평가항목 없음</p>}
       </Sec>
+      {scales.map((e) => (
+        <Sec key={e.id} title={scaleTitle(e.item)}>
+          <table className="qp__t qp__sc">
+            <thead><tr>{e.scale!.cols.map((c, j) => <th key={j} className={j === 0 ? "qp__nw" : undefined}>{c}</th>)}</tr></thead>
+            <tbody>
+              {e.scale!.rows.map((r, k) => (
+                <tr key={k}>{r.map((c, j) => (j === 0 ? <th key={j} scope="row" className="qd__num">{c || "-"}</th> : <td key={j}>{c || "-"}</td>))}</tr>
+              ))}
+            </tbody>
+          </table>
+        </Sec>
+      ))}
+      {report.length > 0 && (
+        <Sec title="결과 보고">
+          {report.map((l, k) => <p key={k} className="qp__p">{l}</p>)}
+        </Sec>
+      )}
       <Foot label="평가항목" i={i} total={PD_PAGES} />
     </section>
   );

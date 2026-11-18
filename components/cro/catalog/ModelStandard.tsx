@@ -14,6 +14,7 @@ import { PRICE_CATS, PRICE_CAT_LABEL, PRICE_UNIT_LABEL, type PriceItem, type Pri
 import { pdPrice } from "@/lib/pd-price";
 import type { PriceBook } from "@/lib/price-book-db";
 
+import { ReportField, SampleCell, ScaleEditor, newScale } from "@/components/cro/catalog/PdEvalParts";
 const won = (n: number) => n.toLocaleString("ko-KR");
 let seq = 0;
 export const nid = (p: string) => `${p}${Date.now().toString(36)}${(++seq).toString(36)}`;
@@ -187,8 +188,8 @@ export function ModelStandard({ row: initialRow, siblings, others, book, readOnl
             </div>
             {evals.length ? (
               <div className="ms__tw">
-                <table className="ms__t">
-                  <thead><tr><th scope="col">항목</th><th scope="col">시점</th><th scope="col">빈도</th><th scope="col">방법</th><th scope="col">대상</th><th scope="col"><span className="sr-only">선택 항목, 빼기</span></th></tr></thead>
+                <table className="ms__t ms__et">
+                  <thead><tr><th scope="col">항목</th><th scope="col">시점</th><th scope="col">빈도</th><th scope="col">방법</th><th scope="col">대상</th><th scope="col" className="r">검체</th><th scope="col"><span className="sr-only">선택 항목, 기준표, 빼기</span></th></tr></thead>
                   <tbody>
                     {evals.map((e) => (
                       <tr key={e.id} data-opt={e.optional ? "1" : undefined}>
@@ -197,10 +198,12 @@ export function ModelStandard({ row: initialRow, siblings, others, book, readOnl
                         <td><TIn label={`${e.item} 빈도`} value={e.freq} max={40} placeholder="1회" onChange={(v) => setEval(e.id, { freq: v })} disabled={readOnly} /></td>
                         <td className="ms__wide"><TIn label={`${e.item} 방법`} value={e.method} max={160} onChange={(v) => setEval(e.id, { method: v })} disabled={readOnly} /></td>
                         <td><TIn label={`${e.item} 대상`} value={e.optional ? "선택 항목" : e.target} max={40} onChange={(v) => setEval(e.id, { target: v })} disabled={readOnly || !!e.optional} /></td>
+                        <td className="r"><SampleCell pd={pd} e={e} items={book.items} onChange={(use) => setEval(e.id, { use })} disabled={readOnly} /></td>
                         <td className="ms__xc">
                           {!readOnly && (
                             <span className="ms__ea">
                               <button type="button" className="ms__opt" aria-pressed={!!e.optional} onClick={() => setEval(e.id, { optional: !e.optional })}>선택</button>
+                              <button type="button" className="ms__opt" aria-pressed={!!e.scale} onClick={() => setEval(e.id, { scale: e.scale ? undefined : newScale() })}>기준표</button>
                               <button type="button" className="btxt ms__x" aria-label={`${e.item} 빼기`} onClick={() => setPd((p) => ({ ...p, evals: (p.evals ?? []).filter((x) => x.id !== e.id) }))}><X size={14} aria-hidden="true" /></button>
                             </span>
                           )}
@@ -213,7 +216,10 @@ export function ModelStandard({ row: initialRow, siblings, others, book, readOnl
             ) : (
               <div className="ms__empty">평가항목 없음</div>
             )}
+            {(pd.evals ?? []).filter((e) => e.scale).map((e) => <ScaleEditor key={e.id} e={e} onChange={(scale) => setEval(e.id, { scale })} disabled={readOnly} />)}
           </section>
+
+          <ReportField value={pd.report ?? ""} onChange={(v) => setPd((p) => ({ ...p, report: v }))} disabled={readOnly} />
         </div>
 
         <aside className="ms__led" aria-labelledby="ms-led">
