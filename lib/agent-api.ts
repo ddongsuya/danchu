@@ -14,6 +14,8 @@ import { sessionForUser, type Session } from "./auth";
 import { getSupabaseAdmin } from "./supabase";
 import type { InviteRow, QuoteRow, RfqRow, RfqSummary } from "./data";
 import type { PipeItem } from "./pipeline";
+import type { Loaded } from "./quote-load";
+import type { ReplyCommon, ReplyItem, ScheduleStep } from "./cro-data";
 import { comparisonOpened } from "./reply-window";
 import { CRO_TERMS_VERSION, JOIN_CONSENT, occupiesSeat } from "./request-policy";
 import { canUse } from "./plans";
@@ -220,4 +222,83 @@ export async function agentGate(req: Request): Promise<AgentSession | NextRespon
   if (typeof s === "string") return agentError(s);
   if (await rateLimited("agent-read", s.userId, 120, 60)) return agentError("rate_limited");
   return s;
+}
+
+/* ── 기관 견적 작성용 읽기 (말로 맡기는 견적 1단계, 2026-11-18) ── */
+
+export type AgentQuoteState = "not_joined" | "open" | "locked" | "closed" | "declined" | "expired";
+
+/**
+ * 받은 요청 한 건의 요청서 전체와 회신 초안. 에이전트가 견적 초안을 만들 때 읽는다.
+ * - 웹 회신 화면(lib/quote-load.ts)과 같은 내용을 같은 공개 규칙으로 준다. 참여 전에는 요약만, 초안은 없다.
+ * - 의뢰자 회사명·연락처(client)·토큰·초대 id 는 넣지 않는다. 요청서 추가 내용의 연락처는 웹처럼 가려져 있다.
+ * - 초안 금액은 단추가 기관 시험 목록 단가로 계산한 값 그대로다(에이전트는 금액을 만들지 않는다).
+ */
+export type AgentQuoteBrief = {
+  no: string;
+  state: AgentQuoteState;
+  closedReason: string | null;
+  request: {
+    full: boolean;
+    substance: string;
+    categories: string[];
+    overview: [string, string][];
+    rows: { seq: number; category: string; name: string; cond: string }[];
+    common: [string, string][];
+    situation: string[];
+    ask: string[];
+    replyBy: string;
+    authorities: string[];
+    translation: boolean;
+    files: string[];
+  };
+  draft: {
+    status: "draft" | "submitted";
+    prefilled: boolean;
+    items: ReplyItem[];
+    note: string;
+    common: ReplyCommon;
+    steps: ScheduleStep[];
+    pdfName: string;
+  } | null;
+};
+
+/** 회신 화면 데이터 → 에이전트가 읽을 모양 (순수 함수, 테스트 대상) */
+export function quoteBriefView(l: Loaded): AgentQuoteBrief {
+  const state: AgentQuoteState = !l.joined
+    ? l.declined
+      ? "declined"
+      : "not_joined"
+    : l.declined
+      ? "declined"
+      : l.closed
+        ? "closed"
+        : l.expired
+          ? "expired"
+          : l.locked
+            ? "locked"
+            : "open";
+  const r = l.rfq;
+  return {
+    no: r.no,
+    state,
+    closedReason: l.closedReason,
+    request: {
+      full: r.full,
+      substance: r.substance,
+      categories: r.categories,
+      overview: r.overview,
+      rows: r.rows.map(({ seq, category, name, cond }) => ({ seq, category, name, cond })),
+      common: r.common,
+      situation: r.situation,
+      ask: r.ask,
+      replyBy: r.replyBy,
+      authorities: r.authorities,
+      translation: !!r.translation,
+      files: r.files.map((f) => f.name),
+    },
+    draft: l.joined && l.draft
+      ? { status: l.draft.status, prefilled: !!l.draft.prefilled, items: l.draft.items, note: l.draft.note, common: l.draft.common, steps: l.draft.steps ?? [], pdfName: l.draft.pdfName }
+      : null,
+  };
 }
