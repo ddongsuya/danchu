@@ -11,6 +11,7 @@ import {
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
 import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
+import { PD_PAGES, PdCover, PdDetailPage, PdEvalPage, PdQuotePage, pdDocTest } from "./PdPages";
 import { COND_LABEL, Cover, DetailPage, GuidePage, Logo, brandVars, QuotePage, SchedulePage, condLine, guidePages, pageCount, pageKeys, type PageKey } from "./DocPages";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
@@ -103,13 +104,17 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
     setDoc({ tests: next });
   };
 
-  const total = pageCount(data);
-  const pageNo = keys.indexOf(page) + 1;
-  const guides = guidePages(data);
+  // 효력 시험 하나 + 단가표 방식이면 PDF와 같은 효력 견적서 4쪽 (표지, 견적서, 시험 구성, 평가항목)
+  const pdx = useMemo(() => pdDocTest(data), [data]);
+  const total = pdx ? PD_PAGES : pageCount(data);
+  const pageNo = pdx ? (page === "cover" ? 1 : page === "quote" ? 2 : page === "schedule" ? 4 : 3) : keys.indexOf(page) + 1;
+  const guides = pdx ? [] : guidePages(data);
   const gk = page.startsWith("guide:") ? Number(page.slice(6)) : -1;
   const guide = gk >= 0 ? guides[gk] ?? null : null;
   const guideEl = guide && <GuidePage head={head} items={guide} part={gk} parts={guides.length} style={style} i={pageNo} total={total} data={data} />;
-  const section = page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : gk >= 0 ? "5부 · 시험 안내" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
+  const pdp = pdx && { head, data, t: pdx.t, q: pdx.q, style };
+  const pdFix = pdx && !readOnly && <div className="qed__pdfix"><Link className="b2 bsm" href={`/cro/docs/${head.id}/fill?step=detail`}>요청 반영에서 고치기</Link></div>;
+  const section = pdx ? (page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 평가항목" : "3부 · 시험 구성") : page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : gk >= 0 ? "5부 · 시험 안내" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
   const savedLabel = readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
 
   return (
@@ -145,8 +150,8 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
           <nav className="qed__toc">
             <Toc on={page === "cover"} onClick={() => { setPage("cover"); setPane("desk"); }} title="표지" sub="의뢰자, 견적번호" thumb="cover" />
             <Toc on={page === "quote"} onClick={() => { setPage("quote"); setPane("desk"); }} title="견적서" sub={`시험 ${data.tests.length}건 · 합계`} thumb="quote" />
-            <Toc on={!!test} onClick={() => { if (data.tests[0]) { setPage(`detail:${data.tests[0].uid}`); setPane("desk"); } }} title="시험 상세 설명" sub={data.tests.length ? "시험 설계 편집" : "시험을 추가하세요"} thumb="detail" />
-            {data.tests.length > 0 && (
+            <Toc on={!!test} onClick={() => { if (data.tests[0]) { setPage(`detail:${data.tests[0].uid}`); setPane("desk"); } }} title={pdx ? "시험 구성" : "시험 상세 설명"} sub={pdx ? "스키마, 군 구성" : data.tests.length ? "시험 설계 편집" : "시험을 추가하세요"} thumb="detail" />
+            {!pdx && data.tests.length > 0 && (
               <ol className="qed__tests">
                 {data.tests.map((t) => {
                   const ch = testLines(t).changes;
@@ -161,7 +166,9 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
                 })}
               </ol>
             )}
-            <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험을 추가하세요"} thumb="schedule" />
+            {pdx
+              ? <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="평가항목" sub={`${(pdx.t.kd?.pd?.evals ?? []).filter((e) => !e.optional).length}개 항목`} thumb="schedule" />
+              : <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험을 추가하세요"} thumb="schedule" />}
             {guides.length > 0 && <Toc on={gk >= 0} onClick={() => { setPage("guide:0"); setPane("desk"); }} title="시험 안내" sub={`시험 종류 ${guides.flat().length}건`} thumb="detail" />}
             {guides.length > 1 && (
               <ol className="qed__tests">
@@ -193,6 +200,13 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
 
           {mode === "client" ? (
             <ClientView data={data} rfqNo={head.rfqNo ?? ""} />
+          ) : pdp ? (
+            <div className="qed__paper">
+              {page === "cover" && (mode === "edit" ? <CoverEdit head={head} setH={setH} readOnly={readOnly} style={style} data={data} total={total} pv={<PdCover {...pdp} />} /> : <PdCover {...pdp} />)}
+              {page === "quote" && (mode === "edit" ? <QuoteEdit head={head} data={data} setDoc={setDoc} style={style} total={total} readOnly={readOnly} pv={<PdQuotePage {...pdp} i={2} />} /> : <PdQuotePage {...pdp} i={2} />)}
+              {test && <>{mode === "edit" && pdFix}<PdDetailPage {...pdp} i={3} /></>}
+              {page === "schedule" && <>{mode === "edit" && pdFix}<PdEvalPage {...pdp} i={4} /></>}
+            </div>
           ) : mode === "preview" ? (
             <div className="qed__paper">
               {page === "cover" && <Cover head={head} data={data} style={style} i={1} total={total} />}
@@ -222,10 +236,10 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
             <Check on={data.visible.perTest} disabled={readOnly} onChange={(v) => setDoc({ visible: { ...data.visible, perTest: v } })}>시험별 금액</Check>
             <Check on={data.visible.adjust} disabled={readOnly || !data.visible.perTest} onChange={(v) => setDoc({ visible: { ...data.visible, adjust: v } })}>추가 비용 내역</Check>
             <Check on={data.visible.formula} disabled={readOnly || !data.visible.perTest || !data.visible.adjust} onChange={(v) => setDoc({ visible: { ...data.visible, formula: v } })}>단가와 계산식</Check>
-            <Check on={data.visible.guide !== false} disabled={readOnly} onChange={(v) => { setDoc({ visible: { ...data.visible, guide: v } }); if (!v && gk >= 0) setPage("schedule"); }}>시험 안내 (5부)</Check>
+            {!pdx && <Check on={data.visible.guide !== false} disabled={readOnly} onChange={(v) => { setDoc({ visible: { ...data.visible, guide: v } }); if (!v && gk >= 0) setPage("schedule"); }}>시험 안내 (5부)</Check>}
           </section>
 
-          {canLayout && (
+          {canLayout && !pdx && (
             <section className="qed__sec">
               <div className="qed__sech"><h2 className="qed__h">견적서 판</h2><span>이 견적서만</span></div>
               <div className="chips qed__layouts" role="radiogroup" aria-label="견적서 판">
@@ -320,7 +334,7 @@ function PageHead({ head, style, right }: { head: DocHead; style: QuoteStyle; ri
   );
 }
 
-function CoverEdit({ head, setH, readOnly, style, data, total }: { head: DocHead; setH: (p: Partial<DocHead>) => void; readOnly: boolean; style: QuoteStyle; data: DocData; total: number }) {
+function CoverEdit({ head, setH, readOnly, style, data, total, pv }: { head: DocHead; setH: (p: Partial<DocHead>) => void; readOnly: boolean; style: QuoteStyle; data: DocData; total: number; pv?: React.ReactNode }) {
   return (
     <>
       <section className="qd qd--edit" style={brandVars(style)}>
@@ -335,12 +349,12 @@ function CoverEdit({ head, setH, readOnly, style, data, total }: { head: DocHead
         </dl>
       </section>
       <p className="qed__under">PDF에서는 이렇게 보여요</p>
-      <Cover head={head} data={data} style={style} i={1} total={total} />
+      {pv ?? <Cover head={head} data={data} style={style} i={1} total={total} />}
     </>
   );
 }
 
-function QuoteEdit({ head, data, setDoc, style, total, readOnly }: { head: DocHead; data: DocData; setDoc: (p: Partial<DocData>) => void; style: QuoteStyle; total: number; readOnly: boolean }) {
+function QuoteEdit({ head, data, setDoc, style, total, readOnly, pv }: { head: DocHead; data: DocData; setDoc: (p: Partial<DocData>) => void; style: QuoteStyle; total: number; readOnly: boolean; pv?: React.ReactNode }) {
   const setT = (k: keyof DocData["terms"], v: string) => setDoc({ terms: { ...data.terms, [k]: v } });
   return (
     <>
@@ -355,7 +369,7 @@ function QuoteEdit({ head, data, setDoc, style, total, readOnly }: { head: DocHe
         </dl>
       </section>
       <p className="qed__under">PDF에서는 이렇게 보여요</p>
-      <QuotePage head={head} data={data} style={style} i={2} total={total} />
+      {pv ?? <QuotePage head={head} data={data} style={style} i={2} total={total} />}
     </>
   );
 }
