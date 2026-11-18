@@ -4,6 +4,8 @@ import { HomeMotion } from "@/components/site/HomeMotion";
 import { KindStrip } from "@/components/site/KindStrip";
 import { EarlyNotice } from "@/components/site/EarlyNotice";
 import { daysToPilot, preregActive } from "@/lib/prereg";
+import { JsonLd } from "@/components/site/JsonLd";
+import { siteJsonLd } from "@/lib/structured-data";
 import "./home.css";
 
 /** 사전예약 알림·D-day 가 날짜를 따라가도록 한 시간마다 다시 만든다 */
@@ -133,6 +135,8 @@ export default function Home() {
 </div>
 </section>
       <HomeMotion />
+{/* 구조화 데이터는 맨 끝에 둔다: main > :first-child 규칙(site.css)이 첫 장면에 걸려 있다 */}
+<JsonLd data={siteJsonLd()} />
     </Site>
   );
 }
