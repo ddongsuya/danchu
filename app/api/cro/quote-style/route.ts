@@ -6,7 +6,7 @@ import { featureError } from "@/lib/plan-usage";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** POST { brandColor, logo (data URL), logoPos, supplier, terms } — 견적서 양식 저장. 다음에 만드는 견적서부터 거래 조건 기본 문구가 들어간다 */
+/** POST { brandColor, logo (data URL), logoPos, supplier, terms, layout } — 견적서 양식 저장. 다음에 만드는 견적서부터 거래 조건 기본 문구가 들어간다 */
 export async function POST(req: Request) {
   const s = await sessionOrNull("cro");
   const orgId = s?.profile.cro_org_id;
@@ -14,6 +14,8 @@ export async function POST(req: Request) {
   { const pe = featureError(s.org, "quote_tool"); if (pe) return NextResponse.json({ error: pe }, { status: 403 }); }
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "저장할 내용이 없어요." }, { status: 400 });
+  // 판 고르기는 Pro(branding). 잠겨 있으면 단추 기본 판으로 저장
+  if (featureError(s.org, "branding") && typeof body === "object") body.layout = "basic";
   const r = await saveStyle(orgId, body);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
   return NextResponse.json({ ok: true });

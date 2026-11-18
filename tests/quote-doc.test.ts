@@ -240,3 +240,22 @@ describe("동물종·경로를 바꾸면 금액도 바뀐다", () => {
     expect(cleanRates([{ kind: "flat", label: "x", bySpecies: { a: { add: 1 } } }])[0].bySpecies).toBeUndefined();
   });
 });
+
+describe("견적서 판 (2026-11-13)", () => {
+  it("견적서별 판은 알려진 값만 남고, 없으면 기관 기본 판", async () => {
+    const { cleanDocData, docStyle, EMPTY_SUPPLIER, EMPTY_TERMS } = await import("@/lib/quote-doc");
+    expect(cleanDocData({ tests: [], layout: "side" }).layout).toBe("side");
+    expect(cleanDocData({ tests: [], layout: "fancy" }).layout).toBeUndefined();
+    const org = { brandColor: null, logo: null, logoPos: "left" as const, supplier: EMPTY_SUPPLIER, terms: EMPTY_TERMS, layout: "summary" as const };
+    expect(docStyle(org, {}).layout).toBe("summary");
+    expect(docStyle(org, { layout: null }).layout).toBe("summary");
+    expect(docStyle(org, { layout: "sign" }).layout).toBe("sign");
+  });
+  it("금액 한글 표기", async () => {
+    const { wonKorean } = await import("@/lib/quote-doc");
+    expect(wonKorean(200_200_000)).toBe("금 이억이십만 원정");
+    expect(wonKorean(249_656_000)).toBe("금 이억사천구백육십오만육천 원정");
+    expect(wonKorean(10_000)).toBe("금 일만 원정");
+    expect(wonKorean(0)).toBe("금 영 원정");
+  });
+});

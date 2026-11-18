@@ -1865,6 +1865,7 @@ export type Database = {
       cro_quote_style: {
         Row: {
           brand_color: string | null
+          layout: string
           logo_data: string | null
           logo_pos: string
           org_id: string
@@ -1874,6 +1875,7 @@ export type Database = {
         }
         Insert: {
           brand_color?: string | null
+          layout?: string
           logo_data?: string | null
           logo_pos?: string
           org_id: string
@@ -1883,6 +1885,7 @@ export type Database = {
         }
         Update: {
           brand_color?: string | null
+          layout?: string
           logo_data?: string | null
           logo_pos?: string
           org_id?: string

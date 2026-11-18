@@ -29,6 +29,8 @@ export async function PUT(req: Request, { params }: Ctx) {
   if (!o) return denied();
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "저장할 내용이 없어요." }, { status: 400 });
+  // 판 고르기는 Pro(branding). 잠겨 있으면 견적서별 판을 지운다
+  if (featureError(o.s.org, "branding") && body.data && typeof body.data === "object") body.data = { ...body.data, layout: null };
   const r = await saveDoc(o.orgId, (await params).id, body);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 500 });
   return NextResponse.json({ ok: true, updatedAt: r.updatedAt });

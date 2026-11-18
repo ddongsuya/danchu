@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
 import {
   blankTest, condChanges, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
+  docStyle, LAYOUTS, layoutName,
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
@@ -26,6 +27,8 @@ type Props = {
   /** 단추 요청에 회신하는 견적서면 회신 화면 주소 */
   replyHref: string | null;
   readOnly?: boolean;
+  /** 견적서별 판 고르기 (Pro, 시범 운영 중 모두) */
+  canLayout?: boolean;
 };
 
 type Mode = "edit" | "preview" | "client";
@@ -36,7 +39,7 @@ type Pane = "rail" | "desk" | "ledger";
  * 금액은 표준가 + 달라진 곳의 추가 비용 (lib/quote-doc testLines). 800ms 뒤 자동 저장.
  * 960px 아래에서는 세 칸을 "구성 · 문서 · 금액" 전환으로 한 칸씩 보여 준다.
  */
-export function DocEditor({ head: head0, initial, style, catalog, rates, replyHref, readOnly = false }: Props) {
+export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rates, replyHref, readOnly = false, canLayout = true }: Props) {
   const router = useRouter();
   const [head, setHead] = useState<DocHead>(head0);
   const [data, setData] = useState<DocData>(initial);
@@ -50,6 +53,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
   const rev = useRef(0);
 
   const totals = useMemo(() => docTotals(data), [data]);
+  const style = docStyle(orgStyle, data);
   const keys = pageKeys(data);
   const test = page.startsWith("detail:") ? data.tests.find((t) => `detail:${t.uid}` === page) ?? null : null;
 
@@ -104,7 +108,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
   const guides = guidePages(data);
   const gk = page.startsWith("guide:") ? Number(page.slice(6)) : -1;
   const guide = gk >= 0 ? guides[gk] ?? null : null;
-  const guideEl = guide && <GuidePage head={head} items={guide} part={gk} parts={guides.length} style={style} i={pageNo} total={total} />;
+  const guideEl = guide && <GuidePage head={head} items={guide} part={gk} parts={guides.length} style={style} i={pageNo} total={total} data={data} />;
   const section = page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : gk >= 0 ? "5부 · 시험 안내" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
   const savedLabel = readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
 
@@ -193,7 +197,7 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
             <div className="qed__paper">
               {page === "cover" && <Cover head={head} data={data} style={style} i={1} total={total} />}
               {page === "quote" && <QuotePage head={head} data={data} style={style} i={2} total={total} />}
-              {test && <DetailPage head={head} t={test} idx={data.tests.indexOf(test)} count={data.tests.length} style={style} i={pageNo} total={total} />}
+              {test && <DetailPage head={head} t={test} idx={data.tests.indexOf(test)} count={data.tests.length} style={style} i={pageNo} total={total} data={data} />}
               {page === "schedule" && <SchedulePage head={head} data={data} style={style} i={3 + data.tests.length} total={total} />}
               {guideEl}
             </div>
@@ -220,6 +224,16 @@ export function DocEditor({ head: head0, initial, style, catalog, rates, replyHr
             <Check on={data.visible.formula} disabled={readOnly || !data.visible.perTest || !data.visible.adjust} onChange={(v) => setDoc({ visible: { ...data.visible, formula: v } })}>단가와 계산식</Check>
             <Check on={data.visible.guide !== false} disabled={readOnly} onChange={(v) => { setDoc({ visible: { ...data.visible, guide: v } }); if (!v && gk >= 0) setPage("schedule"); }}>시험 안내 (5부)</Check>
           </section>
+
+          {canLayout && (
+            <section className="qed__sec">
+              <div className="qed__sech"><h2 className="qed__h">견적서 판</h2><span>이 견적서만</span></div>
+              <div className="chips qed__layouts" role="radiogroup" aria-label="견적서 판">
+                <button type="button" role="radio" className="chip" aria-checked={!data.layout} disabled={readOnly} onClick={() => { setDoc({ layout: null }); if (mode === "edit") setMode("preview"); }}>기관 기본 · {layoutName(orgStyle.layout)}</button>
+                {LAYOUTS.map((l) => <button key={l.key} type="button" role="radio" className="chip" aria-checked={data.layout === l.key} disabled={readOnly} onClick={() => { setDoc({ layout: l.key }); if (mode === "edit") setMode("preview"); }}>{l.name}</button>)}
+              </div>
+            </section>
+          )}
 
           <section className="qed__sec">
             <div className="qed__sech"><h2 className="qed__h">견적서 전체</h2><span>원, VAT 별도</span></div>

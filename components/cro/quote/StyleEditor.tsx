@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { inkOn, type DocData, type DocHead, type QuoteStyle } from "@/lib/quote-doc";
+import { inkOn, LAYOUTS, type DocData, type DocHead, type QuoteStyle } from "@/lib/quote-doc";
 import { uploadToSigned } from "@/lib/upload";
 import { Cover, QuotePage, pageCount } from "./DocPages";
 
@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<string, string> = { received: "접수", making: "제�
 
 export type DesignReq = { id: string; status: string; note: string; files: { name: string; size: number }[]; reply: string; createdAt: string };
 
-type Props = { initial: QuoteStyle; sample: { head: DocHead; data: DocData }; sampleIsReal: boolean; requests: DesignReq[]; readOnly?: boolean };
+type Props = { initial: QuoteStyle; sample: { head: DocHead; data: DocData }; sampleIsReal: boolean; requests: DesignReq[]; readOnly?: boolean; canLayout?: boolean };
 
 /** 이미지 파일 → 가로 최대 640px PNG/JPEG data URL (300KB 이하) */
 async function shrink(file: File): Promise<string> {
@@ -42,7 +42,7 @@ async function shrink(file: File): Promise<string> {
  * 견적서 양식: 로고·브랜드 색·공급자 정보·거래 조건 기본 문구를 정하면 미리보기에 바로 반영된다.
  * 아래에서 지금 쓰는 견적서 파일을 올려 양식 제작을 요청한다 (접수 → 제작 중 → 검토 → 적용).
  */
-export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly = false }: Props) {
+export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly = false, canLayout = true }: Props) {
   const router = useRouter();
   const [st, setSt] = useState<QuoteStyle>(initial);
   const [dirty, setDirty] = useState(false);
@@ -84,6 +84,18 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
     <div className="qsty">
       <div className="qsty__form">
         <section className="qsty__sec">
+          <h2 className="qsty__h2">견적서 판 <small>Pro</small></h2>
+          <div className="qsty__layouts" role="radiogroup" aria-label="견적서 판">
+            {LAYOUTS.map((l) => (
+              <button key={l.key} type="button" role="radio" className="qsty__lay" aria-checked={(st.layout ?? "basic") === l.key} disabled={readOnly || !canLayout} onClick={() => set({ layout: l.key })}>
+                <span className="qsty__thumb" aria-hidden="true" inert><Cover head={sample.head} data={sample.data} style={{ ...st, layout: l.key }} i={1} total={pageCount(sample.data)} /></span>
+                <b>{l.name}</b>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="qsty__sec">
           <h2 className="qsty__h2">로고와 브랜드 색</h2>
           <p className="qed__muted">고르는 대로 미리보기에 바로 보여요.</p>
           <div className="fld">
@@ -121,8 +133,8 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
           <h2 className="qsty__h2">공급자 정보</h2>
           <p className="qed__muted">표지 아래와 엑셀 머리에 들어가요.</p>
           <div className="grid2">
-            {([["name", "기관명"], ["address", "주소"], ["contact", "대표 연락처"], ["person", "담당자"], ["email", "이메일"]] as [keyof QuoteStyle["supplier"], string][]).map(([k, label]) => (
-              <div className="fld" key={k}><label className="fld__lab" htmlFor={`sup-${k}`}>{label}</label><input id={`sup-${k}`} className="inp" disabled={readOnly} value={st.supplier[k]} maxLength={k === "address" ? 200 : 120} onChange={(e) => setSup(k, e.target.value)} /></div>
+            {([["name", "기관명"], ["reg", "사업자 등록번호"], ["ceo", "대표자"], ["address", "주소"], ["contact", "대표 연락처"], ["person", "담당자"], ["email", "이메일"]] as [keyof QuoteStyle["supplier"], string][]).map(([k, label]) => (
+              <div className="fld" key={k}><label className="fld__lab" htmlFor={`sup-${k}`}>{label}</label><input id={`sup-${k}`} className={k === "reg" ? "inp tnum" : "inp"} disabled={readOnly} value={st.supplier[k] ?? ""} maxLength={k === "address" ? 200 : k === "reg" ? 20 : k === "ceo" ? 60 : 120} inputMode={k === "reg" ? "numeric" : undefined} onChange={(e) => setSup(k, e.target.value)} /></div>
             ))}
           </div>
         </section>

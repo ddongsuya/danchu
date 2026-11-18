@@ -5,6 +5,7 @@ import { loadCatalog } from "@/lib/catalog-db";
 import { loadDoc, loadRates, loadStyle } from "@/lib/quote-doc-db";
 import { loadPriceBook } from "@/lib/price-book-db";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { featureError } from "@/lib/plan-usage";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { QuoteFill } from "@/components/cro/quote/QuoteFill";
 import "@/components/cro/quote/quote.css";
@@ -21,6 +22,7 @@ export default async function FillPage({ params, searchParams }: { params: Promi
   const sb = getSupabaseAdmin();
   const [got, catalog, rates, style, book] = await Promise.all([loadDoc(org.id, id), loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name), sb ? loadPriceBook(sb, org.id).catch(() => null) : null]);
   if (!got) notFound();
+  const lock = !!featureError(org, "branding");
   const replyHref = got.head.inviteId ? `/cro/r/${got.head.inviteId}/reply?doc=${got.head.id}` : null;
-  return <QuoteFill head={got.head} initial={got.data} style={style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={replyHref} start={sp.step} readOnly={!!s.demo} book={book ? { items: book.items, marginPct: book.marginPct } : null} />;
+  return <QuoteFill head={got.head} initial={lock ? { ...got.data, layout: null } : got.data} style={lock ? { ...style, layout: "basic" } : style} catalog={catalog.filter((c) => c.available)} rates={Object.fromEntries(rates)} replyHref={replyHref} start={sp.step} readOnly={!!s.demo} book={book ? { items: book.items, marginPct: book.marginPct } : null} />;
 }
