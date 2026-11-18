@@ -4,9 +4,9 @@
  * 표준에서 달라진 곳·묶음별 비용 내역을 만든다. 단가·관리비 %는 견적서·엑셀·회신에 나가지 않는다.
  * 순수 함수. quote-doc.ts 를 import 하지 않는다 (순환 방지).
  */
-import { COST_KEYS, type CostKey, type PdDesign, type PdUse } from "./kind-design";
+import { COST_KEYS, pdUseKey, type CostKey, type PdDesign, type PdEval, type PdUse } from "./kind-design";
 import { isPriceCat, isPriceUnit, parseMargin, type PriceItem, type PriceUnit } from "./price-book";
-import { pdPrice, pdPriceDiff, type PriceLine, type PriceResult } from "./pd-price";
+import { animalsOf, pdPrice, pdPriceDiff, type PriceLine, type PriceResult } from "./pd-price";
 
 /** 견적서를 만들 때의 단가·관리비 % 사본. 단가표를 바꿔도 이미 만든 견적서는 그대로 (0036 원칙) */
 export type PriceSnap = { items: PriceItem[]; margin: number };
@@ -178,4 +178,33 @@ export function dayRange(pd: PdDesign | undefined): { from: number; to: number; 
   const from = Math.min(...d.map((l) => l.from));
   const to = Math.max(...d.map((l) => l.to));
   return { from, to, days: to - from + 1 };
+}
+
+const normName = (x: string) => x.toLowerCase().replace(/[\s()·,&/]/g, "");
+
+/** 평가항목이 가리키는 사용량 줄. 지정이 없으면 장부 이름·항목 이름이 겹치는 줄 */
+export function evalUse(pd: PdDesign, e: PdEval, items: PriceItem[] = []): PdUse | undefined {
+  const uses = pd.uses ?? [];
+  if (e.use) return uses.find((u) => pdUseKey(u) === e.use);
+  const a = normName(e.item);
+  if (!a) return undefined;
+  return uses.find((u) => {
+    const b = normName(u.label || items.find((i) => i.id === u.itemId)?.name || "");
+    return !!b && (a.includes(b) || b.includes(a));
+  });
+}
+
+/** 평가항목 검체 수 = 대상 마리 × 횟수 × 검체당 수 (가리키는 사용량 줄로). 모르면 null */
+export function evalSamples(pd: PdDesign, e: PdEval, items: PriceItem[] = []): number | null {
+  const u = evalUse(pd, e, items);
+  if (!u || u.who === "none") return null;
+  const animals = animalsOf(pd.groups.map((g) => ({ id: g.id, role: g.role, n: g.n })), u.who);
+  return Math.round(animals * (u.times || 0) * (u.per || 1));
+}
+
+/** 점수 기준표 제목: "질환 활성 점수(DAI)" → "DAI 점수 기준" */
+export function scaleTitle(item: string): string {
+  const m = item.match(/\(([^)]+)\)\s*$/);
+  const base = (m ? m[1] : item).trim();
+  return /점수$/.test(base) ? `${base} 기준` : `${base} 점수 기준`;
 }

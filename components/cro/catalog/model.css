@@ -175,3 +175,24 @@
 .rf__gt td:nth-child(2) { min-width: 132px; }
 .rf__gt td:nth-child(3), .rf__gt td:nth-child(4), .rf__gt td:nth-child(5) { min-width: 80px; }
 .rf__dt td:nth-child(3) { min-width: 140px; }
+
+/* 평가항목 보조 칸: 검체 수, 점수 기준표, 결과 보고 */
+.ms__smp { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.ms__smp > .ms__num { font-size: 13px; }
+.ms .ms__smps { max-width: 112px; border: 0; background: none; padding: 0; font: inherit; font-size: 11px; color: var(--muted); text-align: right; text-align-last: right; cursor: pointer; appearance: none; -webkit-appearance: none; }
+.ms .ms__smps:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .ms .ms__smps:not(:disabled):hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; } }
+.ms__scale { margin-top: 20px; }
+.ms__scale h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.ms__shd { display: inline-flex; align-items: center; gap: 4px; }
+.ms__shd .ms__in { font-size: 12px; color: var(--muted); font-weight: 500; min-width: 6ch; }
+.ms .ms__ta { width: 100%; min-height: 88px; padding: 12px; font-size: 14px; line-height: 1.6; resize: vertical; }
+
+/* 평가항목 표: 검체·기준표 칸이 늘어 1440 본문 폭 안에 들도록 좁힌다 */
+.ms__et td, .ms__et th { padding-left: 6px; padding-right: 6px; }
+.ms__t.ms__et .ms__item { min-width: 120px; }
+.ms__t.ms__et td:nth-child(2) { min-width: 76px; }
+.ms__t.ms__et td:nth-child(3) { min-width: 64px; }
+.ms__t.ms__et .ms__wide { min-width: 128px; }
+.ms__et .ms__smps { max-width: 88px; }
+.ms__et .ms__opt { padding: 0 6px; }
