@@ -1,7 +1,9 @@
 import { getSupabaseAdmin } from "./supabase";
 import type { TablesInsert, TablesUpdate } from "./db-types";
 import { orderToKeys } from "./schedule";
-import { cleanKd, COST_KEYS } from "./kind-design";
+import { cleanKd, COST_KEYS, type KindDesign } from "./kind-design";
+import { loadPriceBook, type PriceBook } from "./price-book-db";
+import { pdStdPrice } from "./pd-price";
 import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type CondPrice, type Glp } from "./catalog";
 
 /** 0037 전 행은 routes 가 없다. 그때는 route 하나를 목록으로 본다 */
@@ -160,12 +162,14 @@ export async function upsertCatalog(orgId: string, rows: unknown[], removed: unk
   const updates: (TablesInsert<"cro_catalog"> & { id: string })[] = [];
   const inserts: TablesInsert<"cro_catalog">[] = [];
   const perItem = new Map<string, number>();
+  let book: Promise<PriceBook | null> | undefined;
   for (const raw of rows) {
     const key = raw && typeof raw === "object" ? String((raw as { item_key?: unknown }).item_key) : "";
     const sort = perItem.get(key) ?? 0;
     perItem.set(key, sort + 1);
     const row = toDb(orgId, raw, valid, sort);
     if (!row) continue;
+    await priceFromBook(row, () => (book ??= loadPriceBook(sb, orgId).catch(() => null)));
     const id = raw && typeof raw === "object" ? String((raw as { id?: unknown }).id ?? "") : "";
     if (id && !isNewId(id)) {
       if (!own.has(id)) continue; // 남의 행
@@ -189,6 +193,22 @@ export async function upsertCatalog(orgId: string, rows: unknown[], removed: unk
     }
   }
   return { saved: updates.length + inserts.length, rows: await loadCatalog(orgId) };
+}
+
+/**
+ * 효력 모델 표준(0047): 단가표 사용량 규칙이 있으면 표준가·비용 다섯 칸을 단가표로 계산해 맞춘다.
+ * 금액은 서버 코드만 계산한다 (화면이 보낸 금액은 쓰지 않는다). 단가표를 못 읽으면 그대로 둔다
+ */
+async function priceFromBook(row: TablesInsert<"cro_catalog">, getBook: () => Promise<PriceBook | null>) {
+  const kd = (row.extra as { kd?: KindDesign } | null)?.kd;
+  if (!kd?.pd?.uses?.length) return;
+  const b = await getBook();
+  if (!b) return;
+  const r = pdStdPrice(kd.pd, b.items, b.marginPct);
+  if (!r) return;
+  kd.pd.costs = { ...r.buckets };
+  row.std_price = r.missing ? null : r.total;
+  row.price_min = row.std_price;
 }
 
 /** 일정 단계의 학습 키. 카탈로그 항목 키(대분류::시험)와 겹치지 않는다 */

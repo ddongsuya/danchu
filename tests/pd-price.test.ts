@@ -114,3 +114,30 @@ describe("단가표 입력 검사", () => {
     expect(p[0]).toMatchObject({ id: "c57", before: 38_000 });
   });
 });
+
+describe("모델 표준 저장 칸 (0047)", () => {
+  it("cleanKd 가 일 단위 스키마·평가항목·사용량을 남기고 이상한 값은 버린다", async () => {
+    const { cleanKd } = await import("@/lib/kind-design");
+    const kd = cleanKd({ pd: {
+      model: "DSS", induction: "", groups: [{ id: "g1", label: "정상군", role: "normal", treat: "", n: 8, dose: "", induce: "없음" }], lanes: [], endpoints: [], costs: {}, perGroup: {},
+      days: [{ id: "d1", name: "순화", from: -1, to: -7, mark: "bar" }, { name: "x", from: 0, to: 0, mark: "zzz" }],
+      evals: [{ item: "체중", when: "D0~D10", freq: "하루 1회", method: "전자저울", target: "전 군" }, { item: "" }],
+      uses: [{ itemId: "c57", who: "all", times: 1, per: 1, label: "동물" }, { itemId: "", who: "all" }, { itemId: "po", who: "boss", times: -3, per: 0, bucket: "nope" }],
+      brief: { animal: "C57BL/6", dosing: 3, period: "" },
+    } });
+    const pd = kd!.pd!;
+    expect(pd.days?.[0]).toMatchObject({ from: -7, to: -1, mark: "bar" });
+    expect(pd.days?.[1].mark).toBe("bar");
+    expect(pd.evals).toHaveLength(1);
+    expect(pd.uses).toEqual([{ itemId: "c57", who: "all", times: 1, per: 1, label: "동물" }, { itemId: "po", who: "all", times: 1, per: 1 }]);
+    expect(pd.brief).toEqual({ animal: "C57BL/6", dosing: "", period: "" });
+    expect(pd.groups[0].induce).toBe("없음");
+  });
+
+  it("pdStdPrice: 사용량 규칙이 없으면 null, 있으면 단가표로 계산", async () => {
+    const { pdStdPrice } = await import("@/lib/pd-price");
+    const base = { model: "", induction: "", groups: STD.map((g) => ({ id: g.id, label: g.id, role: g.role, treat: "", n: g.n, dose: "" })), lanes: [], endpoints: [], costs: { cost_animal: null, cost_dosing: null, cost_eval: null, cost_path: null, cost_report: null }, perGroup: { cost_animal: null, cost_dosing: null, cost_eval: null, cost_path: null, cost_report: null }, perAnimal: null };
+    expect(pdStdPrice(base, ITEMS, 15)).toBeNull();
+    expect(pdStdPrice({ ...base, uses: USES }, ITEMS, 15)?.total).toBe(16_675_000);
+  });
+});
