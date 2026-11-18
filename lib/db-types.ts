@@ -594,6 +594,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["cro_quote_style"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_quote_style_org_id_fkey"; columns: ["org_id"]; isOneToOne: true; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
+      cro_price_items: {
+        Row: { id: string; org_id: string; category: string; name: string; attrs: Obj; unit: string; price: number; memo: string; sort: number; archived: boolean; created_at: string; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_price_items"]["Row"], "id" | "attrs" | "memo" | "sort" | "archived" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_price_items"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_price_items_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_price_settings: {
+        Row: { org_id: string; margin_pct: number; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_price_settings"]["Row"], "margin_pct" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_price_settings"]["Row"]>;
+        Relationships: [{ foreignKeyName: "cro_price_settings_org_id_fkey"; columns: ["org_id"]; isOneToOne: true; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
+      };
+      cro_price_log: {
+        Row: { id: number; org_id: string; item_id: string | null; item_name: string; before: number | null; after: number | null; via: string; changed_by: string | null; changed_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_price_log"]["Row"], "id" | "item_id" | "item_name" | "before" | "after" | "changed_by" | "changed_at">;
+        Update: Partial<Database["public"]["Tables"]["cro_price_log"]["Row"]>;
+        Relationships: [
+          { foreignKeyName: "cro_price_log_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] },
+          { foreignKeyName: "cro_price_log_item_id_fkey"; columns: ["item_id"]; isOneToOne: false; referencedRelation: "cro_price_items"; referencedColumns: ["id"] },
+          { foreignKeyName: "cro_price_log_changed_by_fkey"; columns: ["changed_by"]; isOneToOne: false; referencedRelation: "profiles"; referencedColumns: ["id"] },
+        ];
+      };
       cro_quote_design_requests: {
         Row: { id: string; org_id: string; status: string; note: string; files: Json; reply: string; created_by: string | null; created_at: string; updated_at: string };
         Insert: Ins<Database["public"]["Tables"]["cro_quote_design_requests"]["Row"], "id" | "status" | "note" | "files" | "reply" | "created_by" | "created_at" | "updated_at">;
