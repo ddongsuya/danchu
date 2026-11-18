@@ -26,7 +26,8 @@ vi.mock("@/lib/supabase", () => {
 });
 vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error(`redirect:${to}`); } }));
 
-import { agentSession, bearerToken, compareView, croItem, gateRole, joinTerms, meView, requesterItem } from "@/lib/agent-api";
+import { agentSession, bearerToken, compareView, croItem, gateRole, joinTerms, meView, quoteBriefView, requesterItem } from "@/lib/agent-api";
+import type { Loaded } from "@/lib/quote-load";
 import { CRO_TERMS_VERSION, JOIN_CONSENT } from "@/lib/request-policy";
 import type { Session } from "@/lib/auth";
 
@@ -141,5 +142,42 @@ describe("공개 규칙", () => {
     if (!v.open) throw new Error("open");
     expect(v.columns[0]).toMatchObject({ quoteId: "q-1", inviteId: "i-1", revision: 2, selected: true });
     expect(v.columns[1]).toMatchObject({ quoteId: "q-2", selectable: false, selected: false });
+  });
+});
+
+describe("기관 견적 작성용 읽기 (quoteBriefView)", () => {
+  const loaded = (patch: Partial<Loaded> = {}): Loaded =>
+    ({
+      rfq: {
+        full: true, no: "DC-2026-0142", substance: "후보물질 A", categories: ["일반독성"], client: "가나바이오 주식회사", masked: false, identityMasked: true,
+        ddayLabel: "회신 D-5", urgent: false, confid: "일반", overview: [["의뢰 목적", "IND"]], rows: [{ seq: 1, category: "일반독성", name: "랫드 4주 반복투여", cond: "경구" }],
+        common: [["추가 내용", "연락처 비공개"]], situation: [], ask: [], attachments: "", replyBy: "2026-11-30", authorities: ["식약처"],
+        files: [{ id: "f-1", name: "설계안.pdf", size: 10 }], translation: false,
+      },
+      draft: { items: [{ seq: 1, avail: "가능", amount: "48500000", weeks: "14", source: "catalog" }], note: "", pdfName: "", status: "draft", common: { validUntil: "", startDate: "", payTerms: "", substanceQty: "", reportLang: "", includes: [] }, prefilled: true, steps: [] },
+      inviteId: "inv-secret", rfqId: "rfq-secret", croName: "가 기관", croOrgId: "org-1", token: "tok-secret",
+      expired: false, locked: false, declined: false, closed: false, closedReason: null, joined: true, withdrawn: false, canRejoin: false, operator: false, seats: null, joinBy: null,
+      ...patch,
+    }) as Loaded;
+
+  it("의뢰자 회사명·토큰·초대 id·파일 id 를 넣지 않는다", () => {
+    const text = JSON.stringify(quoteBriefView(loaded()));
+    for (const secret of ["가나바이오", "tok-secret", "inv-secret", "rfq-secret", "f-1", "org-1"]) expect(text).not.toContain(secret);
+    expect(quoteBriefView(loaded()).request.files).toEqual(["설계안.pdf"]);
+  });
+
+  it("참여 뒤에는 단추가 계산한 초안 금액 그대로", () => {
+    const b = quoteBriefView(loaded());
+    expect(b.state).toBe("open");
+    expect(b.draft?.items[0]).toMatchObject({ seq: 1, avail: "가능", amount: "48500000", source: "catalog" });
+    expect(b.draft?.prefilled).toBe(true);
+  });
+
+  it("참여 전·불참·닫힘·잠김 상태, 참여 전에는 초안 없음", () => {
+    expect(quoteBriefView(loaded({ joined: false, draft: null })).state).toBe("not_joined");
+    expect(quoteBriefView(loaded({ joined: false })).draft).toBeNull();
+    expect(quoteBriefView(loaded({ joined: false, declined: true })).state).toBe("declined");
+    expect(quoteBriefView(loaded({ closed: true, closedReason: "compared" })).state).toBe("closed");
+    expect(quoteBriefView(loaded({ locked: true })).state).toBe("locked");
   });
 });
