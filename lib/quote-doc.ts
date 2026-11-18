@@ -9,9 +9,10 @@
  */
 import type { CatalogRow, CondPrice } from "./catalog";
 import {
-  cleanKd, cleanOrig, kdExtra, EMPTY5, emptyOther, emptyPk, kindOfCategory, kindStdPrice, pdFrom, pdLanes, pdParts, pkSamples,
+  cleanKd, cleanOrig, COST_KEYS, kdExtra, EMPTY5, emptyOther, emptyPk, kindOfCategory, kindStdPrice, pdFrom, pdLanes, pdParts, pkSamples,
   type Kind, type KindDesign, type Orig,
 } from "./kind-design";
+import { BUCKET_SHORT, cleanPriceSnap, pdBuckets, pdQuote, type PriceSnap } from "./pd-quote";
 
 /* ── 추가 비용 단가 ─────────────────────────────────── */
 
@@ -143,6 +144,8 @@ export type DocTest = {
   why?: string;
   /** 의뢰자에게 확인할 것 */
   asks?: string[];
+  /** 효력 단가표 방식 (0047): 만들 때의 단가·관리비 % 사본. 있으면 금액을 단가표로 계산한다 (lib/pd-quote) */
+  prices?: PriceSnap;
   cond: TestCond;
   groups: DocGroup[];
   evals: DocEval[];
@@ -439,7 +442,15 @@ export function testLines(t: DocTest): { base: number; lines: Line[]; total: num
 function kindLines(t: DocTest, k: Kind): { base: number; lines: Line[]; total: number; changes: number } {
   const lines: Line[] = [];
   let base = 0;
-  if (k === "pd" && t.kd?.pd) {
+  const q = k === "pd" ? pdQuote(t) : null;
+  if (q) {
+    // 단가표 방식: 기준가 = 표준 설계의 견적 금액, 줄 = 묶음마다 달라진 금액 (관리비·이익을 묶음에 나눠 더한 값)
+    base = q.std.total;
+    for (const key of COST_KEYS) {
+      const d = q.cur.buckets[key] - q.std.buckets[key];
+      if (d) lines.push({ label: `${BUCKET_SHORT[key]} · 조정`, formula: `${fmt(q.std.buckets[key])} → ${fmt(q.cur.buckets[key])}`, amount: d, kind: "group" });
+    }
+  } else if (k === "pd" && t.kd?.pd) {
     const parts = pdParts(t.kd.pd, t.std.kd?.pd);
     base = parts.reduce((a, p) => a + (p.base ?? 0), 0);
     for (const p of parts) {
@@ -488,7 +499,9 @@ export function kindRows(t: DocTest): KindRow[] | null {
   const k = testKind(t);
   if (k === "tox" || !t.kd) return null;
   const rows: KindRow[] = [];
-  if (k === "pd" && t.kd.pd) for (const p of pdParts(t.kd.pd, t.std.kd?.pd)) rows.push({ label: p.label, note: p.adj, amount: p.amount, changed: p.changed });
+  const q = k === "pd" ? pdQuote(t) : null;
+  if (q && t.kd.pd) for (const b of pdBuckets(q, t.kd.pd)) rows.push({ label: b.label, note: b.note, amount: b.amount, changed: b.amount !== b.std });
+  else if (k === "pd" && t.kd.pd) for (const p of pdParts(t.kd.pd, t.std.kd?.pd)) rows.push({ label: p.label, note: p.adj, amount: p.amount, changed: p.changed });
   if (k === "pk" && t.kd.pk) {
     const p = t.kd.pk, n = pkSamples(p);
     rows.push({ label: "동물 실험 (투여·채혈)", note: p.groups.length ? `${p.groups.length}군 · ${p.groups.reduce((a, g) => a + g.n, 0)}마리` : "", amount: p.animal ?? 0, changed: false });
@@ -552,7 +565,11 @@ export function docTotals(d: DocData): DocTotals {
 /** 전체 일정 길이 (주) */
 export function scheduleWeeks(d: DocData): number {
   let max = 0;
-  for (const t of d.tests) for (const p of t.phases) max = Math.max(max, t.startWeek + p.start + (p.kind === "point" ? 1 : p.weeks));
+  for (const t of d.tests) {
+    // 효력은 시험 목록·견적서에 적은 기간(weeks) 하나만 쓴다 (주 단위 일정과 따로 놀지 않게)
+    if (testKind(t) === "pd" && t.weeks) { max = Math.max(max, t.startWeek + t.weeks); continue; }
+    for (const p of t.phases) max = Math.max(max, t.startWeek + p.start + (p.kind === "point" ? 1 : p.weeks));
+  }
   return max;
 }
 
@@ -628,6 +645,7 @@ export function cleanDocData(raw: unknown): DocData {
       ...(KIND_IDS.includes(x.kind as Kind) ? { kind: x.kind as Kind } : {}),
       ...(cleanKd(x.kd) ? { kd: cleanKd(x.kd) } : {}),
       ...(cleanOrig(x.orig) ? { orig: cleanOrig(x.orig) } : {}),
+      ...(cleanPriceSnap(x.prices) ? { prices: cleanPriceSnap(x.prices) } : {}),
       ...(text(x.why, 1000) ? { why: text(x.why, 1000) } : {}),
       ...(Array.isArray(x.asks) && x.asks.some((a) => typeof a === "string" && a.trim()) ? { asks: x.asks.filter((a): a is string => typeof a === "string" && !!a.trim()).slice(0, 10).map((a) => a.trim().slice(0, 200)) } : {}),
       cond: cleanCond(x.cond),

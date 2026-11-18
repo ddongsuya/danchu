@@ -6,6 +6,7 @@
 import { docTotals, inkOn, kindRows, kindSummary, mainAnimals, recoveryAnimals, scheduleWeeks, testKind, testLines, type DocData, type DocHead, type DocTest, type QuoteStyle } from "@/lib/quote-doc";
 import { PD_ROLE, pkSamples } from "@/lib/kind-design";
 import { docGuides, GUIDES_PER_PAGE, type TestGuide } from "@/lib/test-guide";
+import { PdPages, pdDocTest } from "./PdPages";
 
 const n = (v: number) => v.toLocaleString("ko-KR");
 
@@ -31,7 +32,7 @@ export function Logo({ style }: { style: QuoteStyle }) {
   return <span className="qd__logotext">{style.supplier.name || "기관명"}</span>;
 }
 
-function Head({ head, style, right }: { head: DocHead; style: QuoteStyle; right: React.ReactNode }) {
+export function Head({ head, style, right }: { head: DocHead; style: QuoteStyle; right: React.ReactNode }) {
   return (
     <header className="qd__head" data-pos={style.logoPos}>
       <Logo style={style} />
@@ -40,7 +41,7 @@ function Head({ head, style, right }: { head: DocHead; style: QuoteStyle; right:
   );
 }
 
-function Foot({ label, i, total }: { label: string; i: number; total: number }) {
+export function Foot({ label, i, total }: { label: string; i: number; total: number }) {
   return (
     <footer className="qd__foot">
       <span>{label}</span>
@@ -326,6 +327,9 @@ export function brandVars(style: QuoteStyle): React.CSSProperties {
 
 /** 5부 전체 (인쇄·PDF) */
 export function DocPages({ head, data, style }: { head: DocHead; data: DocData; style: QuoteStyle }) {
+  // 효력 시험 하나 + 단가표 방식이면 효력 견적서 4쪽 (0047)
+  const pdx = pdDocTest(data);
+  if (pdx) return <div className="qd-pages"><PdPages head={head} data={data} style={style} t={pdx.t} q={pdx.q} /></div>;
   const guides = guidePages(data);
   const sched = 3 + data.tests.length;
   const total = sched + guides.length;

@@ -16,9 +16,9 @@ import type { PriceBook } from "@/lib/price-book-db";
 
 const won = (n: number) => n.toLocaleString("ko-KR");
 let seq = 0;
-const nid = (p: string) => `${p}${Date.now().toString(36)}${(++seq).toString(36)}`;
+export const nid = (p: string) => `${p}${Date.now().toString(36)}${(++seq).toString(36)}`;
 const dLabel = (d: number) => `D${d}`;
-const isNormal = (induce: string) => !induce.trim() || induce.trim() === "없음";
+export const isNormal = (induce: string) => !induce.trim() || induce.trim() === "없음";
 
 /** 횟수 칸을 묻는 단위, 곱(검체당 항목 수 등)을 묻는 단위 */
 const TIMES_UNITS: PriceUnit[] = ["head_day", "cage_day", "head_time", "head_hour", "lot", "each"];
@@ -281,11 +281,11 @@ function Cell({ label, value, onChange, hint, disabled }: { label: string; value
   );
 }
 
-function TIn({ label, value, onChange, max, placeholder, muted, mono, disabled }: { label: string; value: string; onChange: (v: string) => void; max: number; placeholder?: string; muted?: boolean; mono?: boolean; disabled: boolean }) {
+export function TIn({ label, value, onChange, max, placeholder, muted, mono, disabled }: { label: string; value: string; onChange: (v: string) => void; max: number; placeholder?: string; muted?: boolean; mono?: boolean; disabled: boolean }) {
   return <input className={`ms__in${muted ? " ms__inm" : ""}${mono ? " ms__num" : ""}`} aria-label={label} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value.slice(0, max))} disabled={disabled} />;
 }
 
-function NIn({ label, value, onChange, max, disabled }: { label: string; value: number; onChange: (v: number) => void; max: number; disabled: boolean }) {
+export function NIn({ label, value, onChange, max, disabled }: { label: string; value: number; onChange: (v: number) => void; max: number; disabled: boolean }) {
   return <input className="ms__in ms__num r" inputMode="numeric" aria-label={label} value={value ? String(value) : ""} placeholder="0" onChange={(e) => { const v = e.target.value.replace(/[^\d]/g, "").slice(0, 3); onChange(v ? Math.min(max, Number(v)) : 0); }} disabled={disabled} />;
 }
 
@@ -311,7 +311,7 @@ function DayIn({ label, value, onChange }: { label: string; value: number; onCha
 }
 
 /** 시험 스키마 그림: 이름 열 + 날짜 축. 기간은 막대, 매일은 점, 한 시점은 네모 */
-function Schema({ days }: { days: DayLane[] }) {
+export function Schema({ days }: { days: DayLane[] }) {
   const min = Math.min(...days.map((l) => l.from));
   const max = Math.max(...days.map((l) => l.to));
   const span = max - min + 1;
@@ -344,7 +344,7 @@ function Schema({ days }: { days: DayLane[] }) {
   );
 }
 
-function UseEdit({ use, items, onChange, onRemove }: { use: PdUse; items: PriceItem[]; onChange: (p: Partial<PdUse>) => void; onRemove: () => void }) {
+export function UseEdit({ use, items, onChange, onRemove }: { use: PdUse; items: PriceItem[]; onChange: (p: Partial<PdUse>) => void; onRemove: () => void }) {
   const it = items.find((i) => i.id === use.itemId);
   const unit = it?.unit;
   return (

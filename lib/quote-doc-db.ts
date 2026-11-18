@@ -12,6 +12,8 @@ import {
 import type { QuoteLineDef } from "./quote-items";
 import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
+import { loadPriceBook } from "./price-book-db";
+import { snapFor } from "./pd-quote";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -166,6 +168,19 @@ async function insertDoc(orgId: string, userId: string | null, fields: { client:
   return { error: "견적번호를 잡지 못했어요. 잠시 뒤 다시 시도해 주세요." };
 }
 
+/**
+ * 효력 단가표 방식 (0047): 모델 표준에 사용량 규칙이 있는 시험에 만들 때의 단가·관리비 % 사본을 붙인다.
+ * 단가표를 못 읽으면 붙이지 않는다 (예전 다섯 칸 방식으로 보인다)
+ */
+async function attachPrices(orgId: string, data: DocData): Promise<void> {
+  if (!data.tests.some((t) => t.std.kd?.pd?.uses?.length)) return;
+  const sb = getSupabaseAdmin();
+  if (!sb) return;
+  const book = await loadPriceBook(sb, orgId).catch(() => null);
+  if (!book) return;
+  data.tests = data.tests.map((t) => (t.std.kd?.pd?.uses?.length ? { ...t, prices: snapFor(book, t.std.kd.pd, t.kd?.pd) } : t));
+}
+
 function emptyData(style: QuoteStyle): DocData {
   return { tests: [], visible: { ...DEFAULT_VISIBLE }, discount: 0, terms: { ...style.terms }, glp: "" };
 }
@@ -180,6 +195,7 @@ export async function createDocFromCatalog(orgId: string, orgName: string, userI
     if (c) data.tests.push(testFromCatalog(c, rates.get(c.item_key) ?? []));
   }
   for (const name of manual) data.tests.push(blankTest(name, kind));
+  await attachPrices(orgId, data);
   return insertDoc(orgId, userId, { client, substance, data });
 }
 
@@ -203,6 +219,7 @@ export async function createDocFromRequest(orgId: string, orgName: string, userI
     const full = (byKey.get(rowKey(line)) ?? []).find((r) => r.id === picked.row.id) ?? picked.row;
     data.tests.push(withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload));
   }
+  await attachPrices(orgId, data);
   return insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
 }
 
@@ -228,6 +245,9 @@ function withRequest(t: DocTest, payload: Values): DocTest {
     }
     const ends = get("endpoints").split(/[,·\n]/).map((x) => x.trim()).filter(Boolean);
     for (const e of ends) if (!pd.endpoints.includes(e)) pd.endpoints.push(e.slice(0, 80));
+    // 0047 모델 표준: 의뢰자가 적은 평가 지표 중 표준에 없는 것을 평가항목 줄로 (시점·방법은 기관이 채운다)
+    const norm = (x: string) => x.toLowerCase().replace(/[\s()·,]/g, "");
+    if (pd.evals) for (const e of ends) if (!pd.evals.some((x) => norm(x.item).includes(norm(e)) || norm(e).includes(norm(x.item)))) pd.evals.push({ id: `e${pd.evals.length + 1}r`, item: e.slice(0, 60), when: "", freq: "", method: "", target: "전 군" });
     const orig: Orig = { lines: lines([["질환 모델", get("method")], ["동물종", get("species")], ["군 구성", groupsText], ["양성 대조군", get("positive")], ["투여 기간", get("duration")], ["평가 지표", get("endpoints")], ["예비시험", get("pilot")]]), ...(groups ? { groups } : {}), ...(perGroup ? { perGroup } : {}) };
     return { ...t, kd: { ...t.kd, pd }, orig };
   }

@@ -138,3 +138,40 @@
   .ms__lane .selwrap { grid-column: 1 / 3; }
   .ms__lhd { display: none; }
 }
+
+/* ── 요청 반영 (0047 4단계, 시안 v15 "요청 반영") ── */
+.rf .rf__h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
+.ms__head > .rf__acts { display: flex; flex-direction: row; flex: none; gap: 8px; flex-wrap: wrap; }
+.rf .rf__acts .b2 { height: 40px; padding: 0 16px; font-size: 14px; }
+.rf__orig { margin-bottom: 28px; }
+.rf__band { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 24px; padding: 24px 28px; background: var(--track); border-radius: var(--r-sm); }
+.rf__band > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rf__band dt { font-size: 13px; color: var(--muted); }
+.rf__band dd { margin: 0; font-size: 14px; color: var(--ink); line-height: 1.5; white-space: pre-line; }
+.rf mark, .rf tr[data-new="1"] > td { background: var(--brand-tint); color: var(--ink); }
+.rf mark { padding: 0 2px; }
+.rf__dt td { padding-top: 8px; padding-bottom: 8px; }
+.rf__dt .rf__a { padding-left: 0; padding-right: 0; }
+.rf__dt .rf__a mark { display: block; padding: 4px 8px; }
+.rf__dt .rf__amt { vertical-align: middle; border-left: 0; }
+.rf__n { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 8px; }
+.rf__n .ms__in { width: 4ch; }
+.rf__n[data-on="1"] .ms__in { background: var(--brand-tint); }
+.rf__n > .ms__mut { font-size: 12px; min-width: 2ch; white-space: nowrap; }
+.rf__notes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.rf__notes .fld { display: flex; flex-direction: column; gap: 8px; }
+.rf__lab { font-size: 15px; font-weight: 600; }
+.rf .rf__ta { min-height: 100px; padding: 12px; font-size: 14px; line-height: 1.6; resize: vertical; }
+.rf .rf__all { font-size: 13px; font-weight: 400; color: var(--muted); padding: 0; }
+.rf .rf__all:hover { color: var(--ink); }
+.rf .ms__lt tr[data-new="1"] > td { background: var(--brand-tint); }
+@media (max-width: 699px) {
+  .rf .rf__h1 { font-size: 22px; }
+  .rf__band { grid-template-columns: 1fr 1fr; padding: 16px; }
+  .rf__notes { grid-template-columns: 1fr; }
+  .ms__head > .rf__acts { width: 100%; flex: 1 1 100%; }
+  .rf .rf__acts .b2 { flex: 1; }
+}
+.rf__gt td:nth-child(2) { min-width: 132px; }
+.rf__gt td:nth-child(3), .rf__gt td:nth-child(4), .rf__gt td:nth-child(5) { min-width: 80px; }
+.rf__dt td:nth-child(3) { min-width: 140px; }

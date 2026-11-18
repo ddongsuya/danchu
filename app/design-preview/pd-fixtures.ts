@@ -70,8 +70,24 @@ export const PD_MODEL: PdDesign = {
 };
 
 export const PD_ROW: CatalogRow = {
-  id: "preview-dss", item_key: "preview", category: "효력시험", item: "소화기", available: true, glp: "Non-GLP", species: ["마우스"], route: "경구", routes: ["경구"],
+  id: "preview-dss", item_key: "preview", category: "효력시험(약효)", item: "소화기", available: true, glp: "Non-GLP", species: ["마우스"], route: "경구", routes: ["경구"],
   method: "DSS 유도 대장염", groups_ctrl: null, groups_test: null, per_sex: null, recovery_weeks: null, recovery_per_sex: null, dosing: null, weeks: 8,
   includes: [], options: [], unit: "total", price_min: null, price_max: null, extra: {}, kd: { pd: PD_MODEL },
   note: null, last_amount: null, last_weeks: null, last_quoted_at: null, source: "manual", sort: 0, std_price: null,
+};
+
+/** 요청 반영 예시 (시안 v15 "요청 반영"): 6군 × 10마리, 중용량군 추가, 혈청 사이토카인 ELISA 3종 */
+export const PD_REQ: PdDesign = {
+  ...PD_MODEL,
+  groups: [
+    ...PD_MODEL.groups.slice(0, 3).map((x) => ({ ...x, n: 10 })),
+    { ...PD_MODEL.groups[3], n: 10, dose: "10 mg/kg" },
+    { id: "g6", label: "시험물질 중용량군", role: "test", induce: "DSS", treat: "시험물질", dose: "30 mg/kg", n: 10 },
+    { ...PD_MODEL.groups[4], n: 10, dose: "100 mg/kg" },
+  ],
+  evals: [
+    ...(PD_MODEL.evals ?? []).slice(0, 4),
+    { id: "e6", item: "혈청 사이토카인", when: "D10", freq: "1회", method: "부검 시 채혈한 혈청에서 IL-6, TNF-α, IL-1β를 ELISA로 정량", target: "전 군" },
+  ],
+  uses: [...(PD_MODEL.uses ?? []), { itemId: "elisa", who: "all", times: 1, per: 3, label: "사이토카인 ELISA" }],
 };
