@@ -95,15 +95,17 @@ export const SCENE = 3600, XF = 700, LOOP = SCENE * ORDER.length;
 type Buf = { c: HTMLCanvasElement; x: CanvasRenderingContext2D; dpr: number };
 export function buffer(): Buf { const c = document.createElement("canvas"); const dpr = Math.min(2, window.devicePixelRatio || 1); c.width = W * dpr; c.height = H * dpr; const x = c.getContext("2d")!; x.scale(dpr, dpr); return { c, x, dpr }; }
 /** e: 이 카드의 경과 시간(ms). A·B는 장면을 그려 둘 화면 밖 캔버스 */
-export function drawCard(c: CanvasRenderingContext2D, kind: Kind, e: number, A: Buf, B: Buf, still: boolean) {
-  e = ((e % LOOP) + LOOP) % LOOP;
-  const si = Math.floor(e / SCENE), lt = e - si * SCENE, nx = (si + 1) % ORDER.length;
+/** order: 이어 재생할 장면 목록. 생략하면 네 장면 전부 */
+export function drawCard(c: CanvasRenderingContext2D, kind: Kind, e: number, A: Buf, B: Buf, still: boolean, order: string[] = ORDER) {
+  const loop = SCENE * order.length;
+  e = ((e % loop) + loop) % loop;
+  const si = Math.floor(e / SCENE), lt = e - si * SCENE, nx = (si + 1) % order.length;
   const t = still ? 1 : cl(lt / (SCENE - XF)), out = still ? 0 : seg(lt, SCENE - XF, SCENE);
   const w = c.canvas.width, h = c.canvas.height;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
-  A.x.clearRect(0, 0, W, H); G[ORDER[still ? 1 : si] + "-" + kind](A.x, t);
+  A.x.clearRect(0, 0, W, H); G[(still ? (order.includes("word") ? "word" : order[0]) : order[si]) + "-" + kind](A.x, t);
   const o = eio(out); c.globalAlpha = 1 - o; c.filter = o > 0 ? `blur(${o * 6}px)` : "none";
   const s = 1 + o * 0.08; c.setTransform(s, 0, 0, s, ((1 - s) * w) / 2, ((1 - s) * h) / 2); c.drawImage(A.c, 0, 0);
-  if (o > 0) { B.x.clearRect(0, 0, W, H); G[ORDER[nx] + "-" + kind](B.x, eo(out) * 0.12); c.globalAlpha = o; c.filter = `blur(${(1 - o) * 6}px)`; const s2 = 0.92 + o * 0.08; c.setTransform(s2, 0, 0, s2, ((1 - s2) * w) / 2, ((1 - s2) * h) / 2); c.drawImage(B.c, 0, 0); }
+  if (o > 0) { B.x.clearRect(0, 0, W, H); G[order[nx] + "-" + kind](B.x, eo(out) * 0.12); c.globalAlpha = o; c.filter = `blur(${(1 - o) * 6}px)`; const s2 = 0.92 + o * 0.08; c.setTransform(s2, 0, 0, s2, ((1 - s2) * w) / 2, ((1 - s2) * h) / 2); c.drawImage(B.c, 0, 0); }
   c.globalAlpha = 1; c.filter = "none"; c.setTransform(1, 0, 0, 1, 0, 0);
 }
