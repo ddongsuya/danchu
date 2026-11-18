@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CaretRight, CheckSquare, MagnifyingGlass, Plus, Square, X } from "@phosphor-icons/react";
 import { RfqField } from "@/components/RfqField";
@@ -515,6 +516,8 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
 
   const kind = kindOfCategory(d.category);
   const byKind = kind !== "tox";
+  /** 효력은 저장된 줄이면 모델 표준 화면에서 설계·표준가를 고친다 (0047) */
+  const modelPage = kind === "pd" && !isNewId(d.id);
   // 효력·약동학·개별 분석은 군·동물 수 금액을 설계 칸(군당·마리당·검체당)에서 받는다. 여기는 한 번 더하는 항목만
   const hasGroups = !byKind && standardGroups(d).length > 0;
   const list = (rs ?? defaultRates(hasGroups)).filter((r) => !byKind || r.kind === "flat" || r.kind === "qty");
@@ -575,7 +578,15 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
 
           <section className="td__blk">
             <h3>{byKind ? "기관 표준 설계" : "설계"}{byKind && <span>견적서가 이 설계와 달라진 곳을 표시해요</span>}</h3>
-            {!designOpen && !byKind ? (
+            {modelPage ? (
+              <div className="td__sum">
+                <div>
+                  <p>{kindLine(d) || d.item}</p>
+                  {kindPriceLabel(d) && <p className="td__mut">표준가 {kindPriceLabel(d)}</p>}
+                </div>
+                <Link className="td__link" href={`/cro/catalog/model/${d.id}`}>표준 설계 열기</Link>
+              </div>
+            ) : !designOpen && !byKind ? (
               <div className="td__sum">
                 <div>
                   <p>{designLine(d)}</p>
@@ -616,7 +627,7 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
             )}
           </section>
 
-          {byKind ? (
+          {modelPage ? null : byKind ? (
             <section className="td__blk">
               <h3>{kind === "pd" ? "비용 다섯 칸" : "금액"}</h3>
               <KindMoney row={d} onChange={set} k={k} />

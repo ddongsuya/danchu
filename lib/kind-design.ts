@@ -19,7 +19,7 @@ export { kindOfCategory, type Kind };
 
 export type PdRole = "normal" | "vehicle" | "positive" | "test";
 export const PD_ROLE: Record<PdRole, string> = { normal: "정상", vehicle: "대조", positive: "양성대조", test: "시험" };
-export type PdGroup = { id: string; label: string; role: PdRole; treat: string; n: number; dose: string };
+export type PdGroup = { id: string; label: string; role: PdRole; treat: string; n: number; dose: string; /** 유발 (예: DSS). 비우거나 "없음"이면 정상군 (0047 모델 표준) */ induce?: string };
 
 /** 비용 다섯 칸. 키는 회신 design.extra 의 cost_* 와 같다 (lib/efficacy.ts COST_PARTS) */
 export type CostKey = "cost_animal" | "cost_dosing" | "cost_eval" | "cost_path" | "cost_report";
@@ -33,6 +33,15 @@ export const COST_LABEL: Record<CostKey, [string, string]> = {
 };
 export type Money5 = Record<CostKey, number | null>;
 export const EMPTY5: Money5 = { cost_animal: null, cost_dosing: null, cost_eval: null, cost_path: null, cost_report: null };
+
+/** 일 단위 스키마 한 줄 (0047 모델 표준). from·to 는 D0 기준 일(순화는 음수). mark: 기간 막대, 매일 점, 한 시점 */
+export type DayLane = { id: string; name: string; from: number; to: number; mark: "bar" | "dots" | "point" };
+/** 평가항목 한 줄 (0047). 문장 칸은 견적서 평가항목 쪽에 그대로 나간다. optional 은 표준가에 넣지 않는 선택 항목 */
+export type PdEval = { id: string; item: string; when: string; freq: string; method: string; target: string; optional?: boolean };
+/** 모델 표준 머리 요약 (동물·투여·기간 한 줄씩. 유발은 induction) */
+export type PdBrief = { animal: string; dosing: string; period: string };
+/** 단가표 사용량 규칙 (lib/pd-price.ts PriceUse 와 같은 모양) */
+export type PdUse = { itemId: string; who: "all" | "induced" | "dosed" | "none"; times: number; per: number; bucket?: CostKey; label?: string };
 
 /** 주 단위 일정 한 줄. start 는 0부터, point 는 그 주의 한 시점(평가·부검) */
 export type Lane = { id: string; name: string; start: number; weeks: number; point?: boolean };
@@ -51,6 +60,11 @@ export type PdDesign = {
   perAnimal: number | null;
   /** 견적서에서 칸 금액을 직접 고친 값 (계산값 대신) */
   override?: Partial<Money5>;
+  /** 0047 모델 표준: 일 단위 스키마, 평가항목 상세, 단가표 사용량, 머리 요약. 있으면 표준가를 단가표로 계산한다 */
+  days?: DayLane[];
+  evals?: PdEval[];
+  uses?: PdUse[];
+  brief?: PdBrief;
 };
 
 /* ── 약동학 ─────────────────────────────────────────── */
@@ -239,7 +253,8 @@ function cleanPd(v: unknown): PdDesign | undefined {
     model: s(o.model, 120), induction: s(o.induction, 160),
     groups: (Array.isArray(o.groups) ? o.groups : []).slice(0, 16).filter((g) => g && typeof g === "object").map((g, i) => {
       const x = g as Record<string, unknown>;
-      return { id: s(x.id, 40) || `g${i + 1}`, label: s(x.label, 40) || `G${i + 1}`, role: ROLES.includes(x.role as PdRole) ? (x.role as PdRole) : "test", treat: s(x.treat, 80), n: cnt(x.n), dose: s(x.dose, 40) };
+      const induce = s(x.induce, 40);
+      return { id: s(x.id, 40) || `g${i + 1}`, label: s(x.label, 40) || `G${i + 1}`, role: ROLES.includes(x.role as PdRole) ? (x.role as PdRole) : "test", treat: s(x.treat, 80), n: cnt(x.n), dose: s(x.dose, 40), ...(induce ? { induce } : {}) };
     }),
     lanes: (Array.isArray(o.lanes) ? o.lanes : []).slice(0, 8).filter((l) => l && typeof l === "object").map((l, i) => {
       const x = l as Record<string, unknown>;
@@ -248,7 +263,48 @@ function cleanPd(v: unknown): PdDesign | undefined {
     endpoints: list(o.endpoints, 20, 80),
     costs: m5(o.costs), perGroup: m5(o.perGroup), perAnimal: won(o.perAnimal),
     ...(Object.keys(override).length ? { override } : {}),
+    ...cleanPdStd(o),
   };
+}
+
+const day = (v: unknown) => { const n = typeof v === "number" ? v : Number(v); return Number.isFinite(n) ? Math.min(400, Math.max(-60, Math.round(n))) : 0; };
+const WHO = ["all", "induced", "dosed", "none"] as const;
+const MARKS = ["bar", "dots", "point"] as const;
+
+/** 0047 모델 표준 칸 정리. 없으면 빈 객체 (예전 설계는 그대로) */
+function cleanPdStd(o: Record<string, unknown>): Pick<PdDesign, "days" | "evals" | "uses" | "brief"> {
+  const out: Pick<PdDesign, "days" | "evals" | "uses" | "brief"> = {};
+  if (Array.isArray(o.days)) {
+    out.days = o.days.slice(0, 12).filter((l) => l && typeof l === "object").map((l, i) => {
+      const x = l as Record<string, unknown>;
+      const from = day(x.from), to = day(x.to);
+      return { id: s(x.id, 40) || `d${i + 1}`, name: s(x.name, 40) || "단계", from: Math.min(from, to), to: Math.max(from, to), mark: MARKS.includes(x.mark as (typeof MARKS)[number]) ? (x.mark as DayLane["mark"]) : "bar" };
+    });
+  }
+  if (Array.isArray(o.evals)) {
+    out.evals = o.evals.slice(0, 30).filter((e) => e && typeof e === "object").map((e, i) => {
+      const x = e as Record<string, unknown>;
+      return { id: s(x.id, 40) || `e${i + 1}`, item: s(x.item, 60), when: s(x.when, 40), freq: s(x.freq, 40), method: s(x.method, 160), target: s(x.target, 40), ...(x.optional === true ? { optional: true } : {}) };
+    }).filter((e) => e.item);
+  }
+  if (Array.isArray(o.uses)) {
+    out.uses = o.uses.slice(0, 60).filter((u) => u && typeof u === "object").flatMap((u) => {
+      const x = u as Record<string, unknown>;
+      const itemId = s(x.itemId, 40);
+      if (!itemId) return [];
+      const num = (v: unknown, d: number) => { const n = typeof v === "number" ? v : Number(v); return Number.isFinite(n) && n >= 0 ? Math.min(100000, Math.round(n * 100) / 100) : d; };
+      const label = s(x.label, 60);
+      return [{
+        itemId, who: WHO.includes(x.who as (typeof WHO)[number]) ? (x.who as PdUse["who"]) : "all", times: num(x.times, 1), per: num(x.per, 1) || 1,
+        ...(COST_KEYS.includes(x.bucket as CostKey) ? { bucket: x.bucket as CostKey } : {}), ...(label ? { label } : {}),
+      }];
+    });
+  }
+  if (o.brief && typeof o.brief === "object") {
+    const b = o.brief as Record<string, unknown>;
+    out.brief = { animal: s(b.animal, 80), dosing: s(b.dosing, 80), period: s(b.period, 80) };
+  }
+  return out;
 }
 
 function cleanPk(v: unknown): PkDesign | undefined {

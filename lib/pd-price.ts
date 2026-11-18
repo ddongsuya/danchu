@@ -3,7 +3,7 @@
  * 금액 = Σ 사용량 × 단가표 단가, 견적 금액 = 단가 합계 × (1 + 관리비·이익 %). 원 단위 반올림.
  * 사용량은 설계(군 구성·횟수)에서 나온다. 금액은 코드만 계산한다 (AI 가 쓴 금액은 받지 않는다).
  */
-import { COST_KEYS, type CostKey, type PdRole } from "./kind-design";
+import { COST_KEYS, type CostKey, type PdDesign, type PdRole } from "./kind-design";
 import { CAT_BUCKET, PRICE_UNIT_LABEL, type PriceItem, type PriceUnit } from "./price-book";
 
 /** 사용량 규칙 한 줄. 사용량 = 대상 마리 × times × per (대상이 none 이면 1 × times × per) */
@@ -17,6 +17,8 @@ export type PriceUse = {
   per: number;
   /** 견적서 비용 묶음. 없으면 분류 기본값 */
   bucket?: CostKey;
+  /** 장부에 보일 이름 (없으면 단가표 항목 이름) */
+  label?: string;
 };
 
 export type PriceGroup = { id: string; role: PdRole; n: number };
@@ -73,10 +75,10 @@ export function pdPrice(groups: PriceGroup[], uses: PriceUse[], items: PriceItem
     const animals = animalsOf(groups, u.who);
     const usage = Math.round(animals * times * per * 100) / 100;
     if (!it || it.archived) {
-      return { itemId: u.itemId, name: it?.name ?? "단가표에 없는 항목", unit: it?.unit ?? "lot", price: 0, usage, amount: 0, bucket: u.bucket ?? (it ? CAT_BUCKET[it.category] : "cost_report"), formula: "", missing: true };
+      return { itemId: u.itemId, name: u.label || it?.name || "단가표에 없는 항목", unit: it?.unit ?? "lot", price: 0, usage, amount: 0, bucket: u.bucket ?? (it ? CAT_BUCKET[it.category] : "cost_report"), formula: "", missing: true };
     }
     const amount = Math.round(usage * it.price);
-    return { itemId: it.id, name: it.name, unit: it.unit, price: it.price, usage, amount, bucket: u.bucket ?? CAT_BUCKET[it.category], formula: formulaOf({ ...u, times, per }, it.unit, animals, it.price), missing: false };
+    return { itemId: it.id, name: u.label || it.name, unit: it.unit, price: it.price, usage, amount, bucket: u.bucket ?? CAT_BUCKET[it.category], formula: formulaOf({ ...u, times, per }, it.unit, animals, it.price), missing: false };
   });
   const sum = lines.reduce((a, l) => a + l.amount, 0);
   const pct = Math.max(0, marginPct);
@@ -106,4 +108,10 @@ export function pdPriceDiff(std: PriceResult, cur: PriceResult): { lines: PriceD
     return [{ itemId: id, name: ref.name, unit: ref.unit, before: a.amount, after: b.amount, delta: b.amount - a.amount, usageBefore: a.usage, usageAfter: b.usage }];
   });
   return { lines, sumDelta: cur.sum - std.sum, marginDelta: cur.margin - std.margin, totalDelta: cur.total - std.total };
+}
+
+/** 모델 표준(시험 목록 효력 설계)의 표준가. 사용량 규칙이 없으면 null (예전 다섯 칸 방식) */
+export function pdStdPrice(pd: PdDesign | undefined, items: PriceItem[], marginPct: number): PriceResult | null {
+  if (!pd?.uses?.length) return null;
+  return pdPrice(pd.groups.map((g) => ({ id: g.id, role: g.role, n: g.n })), pd.uses, items, marginPct);
 }
