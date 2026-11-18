@@ -2,9 +2,9 @@ import type { NavItem } from "@/components/shell/Shell";
 import { PLANS, inPilotPeriod, planOn, type PlanId, type PlanFeature } from "./plans";
 
 /** 기관 메뉴 경로. 검토 화면은 다른 경로를 넘긴다 */
-export type CroPaths = Record<"today" | "deals" | "clients" | "reports" | "log" | "requests" | "docs" | "catalog" | "calendar" | "notifications" | "org" | "billing" | "more", string>;
+export type CroPaths = Record<"today" | "deals" | "clients" | "reports" | "log" | "requests" | "docs" | "prices" | "catalog" | "calendar" | "notifications" | "org" | "billing" | "more", string>;
 export const CRO_PATHS: CroPaths = {
-  today: "/cro", deals: "/cro/deals", clients: "/cro/clients", reports: "/cro/reports", log: "/cro/log", requests: "/cro/requests", docs: "/cro/docs",
+  today: "/cro", deals: "/cro/deals", clients: "/cro/clients", reports: "/cro/reports", log: "/cro/log", requests: "/cro/requests", docs: "/cro/docs", prices: "/cro/prices",
   catalog: "/cro/catalog", calendar: "/cro/calendar", notifications: "/cro/notifications", org: "/cro/org", billing: "/cro/billing", more: "/cro/more",
 };
 
@@ -34,6 +34,7 @@ export function croNav(tier: CroTier, unread: number, p: CroPaths = CRO_PATHS): 
   const g = has("crm") ? { group: "견적" } : {};
   nav.push({ href: p.requests, label: "받은 요청", icon: "inbox", ...g });
   if (has("quote_tool")) nav.push({ href: p.docs, label: "견적서", icon: "quote", ...g });
+  if (has("quote_tool")) nav.push({ href: p.prices, label: "단가표", icon: "tag", ...g });
   if (has("tests")) nav.push({ href: p.catalog, label: "시험 목록", icon: "list", ...g });
   if (has("tests")) nav.push({ href: p.calendar, label: "캘린더", icon: "calendar", ...g });
   nav.push({ href: p.notifications, label: "알림", icon: "bell", badge: unread, ...g });

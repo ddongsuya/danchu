@@ -19,6 +19,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   { title: "견적", items: [
     { href: "/cro/requests", label: "받은 요청", sub: "단추 요청 참여·회신" },
     { href: "/cro/docs", label: "견적서", sub: "견적서 만들기·보내기", need: "quote_tool" },
+    { href: "/cro/prices", label: "단가표", sub: "효력시험 단가·관리비", need: "quote_tool" },
     { href: "/cro/catalog", label: "시험 목록", sub: "기관이 받는 시험과 단가", need: "tests" },
     { href: "/cro/notifications", label: "알림", sub: "" },
   ] },
