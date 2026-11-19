@@ -1,0 +1,32 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # 비밀값 유출 검사. 전체 이력을 본다. 공개 키 예외는 .gitleaks.toml
+      - name: gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks git . --no-banner --redact --exit-code 1
+
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.186.0
+    steps:
+      - uses: actions/checkout@v4
+      # 프로젝트 규칙(.semgrep/)만 오류로 막는다.
+      - name: semgrep
+        run: semgrep scan --metrics=off --config .semgrep/ --error

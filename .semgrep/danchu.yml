@@ -1,0 +1,36 @@
+# 단추 전용 정적 점검 규칙. CI(.github/workflows/security.yml)에서 돈다.
+rules:
+  - id: danchu-client-no-service-role
+    message: >-
+      "use client" 파일에서 service role 키나 관리자 클라이언트를 쓰면 브라우저 번들에 실린다.
+      서버 컴포넌트나 API 라우트로 옮긴다.
+    severity: ERROR
+    languages: [typescript]
+    paths:
+      include: ["app/", "components/", "lib/"]
+    patterns:
+      - pattern-inside: |
+          "use client";
+          ...
+      - pattern-either:
+          - pattern: getSupabaseAdmin(...)
+          - pattern: supabaseServiceKey(...)
+          - pattern: process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  - id: danchu-no-secret-in-public-env
+    message: NEXT_PUBLIC_ 변수는 브라우저에 공개된다. 이름에 SECRET·SERVICE_ROLE·PRIVATE이 들어가면 비밀값을 공개하는 것이다.
+    severity: ERROR
+    languages: [typescript]
+    pattern-regex: process\.env\.NEXT_PUBLIC_\w*(SECRET|SERVICE_ROLE|PRIVATE)\w*
+
+  - id: danchu-no-log-request-body
+    message: 요청 본문·메일 본문·메시지 내용을 로그에 남기지 않는다. 오류 종류나 id만 남긴다.
+    severity: ERROR
+    languages: [typescript]
+    paths:
+      exclude: ["tests/", "scripts/"]
+    pattern-either:
+      - pattern: console.$F(..., await $REQ.json(), ...)
+      - pattern: console.$F(..., await $REQ.text(), ...)
+      - pattern: console.$F(..., JSON.stringify($X.body), ...)
+      - pattern: console.$F(..., $X.body, ...)
