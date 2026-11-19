@@ -30,6 +30,10 @@ describe("CSP", () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("form-action 'self'");
   });
+  it("Sentry 미국 수집 주소(*.ingest.us.sentry.io)를 연다. 운영 DSN 이 이 주소라 빠지면 브라우저 오류가 Sentry 에 가지 않는다", () => {
+    const connect = buildCsp({ NODE_ENV: "production" }).split("; ").find((d) => d.startsWith("connect-src"))!;
+    expect(connect.split(" ")).toContain("https://*.ingest.us.sentry.io");
+  });
   it("개발에서는 Next 런타임을 위해 eval 을 허용한다", () => {
     expect(buildCsp({ NODE_ENV: "development" })).toContain("'unsafe-eval'");
   });

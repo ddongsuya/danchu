@@ -5,7 +5,7 @@
  */
 export function buildCsp(env: Record<string, string | undefined> = process.env): string {
   const supabase = (env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
-  const connect = ["'self'", supabase || "https://*.supabase.co", "https://*.supabase.co", "https://*.ingest.sentry.io", "https://*.ingest.de.sentry.io", "https://vercel.live", "wss://ws-us3.pusher.com"];
+  const connect = ["'self'", supabase || "https://*.supabase.co", "https://*.supabase.co", "https://*.ingest.sentry.io", "https://*.ingest.us.sentry.io", "https://*.ingest.de.sentry.io", "https://vercel.live", "wss://ws-us3.pusher.com"];
   const script = ["'self'", "'unsafe-inline'", "https://vercel.live"];
   if (env.NODE_ENV !== "production") script.push("'unsafe-eval'"); // Next dev 런타임
   return [
