@@ -51,10 +51,10 @@ export type CompareRowDef = { seq: number; name: string; category: string };
 
 type SortKey = "default" | "total" | "final" | "start";
 const SORTS: [SortKey, string][] = [
+  ["default", "회신 도착 순"],
   ["final", "최종보고서 빠른 순"],
   ["total", "금액 낮은 순"],
   ["start", "착수 빠른 순"],
-  ["default", "기본 순서"],
 ];
 type Tab = "sum" | "diff" | "test";
 
@@ -115,7 +115,7 @@ export function CompareBoard({
   rows: CompareRowDef[];
   canSelect: boolean;
 }) {
-  const [sortBy, setSortBy] = useState<SortKey>("final");
+  const [sortBy, setSortBy] = useState<SortKey>("default");
   const [shown, setShown] = useState(cols.map((c) => c.id));
   const [tab, setTab] = useState<Tab>("sum");
   const [openSame, setOpenSame] = useState(false);

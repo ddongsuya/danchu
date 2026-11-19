@@ -70,8 +70,9 @@ export default async function Compare({ params }: { params: Promise<{ no: string
     });
   }
 
-  // 금액 오름차순, 같으면 기관명 순. 정렬이 없으면 새로 고칠 때마다 열 순서가 바뀐다
-  const quotes = d.quotes.filter((q) => q.status === "submitted").sort((a, b) => (a.total_amount ?? 0) - (b.total_amount ?? 0) || a.cro_name.localeCompare(b.cro_name, "ko"));
+  // 회신 도착 순(처음 제출한 때), 같으면 기관명 순. 단추는 기관 순서를 매기지 않으므로 금액·기간 순은 사용자가 고를 때만
+  const arrived = (q: (typeof d.quotes)[number]) => q.first_submitted_at ?? q.submitted_at ?? "";
+  const quotes = d.quotes.filter((q) => q.status === "submitted").sort((a, b) => arrived(a).localeCompare(arrived(b)) || a.cro_name.localeCompare(b.cro_name, "ko"));
   const orgIds = quotes.map((q) => q.cro_org_id).filter((x): x is string => !!x);
   const sb = getSupabaseAdmin()!;
   const { data: orgs } = orgIds.length ? await sb.from("cro_orgs").select("id, glp_certs, aaalac").in("id", orgIds) : { data: [] };
