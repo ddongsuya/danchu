@@ -497,9 +497,16 @@ export type Database = {
       };
       /** 견적 에이전트 이용 동의 (0046) */
       agent_consents: {
-        Row: { user_id: string; version: string; agreed_at: string; revoked_at: string | null };
-        Insert: Ins<Database["public"]["Tables"]["agent_consents"]["Row"], "agreed_at" | "revoked_at">;
+        Row: { user_id: string; version: string; agreed_at: string; revoked_at: string | null; /** 탈퇴한 시각 (0049) */ account_deleted_at: string | null };
+        Insert: Ins<Database["public"]["Tables"]["agent_consents"]["Row"], "agreed_at" | "revoked_at" | "account_deleted_at">;
         Update: Partial<Database["public"]["Tables"]["agent_consents"]["Row"]>;
+        Relationships: [];
+      };
+      agent_purge_requests: {
+        /** 견적 에이전트 서버에 보낼 대화·승인 기록 삭제 요청 (0049) */
+        Row: { id: number; user_id: string; reason: "account_deleted" | "consent_revoked"; created_at: string; attempts: number; last_error: string | null; done_at: string | null };
+        Insert: Ins<Database["public"]["Tables"]["agent_purge_requests"]["Row"], "id" | "created_at" | "attempts" | "last_error" | "done_at">;
+        Update: Partial<Database["public"]["Tables"]["agent_purge_requests"]["Row"]>;
         Relationships: [];
       };
       rfq_events: {

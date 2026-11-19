@@ -45,7 +45,7 @@ describe("예약 작업 두 묶음", () => {
       expect(stepInPart(n, null)).toBe(true);
       expect(stepInPart(n, "flow")).not.toBe(stepInPart(n, "upkeep"));
     }
-    expect(names.filter((n) => stepInPart(n, "upkeep")).sort()).toEqual(["crm-purge", "crm-reminders", "digest", "early-open-sms", "pending-cleanup", "retention"]);
+    expect(names.filter((n) => stepInPart(n, "upkeep")).sort()).toEqual(["agent-purge", "crm-purge", "crm-reminders", "digest", "early-open-sms", "pending-cleanup", "retention"]);
   });
   it("vercel.json 이 두 묶음을 따로 부른다", () => {
     const v = JSON.parse(readFileSync("vercel.json", "utf8")) as { crons: { path: string; schedule: string }[] };

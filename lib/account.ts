@@ -3,6 +3,7 @@ import type { Values } from "./rfq-schema";
 import { logEvent, notifyUsers, adminEmails, adminUserIds } from "./notify";
 import { notifyInvitedOrgs } from "./distribute";
 import { captureError } from "./observe";
+import { requestAgentPurge } from "./agent-purge";
 
 /** 선정 전 단계. 탈퇴하면 이 요청들은 취소하고 회신 중인 기관에 알린다 */
 export const OPEN_STATUSES = ["received", "distributed", "quoted", "compared"] as const;
@@ -75,9 +76,11 @@ export type DeleteResult =
  * 1) 운영자·계약 진행 중이면 거부
  * 2) 선정 전 요청은 취소하고 회신 중인 기관에 알림
  * 3) 본인 요청서 전부 익명화 (첨부는 미선정 건만 삭제)
- * 4) auth.users 삭제 → profiles·notifications 는 cascade, cro_quotes.submitted_by·rfq_events.actor_id 는 null.
+ * 4) 견적 에이전트 동의 기록에 철회·탈퇴 시각을 적는다 (기록은 3년 남는다, 0049). 에이전트 대화·승인 기록 삭제 요청을 대기열에 넣는다
+ * 5) auth.users 삭제 → profiles·notifications 는 cascade, cro_quotes.submitted_by·rfq_events.actor_id 는 null.
  *    기관 담당자였으면 profiles 삭제 트리거가 그 기관의 회신 링크를 모두 새로 발급한다 (0021)
- * 5) 운영자에게 알림
+ * 6) 에이전트 서버에 삭제를 보낸다 (못 보내면 매일 예약 작업이 다시 보낸다)
+ * 7) 운영자에게 알림
  */
 export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?: string | null; reason: "self" | "admin" }): Promise<DeleteResult> {
   const { data: profile } = await sb.from("profiles").select("id, email, role, name, company, cro_org_id").eq("id", userId).maybeSingle();
@@ -119,14 +122,25 @@ export async function deleteAccount(sb: Admin, userId: string, opts: { actorId?:
     throw new Error("요청 정보를 모두 정리하지 못해 계정을 삭제하지 않았어요. 잠시 후 다시 시도해 주세요.");
   }
 
-  // 4) 계정 삭제
+  // 4) 에이전트 동의 기록: 철회하지 않은 판에 철회 시각, 모든 판에 탈퇴 시각. 삭제 요청은 계정을 지우기 전에 대기열에 넣는다
+  const now = new Date().toISOString();
+  const { error: consentError } = await sb.from("agent_consents").update({ revoked_at: now }).eq("user_id", userId).is("revoked_at", null);
+  if (consentError) captureError(consentError, "account:agent-consent-revoke", { user: userId });
+  await sb.from("agent_consents").update({ account_deleted_at: now }).eq("user_id", userId);
+  const { error: queueError } = await sb.from("agent_purge_requests").insert({ user_id: userId, reason: "account_deleted" });
+  if (queueError && queueError.code !== "23505") captureError(queueError, "account:agent-purge-queue", { user: userId });
+
+  // 5) 계정 삭제
   const { error } = await sb.auth.admin.deleteUser(userId);
   if (error) {
     captureError(error, "account:deleteUser", { user: userId });
     throw new Error("계정을 삭제하지 못했어요.");
   }
 
-  // 5) 운영자 알림 (이메일은 이미 지웠으므로 역할·회사만)
+  // 6) 에이전트 대화·승인 기록 삭제 (대기열에 이미 있으므로 실패해도 예약 작업이 다시 보낸다)
+  await requestAgentPurge(sb, userId, "account_deleted").catch((e) => captureError(e, "account:agent-purge"));
+
+  // 7) 운영자 알림 (이메일은 이미 지웠으므로 역할·회사만)
   const roleKo = profile.role === "cro" ? "기관 담당자" : "의뢰자";
   await notifyUsers(
     await adminUserIds(),

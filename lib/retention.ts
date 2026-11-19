@@ -8,6 +8,8 @@ export const RETENTION = {
   accessLogDays: 90,
   /** 견적 요청 정보·첨부 */
   requestYears: 3,
+  /** 견적 에이전트 이용 동의 기록: 철회하거나 탈퇴한 날부터 */
+  agentConsentYears: 3,
   /** 읽은 앱 알림 (처리방침 약속은 아니고 정리 목적) */
   readNotificationDays: 180,
 } as const;
@@ -23,9 +25,10 @@ function daysAgo(n: number): string {
  * 3) 180일 지난 읽은 알림 삭제
  * 4) 시범 운영 시작 6개월 뒤(2027-12-01)부터 사전예약 삭제 (0030)
  * 5) 90일 지난 문자 알림 기록 삭제 (0033)
+ * 6) 철회·탈퇴한 지 3년 지난 견적 에이전트 동의 기록 삭제 (0049)
  */
-export async function runRetention(sb: Admin, now = new Date()): Promise<{ accessLogs: number; requests: number; files: number; notifications: number; early: number; sms: number }> {
-  const out = { accessLogs: 0, requests: 0, files: 0, notifications: 0, early: 0, sms: 0 };
+export async function runRetention(sb: Admin, now = new Date()): Promise<{ accessLogs: number; requests: number; files: number; notifications: number; early: number; sms: number; agentConsents: number }> {
+  const out = { accessLogs: 0, requests: 0, files: 0, notifications: 0, early: 0, sms: 0, agentConsents: 0 };
 
   const { data: logs } = await sb
     .from("rfq_requests")
@@ -79,5 +82,9 @@ export async function runRetention(sb: Admin, now = new Date()): Promise<{ acces
   const { data: sms, error: smsError } = await sb.from("sms_log").delete().lt("created_at", daysAgo(RETENTION.accessLogDays)).select("id");
   if (!smsError) out.sms = sms?.length ?? 0;
   else console.error("retention sms", smsError.message);
+
+  const { data: consents, error: consentError } = await sb.from("agent_consents").delete().lt("revoked_at", daysAgo(RETENTION.agentConsentYears * 365)).select("user_id");
+  if (!consentError) out.agentConsents = consents?.length ?? 0;
+  else console.error("retention agent consents", consentError.message);
   return out;
 }

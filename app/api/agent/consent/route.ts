@@ -1,5 +1,6 @@
 import { agentError, agentJson, agentGate } from "@/lib/agent-api";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requestAgentPurge } from "@/lib/agent-purge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ const VERSION = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * 견적 에이전트 이용 동의 (연동 3단계, 0046).
  * GET — 내 동의 기록(철회하지 않은 판들). POST { version } — 이 판에 동의. DELETE { version } — 철회.
+ * 철회하면 기록은 3년 남기고(0049), 에이전트 서버에 대화·승인 기록 삭제를 요청한다(처리방침 3항).
  * 사용자는 토큰으로만 정한다. 본문의 계정 값은 받지 않는다.
  */
 export async function GET(req: Request) {
@@ -49,5 +51,7 @@ export async function DELETE(req: Request) {
   if (!sb) return agentError("unavailable");
   const { error } = await sb.from("agent_consents").update({ revoked_at: new Date().toISOString() }).eq("user_id", s.userId).eq("version", version).is("revoked_at", null);
   if (error) return agentError("unavailable");
+  // 에이전트 앱에서 철회하면 에이전트 서버가 먼저 지우고 여기를 부른다. 그래도 한 번 더 요청해 두면 다른 경로의 철회도 같이 지워진다(여러 번 받아도 같다)
+  await requestAgentPurge(sb, s.userId, "consent_revoked");
   return agentJson({ revoked: { version } });
 }

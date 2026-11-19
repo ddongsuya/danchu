@@ -8,6 +8,7 @@ import { captureError } from "@/lib/observe";
 import { isProduction } from "@/lib/env";
 import { rateLimited } from "@/lib/rate-limit";
 import { runRetention } from "@/lib/retention";
+import { retryAgentPurges } from "@/lib/agent-purge";
 import { purgeLeftOrgCrm } from "@/lib/crm-purge";
 import { cronPart, stepInPart } from "@/lib/cron-parts";
 import { EARLY_OPEN_DATE, earlyOpenSms, type EarlyRole } from "@/lib/early";
@@ -104,6 +105,7 @@ export async function GET(req: Request) {
     crmPurge: { marked: 0, cleared: 0, purgedOrgs: 0, rows: 0 },
     digest: false,
     retention: { accessLogs: 0, requests: 0, files: 0, notifications: 0 },
+    agentPurge: { sent: 0, failed: 0 },
     errors: [] as string[],
   };
 
@@ -460,6 +462,12 @@ export async function GET(req: Request) {
   // 5-1) 담당자 계정이 모두 탈퇴한 기관의 CRM 자료: 30일 뒤 지운다 (0040, 처리방침 "기관이 맡긴 개인정보의 처리")
   await run("crm-purge", async () => {
     out.crmPurge = await purgeLeftOrgCrm(sb);
+  });
+
+  // 5-2) 견적 에이전트 대화·승인 기록 삭제 요청 중 못 보낸 것 다시 보내기 (0049, 처리방침 3항)
+  await run("agent-purge", async () => {
+    out.agentPurge = await retryAgentPurges(sb);
+    if (out.agentPurge.failed) throw new Error(`에이전트 삭제 요청 ${out.agentPurge.failed}건을 보내지 못했어요`);
   });
 
   // 실패한 단계가 있으면 운영자에게 알린다. 응답 JSON 은 아무도 읽지 않는다
