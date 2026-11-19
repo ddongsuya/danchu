@@ -61,32 +61,57 @@ export type Database = {
       }
       agent_consents: {
         Row: {
+          account_deleted_at: string | null
           agreed_at: string
           revoked_at: string | null
           user_id: string
           version: string
         }
         Insert: {
+          account_deleted_at?: string | null
           agreed_at?: string
           revoked_at?: string | null
           user_id: string
           version: string
         }
         Update: {
+          account_deleted_at?: string | null
           agreed_at?: string
           revoked_at?: string | null
           user_id?: string
           version?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "agent_consents_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      agent_purge_requests: {
+        Row: {
+          attempts: number
+          created_at: string
+          done_at: string | null
+          id: number
+          last_error: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          done_at?: string | null
+          id?: never
+          last_error?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          done_at?: string | null
+          id?: never
+          last_error?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       billing_adjustments: {
         Row: {
