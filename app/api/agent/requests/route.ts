@@ -1,9 +1,8 @@
 import { agentError, agentJson, agentGate, croItem, requesterItem } from "@/lib/agent-api";
 import { dbReady, listAwardsForOrg, listInvitesForOrg, listRequestsForUser } from "@/lib/data";
 import { buildPipeline } from "@/lib/pipeline";
-import { agentWriteGate, callAs, markVia } from "@/lib/agent-act";
-import { POST as createRfq } from "@/app/api/rfq/route";
-import { POST as startRfq } from "@/app/api/rfq/[no]/start/route";
+import { agentWriteGate } from "@/lib/agent-act";
+import { actResponse, runAgentAction } from "@/lib/agent-actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,14 +38,6 @@ export async function POST(req: Request) {
   if (s.role !== "requester") return agentError("forbidden");
   const b = (await req.json().catch(() => null)) as { payload?: unknown } | null;
   if (!b?.payload || typeof b.payload !== "object" || Array.isArray(b.payload)) return agentJson({ error: "bad_request" }, 400);
-  // 회사명·담당자 연락처는 AI를 거치지 않는다. 에이전트가 보낸 값은 버리고 단추 프로필에서 채운다
-  const p = s.profile;
-  if (!p.company?.trim() || !p.name?.trim()) return agentJson({ error: "profile_incomplete" }, 409);
-  const payload = { ...(b.payload as Record<string, unknown>), company: p.company, name: p.name, dept: p.dept ?? "", phone: p.phone ?? "", email: s.email, orgType: p.org_type ?? (b.payload as Record<string, unknown>).orgType };
-  const made = await callAs(s, req, createRfq, {}, { payload, files: [] });
-  const rfqNo = typeof made.body.rfqNo === "string" ? made.body.rfqNo : null;
-  if (made.status !== 200 || !rfqNo || made.body.persisted !== true) return agentJson(made.body, made.status);
-  if (!made.body.duplicate) await markVia("rfq_requests", "rfq_no", rfqNo);
-  const started = await callAs(s, req, startRfq, { no: rfqNo }, {});
-  return agentJson({ rfqNo, duplicate: !!made.body.duplicate, started: started.status === 200 && started.body.ok === true });
+  // 처리는 액션 등록부의 create (회사명·연락처는 단추 프로필에서 채운다)
+  return actResponse(await runAgentAction(s, req, "create", null, b.payload as Record<string, unknown>));
 }

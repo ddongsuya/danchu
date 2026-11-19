@@ -509,6 +509,17 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["agent_purge_requests"]["Row"]>;
         Relationships: [];
       };
+      agent_action_log: {
+        /** 견적 에이전트가 단추에서 실행한 액션 기록과 되돌리기 정보 (0050) */
+        Row: {
+          id: string; user_id: string; org_id: string | null; role: "requester" | "cro"; action: string; level: "auto" | "confirm"; rfq_no: string | null;
+          target_kind: "companies" | "contacts" | "deals" | "activities" | "events" | "tasks" | null; target_id: string | null; undo: "delete" | "patch" | "move" | null;
+          before: Obj | null; after_updated_at: string | null; status: number; undone_at: string | null; created_at: string;
+        };
+        Insert: Ins<Database["public"]["Tables"]["agent_action_log"]["Row"], "id" | "org_id" | "rfq_no" | "target_kind" | "target_id" | "undo" | "before" | "after_updated_at" | "undone_at" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["agent_action_log"]["Row"]>;
+        Relationships: [];
+      };
       rfq_events: {
         Row: { via: Via; id: string; rfq_id: string; kind: string; title: string; body: string | null; actor_id: string | null; meta: Obj; created_at: string };
         Insert: Ins<Database["public"]["Tables"]["rfq_events"]["Row"], "id" | "body" | "actor_id" | "meta" | "created_at">;

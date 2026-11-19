@@ -16,25 +16,30 @@ type Handler<P> = (req: Request, ctx: { params: Promise<P> }) => Promise<Respons
 export async function agentWriteGate(req: Request): Promise<AgentSession | Response> {
   const s = await agentGate(req);
   if (s instanceof Response) return s;
-  if (await rateLimited("agent-write", s.userId, 30, 600)) return agentError("rate_limited");
-  return s;
+  const limited = await agentWriteLimited(s);
+  return limited ?? s;
 }
 
-/** 단추 웹 라우트 처리를 이 사용자로 부른다. 본문은 JSON */
+/** 이미 세션을 확인한 뒤 쓰기 횟수만 본다(10분에 30번). 넘으면 돌려줄 응답 */
+export async function agentWriteLimited(s: AgentSession): Promise<Response | null> {
+  return (await rateLimited("agent-write", s.userId, 30, 600)) ? agentError("rate_limited") : null;
+}
+
+/** 단추 웹 라우트 처리를 이 사용자로 부른다. 본문은 JSON (GET 은 본문 없음) */
 export async function callAs<P>(
   s: AgentSession,
   from: Request,
   handler: Handler<P>,
   params: P,
   body: unknown,
-  method: "POST" | "PUT" = "POST",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "POST",
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const headers = new Headers({ "content-type": "application/json" });
   for (const h of ["user-agent", "x-forwarded-for", "x-real-ip"]) {
     const v = from.headers.get(h);
     if (v) headers.set(h, v);
   }
-  const req = new Request(from.url, { method, headers, body: JSON.stringify(body ?? {}) });
+  const req = new Request(from.url, { method, headers, body: method === "GET" ? undefined : JSON.stringify(body ?? {}) });
   const res = await runAsAgent(s, () => handler(req, { params: Promise.resolve(params) }));
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   return { status: res.status, body: json };
