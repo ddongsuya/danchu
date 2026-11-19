@@ -37,5 +37,5 @@ begin
   perform pg_temp.t_assert(denied, '사유 값 검사');
 
   perform pg_temp.t_assert((select relrowsecurity from pg_class where oid = 'public.agent_purge_requests'::regclass), 'RLS 켜짐');
-  perform pg_temp.t_eq(public.danchu_schema_version(), 49, '스키마 판 49');
+  perform pg_temp.t_assert(public.danchu_schema_version() >= 49, '스키마 판 49 이상');
 end $$;

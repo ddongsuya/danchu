@@ -49,6 +49,9 @@ export async function sendAgentPurge(userId: string, reason: PurgeReason, opts: 
 
 /** 삭제 요청을 대기열에 적고 바로 한 번 보낸다. 실패해도 예외를 던지지 않는다(탈퇴·철회 자체는 진행) */
 export async function requestAgentPurge(sb: Admin, userId: string, reason: PurgeReason, opts: { env?: Env; fetchImpl?: Fetch } = {}): Promise<boolean> {
+  // 단추에 남은 에이전트 실행 기록(0050)도 같은 약속을 따른다. 탈퇴는 계정과 함께 지워지고, 철회는 여기서 지운다
+  const { error: logErr } = await sb.from("agent_action_log").delete().eq("user_id", userId);
+  if (logErr) captureError(logErr, "agent-purge:action-log", { reason });
   const { error: insErr } = await sb.from("agent_purge_requests").insert({ user_id: userId, reason });
   // 23505: 같은 계정·사유의 열린 요청이 이미 있다 → 그 줄을 이어서 보낸다
   if (insErr && insErr.code !== "23505") captureError(insErr, "agent-purge:enqueue", { reason });

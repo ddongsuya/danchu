@@ -59,6 +59,75 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_action_log: {
+        Row: {
+          action: string
+          after_updated_at: string | null
+          before: Json | null
+          created_at: string
+          id: string
+          level: string
+          org_id: string | null
+          rfq_no: string | null
+          role: string
+          status: number
+          target_id: string | null
+          target_kind: string | null
+          undo: string | null
+          undone_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          after_updated_at?: string | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          level: string
+          org_id?: string | null
+          rfq_no?: string | null
+          role: string
+          status: number
+          target_id?: string | null
+          target_kind?: string | null
+          undo?: string | null
+          undone_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          after_updated_at?: string | null
+          before?: Json | null
+          created_at?: string
+          id?: string
+          level?: string
+          org_id?: string | null
+          rfq_no?: string | null
+          role?: string
+          status?: number
+          target_id?: string | null
+          target_kind?: string | null
+          undo?: string | null
+          undone_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_action_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "cro_orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_action_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_consents: {
         Row: {
           account_deleted_at: string | null
