@@ -29,6 +29,11 @@ import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
 import { LOST_REASONS, STAGES, STATUSES } from "./crm-deals";
 import type { PlanFeature } from "./plans";
+import { checkRequestValues, createGate, requestSchema, REQUEST_SCHEMA_VERSION } from "./agent-request";
+import { matchOrgs } from "./distribute";
+import { rateLimited } from "./rate-limit";
+import type { RfqRow } from "./data";
+import type { Values } from "./rfq-schema";
 import { POST as sponsorQna } from "@/app/api/rfq/[no]/qna/route";
 import { POST as select } from "@/app/api/rfq/[no]/select/route";
 import { POST as detail } from "@/app/api/rfq/[no]/detail/route";
@@ -134,6 +139,12 @@ function viaCrm(kind: string, method: "POST" | "PATCH" = "POST") {
   };
 }
 
+/** 의뢰자: 담당자 칸은 본문 값이 아니라 단추 프로필에서 채운다(접수·검사 같음) */
+function withProfile(c: ActCtx, body: Record<string, unknown>): Values {
+  const p = c.s.profile;
+  return { ...(body as Values), company: p.company ?? "", name: p.name ?? "", dept: p.dept ?? "", phone: p.phone ?? "", email: c.s.email, orgType: (p.org_type ?? body.orgType) as string | undefined };
+}
+
 const QNA_INPUT = obj({ body: str("질의·답변 본문", 2000), questionId: str("답변할 질의 id(답변일 때)", 64) });
 
 /* ── 등록부 ── */
@@ -146,13 +157,58 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
     run: async (c) => {
       const p = c.s.profile;
       if (!p.company?.trim() || !p.name?.trim()) return { status: 409, body: { error: "profile_incomplete" } };
-      const payload = { ...c.body, company: p.company, name: p.name, dept: p.dept ?? "", phone: p.phone ?? "", email: c.s.email, orgType: p.org_type ?? c.body.orgType };
+      // 단추 양식 검사(D1). 판을 보낸 새 앱은 엄격하게, 판 없는 옛 앱은 경고만 남기고 받는다
+      const { schemaVersion, ...raw } = c.body;
+      const chk = checkRequestValues(withProfile(c, raw));
+      const gate = createGate(schemaVersion, chk.issues);
+      if (gate.kind === "outdated") return { status: 409, body: { error: "schema_outdated", schemaVersion: REQUEST_SCHEMA_VERSION } };
+      if (gate.kind === "reject") return { status: 400, body: { error: gate.error, issues: gate.issues } };
+      if (gate.kind === "lenient") console.warn("agent create: lenient", gate.codes.join(","));
+      // 새 앱은 양식에 없는 칸을 빼고 보낸다(기관에게 칸 이름이 그대로 보이지 않게). 옛 앱 본문은 그대로
+      const payload = withProfile(c, schemaVersion === undefined ? raw : chk.payload);
       const made = await callAs(c.s, c.req, createRfq, {}, { payload, files: [] });
       const rfqNo = typeof made.body.rfqNo === "string" ? made.body.rfqNo : null;
       if (made.status !== 200 || !rfqNo || made.body.persisted !== true) return made;
       if (!made.body.duplicate) await markVia("rfq_requests", "rfq_no", rfqNo);
       const started = await callAs(c.s, c.req, startRfq, { no: rfqNo }, {});
       return { status: 200, body: { rfqNo, duplicate: !!made.body.duplicate, started: started.status === 200 && started.body.ok === true } };
+    },
+  },
+  {
+    name: "request_schema", role: "requester", scope: "org", level: "read", area: "intake", label: "요청서 양식", tool: true,
+    description: "단추 요청서 양식(분야·시험 종류·조건 칸·선택지)과 양식 판을 읽는다. 요청서는 이 칸과 선택지 글자 그대로 채운다.",
+    input: obj({}),
+    run: async () => ({ status: 200, body: requestSchema() }),
+  },
+  {
+    name: "request_check", role: "requester", scope: "org", level: "read", area: "intake", label: "요청서 검사", tool: true,
+    description: "요청서 본문을 단추 접수와 같은 규칙으로 검사한다(저장하지 않는다). 빠진 칸, 선택지에 없는 값, 회신 표 행, 보낼 수 있는지를 돌려준다.",
+    input: obj({ payload: passthrough("단추 요청서 본문(request_schema 칸)"), schemaVersion: str("request_schema 의 양식 판", 20) }, ["payload"]),
+    run: async (c) => {
+      const raw = c.body.payload;
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return bad();
+      if (await rateLimited("agent:request_check", c.s.userId, 30, 10 * 60)) return { status: 429, body: { error: "too_many" } };
+      const schemaVersion = c.body.schemaVersion;
+      const chk = checkRequestValues(withProfile(c, raw as Record<string, unknown>));
+      const ok = chk.issues.length === 0;
+      // 받을 기관이 있는지만 알린다. 기관 이름·수는 주지 않는다(접수 전 기관 시험 목록 추정 방지)
+      let deliverable: boolean | null = null;
+      if (ok) {
+        try {
+          const m = await matchOrgs({ categories: (chk.payload.categories as string[]) ?? [], payload: chk.payload } as unknown as RfqRow);
+          deliverable = m.orgs.length > 0;
+        } catch {
+          deliverable = null;
+        }
+      }
+      return {
+        status: 200,
+        body: {
+          schemaVersion: REQUEST_SCHEMA_VERSION,
+          outdated: schemaVersion !== undefined && schemaVersion !== REQUEST_SCHEMA_VERSION,
+          ok, issues: chk.issues, warnings: chk.warnings, rows: chk.rows, payload: chk.payload, deliverable,
+        },
+      };
     },
   },
   { name: "ask", role: "requester", scope: "rfq", level: "confirm", area: "qna", label: "기관에 질의", description: "견적을 낸 기관에 질의를 보낸다.", input: QNA_INPUT, run: viaRfq(sponsorQna, { withAction: "ask" }) },
@@ -352,12 +408,20 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
 ];
 
 export function findAction(role: AgentRole, name: string): ActionDef | null {
-  return AGENT_ACTIONS.find((a) => a.role === role && a.name === name) ?? null;
+  return AGENT_ACTIONS.find((a) => a.role === role && a.name === name && !switchedOff(a.name)) ?? null;
+}
+
+/**
+ * 기능 스위치: AGENT_ACTIONS_OFF=request_check,quote_doc 처럼 적은 액션은 목록에서 빼고 실행하지 않는다(404 bad_request 와 같게).
+ * 에이전트는 목록을 10분 기억하므로 끈 뒤에도 잠깐 부를 수 있다. 그때도 여기서 막힌다
+ */
+export function switchedOff(name: string, env = process.env.AGENT_ACTIONS_OFF): boolean {
+  return !!env && env.split(",").map((x) => x.trim()).includes(name);
 }
 
 /** 에이전트에 보여 줄 목록(실행 함수 없이). 요금제에 없는 기능은 뺀다 */
 export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: string; scope: ActionDef["scope"]; level: ActionLevel; area: ActionArea; label: string; description: string; input: JsonSchema; tool: boolean }[] {
-  return AGENT_ACTIONS.filter((a) => a.role === s.role && (!a.feature || s.role !== "cro" || !featureError(s.org, a.feature))).map((a) => ({
+  return AGENT_ACTIONS.filter((a) => a.role === s.role && !switchedOff(a.name) && (!a.feature || s.role !== "cro" || !featureError(s.org, a.feature))).map((a) => ({
     name: a.name,
     scope: a.scope,
     level: a.level,
@@ -370,7 +434,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.1";
+export const CATALOG_VERSION = "2026-11-20.2";
 
 /* ── 실행과 기록 ── */
 
@@ -415,7 +479,7 @@ export type RunResult = ActOut & { logId: string | null; undoable: boolean };
 export async function runAgentAction(s: AgentSession, req: Request, name: string, no: string | null, body: Record<string, unknown>): Promise<RunResult> {
   const def = findAction(s.role, name);
   const out = (r: ActOut, logId: string | null = null, undoable = false): RunResult => ({ ...r, logId, undoable });
-  if (!def) return out(AGENT_ACTIONS.some((a) => a.name === name) ? { status: 403, body: { error: "forbidden" } } : bad());
+  if (!def) return out(AGENT_ACTIONS.some((a) => a.name === name && !switchedOff(a.name)) ? { status: 403, body: { error: "forbidden" } } : bad());
   if ((def.scope === "rfq") !== !!no) return out(bad());
   if (no && !/^DC-\d{4}-\d{4,6}$/.test(no)) return out(notFound());
   if (def.level === "human" || !def.run) return out({ status: 403, body: { error: "human_only" } });
