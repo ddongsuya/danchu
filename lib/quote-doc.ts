@@ -752,3 +752,62 @@ export function inkOn(hex: string | null | undefined): string {
   // 종이색(#f4f4f0, L≈0.90)과 먹색(#1b1b19, L≈0.011) 중 대비가 큰 쪽
   return (0.9 + 0.05) / (L + 0.05) >= (L + 0.05) / (0.011 + 0.05) ? "#f4f4f0" : "#1b1b19";
 }
+
+/* ── 에이전트: 요청 금액 다시 계산 · 과거 견적 찾기 (2026-11-20) ── */
+
+export type RequestPriceRow = {
+  seq: number;
+  name: string;
+  kind: Kind | null;
+  /** 견적서 툴 계산 금액 (부가세 별도). priced=false 면 null */
+  amount: number | null;
+  /** 기관 표준과 달라진 곳 수 */
+  changes: number;
+  priced: boolean;
+  /** 금액을 내지 않은 까닭: 시험 목록에 맞는 조합 없음 · 표준가 없음(다른 동물종·경로 등) · 단가표에 없는 항목 */
+  why: "no_match" | "no_price" | "missing_item" | null;
+};
+export type RequestPrice = {
+  rows: RequestPriceRow[];
+  /** 금액을 낸 행만 더한 값 (부가세 별도, 할인 전) */
+  sum: number;
+  /** 모든 행에 금액이 있는가 */
+  complete: boolean;
+  source: "doc" | "catalog";
+  doc: { id: string; docNo: string } | null;
+};
+
+/** 견적서 시험 → 요청 행별 금액 (순수 함수, 테스트 대상). 금액은 testLines 만 쓴다 */
+export function priceOf(data: DocData, rows: { seq: number; name: string }[]): Omit<RequestPrice, "source" | "doc"> {
+  const out = rows.map((r): RequestPriceRow => {
+    const t = data.tests.find((x) => x.rfqSeq === r.seq);
+    if (!t) return { seq: r.seq, name: r.name, kind: null, amount: null, changes: 0, priced: false, why: "no_match" };
+    const k = testKind(t);
+    const l = testLines(t);
+    const q = k === "pd" ? pdQuote(t) : null;
+    const why = q && q.cur.missing > 0 ? "missing_item" : (k === "tox" && !(t.std.price && t.std.price > 0)) || l.total <= 0 ? "no_price" : null;
+    return { seq: r.seq, name: r.name, kind: k, amount: why ? null : l.total, changes: l.changes, priced: !why, why };
+  });
+  return { rows: out, sum: out.reduce((a, r) => a + (r.amount ?? 0), 0), complete: out.length > 0 && out.every((r) => r.priced) };
+}
+
+export type DocHit = { id: string; docNo: string; title: string; client: string; substance: string; rfqNo: string | null; issuedOn: string; supply: number; tests: { name: string; total: number }[] };
+type DocSearchRow = { id: string; doc_no: string; title: string; client: string; substance: string; rfq_no: string | null; issued_on: string; supply: number; data: unknown };
+
+/** 우리 기관 견적서에서 찾기 (순수 함수, 테스트 대상). 낱말이 모두 제목·물질·시험 이름·조건에 있으면 맞다. 최근 발행 순 */
+export function searchDocs(rows: DocSearchRow[], q: string, limit = 10): DocHit[] {
+  const norm = (x: string) => x.toLowerCase().replace(/\s+/g, "");
+  const words = q.split(/[\s,]+/).map(norm).filter((w) => w.length >= 1).slice(0, 6);
+  const hits: DocHit[] = [];
+  for (const r of [...rows].sort((a, b) => (a.issued_on < b.issued_on ? 1 : a.issued_on > b.issued_on ? -1 : 0))) {
+    const data = cleanDocData(r.data);
+    const hay = norm([r.title, r.substance, r.doc_no, r.rfq_no ?? "", ...data.tests.flatMap((t) => [t.title, t.item, t.category, t.cond.species, t.cond.route, t.cond.dosing])].join(" "));
+    if (words.length && !words.every((w) => hay.includes(w))) continue;
+    hits.push({
+      id: r.id, docNo: r.doc_no, title: r.title, client: r.client, substance: r.substance, rfqNo: r.rfq_no, issuedOn: r.issued_on, supply: r.supply,
+      tests: data.tests.slice(0, 8).map((t) => ({ name: t.title || t.item, total: testLines(t).total })),
+    });
+    if (hits.length >= limit) break;
+  }
+  return hits;
+}

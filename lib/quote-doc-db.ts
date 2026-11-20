@@ -6,14 +6,15 @@ import { loadCatalog } from "./catalog-db";
 import { pickVariant, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
-  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, testFromCatalog, testKind,
-  type DocData, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
+  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, priceOf, searchDocs, testFromCatalog, testKind,
+  type DocData, type DocHit, type RequestPrice, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
 import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
 import { snapFor } from "./pd-quote";
+import { rfqViewOf } from "./quote-load";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -201,13 +202,30 @@ export async function createDocFromCatalog(orgId: string, orgName: string, userI
   return insertDoc(orgId, userId, { client, substance, data });
 }
 
-/** 단추 요청으로 새 견적서: 요청의 시험 행마다 가장 가까운 카탈로그 조합을 고른다 (회신 초안과 같은 규칙) */
-export async function createDocFromRequest(orgId: string, orgName: string, userId: string | null, a: { inviteId: string; rfqNo: string; substance: string; rows: QuoteLineDef[]; payload: Values }): Promise<{ id?: string; error?: string }> {
+export type RequestInput = { inviteId: string; rfqNo: string; substance: string; rows: QuoteLineDef[]; payload: Values };
+
+/** 단추 요청으로 새 견적서: 요청의 시험 행마다 가장 가까운 카탈로그 조합을 고른다 (회신 초안과 같은 규칙). 이미 있으면 그것을 연다 */
+export async function createDocFromRequest(orgId: string, orgName: string, userId: string | null, a: RequestInput): Promise<{ id?: string; created?: boolean; error?: string }> {
   const sb = getSupabaseAdmin();
   if (!sb) return { error: "저장소 미설정" };
   // 같은 요청으로 만든 견적서가 있으면 그것을 연다 (두 번 눌러 두 부가 생기지 않게)
-  const { data: had } = await sb.from("cro_quote_docs").select("id").eq("org_id", orgId).eq("invite_id", a.inviteId).order("created_at").limit(1);
-  if (had?.[0]) return { id: had[0].id };
+  const had = await docForInvite(orgId, a.inviteId);
+  if (had) return { id: had.id, created: false };
+  const data = await requestData(orgId, orgName, a);
+  const r = await insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
+  return r.id ? { id: r.id, created: true } : r;
+}
+
+/** 이 초대로 만든 견적서 (가장 먼저 만든 것) */
+export async function docForInvite(orgId: string, inviteId: string): Promise<{ id: string; docNo: string } | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const { data } = await sb.from("cro_quote_docs").select("id, doc_no").eq("org_id", orgId).eq("invite_id", inviteId).order("created_at").limit(1);
+  return data?.[0] ? { id: data[0].id, docNo: data[0].doc_no } : null;
+}
+
+/** 요청 행마다 카탈로그 조합을 골라 견적서 시험을 만든다 (저장하지 않는다). 맞는 조합이 없거나 수행하지 않는 행은 빠진다 */
+async function requestData(orgId: string, orgName: string, a: RequestInput): Promise<DocData> {
   const [rows, rates, style] = await Promise.all([loadCatalog(orgId), loadRates(orgId), loadStyle(orgId, orgName)]);
   const byKey = new Map<string, CatalogRow[]>();
   for (const r of rows) byKey.set(r.item_key, [...(byKey.get(r.item_key) ?? []), r]);
@@ -222,7 +240,40 @@ export async function createDocFromRequest(orgId: string, orgName: string, userI
     data.tests.push(withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload));
   }
   await attachPrices(orgId, data);
-  return insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
+  return data;
+}
+
+/**
+ * 견적 금액 다시 계산 (에이전트 quote_price, 2026-11-20 B안).
+ * 이 요청으로 만든 견적서가 있으면 그 견적서(기관이 고친 값), 없으면 시험 목록·단가표로 같은 규칙을 저장 없이 계산한다.
+ * 금액은 견적서 툴 계산(testLines)만 쓴다. 표준가가 없거나 단가표에 없는 항목이 있으면 금액을 내지 않는다(priced=false)
+ */
+export async function priceRequest(orgId: string, orgName: string, a: RequestInput): Promise<RequestPrice> {
+  const doc = await docForInvite(orgId, a.inviteId);
+  const got = doc ? await loadDoc(orgId, doc.id) : null;
+  const data = got?.data ?? (await requestData(orgId, orgName, a));
+  return { ...priceOf(data, a.rows), source: got ? "doc" : "catalog", doc: got && doc ? { id: doc.id, docNo: doc.docNo } : null };
+}
+
+/** 우리 기관 견적서 찾기 (에이전트 quote_history). 최근 300부 안에서 찾는다 */
+export async function findDocs(orgId: string, q: string, limit = 10): Promise<DocHit[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data } = await sb.from("cro_quote_docs").select("id, doc_no, title, client, substance, rfq_no, issued_on, supply, data").eq("org_id", orgId).order("issued_on", { ascending: false }).limit(300);
+  return searchDocs(data ?? [], q, limit);
+}
+
+/** 기관 초대 → 견적서 툴 입력 (참여한 초대만). 요청서 화면과 같은 행·조건을 쓴다 */
+export async function requestInputFor(orgId: string, inviteId: string): Promise<RequestInput | "not_joined" | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const { data: inv } = await sb.from("rfq_invites").select("*").eq("id", inviteId).eq("cro_org_id", orgId).maybeSingle();
+  if (!inv) return null;
+  if (!inv.joined_at) return "not_joined";
+  const { data: r } = await sb.from("rfq_requests").select("*").eq("id", inv.rfq_id).maybeSingle();
+  if (!r) return null;
+  const view = rfqViewOf(r, inv, [], false);
+  return { inviteId: inv.id, rfqNo: inv.rfq_no, substance: view.substance, rows: view.rows, payload: r.payload as Values };
 }
 
 /**

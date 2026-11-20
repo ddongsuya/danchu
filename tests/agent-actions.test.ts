@@ -154,6 +154,10 @@ describe("액션 목록", () => {
     expect(c.map((a) => a.name)).toEqual(expect.arrayContaining(["brief", "report", "task_create", "deal_move", "quote_submit"]));
     expect(catalogFor(requester).map((a) => a.name)).not.toContain("task_create");
     expect(catalogFor(cro()).find((a) => a.name === "crm_delete")).toMatchObject({ level: "human", tool: false });
+    // 2026-11-20: 견적 금액 계산·견적서 만들기는 화면이 부르고(비서 도구 아님), 과거 견적 찾기는 읽기 도구
+    expect(catalogFor(cro()).find((a) => a.name === "quote_price")).toMatchObject({ scope: "rfq", level: "read", tool: false });
+    expect(catalogFor(cro()).find((a) => a.name === "quote_doc")).toMatchObject({ scope: "rfq", level: "auto", tool: false });
+    expect(catalogFor(cro()).find((a) => a.name === "quote_history")).toMatchObject({ scope: "org", level: "read", tool: true });
   });
 });
 
@@ -208,6 +212,22 @@ describe("실행", () => {
   it("담당자 추가: 이메일·전화는 넘기지 않는다", async () => {
     await runAgentAction(cro(), REQ, "contact_create", null, { company_id: "66666666-6666-4666-8666-666666666666", name: "박 팀장", email: "p@x.test", phone: "010" });
     expect(fx.crmCalls[0]!.body).toEqual({ company_id: "66666666-6666-4666-8666-666666666666", name: "박 팀장" });
+  });
+
+  it("안건 넘기기: 담당자 칸만 넘기고, 되돌리면 이전 담당자", async () => {
+    fx.tables.cro_crm_deals = [{ id: "55555555-5555-4555-8555-555555555555", org_id: ORG, stage: "quote", status: "open", owner: ME, updated_at: "t0" }];
+    const r = await runAgentAction(cro(), REQ, "deal_assign", null, { id: "55555555-5555-4555-8555-555555555555", owner: OTHER, stage: "contract" });
+    expect(fx.crmCalls[0]).toEqual({ method: "PATCH", kind: "deals", body: { id: "55555555-5555-4555-8555-555555555555", owner: OTHER } });
+    expect(fx.tables.agent_action_log![0]).toMatchObject({ action: "deal_assign", undo: "patch", before: { owner: ME } });
+    expect(await undoAgentAction(cro(), r.logId!)).toEqual({ ok: true });
+    expect(fx.tables.cro_crm_deals![0]).toMatchObject({ owner: ME, stage: "quote" });
+  });
+
+  it("결재 요청: 결재자에게 [결재] 할 일(내부)로 맡기고, 지우기로 되돌린다", async () => {
+    const r = await runAgentAction(cro(), REQ, "approval_request", null, { title: "가람 견적 할인 10%", approver: OTHER, due_on: "2026-11-21", assignee: ME, category: "other" });
+    expect(fx.crmCalls[0]).toMatchObject({ method: "POST", kind: "tasks", body: { title: "[결재] 가람 견적 할인 10%", category: "internal", assignee: OTHER, due_on: "2026-11-21" } });
+    expect(fx.crmCalls[0]!.body).not.toHaveProperty("approver");
+    expect(r).toMatchObject({ status: 200, undoable: true });
   });
 
   it("웹 처리가 거절하면 기록을 남기지 않는다. 없는 행을 고치려 하면 404", async () => {
