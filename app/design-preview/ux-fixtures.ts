@@ -95,21 +95,22 @@ export const INC_ROWS: CompareRowDef[] = [
   { seq: 2, name: "복귀돌연변이", category: "유전독성" },
   { seq: 3, name: "소핵시험", category: "유전독성" },
 ];
-const incBase = (id: string, name: string, total: number): CompareCol => ({
-  ...UX_COLS[0], id, name, total, includes: ["임상병리", "조직병리(검경 포함)", "통계분석", "QA 점검"], note: null, hasPdf: false, items: [],
+// 기간·착수일·총액은 아래 시험별 값과 맞춘다 (총액 = 시험별 금액 합, 최종보고서 = 가장 긴 시험 + 보고서)
+const incBase = (id: string, name: string, total: number, finalReport: number, start: string): CompareCol => ({
+  ...UX_COLS[0], id, name, total, weeks: finalReport, final: finalReport, finalReport, start, includes: ["임상병리", "조직병리(검경 포함)", "통계분석", "QA 점검"], note: null, hasPdf: false, items: [],
 });
 export const INC_COLS: CompareCol[] = [
-  { ...incBase("inc-a", "예시 기관 A", 48000000), items: [
+  { ...incBase("inc-a", "예시 기관 A", 48000000, 16, "2026-12-14"), items: [
     { seq: 1, avail: "가능", amount: 40000000, weeks: 12, includes: ["일반증상", "체중·사료섭취량", "혈액학", "혈액생화학", "부검·장기무게", "조직병리", "TK 분석"] },
     { seq: 2, avail: "가능", amount: 4500000, weeks: 5, includes: ["균주 5종", "대사활성화(S9)"] },
     { seq: 3, avail: "가능", amount: 3500000, weeks: 6, includes: ["골수 도말"] },
   ] },
-  { ...incBase("inc-b", "예시 기관 B", 43000000), items: [
+  { ...incBase("inc-b", "예시 기관 B", 43000000, 15, "2027-01-04"), items: [
     { seq: 1, avail: "가능", amount: 36000000, weeks: 11, includes: ["일반증상", "체중·사료섭취량", "혈액학", "혈액생화학", "부검·장기무게", "조직병리", "안과검사"] },
     { seq: 2, avail: "가능", amount: 4000000, weeks: 4, includes: ["균주 5종", "대사활성화(S9)"] },
     { seq: 3, avail: "가능", amount: 3000000, weeks: 6, includes: ["골수 도말"] },
   ] },
-  { ...incBase("inc-c", "예시 기관 C", 51000000), items: [
+  { ...incBase("inc-c", "예시 기관 C", 51000000, 17, "2026-12-07"), items: [
     { seq: 1, avail: "조건부 가능", amount: 42000000, weeks: 13, includes: ["일반증상", "체중·사료섭취량", "혈액학", "혈액생화학", "부검·장기무게", "조직병리", "TK 분석", "안과검사"] },
     { seq: 2, avail: "가능", amount: 5000000, weeks: 5, includes: ["균주 5종", "대사활성화(S9)"] },
     { seq: 3, avail: "가능", amount: 4000000, weeks: 7, includes: ["골수 도말"] },
