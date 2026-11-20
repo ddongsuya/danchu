@@ -282,7 +282,7 @@ export function spreadDiscount(totals: number[], discount: number): number[] {
 export function replyFromDoc(data: DocData, items: ReplyItem[]): { items: ReplyItem[]; filled: number[]; empty: number[] } {
   const linked = data.tests.filter((t) => typeof t.rfqSeq === "number");
   const totals = spreadDiscount(linked.map((t) => testLines(t).total), docTotals(data).discount);
-  const bySeq = new Map<number, { amount: number; weeks: number | null; extra: Record<string, string> }>();
+  const bySeq = new Map<number, { amount: number; weeks: number | null; extra: Record<string, string | string[]> }>();
   linked.forEach((t, i) => {
     const prev = bySeq.get(t.rfqSeq!);
     // 같은 회신 줄에 시험이 둘이면 더한다

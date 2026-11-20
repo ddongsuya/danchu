@@ -634,6 +634,14 @@
 .cb-t .cb-g button { display: flex; width: 100%; align-items: baseline; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
 .cb-t .cb-g i { margin-left: auto; font-style: normal; font-weight: 400; color: var(--muted); }
 .cb-t .cb-total > * { font-weight: 700; color: var(--ink); }
+/* 시험별 포함 항목: 시험 줄과 같은 바탕으로 묶고, 글자를 한 단계 작게 */
+.cb-t tbody.cb-tests tr:not(.cb-g):not(.cb-total) > * { background: none; }
+.cb-t tbody.cb-tests tr.cb-alt > * { background: var(--wh); }
+.cb-t tr.cb-inc > * { padding-top: 2px; padding-bottom: 8px; font-size: 13px; }
+.cb-t tr.cb-inc th[scope="row"] { padding-left: 28px; }
+.cb-t tr.cb-inc th span { margin-left: 6px; color: var(--muted); }
+.cb-t tr.cb-inc td[colspan] { color: var(--muted); }
+.cb-t tbody.cb-tests tr:has(+ tr.cb-inc) > * { padding-bottom: 6px; }
 .pt .cb-ask { align-self: flex-start; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 .cb-m { display: none; }
 @media (max-width: 639px) {
@@ -653,6 +661,12 @@
   .cb-mr--big .cb-mcols { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
   .cb-mr--total .cb-mcols { font-weight: 700; }
   .cb-mr--total > p { color: var(--ink); font-weight: 600; }
+  .cb-mgrp { border-radius: var(--r-lg); padding-bottom: 4px; }
+  .cb-mgrp.cb-alt { background: var(--wh); }
+  .cb-mgrp > .cb-mr { background: none; }
+  .cb-mr--inc { padding-top: 2px; padding-bottom: 8px; padding-left: 24px; }
+  .cb-mr--inc .cb-mcols { font-size: 13px; }
+  .cb-mr--common > span { display: block; font-size: 13px; color: var(--muted); position: sticky; left: 24px; max-width: calc(100vw - 72px); }
   .cb-same { padding: 24px 12px 0; }
   .cb-same button { display: flex; width: 100%; align-items: baseline; border: 0; background: none; padding: 0 0 8px; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; }
   .cb-same button span { font-weight: 400; color: var(--muted); margin-left: 6px; }

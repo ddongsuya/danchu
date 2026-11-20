@@ -17,6 +17,7 @@ import { occupiesSeat } from "@/lib/request-policy";
 import { captureError } from "@/lib/observe";
 import { hasSchedule } from "@/lib/quote-schedule";
 import { loadDetail } from "@/lib/detail-data";
+import { arrivalOrder, inclOf } from "@/lib/compare-view";
 
 export const dynamic = "force-dynamic";
 
@@ -71,8 +72,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   }
 
   // 회신 도착 순(처음 제출한 때), 같으면 기관명 순. 단추는 기관 순서를 매기지 않으므로 금액·기간 순은 사용자가 고를 때만
-  const arrived = (q: (typeof d.quotes)[number]) => q.first_submitted_at ?? q.submitted_at ?? "";
-  const quotes = d.quotes.filter((q) => q.status === "submitted").sort((a, b) => arrived(a).localeCompare(arrived(b)) || a.cro_name.localeCompare(b.cro_name, "ko"));
+  const quotes = arrivalOrder(d.quotes);
   const orgIds = quotes.map((q) => q.cro_org_id).filter((x): x is string => !!x);
   const sb = getSupabaseAdmin()!;
   const { data: orgs } = orgIds.length ? await sb.from("cro_orgs").select("id, glp_certs, aaalac").in("id", orgIds) : { data: [] };
@@ -108,7 +108,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       glp: certsOf.get(q.cro_org_id ?? "") ?? [],
       unavailable,
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
-      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOfStored(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra) })),
+      items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOfStored(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra), includes: inclOf(i.design) })),
       hasPdf: !!q.pdf_path,
       askHref: qnaWindow(rfq).sponsorAsk ? `/app/r/${rfq.rfq_no}/qna?to=${q.invite_id}` : null,
       selected: rfq.selected_quote_id === q.id,
