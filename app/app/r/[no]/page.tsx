@@ -18,6 +18,7 @@ import { comparisonOpened } from "@/lib/reply-window";
 import { funnel } from "@/lib/request-story";
 import { RequestStory } from "@/components/app/RequestStory";
 import { qnaCounts } from "@/lib/qna-data";
+import { draftSentAt } from "@/lib/contract-draft-db";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,8 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   }
   // 계약 확인 (2026-10-20 결정 2, 0025): 기관 보고 → 의뢰자 확인 또는 이의 → 이의가 없으면 7일 뒤 자동 확정
   const aw = d.award;
+  // 선정한 기관이 보낸 계약서(안) (2026-11-20)
+  const draftAt = aw ? await draftSentAt(rfq.id) : null;
   const reported = aw?.contract_reported_at ?? null;
   const confirmedAt = aw ? aw.contract_confirmed_at ?? aw.requester_confirmed_at : null;
   const disputeOpen = !!(aw?.requester_disputed_at && !aw.dispute_resolved_at && !confirmedAt);
@@ -117,6 +120,11 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
             <div className="rs-next">
               {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
               {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
+              {contractOpen && draftAt && (
+                <Link href={`/app/r/${rfq.rfq_no}/contract`} className="b2">
+                  계약서(안) 보기
+                </Link>
+              )}
             </div>
           )
         }

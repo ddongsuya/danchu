@@ -23,6 +23,8 @@ import { loadCrmSynced } from "./crm";
 import { getRfqByNo } from "./data";
 import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
+import { awardForOrgByRfq, draftForAward, draftSentAt, sendDraft } from "./contract-draft-db";
+import { createDocFromRequest, docForInvite, findDocs, priceRequest, requestInputFor, type RequestInput } from "./quote-doc-db";
 import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
 import { LOST_REASONS, STAGES, STATUSES } from "./crm-deals";
@@ -84,6 +86,15 @@ const obj = (properties: Record<string, unknown>, required: string[] = []) => ({
 const passthrough = (description: string) => ({ type: "object", additionalProperties: true, description });
 
 /* ── 실행 도우미 ── */
+/** 기관: 이 요청의 견적서 툴 입력(참여한 초대만) */
+async function requestFor(c: ActCtx): Promise<{ input: RequestInput } | ActOut> {
+  const inv = await inviteForOrg(c.no!, c.s.org!.id);
+  if (!inv) return notFound();
+  const input = await requestInputFor(c.s.org!.id, inv.id);
+  if (input === "not_joined") return { status: 409, body: { error: "not_joined" } };
+  return input ? { input } : notFound();
+}
+
 const bad = (): ActOut => ({ status: 400, body: { error: "bad_request" } });
 const notFound = (): ActOut => ({ status: 404, body: { error: "not_found" } });
 
@@ -158,6 +169,29 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   { name: "answer", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자 질의에 답변", description: "의뢰자 질의에 답한다.", input: QNA_INPUT, run: viaInvite(croQna, { withAction: "answer" }) },
   { name: "quote_draft", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적 임시 저장", description: "견적 초안을 단추에 임시 저장한다(의뢰자에게 보이지 않는다). 금액은 단추 계산 또는 사람이 넣은 값.", input: passthrough("단추 회신 본문"), run: viaInvite(saveQuote, { method: "PUT" }) },
   { name: "quote_upload", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적서 PDF 올릴 주소", description: "견적서 PDF를 올릴 주소를 받는다(선택 첨부).", input: obj({ name: str("파일 이름"), size: { type: "integer", minimum: 1 }, type: str("파일 형식", 60) }, ["name", "size"]), run: viaInvite(uploadUrl) },
+  {
+    name: "quote_price", role: "cro", scope: "rfq", level: "read", area: "quote", label: "견적 금액 계산", feature: "quote_tool",
+    description: "요청 행마다 견적서 툴로 금액을 계산한다(독성·약동학·개별 분석·효력). 이 요청으로 만든 견적서가 있으면 그 값을 읽는다. 표준가·단가가 없는 행은 금액을 내지 않는다.",
+    input: obj({}),
+    run: async (c) => {
+      const got = await requestFor(c);
+      if ("status" in got) return got;
+      return { status: 200, body: { price: await priceRequest(c.s.org!.id, c.s.org!.name, got.input) } };
+    },
+  },
+  {
+    name: "quote_doc", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적서 만들기", feature: "quote_tool",
+    description: "이 요청으로 견적서 툴 견적서를 만든다(이미 있으면 그것). 의뢰자에게 보이지 않는다.",
+    input: obj({}),
+    run: async (c) => {
+      const got = await requestFor(c);
+      if ("status" in got) return got;
+      const r = await createDocFromRequest(c.s.org!.id, c.s.org!.name, c.s.userId, got.input);
+      if (!r.id) return { status: 500, body: { error: "unavailable" } };
+      const doc = await docForInvite(c.s.org!.id, got.input.inviteId);
+      return { status: 200, body: { ok: true, docId: r.id, docNo: doc?.docNo ?? null, created: !!r.created, path: `/cro/docs/${r.id}/fill` } };
+    },
+  },
   { name: "quote_submit", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적 제출", description: "견적을 의뢰자에게 제출한다.", input: passthrough("단추 회신 본문"), run: viaInvite(submitQuote, { mark: true }) },
   { name: "detail_reply", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "2차 회신", description: "2차 상세 요청에 회신한다.", input: passthrough("단추 2차 회신 본문"), run: viaInvite(detailReply) },
   {
@@ -167,6 +201,31 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       const awardId = inv ? await awardForInvite(inv.id) : null;
       if (!awardId) return notFound();
       return callAs(c.s, c.req, contractReport, { id: awardId }, c.body);
+    },
+  },
+
+  // ─ 기관: 계약서(안) (2026-11-20, 서명 전까지) ─
+  {
+    name: "contract_draft", role: "cro", scope: "rfq", level: "read", area: "contract", label: "계약서(안) 보기",
+    description: "선정된 견적으로 만든 계약서(안)의 금액·조항 수와 단추 화면 주소, 의뢰자에게 보냈는지. 선정 전이면 404.",
+    input: obj({}),
+    run: async (c) => {
+      const award = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!award) return notFound();
+      const [draft, sentAt] = await Promise.all([draftForAward(award), draftSentAt(award.rfq_id)]);
+      if (!draft) return notFound();
+      return { status: 200, body: { draft: { awardId: award.id, path: `/cro/awards/${award.id}/contract`, tests: draft.tests.length, supply: draft.supply, vat: draft.vat, total: draft.total, articles: draft.articles.length, sentAt, contractStatus: award.contract_status } } };
+    },
+  },
+  {
+    name: "contract_draft_send", role: "cro", scope: "rfq", level: "confirm", area: "contract", label: "계약서(안) 보내기",
+    description: "계약서(안)을 의뢰자에게 보낸다(요청 기록과 의뢰자 알림). 서명은 단추 밖에서 한다.",
+    input: obj({}),
+    run: async (c) => {
+      const award = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!award) return notFound();
+      const r = await sendDraft(award, c.s.userId);
+      return r.ok ? { status: 200, body: { ok: true, sentAt: r.sentAt } } : { status: r.status, body: { error: r.error } };
     },
   },
 
@@ -234,6 +293,21 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
     },
   },
   {
+    name: "deal_assign", role: "cro", scope: "org", level: "auto", area: "crm", label: "안건 넘기기", tool: true, feature: "crm", target: { kind: "deals", op: "update" },
+    description: "안건 담당 영업을 같은 기관의 다른 담당자로 바꾼다(팀 넘기기). 넘기며 맡길 일이 있으면 task_create 를 함께.",
+    input: obj({ id: ref("deal", "안건"), owner: ref("member", "새 담당자") }, ["id", "owner"]),
+    run: async (c) => viaCrm("deals", "PATCH")({ ...c, body: { id: c.body.id, owner: c.body.owner } }),
+  },
+  {
+    name: "approval_request", role: "cro", scope: "org", level: "auto", area: "crm", label: "결재 요청", tool: true, feature: "tests", target: { kind: "tasks", op: "create" },
+    description: "같은 기관 결재자에게 결재 요청을 할 일로 맡긴다(제목 앞에 [결재]). 결재자가 단추 할 일에서 끝냄을 누르면 결재된 것. 기관 밖으로 나가지 않는다.",
+    input: obj({ title: str("결재할 내용", 180), approver: ref("member", "결재자"), due_on: ymd("기한"), deal_id: ref("deal", "안건"), memo: str("메모", 1000) }, ["title", "approver"]),
+    run: async (c) => {
+      const { approver, title, assignee: _a, category: _c, ...rest } = c.body;
+      return viaCrm("tasks")({ ...c, body: { ...rest, title: `[결재] ${String(title ?? "").slice(0, 180)}`, category: "internal", assignee: approver } });
+    },
+  },
+  {
     name: "contact_create", role: "cro", scope: "org", level: "auto", area: "crm", label: "담당자 추가", tool: true, feature: "crm", target: { kind: "contacts", op: "create" },
     description: "고객사에 담당자를 추가한다. 안건을 고르면 그 안건에도 붙인다. 이메일·전화는 단추 화면에서 넣는다.",
     input: obj({ company_id: ref("company", "고객사"), name: str("이름", 100), title: str("직함", 60), dept: str("부서", 100), role: oneOf(CONTACT_ROLES, "decision 결정권자, user 실무, contract 계약, finance 정산, other 기타"), deal_id: ref("deal", "붙일 안건") }, ["company_id", "name"]),
@@ -260,6 +334,12 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   {
     name: "price_book", role: "cro", scope: "org", level: "read", area: "price", label: "단가표 보기", feature: "quote_tool", description: "기관 단가표를 읽는다.", input: obj({}),
     run: async (c) => callAs(c.s, c.req, async () => (await bookRead()) ?? Response.json({ error: "unavailable" }, { status: 503 }), {}, null, "GET"),
+  },
+  {
+    name: "quote_history", role: "cro", scope: "org", level: "read", area: "quote", label: "과거 견적 찾기", tool: true, feature: "quote_tool",
+    description: "우리 기관 견적서 툴 견적서를 낱말로 찾는다(시험 이름·물질·동물종·경로·견적번호). 결과는 화면 카드로만 보이고 금액은 단추가 계산한 값이다.",
+    input: obj({ q: str("찾을 말(예: 28일 랫드 경구)", 100) }, ["q"]),
+    run: async (c) => ({ status: 200, body: { hits: await findDocs(c.s.org!.id, typeof c.body.q === "string" ? c.body.q.slice(0, 100) : "", 10) } }),
   },
   {
     name: "price_book_preview", role: "cro", scope: "org", level: "read", area: "price", label: "단가표 비교", feature: "quote_tool", description: "단가 자료를 지금 단가표와 견준다(저장하지 않는다).", input: passthrough("{ rows }"),
@@ -290,7 +370,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-19.1";
+export const CATALOG_VERSION = "2026-11-20.1";
 
 /* ── 실행과 기록 ── */
 

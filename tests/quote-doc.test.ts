@@ -10,6 +10,9 @@ import {
   nextDocNo,
   scheduleWeeks,
   priceForCond,
+  priceOf,
+  docMatchesQuote,
+  searchDocs,
   standardGroups,
   switchCond,
   testFromCatalog,
@@ -257,5 +260,69 @@ describe("견적서 판 (2026-11-13)", () => {
     expect(wonKorean(249_656_000)).toBe("금 이억사천구백육십오만육천 원정");
     expect(wonKorean(10_000)).toBe("금 일만 원정");
     expect(wonKorean(0)).toBe("금 영 원정");
+  });
+});
+
+describe("에이전트: 요청 금액 다시 계산 (2026-11-20 B안)", () => {
+  const data = (tests: ReturnType<typeof testFromCatalog>[]): DocData => ({ tests, visible: { perTest: true, adjust: true, formula: false }, discount: 0, terms: { pay: "", extra: "", note: "" }, glp: "" });
+
+  it("요청 행마다 견적서 툴 금액, 맞는 조합이 없거나 표준가가 없으면 금액을 내지 않는다", () => {
+    const a = { ...testFromCatalog(row, rates), rfqSeq: 1 };
+    a.groups = a.groups.concat({ ...a.groups[1]!, id: "gx" });
+    const b = { ...testFromCatalog({ ...row, std_price: null } as CatalogRow, rates), rfqSeq: 2 };
+    const r = priceOf(data([a, b]), [{ seq: 1, name: "반복투여" }, { seq: 2, name: "단회투여" }, { seq: 3, name: "유전독성" }]);
+    expect(r.rows[0]).toMatchObject({ seq: 1, priced: true, amount: testLines(a).total, why: null });
+    expect(r.rows[0]!.amount).toBeGreaterThan(168_000_000);
+    expect(r.rows[1]).toMatchObject({ seq: 2, priced: false, amount: null, why: "no_price" });
+    expect(r.rows[2]).toMatchObject({ seq: 3, priced: false, amount: null, why: "no_match", kind: null });
+    expect(r.sum).toBe(testLines(a).total);
+    expect(r.complete).toBe(false);
+  });
+
+  it("독성: 요청 조건이 표준과 다르면(견적서를 만들기 전) 표준가를 그대로 쓰지 않는다", () => {
+    const a = { ...testFromCatalog(row, rates), rfqSeq: 1 };
+    const r = priceOf(data([a]), [{ seq: 1, name: "반복투여" }], new Map([[1, ["회복군 4주", "TK 병행"]]]));
+    expect(r.rows[0]).toMatchObject({ priced: false, amount: null, why: "check", checks: ["회복군 4주", "TK 병행"] });
+    expect(priceOf(data([a]), [{ seq: 1, name: "반복투여" }], new Map([[1, []]])).rows[0]).toMatchObject({ priced: true, amount: 168_000_000 });
+  });
+
+  it("모든 행에 금액이 있으면 complete", () => {
+    const r = priceOf(data([{ ...testFromCatalog(row, rates), rfqSeq: 1 }]), [{ seq: 1, name: "반복투여" }]);
+    expect(r).toMatchObject({ complete: true, sum: 168_000_000 });
+    expect(priceOf(data([]), []).complete).toBe(false);
+  });
+});
+
+describe("에이전트: 과거 견적 찾기", () => {
+  const doc = (id: string, issued: string, title: string, extra: Partial<{ substance: string; item: string; dosing: string }> = {}) => {
+    const t = testFromCatalog({ ...row, item: extra.item ?? row.item, dosing: extra.dosing ?? row.dosing } as CatalogRow, rates);
+    return { id, doc_no: `Q-2611-00${id}`, title, client: "고객", substance: extra.substance ?? "", rfq_no: null, issued_on: issued, supply: 168_000_000, data: data([t]) };
+  };
+  const data = (tests: ReturnType<typeof testFromCatalog>[]) => ({ tests, visible: { perTest: true, adjust: true, formula: false }, discount: 0, terms: { pay: "", extra: "", note: "" }, glp: "" });
+
+  it("낱말이 모두 있는 견적서만, 최근 발행 순, 시험마다 툴 계산 금액", () => {
+    const rows = [doc("1", "2026-03-01", "반복투여 13주"), doc("2", "2026-09-01", "반복투여 13주", { substance: "후보 A" }), doc("3", "2026-10-01", "단회투여", { item: "단회투여 독성", dosing: "1회" })];
+    const hits = searchDocs(rows, "반복 13주");
+    expect(hits.map((h) => h.id)).toEqual(["2", "1"]);
+    expect(hits[0]!.tests[0]).toMatchObject({ total: 168_000_000 });
+    expect(searchDocs(rows, "후보a").map((h) => h.id)).toEqual(["2"]);
+    expect(searchDocs(rows, "없는말")).toEqual([]);
+    expect(searchDocs(rows, "", 2)).toHaveLength(2);
+  });
+});
+
+describe("의뢰자에게 보일 기관 견적서: 제출한 견적과 같을 때만", () => {
+  const data = (tests: ReturnType<typeof testFromCatalog>[], discount = 0): DocData => ({ tests, visible: { perTest: true, adjust: true, formula: false }, discount, terms: { pay: "", extra: "", note: "" }, glp: "" });
+  const a = { ...testFromCatalog(row, rates), rfqSeq: 1 };
+  const b = { ...testFromCatalog({ ...row, item: "단회투여 독성", dosing: "1회", std_price: 20_000_000 } as CatalogRow, rates), rfqSeq: 2 };
+  it("행마다 금액이 같으면 같다. 불가 행은 견적서에 없어도 된다", () => {
+    expect(docMatchesQuote(data([a, b]), [{ seq: 1, avail: "가능", amount: 168_000_000 }, { seq: 2, avail: "조건부 가능", amount: "20000000" as unknown as number }, { seq: 3, avail: "불가", amount: null }])).toBe(true);
+  });
+  it("금액이 다르거나, 행이 빠지거나, 요청 밖 시험·할인이 있으면 다르다", () => {
+    expect(docMatchesQuote(data([a, b]), [{ seq: 1, avail: "가능", amount: 160_000_000 }, { seq: 2, avail: "가능", amount: 20_000_000 }])).toBe(false);
+    expect(docMatchesQuote(data([a]), [{ seq: 1, avail: "가능", amount: 168_000_000 }, { seq: 2, avail: "가능", amount: 20_000_000 }])).toBe(false);
+    expect(docMatchesQuote(data([a, { ...b, rfqSeq: undefined }]), [{ seq: 1, avail: "가능", amount: 168_000_000 }])).toBe(false);
+    expect(docMatchesQuote(data([a], 1_000_000), [{ seq: 1, avail: "가능", amount: 168_000_000 }])).toBe(false);
+    expect(docMatchesQuote(data([]), [])).toBe(false);
   });
 });

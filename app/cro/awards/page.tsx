@@ -46,7 +46,10 @@ export default async function CroAwards() {
                   <div style={{ fontSize: 20, fontWeight: 700 }}>{a.rfq?.substance}</div>
                   <div style={{ fontSize: 13, color: "var(--muted)" }}>{(a.rfq?.categories ?? []).join(" · ")}</div>
                 </div>
-                <span className={`pill ${a.contract_reported_at ? "pill--ok" : "pill--tint"}`} style={{ alignSelf: "flex-start" }}>{a.contract_reported_at ? `계약 체결 · ${won(a.contract_amount ?? 0)}` : "계약 진행"}</span>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", alignSelf: "flex-start" }}>
+                  {!a.contract_reported_at && <Link href={`/cro/awards/${a.id}/contract`} className="b2 bsm">계약서(안)</Link>}
+                  <span className={`pill ${a.contract_reported_at ? "pill--ok" : "pill--tint"}`}>{a.contract_reported_at ? `계약 체결 · ${won(a.contract_amount ?? 0)}` : "계약 진행"}</span>
+                </div>
               </div>
 
               <div className="note note--tint" style={{ flexDirection: "column", gap: 6 }}>

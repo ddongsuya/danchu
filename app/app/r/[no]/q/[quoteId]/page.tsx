@@ -16,6 +16,7 @@ import { ScheduleGantt } from "@/components/ScheduleGantt";
 import { loadDetail } from "@/lib/detail-data";
 import { designOfStored, explainOf } from "@/lib/catalog";
 import { DETAIL_STATUS_LABEL } from "@/lib/detail-quote";
+import { submittedDoc } from "@/lib/quote-doc-db";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   // 2차 상세 견적 (0042): 이 기관에 상세 조건을 보냈으면 회신을 1차 옆에 보인다
   const second = (await loadDetail(rfq.id))?.targets.find((t) => t.quoteId === q.id) ?? null;
   const selectable = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status) && quoteSelectable(q);
+  // 기관이 견적서 툴로 만든 견적서가 제출한 견적과 같으면 기관 양식으로도 보인다
+  const doc = await submittedDoc(q);
 
   return (
     <>
@@ -82,6 +85,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
         </div>
         <div className="ph__actions">
           {q.pdf_path && <a href={`/api/quotes/${q.id}/pdf`} className="b2">견적서 원본(PDF)</a>}
+          {doc && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/doc`} className="b2">기관 견적서</Link>}
           {selectable && <Link href={`/app/r/${rfq.rfq_no}/q/${q.id}/select?rev=${q.revision}`} className="b1 only-wide">이 기관 선택</Link>}
           {rfq.selected_quote_id === q.id && <span className="pill pill--ok">선택한 기관</span>}
         </div>
