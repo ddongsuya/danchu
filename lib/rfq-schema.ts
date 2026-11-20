@@ -616,6 +616,9 @@ export const DETAILS: Record<Cat, Field[]> = {
     },
     { id: "species", type: "chips", label: "동물종", options: SPECIES },
     { id: "design", type: "chips", label: "설계", options: ["단회", "반복"] },
+    // 검체 수 = 군 수 × 군당 마릿수 × 채혈 시점 × 검체 종류. 견적서가 이 두 칸으로 기관 표준 군을 맞춘다 (2026-11-21 사용자 결정)
+    { id: "groupCount", type: "text", label: "군 수", placeholder: "예: 2 (IV 1군, PO 1군)" },
+    { id: "perGroup", type: "text", label: "군당 마릿수", placeholder: "예: 3" },
     {
       id: "matrix",
       type: "chips",

@@ -6,11 +6,11 @@ import { loadCatalog } from "./catalog-db";
 import { pickVariant, prefillRow, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
-  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, docMatchesQuote, nextDocNo, priceOf, searchDocs, testFromCatalog, testKind,
+  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, docMatchesQuote, nextDocNo, priceOf, searchDocs, testFromCatalog, testKind, toxFromRequest,
   type DocData, type DocHit, type RequestPrice, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
-import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
+import { cleanKd, COST_KEYS, firstInt, newPdGroup, parseCount, parseGroups, parseTimes, pkGroupsFromRequest, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
 import { snapFor } from "./pd-quote";
@@ -238,12 +238,20 @@ async function requestData(orgId: string, orgName: string, a: RequestInput): Pro
   for (const line of a.rows) {
     const picked = pickVariant(byKey.get(rowKey(line)) ?? [], line, a.payload);
     if (!picked || !picked.row.available) continue;
-    checks.set(line.seq, prefillRow(line, picked, a.payload).checks);
+    const ck = prefillRow(line, picked, a.payload).checks;
     // 대표가 아닌 동물종·경로로 맞으면 표준가를 그대로 쓰지 않는다 (기관이 금액을 적는다)
     const other = picked.mismatch.includes(PRICE_CHECK_SPECIES) || picked.mismatch.includes(PRICE_CHECK_ROUTE);
     const base = other ? { ...picked.row, std_price: null } : picked.row;
     const full = (byKey.get(rowKey(line)) ?? []).find((r) => r.id === picked.row.id) ?? picked.row;
-    data.tests.push(withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload));
+    let test = withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload);
+    // 독성: 회복군·TK 같은 요청 조건을 기관 단가로 설계에 옮기고, 옮긴 칸은 기관 확인에서 뺀다 (2026-11-21)
+    if (testKind(test) === "tox") {
+      const get = (id: string) => { const v = a.payload[`${line.category}.${id}`]; return typeof v === "string" ? v : undefined; };
+      const r = toxFromRequest(test, { recovery: get("recovery"), tk: get("tk"), formulation: get("formulation"), histopath: get("histopath"), exposure: get("exposure") }, picked.row.recovery_per_sex ?? null);
+      test = r.test;
+      checks.set(line.seq, ck.filter((c) => !r.resolved.includes(c)));
+    } else checks.set(line.seq, ck);
+    data.tests.push(test);
   }
   await attachPrices(orgId, data);
   return { data, checks };
@@ -331,6 +339,10 @@ function withRequest(t: DocTest, payload: Values): DocTest {
   }
   if (k === "pk" && t.kd?.pk) {
     const pk = structuredClone(t.kd.pk);
+    // 군 수·군당 마릿수 (2026-11-21 요청서 칸). 검체 수 = 마릿수 합 × 시점 × 검체 종류
+    const groupCount = firstInt(get("groupCount"), 20);
+    const perGroup = firstInt(get("perGroup"), 200);
+    pk.groups = pkGroupsFromRequest(pk.groups, groupCount, perGroup);
     const sampling = get("sampling");
     const n = parseTimes(sampling);
     if (!pk.times.length && sampling) {
@@ -341,7 +353,7 @@ function withRequest(t: DocTest, payload: Values): DocTest {
     if (Array.isArray(mx) && mx.length) pk.matrix = mx.filter((m) => PK_MATRIX.includes(m));
     const design = get("design");
     if (design && !pk.types.length) pk.types = design.split(", ").map((d) => (d === "단회" ? "단회 PK" : d === "반복" ? "반복 PK" : d)).filter((d) => PK_TYPES.includes(d));
-    const orig: Orig = { lines: lines([["동물종", get("species")], ["설계", design], ["검체", get("matrix")], ["채혈 시기·횟수", sampling], ["분석 장비", get("instrument")]]), ...(n ? { times: n } : {}) };
+    const orig: Orig = { lines: lines([["동물종", get("species")], ["설계", design], ["군 수", get("groupCount")], ["군당 마릿수", get("perGroup")], ["검체", get("matrix")], ["채혈 시기·횟수", sampling], ["분석 장비", get("instrument")]]), ...(groupCount ? { groups: groupCount } : {}), ...(perGroup ? { perGroup } : {}), ...(n ? { times: n } : {}) };
     return { ...t, kd: { ...t.kd, pk }, orig };
   }
   if (k === "other" && t.kd?.other) {

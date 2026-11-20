@@ -176,6 +176,27 @@ export function pdLanes(): Lane[] {
 export const newPdGroup = (role: PdRole, n: number): PdGroup => ({ id: id("g"), label: role === "test" ? "시험물질군" : `${PD_ROLE[role]}군`, role, treat: "", n, dose: "" });
 export const newPkGroup = (n: number): PkGroup => ({ id: id("g"), label: "투여군", route: "", dose: "", n });
 
+/** "2", "2군", "IV 1군, PO 1군" → 첫 정수(1~20). 없으면 undefined */
+export function firstInt(t: string, max: number): number | undefined {
+  const m = t.match(/\d{1,4}/);
+  const n = m ? Number(m[0]) : NaN;
+  return Number.isInteger(n) && n >= 1 && n <= max ? n : undefined;
+}
+
+/**
+ * 의뢰자가 적은 군 수·군당 마릿수로 약동학 군을 맞춘다 (순수 함수).
+ * 기관 표준 군(이름·경로·용량)은 앞에서부터 그대로 두고, 모자라면 군을 더하고 남으면 뒤에서 뺀다.
+ * 군당 마릿수를 적었으면 모든 군에 그 수를 쓴다. 둘 다 없으면 표준 그대로.
+ */
+export function pkGroupsFromRequest(groups: PkGroup[], count?: number, perGroup?: number): PkGroup[] {
+  if (!count && !perGroup) return groups;
+  const target = count ?? groups.length;
+  const n = perGroup ?? groups[0]?.n ?? 0;
+  const out = groups.slice(0, target).map((g) => ({ ...g, n: perGroup ?? g.n }));
+  while (out.length < target) out.push(newPkGroup(n));
+  return out;
+}
+
 /* ── 금액 ───────────────────────────────────────────── */
 
 const v0 = (x: number | null | undefined) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
@@ -389,8 +410,10 @@ export function parseTimes(t: string): number | undefined {
   const nums = t.replace(/총.*$/, "").match(/\d+(\.\d+)?/g);
   return nums && nums.length >= 2 ? nums.length : undefined;
 }
-/** "랫드 혈청, 40개" → 40 */
+/** "랫드 혈청, 40개" → 40. 단위가 없어도 숫자가 하나뿐이면 그 수 ("혈청 40" → 40) */
 export function parseCount(t: string): number | undefined {
   const m = t.match(/(\d{1,5})\s*(개|건|검체|샘플|시료|마리)/);
-  return m ? Number(m[1]) : undefined;
+  if (m) return Number(m[1]);
+  const nums = t.match(/\d+(\.\d+)?/g) ?? [];
+  return nums.length === 1 && /^\d{1,5}$/.test(nums[0]) && Number(nums[0]) > 0 ? Number(nums[0]) : undefined;
 }

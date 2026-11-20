@@ -307,6 +307,50 @@ export function priceForCond(ch: Choices, species: string, route: string): numbe
   return hit ? hit.price : null;
 }
 
+/** 독성 요청 조건 중 견적서 설계로 옮기는 칸 (요청서 `<분야>.<칸>` 값) */
+export type ToxRequest = { recovery?: string; tk?: string; formulation?: string; histopath?: string; exposure?: string };
+
+/** 켜면 금액이 붙는 평가항목: 요청서 칸 → 평가항목 이름 앞부분 → 회신 초안 확인 문구(lib/catalog prefillRow 와 같은 글) */
+const TOX_OPTIONS: [keyof ToxRequest, string, string][] = [
+  ["tk", "TK", "TK 병행"],
+  ["formulation", "조제물분석", "조제물분석"],
+  ["histopath", "조직병리", "조직병리"],
+  ["exposure", "노출증명", "노출증명"],
+];
+
+/**
+ * 의뢰자의 독성 조건을 견적서 설계에 옮긴다 (순수 함수, 2026-11-21). 금액은 기관 단가(testLines)로만 바뀐다.
+ * - 회복시험: 요청이 "2주·4주"이고 기관 표준에 회복군이 없으면, 기관이 정한 회복 마릿수(recoveryPerSex)로 대조군·고용량군(처음·마지막 군)에 둔다.
+ *   기관이 회복 마릿수를 정하지 않았거나 주수만 다르면 옮기지 않는다(기관 확인으로 남는다). 요청이 "없음"이면 회복 동물을 뺀다.
+ * - TK·조제물분석·조직병리·노출증명 "포함": 표준가에 없으면 같은 이름의 추가 항목을 켠다. 그런 항목이 없으면 기관 확인으로 남는다.
+ * resolved: 옮겨서 더는 기관 확인이 필요 없는 확인 문구
+ */
+export function toxFromRequest(t: DocTest, req: ToxRequest, recoveryPerSex: number | null): { test: DocTest; resolved: string[] } {
+  const next: DocTest = structuredClone(t);
+  const resolved: string[] = [];
+  const rec = (req.recovery ?? "").trim();
+  const recWeeks = parseInt(rec, 10);
+  const hasRec = next.groups.some((g) => g.rm + g.rf > 0);
+  if (next.groups.length && Number.isFinite(recWeeks) && recWeeks > 0 && !hasRec && recoveryPerSex && recoveryPerSex > 0) {
+    const last = next.groups.length - 1;
+    next.groups = next.groups.map((g, i) => (i === 0 || i === last ? { ...g, rm: recoveryPerSex, rf: recoveryPerSex } : g));
+    next.cond = { ...next.cond, recovery: rec };
+    resolved.push(`회복군 ${rec}`);
+  } else if (rec === "없음" && hasRec) {
+    next.groups = next.groups.map((g) => ({ ...g, rm: 0, rf: 0 }));
+    next.cond = { ...next.cond, recovery: "없음" };
+  }
+  for (const [key, name, label] of TOX_OPTIONS) {
+    if (req[key] !== "포함") continue;
+    if (next.evals.some((e) => e.base && e.name.startsWith(name))) continue;
+    const opt = next.evals.find((e) => !e.base && e.name.startsWith(name));
+    if (!opt) continue;
+    opt.on = true;
+    resolved.push(label);
+  }
+  return { test: next, resolved };
+}
+
 /** 견적서에서 동물종·경로를 바꾼다. 표준가와 비교 기준도 그 조건으로 옮겨서, 달라진 금액은 표준가에 반영된다 */
 export function switchCond(t: DocTest, p: { species?: string; route?: string }): DocTest {
   const ch = t.std.choices;

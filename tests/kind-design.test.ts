@@ -138,6 +138,9 @@ describe("의뢰자 원안 읽기", () => {
   });
   it("시료 수", () => {
     expect(parseCount("랫드 혈청, 40개")).toBe(40);
+    expect(parseCount("혈청 40")).toBe(40);
+    expect(parseCount("혈청 2종, 40")).toBeUndefined();
+    expect(parseCount("혈청")).toBeUndefined();
   });
 });
 
