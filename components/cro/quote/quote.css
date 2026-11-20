@@ -1008,3 +1008,6 @@
 .qp__gn { display: inline-flex; align-items: baseline; gap: 2px; }
 .qp__t .qp__nw { white-space: nowrap; padding-right: 16px; }
 .qp__t .qp__ev { width: 28%; }
+
+/* 편집 화면: 효력 견적서 4쪽의 시험 구성·평가항목은 요청 반영 화면에서 고친다 */
+.qed__pdfix { max-width: 794px; width: 100%; margin: 0 auto; display: flex; justify-content: flex-end; }

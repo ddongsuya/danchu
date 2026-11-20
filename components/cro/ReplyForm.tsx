@@ -130,7 +130,8 @@ type Loaded = {
  * 초안은 800ms 뒤 자동 저장. 제출본은 자동 저장으로 덮지 않고 "제출" 버튼으로만 갱신한다.
  */
 /** 견적서 생성 툴(0036)에서 넘어온 금액. 요청의 행 번호마다 시험 합계와 기간 */
-export type DocFill = { docNo: string; href: string; printHref: string; lines: { seq: number; amount: number; weeks: number | null; extra?: Record<string, string | string[]> }[] };
+/** auto: ?doc= 없이 이 요청의 최근 견적서로 채운 것. 기관이 이미 저장한 회신 초안이 있으면 덮어쓰지 않는다 */
+export type DocFill = { docNo: string; href: string; printHref: string; auto?: boolean; lines: { seq: number; amount: number; weeks: number | null; extra?: Record<string, string | string[]> }[] };
 
 /** catalogHref: 시험 목록 링크. null 이면 그 요금제에 시험 목록이 없어 링크를 두지 않는다 */
 export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink, catalogHref = "/cro/catalog" }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string }; catalogHref?: string | null }) {
@@ -178,6 +179,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
   useEffect(() => {
     if (!docFill || !data || filledFromDoc.current || data.expired || data.locked || data.closed || data.declined) return;
     filledFromDoc.current = true;
+    if (docFill.auto && data.draft && !data.draft.prefilled) return;
     const by = new Map(docFill.lines.map((l) => [l.seq, l]));
     let count = 0;
     const next = items.map((it) => {
@@ -372,7 +374,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
           </span>
         </div>
       )}
-      {docLink && !docFill && !readOnly && (
+      {docLink && (!docFill || docApplied === 0) && !readOnly && (
         <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
           표준가와 추가 비용으로 견적서를 만들어 금액을 채울 수 있어요. <Link href={docLink.href} style={{ color: "var(--brand)", fontWeight: 600 }}>{docLink.label}</Link>
         </p>
