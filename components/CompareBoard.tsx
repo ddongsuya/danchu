@@ -5,6 +5,7 @@ import Link from "next/link";
 import { INCL_KEYS } from "@/lib/cro-data";
 import { comma, md, payTerms, won } from "@/lib/format";
 import { quoteKindLabel } from "@/lib/concierge";
+import { compareIncl, oddOnes } from "@/lib/compare-incl";
 import { DETAIL_STATUS_LABEL, type DetailReplyItem, type DetailStatus } from "@/lib/detail-quote";
 
 export type CompareCol = {
@@ -98,31 +99,9 @@ function itemOf(c: CompareCol, seq: number): { main: string; sub: string } {
   return { main: short(amount), sub };
 }
 
-/** 다른 곳과 값이 갈리는 칸. 두 곳 이상이 같은 값을 낸 줄에서만 표시한다 */
-function oddOnes(vals: string[]): boolean[] {
-  const count = new Map<string, number>();
-  for (const v of vals) count.set(v, (count.get(v) ?? 0) + 1);
-  const max = Math.max(...count.values());
-  return vals.map((v) => max >= 2 && (count.get(v) ?? 0) < max);
-}
-
-/** 시험 하나의 포함 항목: 기관마다 갈리는 항목은 줄로, 모두 같은 항목은 한 줄로 묶는다 */
-type IncRow = { key: string; vals: string[]; odd: boolean[] };
-function testIncludes(cols: CompareCol[], seq: number): { diff: IncRow[]; common: string[] } | null {
-  const lists = cols.map((c) => { const it = c.items.find((i) => i.seq === seq); return it && it.avail !== "불가" ? it.includes ?? null : null; });
-  const known = lists.filter((l): l is string[] => !!l);
-  if (!known.length) return null;
-  const keys = [...new Set(known.flat())];
-  const common = keys.filter((k) => known.length === cols.length && known.every((l) => l.includes(k)));
-  const diff = keys.filter((k) => !common.includes(k)).map((key) => {
-    const vals = lists.map((l) => (l ? (l.includes(key) ? "포함" : "미포함") : "-"));
-    // 갈리는 칸 표시는 견적이 있는 기관끼리만 견준다
-    const idx = vals.map((v, i) => (v === "-" ? -1 : i)).filter((i) => i >= 0);
-    const o = oddOnes(idx.map((i) => vals[i]));
-    const odd = vals.map((_, i) => { const k = idx.indexOf(i); return k >= 0 && o[k]; });
-    return { key, vals, odd };
-  });
-  return { diff, common };
+/** 시험 하나의 포함 항목 (불가 줄은 견주지 않는다) */
+function testIncludes(cols: CompareCol[], seq: number) {
+  return compareIncl(cols.map((c) => { const it = c.items.find((i) => i.seq === seq); return it && it.avail !== "불가" ? it.includes ?? null : null; }));
 }
 
 export function CompareBoard({
