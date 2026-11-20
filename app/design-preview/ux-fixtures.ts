@@ -88,3 +88,30 @@ export const UX_SCHEDULE = {
     { seq: 102, name: "예시 단계 B", weeks: "3", after: [101] },
   ],
 };
+
+/** 시험별 포함 항목 시안(D3)용 임의 값. 기관·금액·항목은 모두 가상의 값이다 */
+export const INC_ROWS: CompareRowDef[] = [
+  { seq: 1, name: "반복투여 4주", category: "일반독성" },
+  { seq: 2, name: "복귀돌연변이", category: "유전독성" },
+  { seq: 3, name: "소핵시험", category: "유전독성" },
+];
+const incBase = (id: string, name: string, total: number): CompareCol => ({
+  ...UX_COLS[0], id, name, total, includes: ["임상병리", "조직병리(검경 포함)", "통계분석", "QA 점검"], note: null, hasPdf: false, items: [],
+});
+export const INC_COLS: CompareCol[] = [
+  { ...incBase("inc-a", "예시 기관 A", 48000000), items: [
+    { seq: 1, avail: "가능", amount: 40000000, weeks: 12, includes: ["일반증상", "체중·사료섭취량", "혈액학", "혈액생화학", "부검·장기무게", "조직병리", "TK 분석"] },
+    { seq: 2, avail: "가능", amount: 4500000, weeks: 5, includes: ["균주 5종", "대사활성화(S9)"] },
+    { seq: 3, avail: "가능", amount: 3500000, weeks: 6, includes: ["골수 도말"] },
+  ] },
+  { ...incBase("inc-b", "예시 기관 B", 43000000), items: [
+    { seq: 1, avail: "가능", amount: 36000000, weeks: 11, includes: ["일반증상", "체중·사료섭취량", "혈액학", "혈액생화학", "부검·장기무게", "조직병리", "안과검사"] },
+    { seq: 2, avail: "가능", amount: 4000000, weeks: 4, includes: ["균주 5종", "대사활성화(S9)"] },
+    { seq: 3, avail: "가능", amount: 3000000, weeks: 6, includes: ["골수 도말"] },
+  ] },
+  { ...incBase("inc-c", "예시 기관 C", 51000000), items: [
+    { seq: 1, avail: "조건부 가능", amount: 42000000, weeks: 13, includes: ["일반증상", "체중·사료섭취량", "혈액학", "혈액생화학", "부검·장기무게", "조직병리", "TK 분석", "안과검사"] },
+    { seq: 2, avail: "가능", amount: 5000000, weeks: 5, includes: ["균주 5종", "대사활성화(S9)"] },
+    { seq: 3, avail: "가능", amount: 4000000, weeks: 7, includes: ["골수 도말"] },
+  ] },
+];
