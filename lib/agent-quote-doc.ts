@@ -375,3 +375,52 @@ export function submitFromDoc(data: DocData, items: ReplyItem[], rowNames: Map<n
   const overridden = next.filter((it) => it.avail !== "불가" && (before.get(it.seq) ?? "") !== "" && before.get(it.seq) !== it.amount).map((it) => it.seq);
   return { ok: true, items: next, overridden };
 }
+
+/* ── 제출 미리보기 (2026-11-20, 앱 견적 확인 카드) ── */
+
+export type SubmitPreviewRow = {
+  seq: number;
+  /** quote_submit 이 이 줄에 넣을 금액(할인을 나눠 반영, 부가세 별도). 견적서에 금액이 없으면 null */
+  amount: number | null;
+  /** 견적서 기간(주). null 이면 회신 줄의 기간을 그대로 쓴다 */
+  weeks: number | null;
+  /** 의뢰자에게 함께 가는 설계 설명·세부 칸(replyExtra) */
+  extra: Record<string, string>;
+  /** 이 줄에 이어진 견적서 시험. manual: 시험 목록·단가표에 금액이 없어 사람이 넣는 줄(quote_doc_set_amount) */
+  tests: { uid: string; title: string; total: number; manual: boolean }[];
+};
+export type SubmitPreview = {
+  rows: SubmitPreviewRow[];
+  discount: number;
+  /** 요청서와 시험 이름이 달라진 줄(제출이 막힌다) */
+  mismatched: number[];
+  /** 요청 줄에 이어지지 않은 견적서 시험(제출에 들어가지 않는다) */
+  unlinked: string[];
+};
+
+/**
+ * quote_submit(submitFromDoc)이 줄마다 채울 금액·기간·설계 설명을 같은 계산(replyFromDoc)으로 미리 낸다.
+ * 앱 확인 카드는 이 값을 그대로 보이고, 제출 때 견적서 판(updatedAt)을 함께 보내 그사이 바뀌었으면 막는다(사람이 본 금액만 나간다).
+ */
+export function submitPreview(data: DocData, rowNames: Map<number, string>): SubmitPreview {
+  const seqs = [...rowNames.keys()];
+  const r = replyFromDoc(data, seqs.map((seq) => ({ seq, avail: "가능", amount: "", weeks: "" })));
+  const filled = new Set(r.filled);
+  const mismatched = [...new Set(data.tests.filter((t) => typeof t.rfqSeq === "number" && t.item && rowNames.has(t.rfqSeq) && rowNames.get(t.rfqSeq) !== t.item).map((t) => t.rfqSeq as number))];
+  const rows = r.items.map((it): SubmitPreviewRow => {
+    const ex = filled.has(it.seq) && it.design?.extra && typeof it.design.extra === "object" ? (it.design.extra as Record<string, unknown>) : {};
+    return {
+      seq: it.seq,
+      amount: filled.has(it.seq) ? Number(it.amount) : null,
+      weeks: filled.has(it.seq) && it.weeks ? Number(it.weeks) : null,
+      extra: Object.fromEntries(Object.entries(ex).filter((e): e is [string, string] => typeof e[1] === "string")),
+      tests: data.tests.filter((t) => t.rfqSeq === it.seq).map((t) => ({ uid: t.uid, title: t.title || t.item, total: testLines(t).total, manual: !hasCatalogPrice(t) })),
+    };
+  });
+  return {
+    rows,
+    discount: docTotals(data).discount,
+    mismatched,
+    unlinked: data.tests.filter((t) => typeof t.rfqSeq !== "number" || !rowNames.has(t.rfqSeq)).map((t) => t.title || t.item),
+  };
+}

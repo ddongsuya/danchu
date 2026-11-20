@@ -175,3 +175,29 @@ describe("제출 금액은 견적서 계산값만", () => {
     expect(r).toEqual({ ok: false, error: "mismatched", seqs: [1] });
   });
 });
+
+describe("제출 미리보기", () => {
+  const names = new Map([[1, "반복투여 독성"], [2, "특수 분석"]]);
+  it("제출이 채울 금액과 같다: 할인을 줄마다 나누고, 금액 없는 줄은 null, 사람이 넣는 줄을 알린다", async () => {
+    const { submitPreview, submitFromDoc } = await import("@/lib/agent-quote-doc");
+    const d = setManualAmount(doc(), { uid: "tb", amount: 10_000_000, discount: 5_000_000 }) as DocData;
+    d.tests[1].item = "특수 분석";
+    const p = submitPreview(d, names);
+    const r = submitFromDoc(d, [item(1, { avail: "가능" }), item(2, { avail: "가능" })], names);
+    if (!r.ok) throw new Error(r.error);
+    expect(p.rows.map((x) => x.amount)).toEqual(r.items.map((x) => Number(x.amount)));
+    expect(p.rows.reduce((a, x) => a + (x.amount ?? 0), 0)).toBe(45_000_000);
+    expect(p.discount).toBe(5_000_000);
+    expect(p.rows[1].tests).toEqual([{ uid: "tb", title: "특수 분석", total: 10_000_000, manual: true }]);
+    expect(p.rows[0].tests[0].manual).toBe(false);
+    expect(submitPreview(doc(), names).rows[1].amount).toBeNull();
+  });
+  it("이름이 달라진 줄과 요청 줄에 이어지지 않은 시험", async () => {
+    const { submitPreview } = await import("@/lib/agent-quote-doc");
+    const d = doc();
+    d.tests.push({ ...blankTest("추가 분석"), uid: "tc", rfqSeq: null as unknown as number });
+    const p = submitPreview(d, new Map([[1, "단회투여 독성"], [2, "특수 분석"]]));
+    expect(p.mismatched).toEqual([1]);
+    expect(p.unlinked).toEqual(["추가 분석"]);
+  });
+});
