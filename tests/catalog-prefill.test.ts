@@ -107,3 +107,32 @@ describe("카탈로그 초안은 참여 뒤에만 (0023)", () => {
     expect(got?.draft?.steps).toEqual([{ seq: 101, name: "단계 A", weeks: "3", after: [] }]);
   });
 });
+
+describe("동물을 쓰지 않는 시험은 투여경로를 맞춰 보지 않는다", () => {
+  const ames: CatalogItem = { key: "유전독성::복귀돌연변이(Ames, TG 471)", category: "유전독성", item: "복귀돌연변이(Ames, TG 471)" };
+  const amesRow = { seq: 1, category: "유전독성", name: "복귀돌연변이(Ames, TG 471)", cond: "" };
+  it("시험 목록 경로가 해당 없음이면 요청 경로가 경구여도 금액을 채운다", () => {
+    const v = newVariant(ames, { species: ["in vitro(동물 없음)"], route: "해당 없음", routes: ["해당 없음"], price_min: 6_600_000, weeks: 5, source: "manual" });
+    const picked = pickVariant([v], amesRow, { route: "경구(PO)" });
+    expect(picked?.mismatch).not.toContain("투여경로");
+    expect(prefillRow(amesRow, picked, {}).amount).toBe("6600000");
+  });
+  it("in vitro 시험이면 시험 목록에 경로를 적어 두었어도 비교하지 않는다", () => {
+    const v = newVariant(ames, { species: [], route: "경구(PO)", routes: ["경구(PO)"], price_min: 6_600_000, weeks: 5, source: "manual" });
+    const picked = pickVariant([v], amesRow, { route: "정맥(IV)" });
+    expect(picked?.mismatch).not.toContain("투여경로");
+    expect(picked?.mismatch).not.toContain(PRICE_CHECK_ROUTE);
+  });
+  it("같은 분야에서 고른 동물종(소핵 랫드)을 in vitro 시험에 대 보지 않는다", () => {
+    const v = newVariant(ames, { species: ["in vitro(동물 없음)"], route: "해당 없음", routes: ["해당 없음"], price_min: 6_600_000, weeks: 5, source: "manual" });
+    const picked = pickVariant([v], amesRow, { "유전독성.species": ["랫드"], route: "경구(PO)" });
+    expect(picked?.mismatch).toEqual([]);
+    expect(prefillRow(amesRow, picked, {}).amount).toBe("6600000");
+  });
+  it("동물 시험은 그대로 경로를 비교한다", () => {
+    const v = newVariant(item, { species: ["SD 랫드"], route: "해당 없음", routes: ["해당 없음"], price_min: 5_000_000, weeks: 4, source: "manual" });
+    expect(pickVariant([v], row, { route: "경구(PO)" })?.mismatch).not.toContain("투여경로");
+    const w = newVariant(item, { species: ["SD 랫드"], route: "정맥(IV)", routes: ["정맥(IV)"], price_min: 5_000_000, weeks: 4, source: "manual" });
+    expect(pickVariant([w], row, { route: "경구(PO)" })?.mismatch).toContain("투여경로");
+  });
+});
