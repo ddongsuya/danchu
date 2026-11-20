@@ -22,6 +22,8 @@ import { buildAgentReport, buildBrief, reportRange } from "./agent-brief";
 import { loadCrmSynced } from "./crm";
 import { getRfqByNo, getRfqDetail, listNotifications, ownsRfq } from "./data";
 import { comparisonOpened } from "./reply-window";
+import { compareView } from "./compare-view";
+import { loadDetail } from "./detail-data";
 import { awardForRfq } from "./contract-draft-db";
 import { submittedDoc } from "./quote-doc-db";
 import { getSupabaseAdmin } from "./supabase";
@@ -421,6 +423,19 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       if (!doc) return { status: 404, body: { error: "doc_missing" } };
       const v = docView(doc.head, doc.data);
       return { status: 200, body: { croName: q.cro_name, docNo: v.head.docNo, validUntil: v.head.validUntil, tests: v.tests.map(({ uid: _u, source: _s, ...t }) => t), totals: v.totals, terms: v.terms, path: `/app/r/${rfq.rfq_no}/q/${q.id}/doc` } };
+    },
+  },
+  {
+    name: "compare_view", role: "requester", scope: "rfq", level: "read", area: "quote", label: "비교표 보기", tool: true,
+    description: "비교표가 열린 뒤 기관별 견적을 회신 도착 순으로 읽는다(총액·기간·착수·조건·시험별 금액·포함 항목). 시험마다 기관 간 갈리는 포함 항목(diff)과 모두 같은 항목(common)을 함께 준다. 순위·추천은 없다.",
+    input: obj({}),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      if (!comparisonOpened(rfq)) return { status: 409, body: { error: "not_open" } };
+      const d = await getRfqDetail(rfq);
+      const detail = await loadDetail(rfq.id);
+      return { status: 200, body: compareView(rfq, d.quotes, detail) as unknown as Record<string, unknown> };
     },
   },
   {
@@ -861,7 +876,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.7";
+export const CATALOG_VERSION = "2026-11-20.8";
 
 /* ── 실행과 기록 ── */
 

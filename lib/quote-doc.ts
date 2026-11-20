@@ -533,9 +533,12 @@ export function kindSummary(t: DocTest): string {
  * 회신 화면에 넘길 설계 설명 (design.extra). 의뢰자 비교 보고서에 기관 설명으로 나란히 보인다.
  * 효력은 비용 다섯 칸(cost_*)도 넘겨 회신의 비용 구분이 채워진다
  */
-export function replyExtra(t: DocTest): Record<string, string> {
+export function replyExtra(t: DocTest): Record<string, string | string[]> {
   const k = testKind(t);
-  const out: Record<string, string> = {};
+  const out: Record<string, string | string[]> = {};
+  // 이 시험 견적에 켠 평가·분석 항목 (비교표 시험별 포함 항목, D3). 회신 설계 칸이 받는 배열 한도 20개·80자
+  const incl = testIncl(t);
+  if (incl.length) out.incl = incl;
   if (t.why) out.exp_why = t.why.slice(0, 300);
   if (t.asks?.length) out.exp_asks = t.asks.join(" / ").slice(0, 300);
   Object.assign(out, kdExtra(k, t.kd, t.std.kd));
@@ -544,6 +547,11 @@ export function replyExtra(t: DocTest): Record<string, string> {
     if (opts.length) out.exp_options = opts.join(", ").slice(0, 300);
   }
   return out;
+}
+
+/** 견적서에서 켠 평가·분석 항목 이름 (기본 포함과 옵션 모두). 중복은 하나로 */
+export function testIncl(t: DocTest): string[] {
+  return [...new Set(t.evals.filter((e) => e.on && e.name.trim()).map((e) => e.name.trim().slice(0, 80)))].slice(0, 20);
 }
 
 /** 표준과 다른 시험 조건 칸 이름 */
