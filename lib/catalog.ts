@@ -6,7 +6,7 @@
  * 한 항목 아래 조합은 여러 개일 수 있다 (예: 단회투여독성 → 랫드·경구·TG 423 / 비글·정맥·용량증량법).
  */
 import { CATS, DETAILS, type Cat, type Field, type Values } from "./rfq-schema";
-import type { QuoteLineDef } from "./quote-items";
+import { isInVitroItem, type QuoteLineDef } from "./quote-items";
 import { EFFICACY_CAT, costLines, modelsOf } from "./efficacy";
 import { kdExtra, kindOfCategory, type KindDesign } from "./kind-design";
 
@@ -339,6 +339,7 @@ function modelMatch(req: string[], m: string | null): boolean | null {
 /** 표준가가 대표(첫 번째) 동물종·경로 기준이라, 다른 동물종·경로로 맞으면 금액을 기관이 확인한다 */
 export const PRICE_CHECK_SPECIES = "동물종별 금액 확인";
 export const PRICE_CHECK_ROUTE = "투여경로별 금액 확인";
+const NO_ROUTE = "해당 없음";
 
 /**
  * 요청 조건과 가장 가까운 시험을 고른다. 없으면 undefined.
@@ -347,7 +348,9 @@ export const PRICE_CHECK_ROUTE = "투여경로별 금액 확인";
 export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: Values): { row: CatalogRow; mismatch: string[] } | undefined {
   if (!variants.length) return undefined;
   const c = row.category;
-  const reqSpecies = asList(condOf(payload, c, "species"));
+  const noRoute = isInVitroItem(row.name);
+  // 동물종은 분야 단위로 고르므로, 같은 분야 in vivo 시험에서 고른 종을 in vitro 시험에 대 보지 않는다
+  const reqSpecies = noRoute ? [] : asList(condOf(payload, c, "species"));
   const reqRoute = typeof payload.route === "string" ? payload.route : "";
   const reqMethod = asList(condOf(payload, c, "method"));
   const reqGlp = condOf(payload, c, "glpLevel");
@@ -355,9 +358,10 @@ export function pickVariant(variants: CatalogRow[], row: QuoteLineDef, payload: 
   for (const v of variants) {
     let score = v.available ? 0 : -100;
     const mismatch: string[] = [];
-    const routes = v.routes?.length ? v.routes : v.route ? [v.route] : [];
+    // 동물을 쓰지 않는 시험(Ames 등)이나 경로를 "해당 없음"으로 적은 시험은 요청서의 투여경로와 맞춰 보지 않는다
+    const routes = noRoute ? [] : (v.routes?.length ? v.routes : v.route ? [v.route] : []).filter((x) => x !== NO_ROUTE);
     let species = v.species.slice(0, 1);
-    let route = routes[0] ?? null;
+    let route = routes[0] ?? v.route ?? null;
     const sm = speciesMatch(reqSpecies, v.species);
     if (sm === true) {
       score += 4;
