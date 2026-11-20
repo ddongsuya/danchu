@@ -28,7 +28,7 @@ import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
 import { awardForOrgByRfq, draftForAward, draftSentAt, sendDraft } from "./contract-draft-db";
 import { createDocFromRequest, docForInvite, findDocs, loadDoc, priceRequest, requestInputFor, saveDoc, type RequestInput } from "./quote-doc-db";
-import { applyDocEdits, applyReplyFields, docView, parseDocEdits, replyFromDoc, setManualAmount, type EditError } from "./agent-quote-doc";
+import { applyDocEdits, applyReplyFields, docView, parseDocEdits, replyFromDoc, setManualAmount, submitFromDoc, type EditError } from "./agent-quote-doc";
 import { loadQuote } from "./quote-load";
 import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
@@ -52,6 +52,10 @@ import { POST as notificationsRead } from "@/app/api/notifications/read/route";
 import { POST as catalogSave } from "@/app/api/cro/catalog/route";
 import { POST as substancePost } from "@/app/api/awards/[id]/substance/route";
 import { POST as supportPost } from "@/app/api/support/route";
+import { GET as fileGet } from "@/app/api/files/[id]/route";
+import { runAsAgent } from "./agent-context";
+import { extractText, fileKind, maskForCro } from "./agent-file-text";
+import { anonymousFileLabel } from "./request-policy";
 import { loadCatalog } from "./catalog-db";
 import { loadCrm } from "./crm";
 import { catalogPatch, crmFind } from "./agent-cro-tools";
@@ -224,6 +228,75 @@ const supportRun = async (c: ActCtx): Promise<ActOut> => callAs(c.s, c.req, supp
 
 const QNA_INPUT = obj({ body: str("질의·답변 본문", 2000), questionId: str("답변할 질의 id(답변일 때)", 64) });
 
+/**
+ * 요청 첨부 읽기 (2026-11-20 사용자 결정: AI가 첨부 내용까지 읽는다).
+ * 권한은 웹 내려받기(/api/files)와 같다: 의뢰자는 내 요청, 기관은 참여한 요청(CDA·2차 대상·참여 중지 규칙 그대로).
+ * 선정 전 기관에게는 파일 이름을 "첨부 n"으로, 본문의 의뢰자 회사명·담당자 이름·연락처를 가린다.
+ */
+const FILE_INPUT = obj({ fileId: { type: "string", format: "uuid", description: "읽을 첨부 id. 없으면 첨부 목록만" } });
+async function fileTextRun(c: ActCtx): Promise<ActOut> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { status: 503, body: { error: "unavailable" } };
+  const { data: rfq } = await sb.from("rfq_requests").select("id, user_id, company, contact_name, selected_quote_id, payload").eq("rfq_no", c.no!).maybeSingle();
+  if (!rfq) return notFound();
+  let hide = false;
+  let detailOk = true;
+  if (c.s.role === "requester") {
+    if (!rfq.user_id || rfq.user_id !== c.s.userId) return notFound();
+  } else {
+    const inv = await inviteForOrg(c.no!, c.s.org!.id);
+    if (!inv) return notFound();
+    const [{ data: q }, { data: t }] = await Promise.all([
+      sb.from("cro_quotes").select("id").eq("invite_id", inv.id).maybeSingle(),
+      sb.from("rfq_detail_targets").select("id").eq("invite_id", inv.id).maybeSingle(),
+    ]);
+    hide = !(q && rfq.selected_quote_id === q.id);
+    detailOk = !!t;
+  }
+  const { data: rows } = await sb.from("rfq_files").select("id, file_name, size_bytes, mime_type, scope, created_at").eq("rfq_id", rfq.id).order("created_at");
+  const seen: Record<string, number> = {};
+  const files = (rows ?? []).filter((f) => f.scope !== "detail" || detailOk).map((f) => {
+    const idx = (seen[f.scope] = (seen[f.scope] ?? -1) + 1);
+    return { id: f.id as string, name: hide ? anonymousFileLabel(idx, f.file_name, f.size_bytes) : (f.file_name as string), size: f.size_bytes as number, scope: f.scope as string, kind: fileKind(f.file_name, f.mime_type), raw: f };
+  });
+  const id = typeof c.body.fileId === "string" ? c.body.fileId : "";
+  if (!id) return { status: 200, body: { files: files.map(({ raw: _raw, ...f }) => f) } };
+  const f = files.find((x) => x.id === id);
+  if (!f) return notFound();
+  if (f.kind === "unsupported") return { status: 415, body: { error: "unsupported", file: { id: f.id, name: f.name, kind: f.kind } } };
+  if (await rateLimited("agent:file_text", c.s.userId, 40, 10 * 60)) return { status: 429, body: { error: "too_many" } };
+  // 권한 판단과 내려받기는 웹 라우트를 그대로 쓴다
+  const res = await runAsAgent(c.s, () => fileGet(new Request(new URL(`/api/files/${id}`, c.req.url)), { params: Promise.resolve({ id }) }));
+  let bytes: ArrayBuffer | null = null;
+  if (res.status === 302 || res.status === 307) {
+    const loc = res.headers.get("location");
+    const got = loc ? await fetch(loc).catch(() => null) : null;
+    if (got?.ok) bytes = await got.arrayBuffer();
+  } else if (res.status === 200) bytes = await res.arrayBuffer();
+  else return { status: res.status, body: { error: res.status === 403 ? "forbidden" : res.status === 404 ? "not_found" : "unavailable" } };
+  if (!bytes) return { status: 502, body: { error: "unavailable" } };
+  const file = { id: f.id, name: f.name, kind: f.kind };
+  // 이미지·스캔 PDF 는 글이 없어 파일째 AI에 넘긴다. 가릴 수 없으므로 선정 전 기관에는 주지 않는다
+  const whole = (mime: string, max: number): ActOut => {
+    if (hide) return { status: 403, body: { error: "hidden_before_award", file } };
+    if (bytes!.byteLength > max) return { status: 413, body: { error: "too_large", file } };
+    return { status: 200, body: { file, media: { mime, base64: Buffer.from(bytes!).toString("base64") } } };
+  };
+  if (f.kind === "image") return whole(f.raw.mime_type === "image/png" || /\.png$/i.test(f.raw.file_name) ? "image/png" : "image/jpeg", 5 * 1024 * 1024);
+  const out = await extractText(new Uint8Array(bytes), f.raw.file_name, f.raw.mime_type);
+  if ("error" in out) return { status: out.error === "unsupported" ? 415 : 422, body: { error: out.error, file } };
+  if (out.kind === "pdf" && !out.text) return whole("application/pdf", 10 * 1024 * 1024);
+  let text = out.text;
+  let masked = false;
+  if (hide) {
+    const p = (rfq.payload ?? {}) as Record<string, unknown>;
+    const m = maskForCro(text, [rfq.company, rfq.contact_name, typeof p.dept === "string" ? p.dept : null, typeof p.company === "string" ? p.company : null, typeof p.name === "string" ? p.name : null]);
+    text = m.text;
+    masked = m.masked;
+  }
+  return { status: 200, body: { file, text, chars: out.chars, truncated: out.truncated, masked } };
+}
+
 /* ── 등록부 ── */
 export const AGENT_ACTIONS: readonly ActionDef[] = [
   // ─ 의뢰자 ─
@@ -304,7 +377,7 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   { name: "request_reopen", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "보류한 요청 다시 열기", description: "비교표가 열린 뒤 보류한 요청을 다시 열어 선정할 수 있게 한다.", input: obj({}), run: viaRfq(reopenRfq) },
   {
     name: "request_file_url", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "요청 첨부 올릴 주소",
-    description: "요청서 첨부(또는 2차 상세 견적 첨부)를 올릴 주소를 받는다. 올린 뒤 request_file_done 을 부른다. 파일 내용은 AI 입력에 넣지 않는다.",
+    description: "요청서 첨부(또는 2차 상세 견적 첨부)를 올릴 주소를 받는다. 올린 뒤 request_file_done 을 부른다. 내용은 file_text 로 읽는다.",
     input: obj({ name: str("파일 이름"), size: { type: "integer", minimum: 1 }, type: str("파일 형식", 100), scope: oneOf(["request", "detail"], "첨부 범위") }, ["name", "size"]),
     run: viaRfq(fileUrl),
   },
@@ -345,6 +418,11 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
     },
   },
   { name: "support_send", role: "requester", scope: "org", level: "confirm", area: "brief", label: "단추에 문의", description: "단추 운영자에게 문의를 보낸다. 답변은 계정 이메일로 온다.", input: SUPPORT_INPUT, run: supportRun },
+  {
+    name: "file_text", role: "requester", scope: "rfq", level: "read", area: "intake", label: "첨부 읽기", tool: true,
+    description: "내 요청 첨부의 목록, 또는 한 파일의 글(PDF·한글 hwp/hwpx·Word doc/docx·Excel xls/xlsx·PowerPoint). 3만 자에서 자른다. 이미지와 글 없는 PDF(스캔본)는 media(base64)로 준다.",
+    input: FILE_INPUT, run: fileTextRun,
+  },
   { name: "notifications", role: "requester", scope: "org", level: "read", area: "brief", label: "알림 보기", tool: true, description: "내 알림 최근 30개를 읽는다.", input: NOTI_INPUT, run: myNotifications },
   { name: "notifications_read", role: "requester", scope: "org", level: "auto", area: "brief", label: "알림 읽음", tool: true, description: "알림을 읽음으로 표시한다.", input: NOTI_READ_INPUT, run: async (c) => callAs(c.s, c.req, notificationsRead, {}, c.body) },
 
@@ -451,8 +529,40 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       return typeof r === "string" ? editErr(r) : r;
     }),
   },
-  { name: "quote_submit", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적 제출", description: "견적을 의뢰자에게 제출한다.", input: passthrough("단추 회신 본문"), run: viaInvite(submitQuote, { mark: true }) },
-  { name: "detail_reply", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "2차 회신", description: "2차 상세 요청에 회신한다.", input: passthrough("단추 2차 회신 본문"), run: viaInvite(detailReply) },
+  {
+    name: "quote_submit", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적 제출",
+    description: "견적을 의뢰자에게 제출한다. 금액은 이 요청의 견적서(시험 목록 표준가·추가/차감 단가·효력 단가표 계산과 사람이 넣은 금액)에서 단추가 채운다. 본문 금액은 쓰지 않는다. 견적서가 없으면 doc_missing, 금액 없는 줄은 amount_missing, 시험 이름이 달라진 줄은 mismatched.",
+    input: passthrough("단추 회신 본문"),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got.body.error === "doc_missing" ? { status: 409, body: { error: "doc_missing" } } : got;
+      const items = Array.isArray(c.body.items) ? (c.body.items as import("./cro-data").ReplyItem[]) : null;
+      if (!items || items.some((it) => !it || typeof it.seq !== "number")) return bad();
+      const q = await loadQuote(got.inv.token, { markOpened: false });
+      if (!q) return notFound();
+      const r = submitFromDoc(got.head.data, items, new Map(q.rfq.rows.map((x) => [x.seq, x.name])));
+      if (!r.ok) return { status: 409, body: { error: r.error, seqs: r.seqs, docNo: got.head.head.docNo } };
+      const out = await viaInvite(submitQuote, { mark: true })({ ...c, body: { ...c.body, items: r.items } });
+      return out.status === 200 ? { ...out, body: { ...out.body, docNo: got.head.head.docNo, overridden: r.overridden } } : out;
+    },
+  },
+  {
+    name: "detail_reply", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "2차 회신",
+    description: "2차 상세 요청에 회신한다(mode keep·revise·decline). revise 의 줄 금액은 이 요청의 견적서(2차 조건으로 고친 설계)에서 단추가 채운다. 본문 금액은 쓰지 않는다.",
+    input: passthrough("단추 2차 회신 본문"),
+    run: async (c) => {
+      if (c.body.mode !== "revise") return viaInvite(detailReply)(c);
+      const got = await docFor(c);
+      if ("status" in got) return got.body.error === "doc_missing" ? { status: 409, body: { error: "doc_missing" } } : got;
+      const items = Array.isArray(c.body.items) ? (c.body.items as import("./cro-data").ReplyItem[]) : null;
+      if (!items || items.some((it) => !it || typeof it.seq !== "number")) return bad();
+      const q = await loadQuote(got.inv.token, { markOpened: false });
+      if (!q) return notFound();
+      const r = submitFromDoc(got.head.data, items, new Map(q.rfq.rows.map((x) => [x.seq, x.name])));
+      if (!r.ok) return { status: 409, body: { error: r.error, seqs: r.seqs, docNo: got.head.head.docNo } };
+      return viaInvite(detailReply)({ ...c, body: { ...c.body, items: r.items } });
+    },
+  },
   {
     name: "contract_report", role: "cro", scope: "rfq", level: "confirm", area: "contract", label: "계약 체결 보고", description: "선정 뒤 계약 체결을 단추에 보고한다.", input: passthrough("단추 계약 보고 본문"),
     run: async (c) => {
@@ -657,6 +767,11 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       return { status: 200, body: { invoices: (data ?? []).map((x) => ({ invoiceNo: x.invoice_no, month: x.month, total: x.total, dueDate: x.due_date, paidOn: x.paid_on, state: INVOICE_VIEW_LABEL[invoiceView(x, today)] })), path: "/cro/billing" } };
     },
   },
+  {
+    name: "file_text", role: "cro", scope: "rfq", level: "read", area: "intake", label: "요청 첨부 읽기", tool: true,
+    description: "참여한 요청의 첨부 목록, 또는 한 파일의 글(PDF·한글·Word·Excel·PowerPoint). 선정 전에는 파일 이름이 '첨부 n'이고 본문의 의뢰자 회사명·담당자·연락처를 가린다(masked). 이미지·스캔 PDF 는 가릴 수 없어 선정 전에는 hidden_before_award, 선정 뒤에는 media(base64). 3만 자에서 자른다.",
+    input: FILE_INPUT, run: fileTextRun,
+  },
   { name: "notifications", role: "cro", scope: "org", level: "read", area: "brief", label: "알림 보기", tool: true, description: "내 알림 최근 30개를 읽는다.", input: NOTI_INPUT, run: myNotifications },
   { name: "notifications_read", role: "cro", scope: "org", level: "auto", area: "brief", label: "알림 읽음", tool: true, description: "알림을 읽음으로 표시한다.", input: NOTI_READ_INPUT, run: async (c) => callAs(c.s, c.req, notificationsRead, {}, c.body) },
   {
@@ -706,7 +821,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.5";
+export const CATALOG_VERSION = "2026-11-20.6";
 
 /* ── 실행과 기록 ── */
 
