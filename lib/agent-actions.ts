@@ -24,7 +24,9 @@ import { getRfqByNo } from "./data";
 import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
 import { awardForOrgByRfq, draftForAward, draftSentAt, sendDraft } from "./contract-draft-db";
-import { createDocFromRequest, docForInvite, findDocs, priceRequest, requestInputFor, type RequestInput } from "./quote-doc-db";
+import { createDocFromRequest, docForInvite, findDocs, loadDoc, priceRequest, requestInputFor, saveDoc, type RequestInput } from "./quote-doc-db";
+import { applyDocEdits, applyReplyFields, docView, parseDocEdits, replyFromDoc, setManualAmount, type EditError } from "./agent-quote-doc";
+import { loadQuote } from "./quote-load";
 import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
 import { LOST_REASONS, STAGES, STATUSES } from "./crm-deals";
@@ -56,7 +58,8 @@ export type ActionLevel = "read" | "auto" | "confirm" | "human";
 export type ActionArea = "intake" | "qna" | "quote" | "contract" | "crm" | "calendar" | "report" | "brief" | "price";
 export type CrmKind = "companies" | "contacts" | "deals" | "activities" | "events" | "tasks";
 export type JsonSchema = Record<string, unknown>;
-export type ActOut = { status: number; body: Record<string, unknown> };
+/** before: 실행 기록에 남길 바꾸기 전 모습(응답에는 넣지 않는다) */
+export type ActOut = { status: number; body: Record<string, unknown>; before?: Record<string, unknown> };
 export type ActCtx = { s: AgentSession; req: Request; no: string | null; body: Record<string, unknown> };
 
 export type ActionDef = {
@@ -143,6 +146,44 @@ function viaCrm(kind: string, method: "POST" | "PATCH" = "POST") {
 function withProfile(c: ActCtx, body: Record<string, unknown>): Values {
   const p = c.s.profile;
   return { ...(body as Values), company: p.company ?? "", name: p.name ?? "", dept: p.dept ?? "", phone: p.phone ?? "", email: c.s.email, orgType: (p.org_type ?? body.orgType) as string | undefined };
+}
+
+/** 기관: 이 요청으로 만든 견적서(참여한 초대만) */
+async function docFor(c: ActCtx): Promise<{ inv: { id: string; token: string }; head: Awaited<ReturnType<typeof loadDoc>> & object } | ActOut> {
+  const inv = await inviteForOrg(c.no!, c.s.org!.id);
+  if (!inv) return notFound();
+  const d = await docForInvite(c.s.org!.id, inv.id);
+  if (!d) return { status: 404, body: { error: "doc_missing" } };
+  const got = await loadDoc(c.s.org!.id, d.id);
+  return got ? { inv, head: got } : notFound();
+}
+const editErr = (e: EditError): ActOut => ({ status: e === "not_found" ? 404 : 400, body: { error: e } });
+
+/** 견적서를 판 비교로 저장. 바꾸기 전 모습을 실행 기록에 남긴다 */
+async function saveDocAs(c: ActCtx, got: { head: { head: { id: string; client: string; substance: string; issuedOn: string; validUntil: string | null; memo: string; updatedAt: string }; data: unknown } }, data: unknown, extra: Record<string, unknown>): Promise<ActOut> {
+  const h = got.head.head;
+  const ifUpdatedAt = typeof c.body.updatedAt === "string" ? c.body.updatedAt : "";
+  if (!ifUpdatedAt) return bad();
+  if (ifUpdatedAt !== h.updatedAt) return { status: 409, body: { error: "changed", updatedAt: h.updatedAt } };
+  if (featureError(c.s.org, "branding") && data && typeof data === "object") data = { ...(data as object), layout: null };
+  const r = await saveDoc(c.s.org!.id, h.id, { client: h.client, substance: h.substance, issuedOn: h.issuedOn, validUntil: h.validUntil, memo: h.memo, data }, { ifUpdatedAt });
+  if (!r.ok) return r.changed ? { status: 409, body: { error: "changed" } } : { status: 500, body: { error: "unavailable" } };
+  return { status: 200, body: { ok: true, docId: h.id, updatedAt: r.updatedAt, ...extra }, before: { docId: h.id, updatedAt: h.updatedAt, data: got.head.data } };
+}
+
+/** 기관: 이 요청의 회신 초안(없으면 단추가 만든 초안)을 읽어 고친 뒤 임시 저장한다 */
+async function editDraft(c: ActCtx, edit: (d: { items: import("./cro-data").ReplyItem[]; common: import("./cro-data").ReplyCommon; rows: { seq: number; name: string }[] }) => { items: import("./cro-data").ReplyItem[]; common: import("./cro-data").ReplyCommon; extra?: Record<string, unknown> } | ActOut): Promise<ActOut> {
+  const inv = await inviteForOrg(c.no!, c.s.org!.id);
+  if (!inv) return notFound();
+  const got = await loadQuote(inv.token, { markOpened: false });
+  if (!got?.joined || !got.draft) return { status: 409, body: { error: "not_joined" } };
+  if (got.draft.status === "submitted") return { status: 409, body: { error: "submitted" } };
+  const next = edit({ items: got.draft.items, common: got.draft.common, rows: got.rfq.rows });
+  if ("status" in next) return next;
+  const r = await callAs(c.s, c.req, saveQuote, { token: inv.token }, { items: next.items, note: got.draft.note, common: next.common, steps: got.draft.steps ?? [] }, "PUT");
+  if (r.status !== 200) return r;
+  await markVia("cro_quotes", "invite_id", inv.id);
+  return { status: 200, body: { ok: true, items: next.items.map((i) => ({ seq: i.seq, avail: i.avail, amount: i.amount, weeks: i.weeks, reason: i.reason ?? "" })), common: next.common, ...(next.extra ?? {}) } };
 }
 
 const QNA_INPUT = obj({ body: str("질의·답변 본문", 2000), questionId: str("답변할 질의 id(답변일 때)", 64) });
@@ -247,6 +288,79 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       const doc = await docForInvite(c.s.org!.id, got.input.inviteId);
       return { status: 200, body: { ok: true, docId: r.id, docNo: doc?.docNo ?? null, created: !!r.created, path: `/cro/docs/${r.id}/fill` } };
     },
+  },
+  {
+    name: "quote_doc_get", role: "cro", scope: "rfq", level: "read", area: "quote", label: "견적서 보기", feature: "quote_tool", tool: true,
+    description: "이 요청으로 만든 견적서의 시험 줄(조건·군 구성·옵션·기간), 단추가 계산한 금액, 저장 판(updatedAt)을 읽는다. source=manual 이고 금액 0인 줄은 시험 목록·단가표에 맞는 항목이 없어 담당자가 금액을 넣어야 한다.",
+    input: obj({}),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got;
+      return { status: 200, body: docView(got.head.head, got.head.data) as unknown as Record<string, unknown> };
+    },
+  },
+  {
+    name: "quote_doc_edit", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적서 설계 고치기", feature: "quote_tool",
+    description: "견적서의 설계(군별 동물 수, 조건, 옵션 켜기·끄기, 수량, 기간, 고친 이유, 확인할 것, 거래 조건 글)만 바꾼다. 금액 칸은 받지 않고, 바꾸기 전·후 금액은 단추가 계산해 돌려준다. updatedAt 이 지금 판과 다르면 409 changed.",
+    input: obj({ updatedAt: str("quote_doc_get 의 updatedAt", 64), tests: { type: "array", maxItems: 30, items: { type: "object" } }, terms: { type: "object" } }, ["updatedAt"]),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got;
+      const { updatedAt: _v, ...rest } = c.body;
+      const e = parseDocEdits(rest);
+      if (typeof e === "string") return editErr(e);
+      const r = applyDocEdits(got.head.data, e);
+      if (typeof r === "string") return editErr(r);
+      return saveDocAs(c, got, r.data, { diffs: r.diffs, before: r.before, after: r.after });
+    },
+  },
+  {
+    name: "quote_doc_set_amount", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적서 금액 넣기", feature: "quote_tool",
+    description: "사람이 앱 입력란에 넣은 금액을 적는다. 시험 목록·단가표에 금액이 없는 줄(uid)과 할인(discount)만. 비서 도구가 아니다.",
+    input: obj({ updatedAt: str("quote_doc_get 의 updatedAt", 64), uid: str("시험 줄", 64), amount: { type: "integer", minimum: 0 }, label: str("금액 줄 이름", 80), discount: { type: "integer", minimum: 0 } }, ["updatedAt"]),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got;
+      const r = setManualAmount(got.head.data, c.body);
+      if (typeof r === "string") return editErr(r);
+      return saveDocAs(c, got, r, {});
+    },
+  },
+  {
+    name: "quote_doc_preview", role: "cro", scope: "rfq", level: "read", area: "quote", label: "견적서 미리보기", feature: "quote_tool", tool: true,
+    description: "견적서 미리보기·인쇄 화면과 엑셀 내려받기 주소(단추 웹, 로그인 필요)를 돌려준다.",
+    input: obj({}),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got;
+      const id = got.head.head.id;
+      return { status: 200, body: { docId: id, docNo: got.head.head.docNo, print: `/cro/docs/${id}/print`, edit: `/cro/docs/${id}`, xlsx: `/api/cro/docs/${id}/xlsx` } };
+    },
+  },
+  {
+    name: "quote_from_doc", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적서 금액으로 회신 채우기", feature: "quote_tool",
+    description: "견적서의 시험별 금액(할인을 줄마다 나눠 반영)·기간·설계 설명을 회신 초안에 옮겨 임시 저장한다. 가능 여부는 바꾸지 않는다. 금액을 못 채운 줄은 empty, 요청서와 시험 이름이 달라진 줄은 mismatched 로 돌려준다.",
+    input: obj({}),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got;
+      return editDraft(c, (d) => {
+        const names = new Map(d.rows.map((r) => [r.seq, r.name]));
+        const mismatched = got.head.data.tests.filter((t) => typeof t.rfqSeq === "number" && t.item && names.has(t.rfqSeq) && names.get(t.rfqSeq) !== t.item).map((t) => t.rfqSeq as number);
+        const data = { ...got.head.data, tests: got.head.data.tests.filter((t) => !mismatched.includes(t.rfqSeq as number)) };
+        const r = replyFromDoc(data, d.items);
+        return { items: r.items, common: d.common, extra: { filled: r.filled, empty: r.empty.filter((x) => !mismatched.includes(x)), mismatched, docNo: got.head.head.docNo } };
+      });
+    },
+  },
+  {
+    name: "quote_reply_fields", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "회신 칸 고치기",
+    description: "회신 초안의 금액 아닌 칸만 고쳐 임시 저장한다: 줄별 가능 여부(가능·조건부 가능·불가)·사유·기간(주), 공통 조건(착수 가능일·유효기한·결제 조건·시험물질 필요량·보고서 언어). 금액은 받지 않는다.",
+    input: obj({ items: { type: "array", items: { type: "object" } }, common: { type: "object" } }),
+    run: async (c) => editDraft(c, (d) => {
+      const r = applyReplyFields(d, c.body);
+      return typeof r === "string" ? editErr(r) : r;
+    }),
   },
   { name: "quote_submit", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적 제출", description: "견적을 의뢰자에게 제출한다.", input: passthrough("단추 회신 본문"), run: viaInvite(submitQuote, { mark: true }) },
   { name: "detail_reply", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "2차 회신", description: "2차 상세 요청에 회신한다.", input: passthrough("단추 2차 회신 본문"), run: viaInvite(detailReply) },
@@ -434,7 +548,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.2";
+export const CATALOG_VERSION = "2026-11-20.3";
 
 /* ── 실행과 기록 ── */
 
@@ -492,7 +606,7 @@ export async function runAgentAction(s: AgentSession, req: Request, name: string
   const before = t && t.op !== "create" && orgId && inputId ? await readRow(t.kind, inputId, orgId) : null;
   if (t && t.op !== "create" && !before) return out(notFound());
 
-  const r = await def.run({ s, req, no, body });
+  const { before: runBefore, ...r } = await def.run({ s, req, no, body });
   if (def.level === "read" || r.status < 200 || r.status >= 300) return out(r);
 
   // 실행 기록. 기록이 실패해도 동작은 이미 끝났다(되돌리기만 못 한다)
@@ -513,6 +627,8 @@ export async function runAgentAction(s: AgentSession, req: Request, name: string
       }
     }
   }
+  // 견적서처럼 CRM 표가 아닌 것은 실행 함수가 돌려준 바꾸기 전 모습을 남긴다(되돌리기 버튼은 아직 없다)
+  if (!snapshot && runBefore) snapshot = runBefore;
   const logId = await writeLog({ s, orgId, def, no, kind: t?.kind ?? null, targetId, undo, before: snapshot, afterAt, status: r.status });
   return out(r, logId, !!(logId && undo));
 }

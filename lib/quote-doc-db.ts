@@ -354,7 +354,8 @@ function withRequest(t: DocTest, payload: Values): DocTest {
   return t;
 }
 
-export async function saveDoc(orgId: string, id: string, raw: unknown): Promise<{ ok: boolean; updatedAt?: string; error?: string }> {
+/** ifUpdatedAt: 이 판일 때만 저장한다(에이전트 도구). 그 사이 웹에서 고쳤으면 changed */
+export async function saveDoc(orgId: string, id: string, raw: unknown, opts: { ifUpdatedAt?: string } = {}): Promise<{ ok: boolean; updatedAt?: string; error?: string; changed?: boolean }> {
   const sb = getSupabaseAdmin();
   if (!sb || !UUID.test(id)) return { ok: false, error: "저장소 미설정" };
   const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -371,10 +372,13 @@ export async function saveDoc(orgId: string, id: string, raw: unknown): Promise<
     data: data as unknown as Record<string, unknown>,
     supply: t.supply,
   };
-  const { data: row, error } = await sb.from("cro_quote_docs").update(patch).eq("id", id).eq("org_id", orgId).select("updated_at").maybeSingle();
+  let q = sb.from("cro_quote_docs").update(patch).eq("id", id).eq("org_id", orgId);
+  if (opts.ifUpdatedAt) q = q.eq("updated_at", opts.ifUpdatedAt);
+  const { data: row, error } = await q.select("updated_at").maybeSingle();
   if (error || !row) {
-    if (error) console.error("cro_quote_docs update", error);
-    return { ok: false, error: "저장하지 못했어요." };
+    // 오류 내용에는 견적서 본문이 들어갈 수 있어 코드만 남긴다
+    if (error) console.error("cro_quote_docs update", error.code);
+    return { ok: false, error: "저장하지 못했어요.", changed: !error && !!opts.ifUpdatedAt };
   }
   return { ok: true, updatedAt: row.updated_at };
 }
