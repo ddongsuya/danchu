@@ -133,7 +133,7 @@ describe("액션 목록", () => {
 
   it("기관 밖으로 나가는 일은 모두 확인 후 실행", () => {
     for (const n of ["create", "ask", "answer", "select", "detail", "contract_confirm", "contract_result"]) expect(findAction("requester", n)!.level).toBe("confirm");
-    for (const n of ["join", "decline", "ask", "answer", "quote_submit", "detail_reply", "contract_report", "price_book_apply"]) expect(findAction("cro", n)!.level).toBe("confirm");
+    for (const n of ["join", "decline", "ask", "answer", "quote_submit", "detail_reply", "contract_report", "contract_draft_send", "price_book_apply"]) expect(findAction("cro", n)!.level).toBe("confirm");
   });
 
   it("비서 도구는 읽기·바로 실행만. 금액·이메일·전화 칸이 없고, 참조 칸은 정해진 종류만", () => {

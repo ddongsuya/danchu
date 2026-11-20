@@ -23,6 +23,7 @@ import { loadCrmSynced } from "./crm";
 import { getRfqByNo } from "./data";
 import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
+import { awardForOrgByRfq, draftForAward, draftSentAt, sendDraft } from "./contract-draft-db";
 import { createDocFromRequest, docForInvite, findDocs, priceRequest, requestInputFor, type RequestInput } from "./quote-doc-db";
 import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
@@ -200,6 +201,31 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       const awardId = inv ? await awardForInvite(inv.id) : null;
       if (!awardId) return notFound();
       return callAs(c.s, c.req, contractReport, { id: awardId }, c.body);
+    },
+  },
+
+  // ─ 기관: 계약서(안) (2026-11-20, 서명 전까지) ─
+  {
+    name: "contract_draft", role: "cro", scope: "rfq", level: "read", area: "contract", label: "계약서(안) 보기",
+    description: "선정된 견적으로 만든 계약서(안)의 금액·조항 수와 단추 화면 주소, 의뢰자에게 보냈는지. 선정 전이면 404.",
+    input: obj({}),
+    run: async (c) => {
+      const award = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!award) return notFound();
+      const [draft, sentAt] = await Promise.all([draftForAward(award), draftSentAt(award.rfq_id)]);
+      if (!draft) return notFound();
+      return { status: 200, body: { draft: { awardId: award.id, path: `/cro/awards/${award.id}/contract`, tests: draft.tests.length, supply: draft.supply, vat: draft.vat, total: draft.total, articles: draft.articles.length, sentAt, contractStatus: award.contract_status } } };
+    },
+  },
+  {
+    name: "contract_draft_send", role: "cro", scope: "rfq", level: "confirm", area: "contract", label: "계약서(안) 보내기",
+    description: "계약서(안)을 의뢰자에게 보낸다(요청 기록과 의뢰자 알림). 서명은 단추 밖에서 한다.",
+    input: obj({}),
+    run: async (c) => {
+      const award = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!award) return notFound();
+      const r = await sendDraft(award, c.s.userId);
+      return r.ok ? { status: 200, body: { ok: true, sentAt: r.sentAt } } : { status: r.status, body: { error: r.error } };
     },
   },
 
