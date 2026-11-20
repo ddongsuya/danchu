@@ -6,7 +6,7 @@ import { loadCatalog } from "./catalog-db";
 import { pickVariant, prefillRow, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
-  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, priceOf, searchDocs, testFromCatalog, testKind,
+  blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, docMatchesQuote, nextDocNo, priceOf, searchDocs, testFromCatalog, testKind,
   type DocData, type DocHit, type RequestPrice, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
@@ -14,6 +14,7 @@ import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
 import { snapFor } from "./pd-quote";
+import { featureError } from "./plan-usage";
 import { rfqViewOf } from "./quote-load";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -260,6 +261,23 @@ export async function priceRequest(orgId: string, orgName: string, a: RequestInp
   // 기관이 아직 견적서를 만들지 않았으면 요청 조건이 표준과 다른 독성 행은 금액을 내지 않는다 (견적서에서 설계를 맞춘 뒤 계산)
   const fresh = await requestData(orgId, orgName, a);
   return { ...priceOf(fresh.data, a.rows, fresh.checks), source: "catalog", doc: null };
+}
+
+/**
+ * 의뢰자에게 보일 기관 견적서 (비교표가 열린 뒤, 부르는 쪽이 확인한다).
+ * 이 초대로 만든 견적서가 제출한 견적과 금액까지 같을 때만 돌려준다(docMatchesQuote). 양식 고르기(branding)가 없는 요금제면 기본 판
+ */
+export async function submittedDoc(q: { cro_org_id: string | null; invite_id: string | null; cro_quote_items?: { seq: number; avail: string | null; amount: number | null }[] | null }): Promise<{ head: DocHead; data: DocData; style: QuoteStyle } | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb || !q.cro_org_id || !q.invite_id) return null;
+  const doc = await docForInvite(q.cro_org_id, q.invite_id);
+  const got = doc ? await loadDoc(q.cro_org_id, doc.id) : null;
+  if (!got || !docMatchesQuote(got.data, q.cro_quote_items ?? [])) return null;
+  const { data: org } = await sb.from("cro_orgs").select("*").eq("id", q.cro_org_id).maybeSingle();
+  if (!org) return null;
+  const style = await loadStyle(q.cro_org_id, org.name ?? "");
+  const lock = !!featureError(org as Parameters<typeof featureError>[0], "branding");
+  return { head: { ...got.head, memo: "" }, data: lock ? { ...got.data, layout: null } : got.data, style: lock ? { ...style, layout: "basic" } : style };
 }
 
 /** 우리 기관 견적서 찾기 (에이전트 quote_history). 최근 300부 안에서 찾는다 */

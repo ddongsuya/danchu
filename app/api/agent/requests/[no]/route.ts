@@ -1,6 +1,8 @@
 import { agentError, agentJson, agentGate, compareView, croItem, requesterItem } from "@/lib/agent-api";
 import { dbReady, getRfqByNo, getRfqDetail, listAwardsForOrg, listInvitesForOrg, listRequestsForUser, ownsRfq } from "@/lib/data";
 import { buildPipeline } from "@/lib/pipeline";
+import { comparisonOpened } from "@/lib/reply-window";
+import { submittedDoc } from "@/lib/quote-doc-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +25,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ no: stri
     const [d, mine] = await Promise.all([getRfqDetail(rfq), listRequestsForUser(s.userId)]);
     const summary = mine.find((r) => r.id === rfq.id);
     if (!summary) return agentError("not_found");
-    return agentJson({ role: s.role, request: requesterItem(summary), compare: compareView(rfq, d.invites, d.quotes) });
+    // 비교표가 열렸으면 기관 견적서(제출 금액과 같은 것)가 있는 견적을 표시한다
+    const docs = comparisonOpened(rfq) ? new Set((await Promise.all(d.quotes.filter((q) => q.status === "submitted").map(async (q) => ((await submittedDoc(q)) ? q.id : null)))).filter((x): x is string => !!x)) : new Set<string>();
+    return agentJson({ role: s.role, request: requesterItem(summary), compare: compareView(rfq, d.invites, d.quotes, docs) });
   }
 
   const orgId = s.org!.id;

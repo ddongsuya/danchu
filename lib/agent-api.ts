@@ -183,14 +183,20 @@ export type AgentCompare =
   | {
       open: true;
       /** quoteId·revision·inviteId 는 선정·2차 요청·질의 같은 승인 동작(연동 4·5단계)에 그대로 넘긴다. selectable 은 단추 선정 조건(정식 견적서·유효기간) */
-      columns: { lab: string; total: number | null; weeks: number | null; submittedAt: string | null; quoteId: string | null; inviteId: string | null; revision: number | null; selectable: boolean; selected: boolean }[];
+      columns: { lab: string; total: number | null; weeks: number | null; submittedAt: string | null; quoteId: string | null; inviteId: string | null; revision: number | null; selectable: boolean; selected: boolean; docPath: string | null }[];
     };
 
 /**
  * 의뢰자 비교표. 열리기 전에는 숫자만. 열린 뒤에는 제출한 견적을 회신 도착 순으로(추천·순위 없음).
  * 금액은 단추가 저장한 값 그대로다(에이전트가 다시 계산하거나 고치지 않는다).
  */
-export function compareView(rfq: Pick<RfqRow, "compared_at" | "selected_quote_id" | "reply_by">, invites: Pick<InviteRow, "status" | "withdrawn_at" | "revoked_at" | "joined_at">[], quotes: (Pick<QuoteRow, "status" | "cro_name" | "total_amount" | "final_weeks" | "first_submitted_at"> & Partial<Pick<QuoteRow, "id" | "invite_id" | "revision" | "auto" | "pdf_path" | "start_date" | "valid_until">>)[]): AgentCompare {
+export function compareView(
+  rfq: Pick<RfqRow, "compared_at" | "selected_quote_id" | "reply_by"> & Partial<Pick<RfqRow, "rfq_no">>,
+  invites: Pick<InviteRow, "status" | "withdrawn_at" | "revoked_at" | "joined_at">[],
+  quotes: (Pick<QuoteRow, "status" | "cro_name" | "total_amount" | "final_weeks" | "first_submitted_at"> & Partial<Pick<QuoteRow, "id" | "invite_id" | "revision" | "auto" | "pdf_path" | "start_date" | "valid_until">>)[],
+  /** 기관 견적서(견적서 툴, 제출 금액과 같음)가 있는 견적 id. docPath 로 단추 웹 견적서 화면을 연다 */
+  docs: ReadonlySet<string> = new Set(),
+): AgentCompare {
   if (!comparisonOpened(rfq)) {
     const seats = invites.filter((i) => occupiesSeat(i));
     return { open: false, joined: seats.length, submitted: seats.filter((i) => i.status === "submitted").length, replyBy: rfq.reply_by ?? null };
@@ -208,6 +214,7 @@ export function compareView(rfq: Pick<RfqRow, "compared_at" | "selected_quote_id
       revision: q.revision ?? null,
       selectable: !!q.id && quoteSelectable(q),
       selected: !!q.id && q.id === rfq.selected_quote_id,
+      docPath: q.id && rfq.rfq_no && docs.has(q.id) ? `/app/r/${rfq.rfq_no}/q/${q.id}/doc` : null,
     }));
   return { open: true, columns: cols };
 }

@@ -815,3 +815,19 @@ export function searchDocs(rows: DocSearchRow[], q: string, limit = 10): DocHit[
   }
   return hits;
 }
+
+/**
+ * 견적서가 제출한 견적과 같은가 (순수 함수, 테스트 대상). 의뢰자에게 기관 견적서를 보일 때 쓴다.
+ * 가능·조건부 가능 행마다 같은 행 번호의 시험이 있고 금액이 같으며, 요청 행이 아닌 시험·할인이 없을 때만 같다.
+ * 다르면 견적서를 보이지 않는다 (비교표와 숫자가 어긋나지 않게)
+ */
+export function docMatchesQuote(data: DocData, items: { seq: number; avail: string | null; amount: number | string | null }[]): boolean {
+  if (n0(Number(data.discount)) > 0) return false;
+  const want = items.filter((i) => i.avail && i.avail !== "불가");
+  if (!want.length || data.tests.length !== want.length) return false;
+  return want.every((i) => {
+    const t = data.tests.find((x) => x.rfqSeq === i.seq);
+    const amount = i.amount == null || i.amount === "" ? NaN : Number(i.amount);
+    return !!t && Number.isFinite(amount) && testLines(t).total === Math.round(amount);
+  });
+}

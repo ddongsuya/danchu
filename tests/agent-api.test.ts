@@ -143,6 +143,14 @@ describe("공개 규칙", () => {
     expect(v.columns[0]).toMatchObject({ quoteId: "q-1", inviteId: "i-1", revision: 2, selected: true });
     expect(v.columns[1]).toMatchObject({ quoteId: "q-2", selectable: false, selected: false });
   });
+  it("기관 견적서가 있는 견적은 단추 웹 견적서 주소를 붙인다", () => {
+    const v = compareView({ rfq_no: "DC-2026-0142", compared_at: "2026-11-21", selected_quote_id: null, reply_by: "2026-11-20" }, [], [
+      { id: "q-1", status: "submitted", cro_name: "가", total_amount: 1, final_weeks: 1, first_submitted_at: "2026-11-03" },
+      { id: "q-2", status: "submitted", cro_name: "나", total_amount: 1, final_weeks: 1, first_submitted_at: "2026-11-04" },
+    ], new Set(["q-2"]));
+    if (!v.open) throw new Error("open");
+    expect(v.columns.map((c) => c.docPath)).toEqual([null, "/app/r/DC-2026-0142/q/q-2/doc"]);
+  });
 });
 
 describe("기관 견적 작성용 읽기 (quoteBriefView)", () => {
