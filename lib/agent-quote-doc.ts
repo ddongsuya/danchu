@@ -351,3 +351,27 @@ export function applyReplyFields(draft: { items: ReplyItem[]; common: ReplyCommo
   }
   return { items, common };
 }
+
+/* ── 제출 금액 (2026-11-20 사용자 결정: 단가표 기준) ── */
+
+/**
+ * 에이전트 제출 본문의 금액을 견적서 계산값으로 바꾼다. 본문에 적힌 금액은 쓰지 않는다.
+ * - 견적서 금액 = 시험 목록 표준가·추가/차감 단가·효력 단가표로 코드가 계산한 값 + 사람이 넣은 금액(목록에 없는 줄·할인).
+ * - 불가 줄은 금액을 비운다. 그 밖의 줄에 견적서 금액이 없으면 amount_missing (사람이 quote_doc_set_amount 로 넣는다).
+ * - 요청서와 시험 이름이 달라진 줄은 mismatched 로 막는다.
+ */
+export function submitFromDoc(data: DocData, items: ReplyItem[], rowNames: Map<number, string>):
+  | { ok: true; items: ReplyItem[]; overridden: number[] }
+  | { ok: false; error: "amount_missing" | "mismatched"; seqs: number[] } {
+  const mismatched = data.tests.filter((t) => typeof t.rfqSeq === "number" && t.item && rowNames.has(t.rfqSeq) && rowNames.get(t.rfqSeq) !== t.item).map((t) => t.rfqSeq as number);
+  const live = items.filter((it) => it.avail !== "불가");
+  const bad = [...new Set(mismatched)].filter((s) => live.some((it) => it.seq === s));
+  if (bad.length) return { ok: false, error: "mismatched", seqs: bad };
+  const r = replyFromDoc(data, items);
+  const missing = r.empty.filter((s) => live.some((it) => it.seq === s));
+  if (missing.length) return { ok: false, error: "amount_missing", seqs: missing };
+  const before = new Map(items.map((it) => [it.seq, String(it.amount ?? "")]));
+  const next = r.items.map((it) => (it.avail === "불가" ? { ...it, amount: "" } : it));
+  const overridden = next.filter((it) => it.avail !== "불가" && (before.get(it.seq) ?? "") !== "" && before.get(it.seq) !== it.amount).map((it) => it.seq);
+  return { ok: true, items: next, overridden };
+}

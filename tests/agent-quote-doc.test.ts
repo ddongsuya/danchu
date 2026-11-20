@@ -150,3 +150,28 @@ describe("회신 칸", () => {
     expect(applyReplyFields(draft, { common: { includes: [] } })).toBe("bad_request");
   });
 });
+
+describe("제출 금액은 견적서 계산값만", () => {
+  const names = new Map([[1, "반복투여 독성"], [2, "특수 분석"]]);
+  it("본문 금액을 버리고 견적서 금액으로 채운다", async () => {
+    const { submitFromDoc } = await import("@/lib/agent-quote-doc");
+    const d = setManualAmount(doc(), { uid: "tb", amount: 5_000_000 }) as DocData;
+    d.tests[1].item = "특수 분석";
+    const r = submitFromDoc(d, [item(1, { avail: "가능", amount: "1" }), item(2, { avail: "가능" })], names);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.items.map((x) => x.amount)).toEqual(["40000000", "5000000"]);
+    expect(r.overridden).toEqual([1]);
+  });
+  it("금액 없는 줄은 amount_missing, 불가 줄은 금액을 비운다", async () => {
+    const { submitFromDoc } = await import("@/lib/agent-quote-doc");
+    expect(submitFromDoc(doc(), [item(1, { avail: "가능" }), item(2, { avail: "가능" })], names)).toEqual({ ok: false, error: "amount_missing", seqs: [2] });
+    const r = submitFromDoc(doc(), [item(1, { avail: "가능" }), item(2, { avail: "불가", amount: "300" })], names);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.items[1].amount).toBe("");
+  });
+  it("요청서와 시험 이름이 달라진 줄은 mismatched", async () => {
+    const { submitFromDoc } = await import("@/lib/agent-quote-doc");
+    const r = submitFromDoc(doc(), [item(1, { avail: "가능" })], new Map([[1, "단회투여 독성"]]));
+    expect(r).toEqual({ ok: false, error: "mismatched", seqs: [1] });
+  });
+});
