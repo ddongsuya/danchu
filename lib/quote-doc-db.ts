@@ -3,7 +3,7 @@
  */
 import { getSupabaseAdmin } from "./supabase";
 import { loadCatalog } from "./catalog-db";
-import { pickVariant, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
+import { pickVariant, prefillRow, rowKey, PRICE_CHECK_ROUTE, PRICE_CHECK_SPECIES, type CatalogRow } from "./catalog";
 import { todaySeoul } from "./format";
 import {
   blankTest, addDays, cleanDocData, cleanRates, DEFAULT_VISIBLE, docTitle, docTotals, EMPTY_SUPPLIER, EMPTY_TERMS, nextDocNo, priceOf, searchDocs, testFromCatalog, testKind,
@@ -211,7 +211,7 @@ export async function createDocFromRequest(orgId: string, orgName: string, userI
   // 같은 요청으로 만든 견적서가 있으면 그것을 연다 (두 번 눌러 두 부가 생기지 않게)
   const had = await docForInvite(orgId, a.inviteId);
   if (had) return { id: had.id, created: false };
-  const data = await requestData(orgId, orgName, a);
+  const { data } = await requestData(orgId, orgName, a);
   const r = await insertDoc(orgId, userId, { client: `단추 요청 ${a.rfqNo}`, substance: a.substance, inviteId: a.inviteId, rfqNo: a.rfqNo, data });
   return r.id ? { id: r.id, created: true } : r;
 }
@@ -224,15 +224,20 @@ export async function docForInvite(orgId: string, inviteId: string): Promise<{ i
   return data?.[0] ? { id: data[0].id, docNo: data[0].doc_no } : null;
 }
 
-/** 요청 행마다 카탈로그 조합을 골라 견적서 시험을 만든다 (저장하지 않는다). 맞는 조합이 없거나 수행하지 않는 행은 빠진다 */
-async function requestData(orgId: string, orgName: string, a: RequestInput): Promise<DocData> {
+/**
+ * 요청 행마다 카탈로그 조합을 골라 견적서 시험을 만든다 (저장하지 않는다). 맞는 조합이 없거나 수행하지 않는 행은 빠진다.
+ * checks: 회신 초안과 같은 규칙으로 본, 요청 조건이 기관 표준과 다른 칸 (행 번호별)
+ */
+async function requestData(orgId: string, orgName: string, a: RequestInput): Promise<{ data: DocData; checks: Map<number, string[]> }> {
   const [rows, rates, style] = await Promise.all([loadCatalog(orgId), loadRates(orgId), loadStyle(orgId, orgName)]);
   const byKey = new Map<string, CatalogRow[]>();
   for (const r of rows) byKey.set(r.item_key, [...(byKey.get(r.item_key) ?? []), r]);
   const data = emptyData(style);
+  const checks = new Map<number, string[]>();
   for (const line of a.rows) {
     const picked = pickVariant(byKey.get(rowKey(line)) ?? [], line, a.payload);
     if (!picked || !picked.row.available) continue;
+    checks.set(line.seq, prefillRow(line, picked, a.payload).checks);
     // 대표가 아닌 동물종·경로로 맞으면 표준가를 그대로 쓰지 않는다 (기관이 금액을 적는다)
     const other = picked.mismatch.includes(PRICE_CHECK_SPECIES) || picked.mismatch.includes(PRICE_CHECK_ROUTE);
     const base = other ? { ...picked.row, std_price: null } : picked.row;
@@ -240,7 +245,7 @@ async function requestData(orgId: string, orgName: string, a: RequestInput): Pro
     data.tests.push(withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload));
   }
   await attachPrices(orgId, data);
-  return data;
+  return { data, checks };
 }
 
 /**
@@ -251,8 +256,10 @@ async function requestData(orgId: string, orgName: string, a: RequestInput): Pro
 export async function priceRequest(orgId: string, orgName: string, a: RequestInput): Promise<RequestPrice> {
   const doc = await docForInvite(orgId, a.inviteId);
   const got = doc ? await loadDoc(orgId, doc.id) : null;
-  const data = got?.data ?? (await requestData(orgId, orgName, a));
-  return { ...priceOf(data, a.rows), source: got ? "doc" : "catalog", doc: got && doc ? { id: doc.id, docNo: doc.docNo } : null };
+  if (got && doc) return { ...priceOf(got.data, a.rows), source: "doc", doc: { id: doc.id, docNo: doc.docNo } };
+  // 기관이 아직 견적서를 만들지 않았으면 요청 조건이 표준과 다른 독성 행은 금액을 내지 않는다 (견적서에서 설계를 맞춘 뒤 계산)
+  const fresh = await requestData(orgId, orgName, a);
+  return { ...priceOf(fresh.data, a.rows, fresh.checks), source: "catalog", doc: null };
 }
 
 /** 우리 기관 견적서 찾기 (에이전트 quote_history). 최근 300부 안에서 찾는다 */

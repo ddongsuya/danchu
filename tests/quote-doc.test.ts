@@ -278,6 +278,13 @@ describe("에이전트: 요청 금액 다시 계산 (2026-11-20 B안)", () => {
     expect(r.complete).toBe(false);
   });
 
+  it("독성: 요청 조건이 표준과 다르면(견적서를 만들기 전) 표준가를 그대로 쓰지 않는다", () => {
+    const a = { ...testFromCatalog(row, rates), rfqSeq: 1 };
+    const r = priceOf(data([a]), [{ seq: 1, name: "반복투여" }], new Map([[1, ["회복군 4주", "TK 병행"]]]));
+    expect(r.rows[0]).toMatchObject({ priced: false, amount: null, why: "check", checks: ["회복군 4주", "TK 병행"] });
+    expect(priceOf(data([a]), [{ seq: 1, name: "반복투여" }], new Map([[1, []]])).rows[0]).toMatchObject({ priced: true, amount: 168_000_000 });
+  });
+
   it("모든 행에 금액이 있으면 complete", () => {
     const r = priceOf(data([{ ...testFromCatalog(row, rates), rfqSeq: 1 }]), [{ seq: 1, name: "반복투여" }]);
     expect(r).toMatchObject({ complete: true, sum: 168_000_000 });

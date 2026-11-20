@@ -764,8 +764,10 @@ export type RequestPriceRow = {
   /** 기관 표준과 달라진 곳 수 */
   changes: number;
   priced: boolean;
-  /** 금액을 내지 않은 까닭: 시험 목록에 맞는 조합 없음 · 표준가 없음(다른 동물종·경로 등) · 단가표에 없는 항목 */
-  why: "no_match" | "no_price" | "missing_item" | null;
+  /** 금액을 내지 않은 까닭: 시험 목록에 맞는 조합 없음 · 표준가 없음(다른 동물종·경로 등) · 단가표에 없는 항목 · 요청 조건이 표준과 다름(독성) */
+  why: "no_match" | "no_price" | "missing_item" | "check" | null;
+  /** 요청 조건이 기관 표준과 다른 칸 (회복군 4주, TK 병행 등) */
+  checks: string[];
 };
 export type RequestPrice = {
   rows: RequestPriceRow[];
@@ -778,15 +780,17 @@ export type RequestPrice = {
 };
 
 /** 견적서 시험 → 요청 행별 금액 (순수 함수, 테스트 대상). 금액은 testLines 만 쓴다 */
-export function priceOf(data: DocData, rows: { seq: number; name: string }[]): Omit<RequestPrice, "source" | "doc"> {
+export function priceOf(data: DocData, rows: { seq: number; name: string }[], checks?: ReadonlyMap<number, string[]>): Omit<RequestPrice, "source" | "doc"> {
   const out = rows.map((r): RequestPriceRow => {
     const t = data.tests.find((x) => x.rfqSeq === r.seq);
-    if (!t) return { seq: r.seq, name: r.name, kind: null, amount: null, changes: 0, priced: false, why: "no_match" };
+    if (!t) return { seq: r.seq, name: r.name, kind: null, amount: null, changes: 0, priced: false, why: "no_match", checks: [] };
     const k = testKind(t);
     const l = testLines(t);
     const q = k === "pd" ? pdQuote(t) : null;
-    const why = q && q.cur.missing > 0 ? "missing_item" : (k === "tox" && !(t.std.price && t.std.price > 0)) || l.total <= 0 ? "no_price" : null;
-    return { seq: r.seq, name: r.name, kind: k, amount: why ? null : l.total, changes: l.changes, priced: !why, why };
+    // 독성은 요청 조건(회복군·TK 등)을 견적서 설계에 자동으로 옮기지 않는다. 다르면 표준가를 그대로 쓰지 않는다
+    const ck = k === "tox" ? (checks?.get(r.seq) ?? []) : [];
+    const why = q && q.cur.missing > 0 ? "missing_item" : (k === "tox" && !(t.std.price && t.std.price > 0)) || l.total <= 0 ? "no_price" : ck.length ? "check" : null;
+    return { seq: r.seq, name: r.name, kind: k, amount: why ? null : l.total, changes: l.changes, priced: !why, why, checks: ck };
   });
   return { rows: out, sum: out.reduce((a, r) => a + (r.amount ?? 0), 0), complete: out.length > 0 && out.every((r) => r.priced) };
 }
