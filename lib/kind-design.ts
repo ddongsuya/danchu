@@ -390,6 +390,26 @@ export function parseTimes(t: string): number | undefined {
   const nums = t.replace(/총.*$/, "").match(/\d+(\.\d+)?/g);
   return nums && nums.length >= 2 ? nums.length : undefined;
 }
+/**
+ * "0.5, 1, 2, 4, 8, 24h" → ["0.5시간", "1시간", …]. 단위는 뒤에 붙은 것이 앞의 숫자들에도 걸린다
+ * ("5, 15, 30분, 1, 2, 4시간" → 5분·15분·30분·1시간·2시간·4시간). 단위가 하나도 없으면 시간. 2개 미만이면 빈 배열
+ */
+export function parseTimeList(t: string): string[] {
+  const body = t.replace(/총.*$/, "").replace(/[·;]/g, ",");
+  const toks = body.match(/\d+(\.\d+)?\s*(min|분|hr|h|시간|d|일)?/gi) ?? [];
+  const unitOf = (u: string) => (/^(min|분)$/i.test(u) ? "분" : /^(d|일)$/i.test(u) ? "일" : "시간");
+  const out: string[] = [];
+  let pending: string[] = [];
+  let last = "시간";
+  for (const tok of toks.slice(0, 24)) {
+    const m = tok.match(/^(\d+(?:\.\d+)?)\s*(\D*)$/);
+    if (!m) continue;
+    pending.push(m[1]);
+    if (m[2]) { last = unitOf(m[2].trim()); out.push(...pending.map((x) => `${x}${last}`)); pending = []; }
+  }
+  out.push(...pending.map((x) => `${x}${last}`));
+  return out.length >= 2 ? out : [];
+}
 /** "랫드 혈청, 40개" → 40 */
 export function parseCount(t: string): number | undefined {
   const m = t.match(/(\d{1,5})\s*(개|건|검체|샘플|시료|마리)/);

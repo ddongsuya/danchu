@@ -10,7 +10,7 @@ import {
   type DocData, type DocHit, type RequestPrice, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
-import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
+import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimeList, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
 import { snapFor } from "./pd-quote";
@@ -347,10 +347,9 @@ function withRequest(t: DocTest, payload: Values): DocTest {
     const pk = structuredClone(t.kd.pk);
     const sampling = get("sampling");
     const n = parseTimes(sampling);
-    if (!pk.times.length && sampling) {
-      const unit = /분|min/i.test(sampling) && !/h|시간/i.test(sampling) ? "분" : "시간";
-      pk.times = (sampling.replace(/총.*$/, "").match(/\d+(\.\d+)?/g) ?? []).slice(0, 24).map((x) => `${x}${unit}`);
-    }
+    // 의뢰자가 채혈 시점을 적었으면 그 시점으로 바꾼다. 검체 수가 달라진 만큼 검체 단가로 추가·차감된다 (kindLines)
+    const reqTimes = parseTimeList(sampling);
+    if (reqTimes.length) pk.times = reqTimes;
     const mx = (payload[`${t.category}.matrix`] as string[] | undefined) ?? [];
     if (Array.isArray(mx) && mx.length) pk.matrix = mx.filter((m) => PK_MATRIX.includes(m));
     const design = get("design");

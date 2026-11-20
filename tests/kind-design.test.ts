@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cleanDocData, docTotals, testFromCatalog, testKind, testLines, type DocData, type DocTest } from "@/lib/quote-doc";
-import { cleanKd, kindOfCategory, kindStdPrice, parseCount, parseGroups, parseTimes, pdFrom, pdParts, pkSamples, type PdDesign } from "@/lib/kind-design";
+import { cleanKd, kindOfCategory, kindStdPrice, parseCount, parseGroups, parseTimeList, parseTimes, pdFrom, pdParts, pkSamples, type PdDesign } from "@/lib/kind-design";
 import { prefillRow, type CatalogRow } from "@/lib/catalog";
 import { kdExtra } from "@/lib/kind-design";
 
@@ -198,5 +198,24 @@ describe("개별 분석: 1식 금액 (2026-11-21 0원 버그)", () => {
     expect(up.lines.map((l) => l.amount)).toEqual([20 * 30_000]);
     const down = testLines({ ...t, kd: { other: { ...t.kd!.other!, n: 10 } } });
     expect(down.total).toBe(300_000 + 1_000_000 + 10 * 30_000);
+  });
+});
+
+describe("PK 채혈 시점 읽기 (요청 → 설계)", () => {
+  it("뒤에 붙은 단위를 앞 숫자에도 건다", () => {
+    expect(parseTimeList("0.5, 1, 2, 4, 8, 24h · 총 6회")).toEqual(["0.5시간", "1시간", "2시간", "4시간", "8시간", "24시간"]);
+    expect(parseTimeList("5, 15, 30분, 1, 2, 4시간")).toEqual(["5분", "15분", "30분", "1시간", "2시간", "4시간"]);
+    expect(parseTimeList("15min, 1, 24hr")).toEqual(["15분", "1시간", "24시간"]);
+  });
+  it("횟수만 있거나 하나뿐이면 바꾸지 않는다", () => {
+    expect(parseTimeList("총 6회")).toEqual([]);
+    expect(parseTimeList("24h")).toEqual([]);
+    expect(parseTimeList("")).toEqual([]);
+  });
+  it("시점이 줄면 검체 수가 준다", () => {
+    const pk = { types: [], groups: [{ id: "g1", label: "1군", route: "경구", dose: "", n: 3 }], times: ["0.25시간", "0.5시간", "1시간", "2시간", "4시간", "8시간", "12시간", "24시간"], matrix: ["혈장"], method: "" as const, params: [], animal: null, perSample: 45000, dev: null, report: null };
+    const req = { ...pk, times: parseTimeList("0.5, 1, 2, 4, 8, 24h") };
+    expect(pkSamples(pk)).toBe(24);
+    expect(pkSamples(req)).toBe(18);
   });
 });
