@@ -20,7 +20,10 @@ import { agentJson } from "./agent-api";
 import { callAs, inviteForOrg, markVia } from "./agent-act";
 import { buildAgentReport, buildBrief, reportRange } from "./agent-brief";
 import { loadCrmSynced } from "./crm";
-import { getRfqByNo } from "./data";
+import { getRfqByNo, getRfqDetail, listNotifications, ownsRfq } from "./data";
+import { comparisonOpened } from "./reply-window";
+import { awardForRfq } from "./contract-draft-db";
+import { submittedDoc } from "./quote-doc-db";
 import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
 import { awardForOrgByRfq, draftForAward, draftSentAt, sendDraft } from "./contract-draft-db";
@@ -41,6 +44,19 @@ import { POST as select } from "@/app/api/rfq/[no]/select/route";
 import { POST as detail } from "@/app/api/rfq/[no]/detail/route";
 import { POST as contractConfirm } from "@/app/api/rfq/[no]/contract/route";
 import { POST as contractResult } from "@/app/api/rfq/[no]/contract-result/route";
+import { POST as outcomeRfq } from "@/app/api/rfq/[no]/outcome/route";
+import { POST as reopenRfq } from "@/app/api/rfq/[no]/reopen/route";
+import { POST as fileUrl } from "@/app/api/rfq/[no]/files/retry/route";
+import { POST as fileDone } from "@/app/api/rfq/[no]/files/confirm/route";
+import { POST as notificationsRead } from "@/app/api/notifications/read/route";
+import { POST as catalogSave } from "@/app/api/cro/catalog/route";
+import { POST as substancePost } from "@/app/api/awards/[id]/substance/route";
+import { POST as supportPost } from "@/app/api/support/route";
+import { loadCatalog } from "./catalog-db";
+import { loadCrm } from "./crm";
+import { catalogPatch, crmFind } from "./agent-cro-tools";
+import { invoiceView, INVOICE_VIEW_LABEL } from "./invoices";
+import { todaySeoul } from "./format";
 import { POST as createRfq } from "@/app/api/rfq/route";
 import { POST as startRfq } from "@/app/api/rfq/[no]/start/route";
 import { POST as detailReply } from "@/app/api/quote/[token]/detail/route";
@@ -186,6 +202,26 @@ async function editDraft(c: ActCtx, edit: (d: { items: import("./cro-data").Repl
   return { status: 200, body: { ok: true, items: next.items.map((i) => ({ seq: i.seq, avail: i.avail, amount: i.amount, weeks: i.weeks, reason: i.reason ?? "" })), common: next.common, ...(next.extra ?? {}) } };
 }
 
+/** 내 알림(웹 알림 화면과 같은 목록). 본문은 120자까지 */
+async function myNotifications(c: ActCtx): Promise<ActOut> {
+  const unread = c.body.unread === true;
+  const { list } = await listNotifications(c.s.userId, 30);
+  const rows = (unread ? list.filter((n) => !n.read_at) : list).map((n) => ({ id: n.id, kind: n.kind, title: n.title, body: (n.body ?? "").slice(0, 120), href: n.href, read: !!n.read_at, at: n.created_at }));
+  return { status: 200, body: { notifications: rows } };
+}
+const NOTI_INPUT = obj({ unread: { type: "boolean", description: "읽지 않은 것만" } });
+const NOTI_READ_INPUT = obj({ id: { type: "string", format: "uuid", description: "읽음 처리할 알림. 없으면 전부" } });
+
+/** 의뢰자: 내 요청(없거나 남의 것이면 null) */
+async function ownRfq(c: ActCtx) {
+  const rfq = await getRfqByNo(c.no!);
+  return rfq && ownsRfq(rfq, c.s.userId) ? rfq : null;
+}
+
+const SUPPORT_INPUT = obj({ type: oneOf(["이용 문의", "오류 신고", "요금·청구", "기타"], "문의 종류"), rfqNo: str("관련 요청 번호", 20), text: str("문의 내용", 4000) }, ["text"]);
+/** 단추 운영자에게 문의(답변은 계정 이메일로) */
+const supportRun = async (c: ActCtx): Promise<ActOut> => callAs(c.s, c.req, supportPost, {}, { email: c.s.email, type: c.body.type ?? "기타", rfqNo: c.body.rfqNo ?? "", text: c.body.text });
+
 const QNA_INPUT = obj({ body: str("질의·답변 본문", 2000), questionId: str("답변할 질의 id(답변일 때)", 64) });
 
 /* ── 등록부 ── */
@@ -258,6 +294,59 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   { name: "detail", role: "requester", scope: "rfq", level: "confirm", area: "quote", label: "2차 상세 요청", description: "기관에 2차 상세 견적을 요청한다.", input: passthrough("단추 2차 요청 본문"), run: viaRfq(detail, { mark: "rfq_details" }) },
   { name: "contract_confirm", role: "requester", scope: "rfq", level: "confirm", area: "contract", label: "계약 보고 확인", description: "기관의 계약 체결 보고를 확인하거나 이의를 남긴다.", input: passthrough("단추 계약 확인 본문"), run: viaRfq(contractConfirm) },
   { name: "contract_result", role: "requester", scope: "rfq", level: "confirm", area: "contract", label: "계약 결과 알림", description: "계약 결과를 단추에 알린다.", input: passthrough("단추 계약 결과 본문"), run: viaRfq(contractResult) },
+
+  {
+    name: "request_close", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "선정 없이 마무리",
+    description: "기관을 선정하지 않고 요청을 마무리한다(외부 진행·보류·취소). 외부 진행이면 어느 기관과 하는지 적는다.",
+    input: obj({ outcome: oneOf(["외부 진행", "보류", "취소"], "마무리 사유"), note: str("메모", 500) }, ["outcome"]),
+    run: viaRfq(outcomeRfq),
+  },
+  { name: "request_reopen", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "보류한 요청 다시 열기", description: "비교표가 열린 뒤 보류한 요청을 다시 열어 선정할 수 있게 한다.", input: obj({}), run: viaRfq(reopenRfq) },
+  {
+    name: "request_file_url", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "요청 첨부 올릴 주소",
+    description: "요청서 첨부(또는 2차 상세 견적 첨부)를 올릴 주소를 받는다. 올린 뒤 request_file_done 을 부른다. 파일 내용은 AI 입력에 넣지 않는다.",
+    input: obj({ name: str("파일 이름"), size: { type: "integer", minimum: 1 }, type: str("파일 형식", 100), scope: oneOf(["request", "detail"], "첨부 범위") }, ["name", "size"]),
+    run: viaRfq(fileUrl),
+  },
+  {
+    name: "request_file_done", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "요청 첨부 올림 확인",
+    description: "주소로 올린 첨부를 단추가 확인한다.",
+    input: obj({ paths: { type: "array", maxItems: 20, items: { type: "string", maxLength: 300 } } }, ["paths"]),
+    run: viaRfq(fileDone),
+  },
+  {
+    name: "quote_view", role: "requester", scope: "rfq", level: "read", area: "quote", label: "기관 견적서 보기", tool: true,
+    description: "비교표가 열린 뒤, 기관이 단추 견적서 툴로 만든 견적서(제출 금액과 같은 것)의 시험 줄·금액·조건을 읽는다.",
+    input: obj({ quoteId: { type: "string", format: "uuid", description: "견적 id(요청 상세의 견적)" } }, ["quoteId"]),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      if (!comparisonOpened(rfq)) return { status: 409, body: { error: "not_open" } };
+      const d = await getRfqDetail(rfq);
+      const q = d.quotes.find((x) => x.id === c.body.quoteId && x.status === "submitted");
+      if (!q) return notFound();
+      const doc = await submittedDoc(q);
+      if (!doc) return { status: 404, body: { error: "doc_missing" } };
+      const v = docView(doc.head, doc.data);
+      return { status: 200, body: { croName: q.cro_name, docNo: v.head.docNo, validUntil: v.head.validUntil, tests: v.tests.map(({ uid: _u, source: _s, ...t }) => t), totals: v.totals, terms: v.terms, path: `/app/r/${rfq.rfq_no}/q/${q.id}/doc` } };
+    },
+  },
+  {
+    name: "contract_draft_view", role: "requester", scope: "rfq", level: "read", area: "contract", label: "받은 계약서(안) 보기", tool: true,
+    description: "선정한 기관이 보낸 계약서(안)를 읽는다. 받기 전이면 not_sent.",
+    input: obj({}),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      const [award, sentAt] = await Promise.all([awardForRfq(rfq.id), draftSentAt(rfq.id)]);
+      if (!award || !sentAt) return { status: 409, body: { error: "not_sent" } };
+      const draft = await draftForAward(award);
+      return draft ? { status: 200, body: { sentAt, draft: draft as unknown as Record<string, unknown>, path: `/app/r/${rfq.rfq_no}/contract` } } : notFound();
+    },
+  },
+  { name: "support_send", role: "requester", scope: "org", level: "confirm", area: "brief", label: "단추에 문의", description: "단추 운영자에게 문의를 보낸다. 답변은 계정 이메일로 온다.", input: SUPPORT_INPUT, run: supportRun },
+  { name: "notifications", role: "requester", scope: "org", level: "read", area: "brief", label: "알림 보기", tool: true, description: "내 알림 최근 30개를 읽는다.", input: NOTI_INPUT, run: myNotifications },
+  { name: "notifications_read", role: "requester", scope: "org", level: "auto", area: "brief", label: "알림 읽음", tool: true, description: "알림을 읽음으로 표시한다.", input: NOTI_READ_INPUT, run: async (c) => callAs(c.s, c.req, notificationsRead, {}, c.body) },
 
   // ─ 기관: 받은 요청 ─
   { name: "join", role: "cro", scope: "rfq", level: "confirm", area: "intake", label: "참여", description: "받은 요청에 참여한다. 이용 조건 판(terms)을 그대로 넘긴다.", input: passthrough("단추 참여 본문"), run: viaInvite(join) },
@@ -501,6 +590,75 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   },
 
   // ─ 기관: 단가표 ─
+  { name: "support_send", role: "cro", scope: "org", level: "confirm", area: "brief", label: "단추에 문의", description: "단추 운영자에게 문의를 보낸다. 답변은 계정 이메일로 온다.", input: SUPPORT_INPUT, run: supportRun },
+  {
+    name: "substance_send", role: "cro", scope: "rfq", level: "confirm", area: "contract", label: "시험물질 필요량 알리기",
+    description: "선정된 요청에 시험물질 필요량과 보낼 시점을 적어 의뢰자에게 알린다. 다시 보내면 고친 값으로 바꾼다.",
+    input: obj({ qty: str("필요량(예: 50 g)", 200), when: str("보낼 시점", 200), note: str("메모", 500) }, ["qty"]),
+    run: async (c) => {
+      const award = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!award) return { status: 409, body: { error: "not_awarded" } };
+      return callAs(c.s, c.req, substancePost, { id: award.id }, c.body);
+    },
+  },
+  {
+    name: "catalog_view", role: "cro", scope: "org", level: "read", area: "price", label: "시험 목록 보기", feature: "tests", tool: true,
+    description: "우리 기관 시험 목록(시험별 조합: 가능 여부·동물종·경로·군 구성·기간·포함 항목·표준가·옵션)을 읽는다. category 로 좁힐 수 있다.",
+    input: obj({ category: str("대분류", 60) }),
+    run: async (c) => {
+      const cat = typeof c.body.category === "string" ? c.body.category : "";
+      const rows = (await loadCatalog(c.s.org!.id)).filter((r) => !cat || r.category === cat);
+      return { status: 200, body: { rows: rows.map((r) => ({ id: r.id, category: r.category, item: r.item, available: r.available, glp: r.glp, species: r.species, routes: r.routes, method: r.method, groups_ctrl: r.groups_ctrl, groups_test: r.groups_test, per_sex: r.per_sex, recovery_weeks: r.recovery_weeks, recovery_per_sex: r.recovery_per_sex, dosing: r.dosing, weeks: r.weeks, includes: r.includes, std_price: r.std_price ?? null, options: r.options })) } };
+    },
+  },
+  {
+    name: "catalog_preview", role: "cro", scope: "org", level: "read", area: "price", label: "시험 목록 고칠 내용 보기", feature: "tests",
+    description: "시험 목록에서 고칠 행·칸을 지금 값과 견준다(저장하지 않는다). 새 조합 만들기·지우기는 웹에서 한다.",
+    input: obj({ rows: { type: "array", maxItems: 100, items: { type: "object" } } }, ["rows"]),
+    run: async (c) => {
+      const r = catalogPatch(await loadCatalog(c.s.org!.id), c.body.rows);
+      return { status: 200, body: { diffs: r.diffs, errors: r.errors } };
+    },
+  },
+  {
+    name: "catalog_apply", role: "cro", scope: "org", level: "confirm", area: "price", label: "시험 목록 반영", feature: "tests",
+    description: "사람이 미리보기를 확인한 시험 목록 수정을 반영한다. 틀린 칸이 하나라도 있으면 반영하지 않는다.",
+    input: obj({ rows: { type: "array", maxItems: 100, items: { type: "object" } } }, ["rows"]),
+    run: async (c) => {
+      const cur = await loadCatalog(c.s.org!.id);
+      const r = catalogPatch(cur, c.body.rows);
+      if (r.errors.length) return { status: 400, body: { error: "invalid_rows", errors: r.errors } };
+      if (!r.rows.length) return { status: 200, body: { ok: true, saved: 0, diffs: [] } };
+      const out = await callAs(c.s, c.req, catalogSave, {}, { rows: r.rows, removed: [] });
+      if (out.status !== 200) return out;
+      const ids = new Set(r.rows.map((x) => x.id));
+      return { status: 200, body: { ok: true, saved: out.body.saved ?? r.rows.length, diffs: r.diffs }, before: { rows: cur.filter((x) => ids.has(x.id)) as unknown as Record<string, unknown>[] } };
+    },
+  },
+  {
+    name: "crm_find", role: "cro", scope: "org", level: "read", area: "crm", label: "고객관리 찾기", feature: "crm", tool: true,
+    description: "고객사·담당자·안건·할 일·일정을 이름으로 찾는다. 금액·이메일·전화·메모는 돌려주지 않는다.",
+    input: obj({ q: str("찾을 말", 80), kinds: { type: "array", items: oneOf(["company", "contact", "deal", "task", "event"], "종류") } }),
+    run: async (c) => {
+      const d = await loadCrm(c.s.org!.id);
+      const kinds = Array.isArray(c.body.kinds) ? (c.body.kinds as ("company" | "contact" | "deal" | "task" | "event")[]) : undefined;
+      return { status: 200, body: { hits: crmFind(d, typeof c.body.q === "string" ? c.body.q : "", kinds) } };
+    },
+  },
+  {
+    name: "billing_view", role: "cro", scope: "org", level: "read", area: "report", label: "청구서 보기", tool: true,
+    description: "우리 기관 월 청구서 목록(월·금액·납부 기한·상태)을 읽는다.",
+    input: obj({}),
+    run: async (c) => {
+      const sb = getSupabaseAdmin();
+      if (!sb) return { status: 503, body: { error: "unavailable" } };
+      const { data } = await sb.from("billing_invoices").select("id, invoice_no, month, total, due_date, status, paid_on").eq("org_id", c.s.org!.id).neq("status", "void").order("month", { ascending: false }).limit(24);
+      const today = todaySeoul();
+      return { status: 200, body: { invoices: (data ?? []).map((x) => ({ invoiceNo: x.invoice_no, month: x.month, total: x.total, dueDate: x.due_date, paidOn: x.paid_on, state: INVOICE_VIEW_LABEL[invoiceView(x, today)] })), path: "/cro/billing" } };
+    },
+  },
+  { name: "notifications", role: "cro", scope: "org", level: "read", area: "brief", label: "알림 보기", tool: true, description: "내 알림 최근 30개를 읽는다.", input: NOTI_INPUT, run: myNotifications },
+  { name: "notifications_read", role: "cro", scope: "org", level: "auto", area: "brief", label: "알림 읽음", tool: true, description: "알림을 읽음으로 표시한다.", input: NOTI_READ_INPUT, run: async (c) => callAs(c.s, c.req, notificationsRead, {}, c.body) },
   {
     name: "price_book", role: "cro", scope: "org", level: "read", area: "price", label: "단가표 보기", feature: "quote_tool", description: "기관 단가표를 읽는다.", input: obj({}),
     run: async (c) => callAs(c.s, c.req, async () => (await bookRead()) ?? Response.json({ error: "unavailable" }, { status: 503 }), {}, null, "GET"),
@@ -548,7 +706,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.3";
+export const CATALOG_VERSION = "2026-11-20.5";
 
 /* ── 실행과 기록 ── */
 
