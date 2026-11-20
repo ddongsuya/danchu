@@ -17,6 +17,7 @@ import {
   switchCond,
   testFromCatalog,
   testLines,
+  toxFromRequest,
   type DocData,
   type Rate,
 } from "@/lib/quote-doc";
@@ -324,5 +325,56 @@ describe("의뢰자에게 보일 기관 견적서: 제출한 견적과 같을 �
     expect(docMatchesQuote(data([a, { ...b, rfqSeq: undefined }]), [{ seq: 1, avail: "가능", amount: 168_000_000 }])).toBe(false);
     expect(docMatchesQuote(data([a], 1_000_000), [{ seq: 1, avail: "가능", amount: 168_000_000 }])).toBe(false);
     expect(docMatchesQuote(data([]), [])).toBe(false);
+  });
+});
+
+describe("독성: 의뢰자 요청 조건을 계산기로 옮긴다 (2026-11-21)", () => {
+  const noRec = { ...row, recovery_weeks: null, recovery_per_sex: null } as CatalogRow;
+  const ask = (v: Record<string, string>) => (id: string) => v[id] ?? "";
+
+  it("표준에 회복군이 없는데 4주 회복을 요청하면 대조군·최고용량군에 넣고 회복군 단가로 더한다", () => {
+    const t = testFromCatalog(noRec, rates);
+    const r = toxFromRequest(t, ask({ recovery: "4주" }), 5);
+    expect(r.test.groups.map((g) => g.rm)).toEqual([5, 0, 0, 5]);
+    expect(r.test.cond.recovery).toBe("4주");
+    expect(r.applied).toEqual(["회복군 4주"]);
+    const l = testLines(r.test);
+    expect(l.lines.find((x) => x.kind === "recovery")?.amount).toBe(20 * 900_000);
+    expect(l.total).toBe(168_000_000 + 18_000_000);
+  });
+
+  it("회복 마릿수 표준이 없으면 본시험의 절반", () => {
+    const r = toxFromRequest(testFromCatalog(noRec, rates), ask({ recovery: "2주" }));
+    expect(r.test.groups[0].rm).toBe(5);
+  });
+
+  it("회복 \"없음\"이면 표준 회복군을 빼고, 차감 단가가 없으면 금액은 그대로", () => {
+    const r = toxFromRequest(testFromCatalog(row, rates), ask({ recovery: "없음" }));
+    expect(r.test.groups.every((g) => g.rm === 0 && g.rf === 0)).toBe(true);
+    expect(testLines(r.test).total).toBe(168_000_000);
+  });
+
+  it("회복 기간만 다르면(표준 4주, 요청 2주) 옮기되 확인 칸에 남긴다", () => {
+    const r = toxFromRequest(testFromCatalog(row, rates), ask({ recovery: "2주" }));
+    expect(r.test.cond.recovery).toBe("2주");
+    expect(r.applied).toEqual([]);
+  });
+
+  it("TK 포함이면 TK 분석 항목을 켜고 그 금액을 더한다, 미포함이면 끈다", () => {
+    const on = toxFromRequest(testFromCatalog(row, rates), ask({ tk: "포함" }));
+    expect(on.applied).toContain("TK 병행");
+    expect(testLines(on.test).total).toBe(168_000_000 + 7_000_000);
+    const off = toxFromRequest(on.test, ask({ tk: "미포함" }));
+    expect(testLines(off.test).total).toBe(168_000_000);
+  });
+
+  it("단가가 없는 조건은 옮기지 못하고 확인 칸에 남는다", () => {
+    const r = toxFromRequest(testFromCatalog(row, rates), ask({ formulation: "포함" }));
+    expect(r.applied).toEqual([]);
+  });
+
+  it("의뢰자 원안을 남긴다", () => {
+    const r = toxFromRequest(testFromCatalog(row, rates), ask({ recovery: "4주", tk: "포함", species: "랫드" }));
+    expect(r.orig?.lines).toEqual([["동물종", "랫드"], ["회복시험", "4주"], ["TK 병행", "포함"]]);
   });
 });
