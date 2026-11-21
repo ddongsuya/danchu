@@ -45,6 +45,25 @@ beforeEach(() => {
   delete process.env.AGENT_REQUEST_STRICT;
 });
 
+describe("선정 뒤·질의응답 읽기 (2026-11-21, 앱에서 계약 보고까지)", () => {
+  it("의뢰자: 계약 진행·질의응답 읽기, 질의 입력은 웹 라우트와 같은 칸", () => {
+    const c = catalogFor(requester);
+    expect(c.find((a) => a.name === "contract_status")).toMatchObject({ level: "read", scope: "rfq" });
+    expect(c.find((a) => a.name === "qna_view")).toMatchObject({ level: "read", scope: "rfq" });
+    const ask = findAction("requester", "ask")!.input as { properties: Record<string, unknown>; required: string[] };
+    expect(ask.required).toEqual(["inviteId", "topic", "body"]);
+    const answer = findAction("requester", "answer")!.input as { required: string[] };
+    expect(answer.required).toEqual(["questionId", "answer", "scope"]);
+  });
+  it("기관: 계약 진행·질의응답 읽기", () => {
+    expect(findAction("cro", "contract_status")).toMatchObject({ level: "read", scope: "rfq" });
+    expect(findAction("cro", "qna_view")).toMatchObject({ level: "read", scope: "rfq" });
+    expect((findAction("cro", "ask")!.input as { required: string[] }).required).toEqual(["topic", "body"]);
+    expect(findAction("cro", "detail_view")).toMatchObject({ level: "read", scope: "rfq" });
+    expect(findAction("requester", "detail_view")).toMatchObject({ level: "read", scope: "rfq" });
+  });
+});
+
 describe("요청서 양식·검사 도구", () => {
   it("의뢰자 읽기 도구로 목록에 있다", () => {
     const c = catalogFor(requester);

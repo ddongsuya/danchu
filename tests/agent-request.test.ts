@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { REQUEST_SCHEMA_VERSION, checkRequestValues, createGate, itemsFieldOf, requestSchema } from "@/lib/agent-request";
-import type { Values } from "@/lib/rfq-schema";
+import { validateRequired, type Values } from "@/lib/rfq-schema";
 
 /*
  * 에이전트 요청서 도구 (2026-11-20 설계안 D1)
@@ -80,6 +80,32 @@ describe("요청서 검사", () => {
     const r = checkRequestValues(base({ substance: "" }));
     expect(r.issues[0]).toMatchObject({ code: "required" });
     expect(r.issues[0].message).toContain("필수 항목");
+  });
+});
+
+describe("PK 동물 시험의 군 수·군당 마릿수 (2026-11-21 사용자 결정)", () => {
+  const pk = (extra: Values = {}) =>
+    base({ categories: ["PK/TK/ADME·생체시료분석"], "PK/TK/ADME·생체시료분석.items": ["PK(약물동태)"], "PK/TK/ADME·생체시료분석.species": ["랫드"], ...extra });
+  it("양식이 조건부 필수를 알려 준다", () => {
+    const f = requestSchema().categories.find((c) => c.name === "PK/TK/ADME·생체시료분석")!.fields.find((x) => x.key.endsWith(".groupCount"))!;
+    expect(f.requiredIf).toEqual({ key: "PK/TK/ADME·생체시료분석.items", anyOf: expect.arrayContaining(["PK(약물동태)", "TK(독성동태)"]) });
+  });
+  it("동물 시험인데 비면 칸마다 required, 웹 검사도 막는다", () => {
+    const r = checkRequestValues(pk());
+    expect(r.issues.filter((i) => i.code === "required").map((i) => i.key)).toEqual(["PK/TK/ADME·생체시료분석.groupCount", "PK/TK/ADME·생체시료분석.perGroup"]);
+    expect(validateRequired(pk())).toContain("군 수");
+  });
+  it("숫자가 없으면 빈 것으로 본다", () => {
+    const r = checkRequestValues(pk({ "PK/TK/ADME·생체시료분석.groupCount": "미정", "PK/TK/ADME·생체시료분석.perGroup": "3" }));
+    expect(r.issues.map((i) => i.key)).toEqual(["PK/TK/ADME·생체시료분석.groupCount"]);
+  });
+  it("채우면 통과", () => {
+    const r = checkRequestValues(pk({ "PK/TK/ADME·생체시료분석.groupCount": "2 (IV, PO)", "PK/TK/ADME·생체시료분석.perGroup": "3" }));
+    expect(r.issues).toEqual([]);
+    expect(validateRequired(pk({ "PK/TK/ADME·생체시료분석.groupCount": "2", "PK/TK/ADME·생체시료분석.perGroup": "3" }))).toBe("");
+  });
+  it("체외 시험만이면 묻지 않는다", () => {
+    expect(checkRequestValues(pk({ "PK/TK/ADME·생체시료분석.items": ["CYP 억제"] })).issues).toEqual([]);
   });
 });
 
