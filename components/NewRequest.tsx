@@ -10,6 +10,7 @@ import {
   DEFAULT_VALUES,
   filled,
   validateRequired,
+  activeRequired,
   labelMap,
   type Cat,
   type Field,
@@ -296,7 +297,12 @@ export function NewRequest({
     <RfqField
       key={id}
       id={id}
-      field={{ ...f, label: f.label || FIELD_LABELS[f.id] || f.id }}
+      field={{
+        ...f,
+        label: f.label || FIELD_LABELS[f.id] || f.id,
+        // 조건부 필수 칸(PK 동물 시험의 군 수 등)은 조건이 켜지면 필수로 보인다
+        required: f.required || (!!f.requiredIf && id.includes(".") && activeRequired(id.slice(0, id.lastIndexOf(".")) as Cat, values).some((x) => x.id === f.id)),
+      }}
       values={values}
       onChange={set}
       files={files}
@@ -711,7 +717,11 @@ export function NewRequest({
                 <div className="request__fields">
                   {cats.map((c) => {
                     const f = itemsField(c);
-                    return f ? field({ ...f, label: c, help: undefined }, `${c}.${f.id}`) : null;
+                    if (!f) return null;
+                    return [
+                      field({ ...f, label: c, help: undefined }, `${c}.${f.id}`),
+                      ...activeRequired(c, values).map((x) => field(x, `${c}.${x.id}`)),
+                    ];
                   })}
                 </div>
               </section>
@@ -725,9 +735,9 @@ export function NewRequest({
             {!quick && cats
               .filter((c) => DETAILS[c])
               .map((c) => (
-                <details className="request__details" key={c}>
+                <details className="request__details" key={c} open={activeRequired(c, values).length > 0 || undefined}>
                   <summary>
-                    {c} 상세 조건 <span>선택 입력</span>
+                    {c} 상세 조건 <span>{activeRequired(c, values).length ? "필수 포함" : "선택 입력"}</span>
                   </summary>
                   <div className="request__fields">
                     {c === "일반독성" && (

@@ -9,10 +9,18 @@
  * 이 파일은 순수 함수만 둔다(테스트 대상). 기관 맞추기·실행은 lib/agent-actions.ts.
  */
 import { createHash } from "node:crypto";
-import { CATS, CONTACT, DETAILS, STEP2, WIZ, labelMap, validateRequired, type Field, type Values } from "./rfq-schema";
+import { CATS, CONTACT, DETAILS, STEP2, WIZ, detailRequired, labelMap, validateRequired, type Field, type Values } from "./rfq-schema";
 import { quoteRowsFromPayload, type QuoteLineDef } from "./quote-items";
 
-export type SchemaField = { key: string; type: Field["type"]; label: string; required: boolean; options?: string[] };
+export type SchemaField = {
+  key: string;
+  type: Field["type"];
+  label: string;
+  required: boolean;
+  options?: string[];
+  /** 같은 분야의 칸(키 전체)에 이 값 중 하나가 있으면 필수. 숫자가 들어가야 한다 */
+  requiredIf?: { key: string; anyOf: string[] };
+};
 export type RequestSchema = {
   schemaVersion: string;
   /** 요청 전체 칸(위자드·상세 조건). 담당자 정보는 단추 프로필에서 채우므로 없다 */
@@ -21,12 +29,13 @@ export type RequestSchema = {
   categories: { name: string; fields: SchemaField[]; itemsKey: string | null }[];
 };
 
-const toField = (f: Field, key = f.id, fallbackLabel = f.id): SchemaField => ({
+const toField = (f: Field, key = f.id, fallbackLabel = f.id, cat?: string): SchemaField => ({
   key,
   type: f.type,
   label: f.label || fallbackLabel,
   required: !!f.required,
   ...(f.options?.length ? { options: [...f.options] } : {}),
+  ...(f.requiredIf && cat ? { requiredIf: { key: `${cat}.${f.requiredIf.field}`, anyOf: [...f.requiredIf.anyOf] } } : {}),
 });
 
 /** 분야의 시험 종류 칸(items, 생식발생독성은 segment). 없으면 null */
@@ -43,7 +52,7 @@ function buildSchema(): Omit<RequestSchema, "schemaVersion"> {
   ];
   const categories = CATS.map((cat) => ({
     name: cat,
-    fields: DETAILS[cat].map((f) => toField(f, `${cat}.${f.id}`)),
+    fields: DETAILS[cat].map((f) => toField(f, `${cat}.${f.id}`, f.id, cat)),
     itemsKey: itemsFieldOf(cat) ? `${cat}.${itemsFieldOf(cat)}` : null,
   }));
   return { fields, categories };
@@ -80,7 +89,10 @@ export function checkRequestValues(values: Values): { issues: RequestIssue[]; wa
   const payload: Values = {};
 
   const required = validateRequired({ ...values });
-  if (required) issues.push({ key: "", label: "", code: "required", message: required });
+  // 조건부 필수(PK 동물 시험의 군 수·군당 마릿수)는 칸마다 알려 준다. 앱이 그 칸을 바로 묻게
+  const details = detailRequired(values);
+  if (required && !details.some((d) => d.message === required)) issues.push({ key: "", label: "", code: "required", message: required });
+  for (const d of details) issues.push({ key: d.key, label: labels[d.key] ?? d.key, code: "required", message: d.message });
 
   const cats = Array.isArray(values.categories) ? values.categories.filter((c) => (CATS as readonly string[]).includes(c)) : [];
   for (const cat of cats) {

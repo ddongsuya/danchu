@@ -7,7 +7,7 @@ import { ArrowLeft, CaretRight, CheckSquare, MagnifyingGlass, Plus, Square, X } 
 import { RfqField } from "@/components/RfqField";
 import { Chevron } from "@/components/Chevron";
 import { EXTRA_FIELDS, INCLUDE_KEYS, OPTION_SUGGEST, PER_SAMPLE_CATS, ROUTES, SPECIES, isNewId, methodOptions, newVariant, type CatalogItem, type CatalogRow, type CondPrice } from "@/lib/catalog";
-import { PRESETS, presetItems } from "@/lib/presets";
+import { PRESETS, presetItems, standardDesign } from "@/lib/presets";
 import { defaultRates, standardGroups, uid, type Rate } from "@/lib/quote-doc";
 import type { Cat, Values } from "@/lib/rfq-schema";
 import { won, ymd } from "@/lib/format";
@@ -111,7 +111,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
   /** 고른 시험을 빈 줄로 담고, 질문 하나씩 채우기로 넘어간다 */
   const addPicked = async (keys: string[], fromPreset: Map<string, Partial<CatalogRow>>) => {
     const byKey = new Map(items.map((it) => [it.key, it]));
-    const fresh = keys.map((k) => byKey.get(k)).filter((x): x is CatalogItem => !!x).map((it) => newVariant(it, { source: "manual", ...(fromPreset.get(it.key) ?? {}) }));
+    const fresh = keys.map((k) => byKey.get(k)).filter((x): x is CatalogItem => !!x).map((it) => newVariant(it, { source: "manual", ...standardDesign(it.key, fromPreset.get(it.key)) }));
     if (!fresh.length) return;
     const before = new Set(rows.map((r) => r.id));
     const d = await postJson<{ rows?: CatalogRow[] }>("/api/cro/catalog", { rows: [...rows.filter((r) => keys.includes(r.item_key)), ...fresh], removed: [] });
@@ -275,7 +275,7 @@ function Pick({ items, rows, orgCategories, first, readOnly, onBack, onAdd }: {
     for (const pi of presetItems(p)) {
       if (have.has(pi.key)) continue;
       keys.push(pi.key);
-      m.set(pi.key, { species: pi.species ?? [], route: pi.route ?? null, routes: pi.route ? [pi.route] : [], method: pi.method ?? null, note: pi.note ?? null });
+      m.set(pi.key, { ...(pi.species?.length ? { species: pi.species } : {}), ...(pi.route ? { route: pi.route, routes: [pi.route] } : {}), ...(pi.method ? { method: pi.method } : {}), ...(pi.note ? { note: pi.note } : {}) });
     }
     setPreset(m);
     setPicked((s) => [...new Set([...s, ...keys])]);

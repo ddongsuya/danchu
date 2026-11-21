@@ -10,7 +10,7 @@ import {
   type DocData, type DocHit, type RequestPrice, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
-import { cleanKd, COST_KEYS, newPdGroup, parseCount, parseGroups, parseTimeList, parseTimes, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
+import { cleanKd, COST_KEYS, firstInt, newPdGroup, parseCount, parseGroups, parseTimeList, parseTimes, pkGroupsFromRequest, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
 import { snapFor } from "./pd-quote";
@@ -345,6 +345,10 @@ function withRequest(t: DocTest, payload: Values): DocTest {
   }
   if (k === "pk" && t.kd?.pk) {
     const pk = structuredClone(t.kd.pk);
+    // 군 수·군당 마릿수 (2026-11-21 요청서 칸). 검체 수 = 마릿수 합 × 시점 × 검체 종류
+    const groupCount = firstInt(get("groupCount"), 20);
+    const perGroup = firstInt(get("perGroup"), 200);
+    pk.groups = pkGroupsFromRequest(pk.groups, groupCount, perGroup);
     const sampling = get("sampling");
     const n = parseTimes(sampling);
     // 의뢰자가 채혈 시점을 적었으면 그 시점으로 바꾼다. 검체 수가 달라진 만큼 검체 단가로 추가·차감된다 (kindLines)
@@ -354,7 +358,7 @@ function withRequest(t: DocTest, payload: Values): DocTest {
     if (Array.isArray(mx) && mx.length) pk.matrix = mx.filter((m) => PK_MATRIX.includes(m));
     const design = get("design");
     if (design && !pk.types.length) pk.types = design.split(", ").map((d) => (d === "단회" ? "단회 PK" : d === "반복" ? "반복 PK" : d)).filter((d) => PK_TYPES.includes(d));
-    const orig: Orig = { lines: lines([["동물종", get("species")], ["설계", design], ["검체", get("matrix")], ["채혈 시기·횟수", sampling], ["분석 장비", get("instrument")]]), ...(n ? { times: n } : {}) };
+    const orig: Orig = { lines: lines([["동물종", get("species")], ["설계", design], ["군 수", get("groupCount")], ["군당 마릿수", get("perGroup")], ["검체", get("matrix")], ["채혈 시기·횟수", sampling], ["분석 장비", get("instrument")]]), ...(groupCount ? { groups: groupCount } : {}), ...(perGroup ? { perGroup } : {}), ...(n ? { times: n } : {}) };
     return { ...t, kd: { ...t.kd, pk }, orig };
   }
   if (k === "other" && t.kd?.other) {
