@@ -25,6 +25,7 @@ import { comparisonOpened } from "./reply-window";
 import { compareView } from "./compare-view";
 import { loadDetail } from "./detail-data";
 import { awardForRfq } from "./contract-draft-db";
+import { contractView } from "./agent-contract";
 import { submittedDoc } from "./quote-doc-db";
 import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
@@ -369,6 +370,18 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   { name: "detail", role: "requester", scope: "rfq", level: "confirm", area: "quote", label: "2차 상세 요청", description: "기관에 2차 상세 견적을 요청한다.", input: passthrough("단추 2차 요청 본문"), run: viaRfq(detail, { mark: "rfq_details" }) },
   { name: "contract_confirm", role: "requester", scope: "rfq", level: "confirm", area: "contract", label: "계약 보고 확인", description: "기관의 계약 체결 보고를 확인하거나 이의를 남긴다.", input: passthrough("단추 계약 확인 본문"), run: viaRfq(contractConfirm) },
   { name: "contract_result", role: "requester", scope: "rfq", level: "confirm", area: "contract", label: "계약 결과 알림", description: "계약 결과를 단추에 알린다.", input: passthrough("단추 계약 결과 본문"), run: viaRfq(contractResult) },
+  {
+    name: "contract_status", role: "requester", scope: "rfq", level: "read", area: "contract", label: "계약 진행 보기", tool: true,
+    description: "선정한 기관의 계약 체결 보고, 확인 기한, 확정 여부, 내가 알린 계약 결과와 지금 할 수 있는 동작(확인·이의, 결과 알리기). 선정 전이면 not_selected.",
+    input: obj({}),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      const got = await contractRow({ rfqId: rfq.id });
+      if (!got) return { status: 409, body: { error: "not_selected" } };
+      return { status: 200, body: { contract: contractView("requester", got.award, rfq.status, got.quoteAmount) } };
+    },
+  },
 
   {
     name: "request_close", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "선정 없이 마무리",
@@ -576,6 +589,19 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       const r = submitFromDoc(got.head.data, items, new Map(q.rfq.rows.map((x) => [x.seq, x.name])));
       if (!r.ok) return { status: 409, body: { error: r.error, seqs: r.seqs, docNo: got.head.head.docNo } };
       return viaInvite(detailReply)({ ...c, body: { ...c.body, items: r.items } });
+    },
+  },
+  {
+    name: "contract_status", role: "cro", scope: "rfq", level: "read", area: "contract", label: "계약 진행 보기", tool: true,
+    description: "선정된 요청의 계약 체결 보고 상태, 선정 견적 금액과 차이 사유 규칙, 의뢰자 확인 여부, 지금 할 수 있는 동작(보고·정정). 선정 전이면 not_awarded.",
+    input: obj({}),
+    run: async (c) => {
+      const lite = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!lite) return { status: 409, body: { error: "not_awarded" } };
+      const got = await contractRow({ awardId: lite.id });
+      const rfq = got ? await getRfqByNo(c.no!) : null;
+      if (!got || !rfq) return notFound();
+      return { status: 200, body: { contract: contractView("cro", got.award, rfq.status, got.quoteAmount) } };
     },
   },
   {
@@ -836,7 +862,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.7";
+export const CATALOG_VERSION = "2026-11-21.1";
 
 /* ── 실행과 기록 ── */
 
@@ -1004,6 +1030,17 @@ export async function undoAgentAction(s: AgentSession, logId: string, now = Date
 /** 응답 본문에 실행 기록 id 를 붙인다(웹 처리 본문은 그대로) */
 export function actResponse(r: RunResult) {
   return agentJson(r.logId ? { ...r.body, agentLog: { id: r.logId, undoable: r.undoable } } : r.body, r.status);
+}
+
+/** 선정 한 건(계약 진행 보기용)과 선정 견적 금액(선정 때 고정한 fee_basis_amount, 없으면 견적 총액) */
+async function contractRow(by: { rfqId: string } | { awardId: string }) {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const q = sb.from("rfq_awards").select("*");
+  const { data: award } = await ("rfqId" in by ? q.eq("rfq_id", by.rfqId) : q.eq("id", by.awardId)).maybeSingle();
+  if (!award) return null;
+  const quote = award.fee_basis_amount == null ? (await sb.from("cro_quotes").select("total_amount").eq("id", award.quote_id).maybeSingle()).data : null;
+  return { award, quoteAmount: award.fee_basis_amount ?? (quote?.total_amount as number | null | undefined) ?? null };
 }
 
 /** 우리 기관 초대로 받은 선정. 선정 전이면 null */
