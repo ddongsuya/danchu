@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
 import {
-  blankTest, condChanges, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
+  blankTest, condChanges, deductOf, docTitle, docTotals, kindRows, mainAnimals, recoveryAnimals, scheduleWeeks, switchCond, testFromCatalog, testKind, testLines, uid,
   docStyle, LAYOUTS, layoutName,
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
@@ -475,7 +475,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   <input type="checkbox" checked={e.on} disabled={readOnly} onChange={(ev) => set({ evals: t.evals.map((x, j) => (j === k ? { ...x, on: ev.target.checked } : x)) })} />
                   <span className={!e.base && e.on ? "qed__mk" : undefined}>{e.name}</span>
                 </label>
-                <small>{e.base ? "기본" : e.on ? "추가" : r?.add ? `추가 시 + ${n(r.add)}` : "추가 시 금액 없음"}</small>
+                <small>{e.base ? (r && deductOf(r) ? (e.on ? `기본 · 빼면 - ${n(deductOf(r))}` : `제외 - ${n(deductOf(r))}`) : "기본") : e.on ? "추가" : r?.add ? `추가 시 + ${n(r.add)}` : "추가 시 금액 없음"}</small>
               </li>
             );
           })}
