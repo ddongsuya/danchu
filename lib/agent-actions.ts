@@ -35,7 +35,7 @@ import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
 import { awardForOrgByRfq, draftForAward, draftSentAt, sendDraft } from "./contract-draft-db";
 import { createDocFromRequest, docForInvite, findDocs, loadDoc, priceRequest, requestInputFor, saveDoc, type RequestInput } from "./quote-doc-db";
-import { applyDocEdits, applyReplyFields, docView, parseDocEdits, replyFromDoc, setManualAmount, submitFromDoc, type EditError } from "./agent-quote-doc";
+import { applyDocEdits, applyReplyFields, docView, parseDocEdits, replyFromDoc, setManualAmount, submitFromDoc, submitPreview, type EditError } from "./agent-quote-doc";
 import { loadQuote } from "./quote-load";
 import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
@@ -185,6 +185,25 @@ async function docFor(c: ActCtx): Promise<{ inv: { id: string; token: string }; 
   return got ? { inv, head: got } : notFound();
 }
 const editErr = (e: EditError): ActOut => ({ status: e === "not_found" ? 404 : 400, body: { error: e } });
+
+/**
+ * 제출 본문의 견적서 판(docUpdatedAt, 앱 확인 카드가 본 판). 있으면 지금 판과 같아야 하고, 본문 금액이 견적서 금액과 달라도 막는다(사람이 본 금액만 나간다).
+ * 없으면(옛 앱) 견적서 금액으로 바꿔 채운다(overridden).
+ */
+function docVersionErr(c: ActCtx, head: { updatedAt: string }, filled?: { before: import("./cro-data").ReplyItem[]; after: import("./cro-data").ReplyItem[] }): ActOut | null {
+  const v = c.body.docUpdatedAt;
+  if (v === undefined) return null;
+  if (typeof v !== "string" || !v) return bad();
+  if (v !== head.updatedAt) return { status: 409, body: { error: "changed", updatedAt: head.updatedAt } };
+  if (!filled) return null;
+  const sent = new Map(filled.before.map((it) => [it.seq, String(it.amount ?? "")]));
+  const seqs = filled.after.filter((it) => it.avail !== "불가" && sent.get(it.seq) !== String(it.amount ?? "")).map((it) => it.seq);
+  return seqs.length ? { status: 409, body: { error: "changed", seqs, updatedAt: head.updatedAt } } : null;
+}
+const withoutDocVersion = (b: Record<string, unknown>) => {
+  const { docUpdatedAt: _v, ...rest } = b;
+  return rest;
+};
 
 /** 견적서를 판 비교로 저장. 바꾸기 전 모습을 실행 기록에 남긴다 */
 async function saveDocAs(c: ActCtx, got: { head: { head: { id: string; client: string; substance: string; issuedOn: string; validUntil: string | null; memo: string; updatedAt: string }; data: unknown } }, data: unknown, extra: Record<string, unknown>): Promise<ActOut> {
@@ -601,6 +620,19 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
     },
   },
   {
+    name: "quote_submit_preview", role: "cro", scope: "rfq", level: "read", area: "quote", label: "제출 미리보기", feature: "quote_tool",
+    description: "견적 제출(quote_submit)이 줄마다 채울 금액(할인 반영)·기간·설계 설명과 견적서 판(updatedAt)을 미리 읽는다. 앱 견적 확인 카드가 그대로 보이고, 제출 때 docUpdatedAt 으로 판을 넘긴다. 비서 도구가 아니다.",
+    input: obj({}),
+    run: async (c) => {
+      const got = await docFor(c);
+      if ("status" in got) return got;
+      const q = await loadQuote(got.inv.token, { markOpened: false });
+      if (!q) return notFound();
+      const h = got.head.head;
+      return { status: 200, body: { docId: h.id, docNo: h.docNo, updatedAt: h.updatedAt, path: `/cro/docs/${h.id}/fill`, ...submitPreview(got.head.data, new Map(q.rfq.rows.map((x) => [x.seq, x.name]))) } };
+    },
+  },
+  {
     name: "quote_from_doc", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적서 금액으로 회신 채우기", feature: "quote_tool",
     description: "견적서의 시험별 금액(할인을 줄마다 나눠 반영)·기간·설계 설명을 회신 초안에 옮겨 임시 저장한다. 가능 여부는 바꾸지 않는다. 금액을 못 채운 줄은 empty, 요청서와 시험 이름이 달라진 줄은 mismatched 로 돌려준다.",
     input: obj({}),
@@ -627,7 +659,7 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   },
   {
     name: "quote_submit", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "견적 제출",
-    description: "견적을 의뢰자에게 제출한다. 금액은 이 요청의 견적서(시험 목록 표준가·추가/차감 단가·효력 단가표 계산과 사람이 넣은 금액)에서 단추가 채운다. 본문 금액은 쓰지 않는다. 견적서가 없으면 doc_missing, 금액 없는 줄은 amount_missing, 시험 이름이 달라진 줄은 mismatched.",
+    description: "견적을 의뢰자에게 제출한다. 금액은 이 요청의 견적서(시험 목록 표준가·추가/차감 단가·효력 단가표 계산과 사람이 넣은 금액)에서 단추가 채운다. 본문 금액은 쓰지 않는다. 견적서가 없으면 doc_missing, 금액 없는 줄은 amount_missing, 시험 이름이 달라진 줄은 mismatched. docUpdatedAt(제출 미리보기의 판)을 넘기면 판이 바뀌었거나 본문 금액이 견적서와 다를 때 changed.",
     input: passthrough("단추 회신 본문"),
     run: async (c) => {
       const got = await docFor(c);
@@ -636,9 +668,13 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       if (!items || items.some((it) => !it || typeof it.seq !== "number")) return bad();
       const q = await loadQuote(got.inv.token, { markOpened: false });
       if (!q) return notFound();
+      const stale = docVersionErr(c, got.head.head);
+      if (stale) return stale;
       const r = submitFromDoc(got.head.data, items, new Map(q.rfq.rows.map((x) => [x.seq, x.name])));
       if (!r.ok) return { status: 409, body: { error: r.error, seqs: r.seqs, docNo: got.head.head.docNo } };
-      const out = await viaInvite(submitQuote, { mark: true })({ ...c, body: { ...c.body, items: r.items } });
+      const moved = docVersionErr(c, got.head.head, { before: items, after: r.items });
+      if (moved) return moved;
+      const out = await viaInvite(submitQuote, { mark: true })({ ...c, body: { ...withoutDocVersion(c.body), items: r.items } });
       return out.status === 200 ? { ...out, body: { ...out.body, docNo: got.head.head.docNo, overridden: r.overridden } } : out;
     },
   },
@@ -657,7 +693,7 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   },
   {
     name: "detail_reply", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "2차 회신",
-    description: "2차 상세 요청에 회신한다(mode keep·revise·decline). revise 의 줄 금액은 이 요청의 견적서(2차 조건으로 고친 설계)에서 단추가 채운다. 본문 금액은 쓰지 않는다.",
+    description: "2차 상세 요청에 회신한다(mode keep·revise·decline). revise 의 줄 금액은 이 요청의 견적서(2차 조건으로 고친 설계)에서 단추가 채운다. 본문 금액은 쓰지 않는다. docUpdatedAt 은 quote_submit 과 같다.",
     input: passthrough("단추 2차 회신 본문"),
     run: async (c) => {
       if (c.body.mode !== "revise") return viaInvite(detailReply)(c);
@@ -667,9 +703,13 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       if (!items || items.some((it) => !it || typeof it.seq !== "number")) return bad();
       const q = await loadQuote(got.inv.token, { markOpened: false });
       if (!q) return notFound();
+      const stale = docVersionErr(c, got.head.head);
+      if (stale) return stale;
       const r = submitFromDoc(got.head.data, items, new Map(q.rfq.rows.map((x) => [x.seq, x.name])));
       if (!r.ok) return { status: 409, body: { error: r.error, seqs: r.seqs, docNo: got.head.head.docNo } };
-      return viaInvite(detailReply)({ ...c, body: { ...c.body, items: r.items } });
+      const moved = docVersionErr(c, got.head.head, { before: items, after: r.items });
+      if (moved) return moved;
+      return viaInvite(detailReply)({ ...c, body: { ...withoutDocVersion(c.body), items: r.items } });
     },
   },
   {
@@ -943,7 +983,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-21.3";
+export const CATALOG_VERSION = "2026-11-21.4";
 
 /* ── 실행과 기록 ── */
 

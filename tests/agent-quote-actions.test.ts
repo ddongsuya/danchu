@@ -65,8 +65,11 @@ describe("견적서 도구 목록", () => {
     expect(c.find((a) => a.name === "quote_doc_preview")).toMatchObject({ level: "read", tool: true });
     for (const n of ["quote_doc_edit", "quote_doc_set_amount", "quote_from_doc", "quote_reply_fields"]) expect(c.find((a) => a.name === n), n).toMatchObject({ level: "confirm", tool: false });
   });
+  it("제출 미리보기는 화면이 부르는 읽기(비서 도구 아님)", () => {
+    expect(catalogFor(cro).find((a) => a.name === "quote_submit_preview")).toMatchObject({ level: "read", tool: false });
+  });
   it("견적서 도구는 견적서 툴 요금제 기능, 회신 칸 고치기는 요금제와 상관없다", () => {
-    for (const n of ["quote_doc_get", "quote_doc_edit", "quote_doc_set_amount", "quote_doc_preview", "quote_from_doc"]) expect(findAction("cro", n)?.feature, n).toBe("quote_tool");
+    for (const n of ["quote_doc_get", "quote_doc_edit", "quote_doc_set_amount", "quote_doc_preview", "quote_submit_preview", "quote_from_doc"]) expect(findAction("cro", n)?.feature, n).toBe("quote_tool");
     expect(findAction("cro", "quote_reply_fields")?.feature).toBeUndefined();
   });
 });
@@ -131,5 +134,39 @@ describe("회신", () => {
     const r = await runAgentAction(cro, REQ, "quote_reply_fields", NO, { items: [{ seq: 2, avail: "불가", reason: "장비 없음" }] });
     expect(r.status).toBe(200);
     expect((fx.puts[0].items as { avail: string }[])[1].avail).toBe("불가");
+  });
+});
+
+describe("제출: 사람이 본 견적서 판만", () => {
+  const common = { validUntil: "", startDate: "2026-12-01", payTerms: "", substanceQty: "", reportLang: "", includes: [] };
+  const body = (extra: Record<string, unknown>) => ({ note: "", steps: [], common, items: [{ seq: 1, avail: "가능", amount: "30000000", weeks: "" }, { seq: 2, avail: "불가", amount: "", weeks: "" }], ...extra });
+  it("미리보기: 판·줄 금액·사람이 넣는 줄", async () => {
+    const r = await runAgentAction(cro, REQ, "quote_submit_preview", NO, {});
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ updatedAt: "v1", docNo: "Q-1", path: "/cro/docs/d1/fill", discount: 0, mismatched: [], rows: [{ seq: 1, amount: 30_000_000 }, { seq: 2, amount: null, tests: [{ uid: "tb", manual: true }] }] });
+  });
+  it("판이 다르면 changed, 단추로 보내지 않는다", async () => {
+    const r = await runAgentAction(cro, REQ, "quote_submit", NO, body({ docUpdatedAt: "old" }));
+    expect(r).toMatchObject({ status: 409, body: { error: "changed", updatedAt: "v1" } });
+    expect(fx.puts).toEqual([]);
+  });
+  it("본문 금액이 견적서와 다르면 changed", async () => {
+    const b = body({ docUpdatedAt: "v1" });
+    (b.items as { amount: string }[])[0].amount = "1";
+    expect(await runAgentAction(cro, REQ, "quote_submit", NO, b)).toMatchObject({ status: 409, body: { error: "changed", seqs: [1] } });
+    expect(fx.puts).toEqual([]);
+  });
+  it("판과 금액이 같으면 제출하고, 판 칸은 단추 회신 본문에 넣지 않는다", async () => {
+    const r = await runAgentAction(cro, REQ, "quote_submit", NO, body({ docUpdatedAt: "v1" }));
+    expect(r.status).toBe(200);
+    expect(fx.puts[0]).not.toHaveProperty("docUpdatedAt");
+    expect((fx.puts[0].items as { amount: string }[]).map((x) => x.amount)).toEqual(["30000000", ""]);
+  });
+  it("판을 넘기지 않으면(옛 앱) 견적서 금액으로 채운다", async () => {
+    const b = body({});
+    (b.items as { amount: string }[])[0].amount = "1";
+    const r = await runAgentAction(cro, REQ, "quote_submit", NO, b);
+    expect(r.status).toBe(200);
+    expect((fx.puts[0].items as { amount: string }[])[0].amount).toBe("30000000");
   });
 });
