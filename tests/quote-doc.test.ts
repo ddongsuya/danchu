@@ -99,12 +99,31 @@ describe("testLines: 표준가 + 달라진 곳", () => {
     expect(r.total).toBe(195_000_000);
   });
 
-  it("차감 단가가 비어 있으면 줄여도 금액이 줄지 않는다", () => {
+  it("차감 칸이 비면 추가 단가로 빼고, 0을 적었으면 빼지 않는다 (2026-11-21)", () => {
     const t = testFromCatalog(row, rates);
     t.groups = t.groups.map((g) => ({ ...g, rm: 0, rf: 0 }));
     const r = testLines(t);
-    expect(r.lines.find((l) => l.kind === "recovery")?.amount).toBe(0);
-    expect(r.total).toBe(168_000_000);
+    expect(r.lines.find((l) => l.kind === "recovery")?.amount).toBe(-18_000_000);
+    expect(r.total).toBe(150_000_000);
+    const zero = { ...t, rates: t.rates.map((x) => (x.kind === "recovery" ? { ...x, deduct: 0 } : x)) };
+    expect(testLines(zero).lines.find((l) => l.kind === "recovery")?.amount ?? 0).toBe(0);
+    expect(testLines(zero).total).toBe(168_000_000);
+  });
+
+  it("표준에 든 평가항목을 빼면 같은 이름 단가로 차감한다 (2026-11-21)", () => {
+    const withFlat: Rate[] = [...rates, { id: "f1", kind: "flat", label: "혈액학", unit: "시험", add: 2_000_000, deduct: 1_500_000, shown: "혈액학 추가" }];
+    const t = testFromCatalog(row, withFlat);
+    const hem = t.evals.find((e) => e.name === "혈액학");
+    expect(hem).toMatchObject({ base: true, on: true, rateId: "f1" });
+    // 같은 이름으로 따로 "추가" 칩을 만들지 않는다
+    expect(t.evals.filter((e) => e.name === "혈액학")).toHaveLength(1);
+    hem!.on = false;
+    const r = testLines(t);
+    expect(r.lines.find((l) => l.label === "혈액학 제외")?.amount).toBe(-1_500_000);
+    expect(r.total).toBe(166_500_000);
+    // 단가가 없는 표준 항목은 빼도 금액이 그대로
+    t.evals.find((e) => e.name === "체중")!.on = false;
+    expect(testLines(t).total).toBe(166_500_000);
   });
 
   it("평가항목·수량·직접 입력 줄", () => {
@@ -160,7 +179,7 @@ describe("저장 값 정리", () => {
     const r = cleanRates([{ kind: "animal", add: 1 }, { kind: "animal", add: 2 }, { kind: "flat", add: "3", deduct: 9 }]);
     expect(r).toHaveLength(2);
     expect(r[0].add).toBe(1);
-    expect(r[1]).toMatchObject({ kind: "flat", add: 3, deduct: null });
+    expect(r[1]).toMatchObject({ kind: "flat", add: 3, deduct: 9 });
   });
   it("한 번 저장한 값은 다시 정리해도 같다", () => {
     const t = testFromCatalog(row, rates);
@@ -348,10 +367,20 @@ describe("독성: 의뢰자 요청 조건을 계산기로 옮긴다 (2026-11-21)
     expect(r.test.groups[0].rm).toBe(5);
   });
 
-  it("회복 \"없음\"이면 표준 회복군을 빼고, 차감 단가가 없으면 금액은 그대로", () => {
+  it("회복 \"없음\"이면 표준 회복군을 빼고, 차감 칸이 비면 추가 단가로 뺀다", () => {
     const r = toxFromRequest(testFromCatalog(row, rates), ask({ recovery: "없음" }));
     expect(r.test.groups.every((g) => g.rm === 0 && g.rf === 0)).toBe(true);
-    expect(testLines(r.test).total).toBe(168_000_000);
+    expect(testLines(r.test).total).toBe(150_000_000);
+  });
+
+  it("표준에 든 항목을 \"미포함\"으로 요청하면 차감 단가가 있을 때만 뺀다", () => {
+    const withFlat: Rate[] = [...rates, { id: "f2", kind: "flat", label: "조직병리", unit: "시험", add: 9_000_000, deduct: 6_000_000, shown: "조직병리 추가" }];
+    const base = { ...row, includes: [...row.includes, "조직병리"] } as CatalogRow;
+    const r = toxFromRequest(testFromCatalog(base, withFlat), ask({ histopath: "미포함" }));
+    expect(r.test.evals.find((e) => e.name === "조직병리")?.on).toBe(false);
+    expect(testLines(r.test).total).toBe(162_000_000);
+    const noRate = toxFromRequest(testFromCatalog(base, rates), ask({ histopath: "미포함" }));
+    expect(noRate.test.evals.find((e) => e.name === "조직병리")?.on).toBe(true);
   });
 
   it("회복 기간만 다르면(표준 4주, 요청 2주) 옮기되 확인 칸에 남긴다", () => {

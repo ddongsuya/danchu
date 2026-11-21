@@ -33,7 +33,7 @@ export type Rate = {
   unit: string;
   /** 추가 단가 (원) */
   add: number | null;
-  /** 차감 단가 (원, 양수로 적는다). 비우면 줄여도 금액이 줄지 않는다 */
+  /** 차감 단가 (원, 양수로 적는다). 비우면 추가 단가로 뺀다, 0이면 빼지 않는다 (2026-11-21 사용자 결정) */
   deduct: number | null;
   /** 견적서 표시명 */
   shown: string;
@@ -98,7 +98,7 @@ export function cleanRates(raw: unknown): Rate[] {
       id, kind, label,
       unit: text(o.unit, 12) || (kind === "group" ? "군" : kind === "flat" ? "시험" : "마리"),
       add: int(o.add, MAX_WON),
-      deduct: kind === "flat" ? null : int(o.deduct, MAX_WON),
+      deduct: int(o.deduct, MAX_WON),
       shown: text(o.shown, 60) || label,
       ...(Object.keys(bySpecies).length ? { bySpecies } : {}),
     });
@@ -253,9 +253,12 @@ export function testFromCatalog(c: CatalogRow, rates: Rate[], full: CatalogRow =
     .filter((o) => o.name && !flats.some((f) => f.label === o.name))
     .map((o, i) => ({ id: `opt${i + 1}`, kind: "flat", label: o.name, unit: "시험", add: o.amount, deduct: null, shown: `${o.name} 추가` }));
   const allRates = [...(rates.length ? rates : defaultRates(groups.length > 0)), ...optionRates];
+  // 표준에 든 항목과 이름이 같은 평가항목 단가는 그 항목을 뺄 때 차감에 쓴다 (따로 "추가" 칩을 만들지 않는다)
+  const flatAll = allRates.filter((r) => r.kind === "flat");
+  const byName = (name: string) => flatAll.find((r) => r.label && r.label.trim() === name.trim());
   const evals: DocEval[] = [
-    ...c.includes.map((name) => ({ name, on: true, base: true })),
-    ...allRates.filter((r) => r.kind === "flat").map((r) => ({ name: r.label, on: false, base: false, rateId: r.id })),
+    ...c.includes.map((name) => { const r = byName(name); return { name, on: true, base: true, ...(r ? { rateId: r.id } : {}) }; }),
+    ...flatAll.filter((r) => !c.includes.some((n) => n.trim() === r.label.trim())).map((r) => ({ name: r.label, on: false, base: false, rateId: r.id })),
   ];
   const cond = condOfRow(c);
   const subtitle = [cond.species, cond.route, cond.glp].filter(Boolean).join(" · ");
@@ -361,11 +364,32 @@ export type Line = {
 
 const n0 = (v: number) => (Number.isFinite(v) ? v : 0);
 const fmt = (v: number) => v.toLocaleString("ko-KR");
-const priced = (diff: number, r: Rate | undefined) => (!r || !diff ? 0 : diff > 0 ? diff * (r.add ?? 0) : r.deduct ? diff * r.deduct : 0);
+/** 줄일 때 단가: 차감 칸이 비면 추가 단가와 같다. 0을 적었으면 빼지 않는다 */
+export const deductOf = (r: Pick<Rate, "add" | "deduct"> | undefined): number => (r ? r.deduct ?? r.add ?? 0 : 0);
+const priced = (diff: number, r: Rate | undefined) => (!r || !diff ? 0 : diff > 0 ? diff * (r.add ?? 0) : deductOf(r) ? diff * deductOf(r) : 0);
 
 /** 본시험 동물 합계 */
 export const mainAnimals = (gs: DocGroup[]) => gs.reduce((a, g) => a + n0(g.m) + n0(g.f), 0);
 export const recoveryAnimals = (gs: DocGroup[]) => gs.reduce((a, g) => a + n0(g.rm) + n0(g.rf), 0);
+
+/**
+ * 평가항목 줄: 표준에 없는 항목을 넣으면 추가 단가, 표준에 든 항목을 빼면 차감 단가(비우면 추가 단가)로 뺀다 (2026-11-21).
+ * 표준 항목의 단가는 이름이 같은 평가항목 단가에서 찾는다 (testFromCatalog 가 rateId 를 붙인다)
+ */
+function evalLines(t: DocTest): Line[] {
+  const out: Line[] = [];
+  for (const e of t.evals) {
+    if (!e.rateId) continue;
+    const r = t.rates.find((x) => x.id === e.rateId);
+    if (!r) continue;
+    if (e.on && !e.base) out.push({ label: r.shown || `${r.label} 추가`, formula: `1${r.unit} × ${fmt(r.add ?? 0)}`, amount: r.add ?? 0, kind: "flat" });
+    else if (!e.on && e.base) {
+      const d = deductOf(r);
+      if (d) out.push({ label: `${r.label || e.name} 제외`, formula: `1${r.unit} × ${fmt(d)}`, amount: -d, kind: "flat" });
+    }
+  }
+  return out;
+}
 
 /**
  * 시험 한 줄의 금액. 표준가 + 달라진 곳의 추가 비용.
@@ -387,7 +411,7 @@ export function testLines(t: DocTest): { base: number; lines: Line[]; total: num
     const rg = rate("group");
     if (dg !== 0) {
       const amt = priced(dg, rg);
-      const unit = dg > 0 ? rg?.add : rg?.deduct;
+      const unit = dg > 0 ? rg?.add : deductOf(rg);
       lines.push({ label: dg > 0 ? `투여군 추가 · ${dg}군` : `투여군 제외 · ${-dg}군`, formula: `${Math.abs(dg)}군 × ${fmt(unit ?? 0)}`, amount: amt, kind: "group" });
     }
 
@@ -395,7 +419,7 @@ export function testLines(t: DocTest): { base: number; lines: Line[]; total: num
     const da = mainAnimals(t.groups) - expected;
     if (da !== 0) {
       const ra = rate("animal");
-      const unit = da > 0 ? ra?.add : ra?.deduct;
+      const unit = da > 0 ? ra?.add : deductOf(ra);
       // 모든 군이 같은 수만큼 바뀌었으면 "+2마리 × 2성 × 4군" 으로 보여 준다
       const per = t.groups.map((g) => { const s = stdById.get(g.id); return [g.m - (s ? s.m : perGroupStd / 2), g.f - (s ? s.f : perGroupStd / 2)]; });
       const flat = per.flat();
@@ -413,7 +437,7 @@ export function testLines(t: DocTest): { base: number; lines: Line[]; total: num
     const dr = recoveryAnimals(t.groups) - recStd;
     if (dr !== 0) {
       const rr = rate("recovery");
-      const unit = dr > 0 ? rr?.add : rr?.deduct;
+      const unit = dr > 0 ? rr?.add : deductOf(rr);
       const changed = t.groups.filter((g) => { const s = stdById.get(g.id); return g.rm + g.rf !== (s ? s.rm + s.rf : 0); }).map((g) => g.label.split(" ")[0]);
       const who = changed.length && changed.length <= 3 ? `${changed.join(", ")} ` : "";
       lines.push({ label: dr > 0 ? `${who}회복군 추가 · ${dr}마리` : `${who}회복군 제외 · ${-dr}마리`, formula: `${Math.abs(dr)}마리 × ${fmt(unit ?? 0)}`, amount: priced(dr, rr), kind: "recovery" });
@@ -423,15 +447,10 @@ export function testLines(t: DocTest): { base: number; lines: Line[]; total: num
   for (const r of t.rates.filter((x) => x.kind === "qty")) {
     const q = Math.round(n0(t.qty[r.id] ?? 0));
     if (!q) continue;
-    const unit = q > 0 ? r.add : r.deduct;
+    const unit = q > 0 ? r.add : deductOf(r);
     lines.push({ label: `${r.shown} · ${Math.abs(q)}${r.unit}`, formula: `${Math.abs(q)}${r.unit} × ${fmt(unit ?? 0)}`, amount: priced(q, r), kind: "qty" });
   }
-  for (const e of t.evals) {
-    if (!e.on || e.base || !e.rateId) continue;
-    const r = t.rates.find((x) => x.id === e.rateId);
-    if (!r) continue;
-    lines.push({ label: r.shown || `${r.label} 추가`, formula: `1${r.unit} × ${fmt(r.add ?? 0)}`, amount: r.add ?? 0, kind: "flat" });
-  }
+  lines.push(...evalLines(t));
   for (const x of t.extras) {
     if (!x.label && !x.amount) continue;
     lines.push({ label: x.label || "기타", formula: "직접 입력", amount: Math.round(n0(x.amount)), kind: "extra" });
@@ -481,11 +500,7 @@ function kindLines(t: DocTest, k: Kind): { base: number; lines: Line[]; total: n
     const d = o.n - sn;
     if (d && ps) lines.push({ label: d > 0 ? `검체 분석 추가 · ${d}검체` : `검체 분석 차감 · ${-d}검체`, formula: `${o.n}검체, 표준 ${sn}검체 → ${Math.abs(d)}검체 × ${fmt(ps)}`, amount: d * ps, kind: "qty" });
   }
-  for (const e of t.evals) {
-    if (!e.on || e.base || !e.rateId) continue;
-    const r = t.rates.find((x) => x.id === e.rateId);
-    if (r) lines.push({ label: r.shown || `${r.label} 추가`, formula: `1${r.unit} × ${fmt(r.add ?? 0)}`, amount: r.add ?? 0, kind: "flat" });
-  }
+  lines.push(...evalLines(t));
   for (const x of t.extras) {
     if (!x.label && !x.amount) continue;
     lines.push({ label: x.label || "기타", formula: "직접 입력", amount: Math.round(n0(x.amount)), kind: "extra" });
@@ -905,6 +920,11 @@ export function toxFromRequest(t: DocTest, get: (id: string) => string, stdRecov
       const r = e.rateId ? t.rates.find((x) => x.id === e.rateId) : undefined;
       if (e.base || (r && r.add != null)) applied.push(y.check);
     } else if (e.on && !e.base) e.on = false;
+    else if (e.on && e.base && e.rateId) {
+      // 표준에 든 항목을 의뢰자가 빼면, 차감 단가가 있을 때만 빼고 금액을 줄인다 (없으면 기관이 정하게 둔다)
+      const r = t.rates.find((x) => x.id === e.rateId);
+      if (r && deductOf(r)) e.on = false;
+    }
   }
 
   const ln = (pairs: [string, string][]) => pairs.filter(([, v]) => v);

@@ -665,7 +665,7 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
           {(!byKind || list.length > 0) && (
             <section className="td__blk">
               <h3>추가 비용 단가 <span>선택</span></h3>
-              <p className="td__mut">의뢰자 조건이 설계와 다르면 견적서 금액을 이 단가로 맞춰요. 차감을 비우면 줄여도 금액이 줄지 않아요.</p>
+              <p className="td__mut">의뢰자 조건이 설계와 다르면 견적서 금액을 이 단가로 맞춰요. 차감을 비우면 추가와 같은 금액을 빼고, 0을 적으면 빼지 않아요.</p>
               <div className="td__rates">
                 {list.length > 0 && <><span aria-hidden="true" /><span className="td__rh" aria-hidden="true">1{list[0]?.unit ?? "마리"}당 추가</span><span className="td__rh" aria-hidden="true">차감</span></>}
                 {list.map((r) => (
@@ -724,12 +724,12 @@ function RateRow({ r, species, onChange }: { r: Rate; species: string[]; onChang
     <>
       {auto ? <span className="td__rl">{name} <small>1{r.unit}{others.length ? ` · ${species[0]}` : ""}</small></span> : <input className="inp" value={r.label} placeholder={r.kind === "qty" ? "수량 항목 (예: TK 채혈 시점)" : "항목 이름 (예: 추가 장기 조직병리)"} aria-label="추가 항목 이름" onChange={(e) => onChange({ label: e.target.value.slice(0, 60), shown: e.target.value.slice(0, 60) })} />}
       <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 추가 단가`} value={r.add != null ? r.add.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ add: v ? Number(v) : null }); }} /><span>원</span></div>
-      {r.kind === "flat" ? <span /> : <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 차감 단가`} placeholder="없음" value={r.deduct != null ? r.deduct.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ deduct: v ? Number(v) : null }); }} /><span>원</span></div>}
+      <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 차감 단가`} placeholder={fmtW(r.add) || "추가와 같음"} value={r.deduct != null ? r.deduct.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ deduct: v ? Number(v) : null }); }} /><span>원</span></div>
       {others.map((sp) => (
         <Fragment key={sp}>
           <span className="td__rl td__rl--sp">{sp}</span>
           <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 추가 단가`} placeholder={fmtW(r.add) || "대표와 같음"} value={fmtW(r.bySpecies?.[sp]?.add)} onChange={(e) => setSp(sp, "add", e.target.value)} /><span>원</span></div>
-          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 차감 단가`} placeholder={fmtW(r.deduct) || "없음"} value={fmtW(r.bySpecies?.[sp]?.deduct)} onChange={(e) => setSp(sp, "deduct", e.target.value)} /><span>원</span></div>
+          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 차감 단가`} placeholder={fmtW(r.bySpecies?.[sp]?.add) || fmtW(r.deduct) || fmtW(r.add) || "추가와 같음"} value={fmtW(r.bySpecies?.[sp]?.deduct)} onChange={(e) => setSp(sp, "deduct", e.target.value)} /><span>원</span></div>
         </Fragment>
       ))}
     </>
