@@ -40,6 +40,8 @@ export interface Field {
   options?: string[];
   /** 라벨 안의 특정 문구를 링크로 (동의 항목에서 약관·처리방침 연결) */
   link?: { text: string; href: string };
+  /** 같은 분야의 다른 칸에 이 값 중 하나가 골라지면 필수 (분야 칸 전용. 예: PK 동물 시험이면 군 수) */
+  requiredIf?: { field: string; anyOf: string[] };
 }
 
 export interface WizStep {
@@ -395,6 +397,10 @@ export const STEP2: Group[] = [
 
 /* ---------- 3단계 · 대분류별 세부 조건 ---------- */
 
+/** PK 동물 시험 항목. 이 중 하나를 고르면 군 수·군당 마릿수가 필수다 (2026-11-21 사용자 결정, 검체 수 = 군 × 마릿수 × 시점) */
+export const PK_ANIMAL_ITEMS = ["PK(약물동태)", "TK(독성동태)", "ADME", "물질수지", "조직분포", "배설"];
+const PK_ANIMAL = { field: "items", anyOf: PK_ANIMAL_ITEMS };
+
 export const DETAILS: Record<Cat, Field[]> = {
   일반독성: [
     {
@@ -617,8 +623,8 @@ export const DETAILS: Record<Cat, Field[]> = {
     { id: "species", type: "chips", label: "동물종", options: SPECIES },
     { id: "design", type: "chips", label: "설계", options: ["단회", "반복"] },
     // 검체 수 = 군 수 × 군당 마릿수 × 채혈 시점 × 검체 종류. 견적서가 이 두 칸으로 기관 표준 군을 맞춘다 (2026-11-21 사용자 결정)
-    { id: "groupCount", type: "text", label: "군 수", placeholder: "예: 2 (IV 1군, PO 1군)" },
-    { id: "perGroup", type: "text", label: "군당 마릿수", placeholder: "예: 3" },
+    { id: "groupCount", type: "text", label: "군 수", placeholder: "예: 2 (IV 1군, PO 1군)", requiredIf: PK_ANIMAL },
+    { id: "perGroup", type: "text", label: "군당 마릿수", placeholder: "예: 3", requiredIf: PK_ANIMAL },
     {
       id: "matrix",
       type: "chips",
@@ -769,7 +775,29 @@ export function validateRequired(values: Values): string {
       if (f.required && !filled(values, f.id)) return `필수 항목을 확인해 주세요: ${f.label || step.q}`;
     }
   }
-  return "";
+  return detailRequired(values)[0]?.message ?? "";
+}
+
+/** 분야 칸 중 지금 조건부 필수(requiredIf)가 켜진 칸 */
+export function activeRequired(cat: Cat, values: Values): Field[] {
+  return (DETAILS[cat] ?? []).filter((f) => {
+    if (!f.requiredIf) return false;
+    const on = values[`${cat}.${f.requiredIf.field}`];
+    return (Array.isArray(on) ? on : typeof on === "string" ? [on] : []).some((v) => f.requiredIf!.anyOf.includes(v));
+  });
+}
+
+/** 조건부 필수 칸 중 비었거나 숫자가 없는 칸. 고른 분야만 본다 */
+export function detailRequired(values: Values): { key: string; message: string }[] {
+  const cats = Array.isArray(values.categories) ? values.categories.filter((c): c is Cat => CATS.includes(c as Cat)) : [];
+  const out: { key: string; message: string }[] = [];
+  for (const cat of cats) {
+    for (const f of activeRequired(cat, values)) {
+      const v = values[`${cat}.${f.id}`];
+      if (typeof v !== "string" || !/\d/.test(v)) out.push({ key: `${cat}.${f.id}`, message: `필수 항목을 확인해 주세요: ${cat} · ${f.label}` });
+    }
+  }
+  return out;
 }
 
 /** id → 사람이 읽는 라벨 (메일 본문·관리용) */
