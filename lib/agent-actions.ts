@@ -23,8 +23,13 @@ import { loadCrmSynced } from "./crm";
 import { getRfqByNo, getRfqDetail, listNotifications, ownsRfq } from "./data";
 import { comparisonOpened } from "./reply-window";
 import { compareView } from "./compare-view";
-import { loadDetail } from "./detail-data";
+import { loadDetail, loadDetailForInvite } from "./detail-data";
+import { DETAIL_STATUS_LABEL, MAX_DETAIL_TARGETS, PRIVATE_KEYS, cleanLabel, detailFieldMap, detailLines, showValue } from "./detail-quote";
+import { testOptions } from "./qna-data";
 import { awardForRfq } from "./contract-draft-db";
+import { contractView } from "./agent-contract";
+import { loadCroQna, loadSponsorQna } from "./qna-data";
+import { QNA_TOPICS } from "./qna";
 import { submittedDoc } from "./quote-doc-db";
 import { getSupabaseAdmin } from "./supabase";
 import { featureError } from "./plan-usage";
@@ -247,7 +252,13 @@ const SUPPORT_INPUT = obj({ type: oneOf(["이용 문의", "오류 신고", "요�
 /** 단추 운영자에게 문의(답변은 계정 이메일로) */
 const supportRun = async (c: ActCtx): Promise<ActOut> => callAs(c.s, c.req, supportPost, {}, { email: c.s.email, type: c.body.type ?? "기타", rfqNo: c.body.rfqNo ?? "", text: c.body.text });
 
-const QNA_INPUT = obj({ body: str("질의·답변 본문", 2000), questionId: str("답변할 질의 id(답변일 때)", 64) });
+/* 질의응답 본문은 웹 라우트 그대로(app/api/rfq/[no]/qna, app/api/quote/[token]/qna). 주제·시험 행은 qna_view 의 topics·tests */
+const QNA_TOPIC_IDS = QNA_TOPICS.map(([k]) => k);
+const testSeq = { type: "integer", minimum: 1, description: "관련 시험 행(qna_view tests 의 seq). 없으면 요청 전체" };
+const SPONSOR_ASK_INPUT = obj({ inviteId: str("질의할 기관(qna_view targets 의 inviteId)", 64), topic: oneOf(QNA_TOPIC_IDS, "주제"), testSeq, body: str("질의 본문", 1000) }, ["inviteId", "topic", "body"]);
+const SPONSOR_ANSWER_INPUT = obj({ questionId: str("답할 기관 질의 id", 64), answer: str("답변", 1000), scope: oneOf(["private", "all"], "private 질의 기관만, all 참여 기관 전체") }, ["questionId", "answer", "scope"]);
+const CRO_ASK_INPUT = obj({ topic: oneOf(QNA_TOPIC_IDS, "주제"), testSeq, body: str("질의 본문", 1000) }, ["topic", "body"]);
+const CRO_ANSWER_INPUT = obj({ questionId: str("답할 의뢰자 질의 id", 64), answer: str("답변", 1000) }, ["questionId", "answer"]);
 
 /**
  * 요청 첨부 읽기 (2026-11-20 사용자 결정: AI가 첨부 내용까지 읽는다).
@@ -382,12 +393,69 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       };
     },
   },
-  { name: "ask", role: "requester", scope: "rfq", level: "confirm", area: "qna", label: "기관에 질의", description: "견적을 낸 기관에 질의를 보낸다.", input: QNA_INPUT, run: viaRfq(sponsorQna, { withAction: "ask" }) },
-  { name: "answer", role: "requester", scope: "rfq", level: "confirm", area: "qna", label: "기관 질의에 답변", description: "기관이 보낸 질의에 답한다.", input: QNA_INPUT, run: viaRfq(sponsorQna, { withAction: "answer" }) },
+  {
+    name: "qna_view", role: "requester", scope: "rfq", level: "read", area: "qna", label: "질의응답 보기", tool: true,
+    description: "이 요청의 질의응답(기관 표시명은 비교표 전 기관 A·B, 선정 전 연락처 가림), 질의할 수 있는 기관, 답할 질의 수, 주제·시험 행 목록.",
+    input: obj({}),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      return { status: 200, body: { qna: await loadSponsorQna(rfq), topics: QNA_TOPICS.map(([id, label]) => ({ id, label })) } };
+    },
+  },
+  { name: "ask", role: "requester", scope: "rfq", level: "confirm", area: "qna", label: "기관에 질의", description: "비교표가 열린 뒤 견적을 낸 기관에 질의를 보낸다.", input: SPONSOR_ASK_INPUT, run: viaRfq(sponsorQna, { withAction: "ask" }) },
+  { name: "answer", role: "requester", scope: "rfq", level: "confirm", area: "qna", label: "기관 질의에 답변", description: "기관이 보낸 질의에 답한다. 다른 참여 기관에도 공개할지(scope) 고른다.", input: SPONSOR_ANSWER_INPUT, run: viaRfq(sponsorQna, { withAction: "answer" }) },
   { name: "select", role: "requester", scope: "rfq", level: "confirm", area: "quote", label: "기관 선정", description: "비교표가 열린 뒤 견적 하나를 선정한다. 선정 사유를 함께 남긴다.", input: passthrough("단추 선정 본문"), run: viaRfq(select, { mark: "rfq_awards" }) },
+  {
+    name: "detail_view", role: "requester", scope: "rfq", level: "read", area: "quote", label: "2차 상세 요청 보기", tool: true,
+    description: "2차 상세 요청을 보낼 수 있는지, 보낼 수 있는 기관(1차 견적을 낸 곳, 최대 3곳)과 바꿀 수 있는 조건 칸(지금 값), 보냈으면 바꾼 조건과 기관별 회신 상태.",
+    input: obj({}),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      const [d, sent] = await Promise.all([getRfqDetail(rfq), loadDetail(rfq.id)]);
+      const payload = (rfq.payload ?? {}) as Values;
+      const cats = rfq.categories ?? [];
+      const submitted = d.quotes.filter((q) => q.status === "submitted");
+      const labOf = new Map(submitted.map((q) => [q.id, q.cro_name]));
+      const opened = comparisonOpened(rfq);
+      // 단추 send_detail_request 와 같은 조건: 비교표가 열린 뒤, 선정·마무리 전, 요청마다 한 번
+      const canSend = opened && !sent && !rfq.selected_quote_id && !["selected", "contracting", "closed", "cancelled"].includes(rfq.status) && submitted.length > 0;
+      return {
+        status: 200,
+        body: {
+          canSend,
+          maxTargets: MAX_DETAIL_TARGETS,
+          targets: opened ? submitted.map((q) => ({ quoteId: q.id, lab: q.cro_name })) : [],
+          // 바꿀 수 있는 조건(요청서 키 그대로). 예산은 기관에 가지 않는다
+          fields: [...detailFieldMap(cats)].map(([key, { field, group }]) => ({ key, group, label: cleanLabel(field.label), type: field.type, ...(field.options ? { options: [...field.options] } : {}), current: showValue(payload[key]) || null, private: PRIVATE_KEYS.includes(key) })),
+          sent: sent
+            ? {
+                replyBy: sent.replyBy,
+                note: sent.note,
+                ...detailLines(sent.values, payload, cats),
+                targets: sent.targets.map((t) => ({ quoteId: t.quoteId, lab: labOf.get(t.quoteId) ?? "", status: t.status, statusLabel: DETAIL_STATUS_LABEL[t.status] ?? t.status, total: t.total, weeks: t.weeks, respondedAt: t.respondedAt })),
+              }
+            : null,
+        },
+      };
+    },
+  },
   { name: "detail", role: "requester", scope: "rfq", level: "confirm", area: "quote", label: "2차 상세 요청", description: "기관에 2차 상세 견적을 요청한다.", input: passthrough("단추 2차 요청 본문"), run: viaRfq(detail, { mark: "rfq_details" }) },
   { name: "contract_confirm", role: "requester", scope: "rfq", level: "confirm", area: "contract", label: "계약 보고 확인", description: "기관의 계약 체결 보고를 확인하거나 이의를 남긴다.", input: passthrough("단추 계약 확인 본문"), run: viaRfq(contractConfirm) },
   { name: "contract_result", role: "requester", scope: "rfq", level: "confirm", area: "contract", label: "계약 결과 알림", description: "계약 결과를 단추에 알린다.", input: passthrough("단추 계약 결과 본문"), run: viaRfq(contractResult) },
+  {
+    name: "contract_status", role: "requester", scope: "rfq", level: "read", area: "contract", label: "계약 진행 보기", tool: true,
+    description: "선정한 기관의 계약 체결 보고, 확인 기한, 확정 여부, 내가 알린 계약 결과와 지금 할 수 있는 동작(확인·이의, 결과 알리기). 선정 전이면 not_selected.",
+    input: obj({}),
+    run: async (c) => {
+      const rfq = await ownRfq(c);
+      if (!rfq) return notFound();
+      const got = await contractRow({ rfqId: rfq.id });
+      if (!got) return { status: 409, body: { error: "not_selected" } };
+      return { status: 200, body: { contract: contractView("requester", got.award, rfq.status, got.quoteAmount) } };
+    },
+  },
 
   {
     name: "request_close", role: "requester", scope: "rfq", level: "confirm", area: "intake", label: "선정 없이 마무리",
@@ -463,8 +531,21 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   // ─ 기관: 받은 요청 ─
   { name: "join", role: "cro", scope: "rfq", level: "confirm", area: "intake", label: "참여", description: "받은 요청에 참여한다. 이용 조건 판(terms)을 그대로 넘긴다.", input: passthrough("단추 참여 본문"), run: viaInvite(join) },
   { name: "decline", role: "cro", scope: "rfq", level: "confirm", area: "intake", label: "불참", description: "받은 요청에 참여하지 않는다.", input: passthrough("단추 불참 본문"), run: viaInvite(decline) },
-  { name: "ask", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자에게 질의", description: "의뢰자에게 질의를 보낸다(투여 경로·물질 보유량 등).", input: QNA_INPUT, run: viaInvite(croQna, { withAction: "ask" }) },
-  { name: "answer", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자 질의에 답변", description: "의뢰자 질의에 답한다.", input: QNA_INPUT, run: viaInvite(croQna, { withAction: "answer" }) },
+  {
+    name: "qna_view", role: "cro", scope: "rfq", level: "read", area: "qna", label: "질의응답 보기", tool: true,
+    description: "참여한 요청의 우리 기관 질의응답과 의뢰자가 모두에게 공개한 답변, 질의·답변 가능 여부, 답할 질의 수, 주제·시험 행 목록. 참여 전이면 not_joined.",
+    input: obj({}),
+    run: async (c) => {
+      const inv = await inviteForOrg(c.no!, c.s.org!.id);
+      const rfq = inv ? await getRfqByNo(c.no!) : null;
+      if (!inv || !rfq) return notFound();
+      if (!(await joinedInvite(inv.id))) return { status: 409, body: { error: "not_joined" } };
+      const qna = await loadCroQna(inv.id, rfq.id);
+      return qna ? { status: 200, body: { qna, topics: QNA_TOPICS.map(([id, label]) => ({ id, label })) } } : notFound();
+    },
+  },
+  { name: "ask", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자에게 질의", description: "참여 뒤 비교표가 열리기 전까지 의뢰자에게 질의를 보낸다(투여 경로·물질 보유량 등).", input: CRO_ASK_INPUT, run: viaInvite(croQna, { withAction: "ask" }) },
+  { name: "answer", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자 질의에 답변", description: "의뢰자 질의에 답한다.", input: CRO_ANSWER_INPUT, run: viaInvite(croQna, { withAction: "answer" }) },
   { name: "quote_draft", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적 임시 저장", description: "견적 초안을 단추에 임시 저장한다(의뢰자에게 보이지 않는다). 금액은 단추 계산 또는 사람이 넣은 값.", input: passthrough("단추 회신 본문"), run: viaInvite(saveQuote, { method: "PUT" }) },
   { name: "quote_upload", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적서 PDF 올릴 주소", description: "견적서 PDF를 올릴 주소를 받는다(선택 첨부).", input: obj({ name: str("파일 이름"), size: { type: "integer", minimum: 1 }, type: str("파일 형식", 60) }, ["name", "size"]), run: viaInvite(uploadUrl) },
   {
@@ -598,6 +679,19 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
     },
   },
   {
+    name: "detail_view", role: "cro", scope: "rfq", level: "read", area: "quote", label: "2차 상세 요청 보기", tool: true,
+    description: "우리 기관이 받은 2차 상세 요청: 바뀐 조건·새 조건, 1차 견적 줄, 회신 기한·상태, 보낸 회신. 받지 않았으면 not_target.",
+    input: obj({}),
+    run: async (c) => {
+      const inv = await inviteForOrg(c.no!, c.s.org!.id);
+      const rfq = inv ? await getRfqByNo(c.no!) : null;
+      if (!inv || !rfq) return notFound();
+      const d = await loadDetailForInvite(inv.id, rfq.id, testOptions((rfq.payload ?? {}) as Values));
+      if (!d) return { status: 409, body: { error: "not_target" } };
+      return { status: 200, body: { detail: { ...d, canReply: d.status === "sent" && !d.expired && !d.closed } } };
+    },
+  },
+  {
     name: "detail_reply", role: "cro", scope: "rfq", level: "confirm", area: "quote", label: "2차 회신",
     description: "2차 상세 요청에 회신한다(mode keep·revise·decline). revise 의 줄 금액은 이 요청의 견적서(2차 조건으로 고친 설계)에서 단추가 채운다. 본문 금액은 쓰지 않는다. docUpdatedAt 은 quote_submit 과 같다.",
     input: passthrough("단추 2차 회신 본문"),
@@ -616,6 +710,19 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       const moved = docVersionErr(c, got.head.head, { before: items, after: r.items });
       if (moved) return moved;
       return viaInvite(detailReply)({ ...c, body: { ...withoutDocVersion(c.body), items: r.items } });
+    },
+  },
+  {
+    name: "contract_status", role: "cro", scope: "rfq", level: "read", area: "contract", label: "계약 진행 보기", tool: true,
+    description: "선정된 요청의 계약 체결 보고 상태, 선정 견적 금액과 차이 사유 규칙, 의뢰자 확인 여부, 지금 할 수 있는 동작(보고·정정). 선정 전이면 not_awarded.",
+    input: obj({}),
+    run: async (c) => {
+      const lite = await awardForOrgByRfq(c.s.org!.id, c.no!);
+      if (!lite) return { status: 409, body: { error: "not_awarded" } };
+      const got = await contractRow({ awardId: lite.id });
+      const rfq = got ? await getRfqByNo(c.no!) : null;
+      if (!got || !rfq) return notFound();
+      return { status: 200, body: { contract: contractView("cro", got.award, rfq.status, got.quoteAmount) } };
     },
   },
   {
@@ -876,7 +983,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-20.8";
+export const CATALOG_VERSION = "2026-11-21.4";
 
 /* ── 실행과 기록 ── */
 
@@ -1044,6 +1151,25 @@ export async function undoAgentAction(s: AgentSession, logId: string, now = Date
 /** 응답 본문에 실행 기록 id 를 붙인다(웹 처리 본문은 그대로) */
 export function actResponse(r: RunResult) {
   return agentJson(r.logId ? { ...r.body, agentLog: { id: r.logId, undoable: r.undoable } } : r.body, r.status);
+}
+
+/** 참여한 초대인가(질의응답은 참여 뒤부터) */
+async function joinedInvite(inviteId: string): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { data } = await sb.from("rfq_invites").select("joined_at").eq("id", inviteId).maybeSingle();
+  return !!data?.joined_at;
+}
+
+/** 선정 한 건(계약 진행 보기용)과 선정 견적 금액(선정 때 고정한 fee_basis_amount, 없으면 견적 총액) */
+async function contractRow(by: { rfqId: string } | { awardId: string }) {
+  const sb = getSupabaseAdmin();
+  if (!sb) return null;
+  const q = sb.from("rfq_awards").select("*");
+  const { data: award } = await ("rfqId" in by ? q.eq("rfq_id", by.rfqId) : q.eq("id", by.awardId)).maybeSingle();
+  if (!award) return null;
+  const quote = award.fee_basis_amount == null ? (await sb.from("cro_quotes").select("total_amount").eq("id", award.quote_id).maybeSingle()).data : null;
+  return { award, quoteAmount: award.fee_basis_amount ?? (quote?.total_amount as number | null | undefined) ?? null };
 }
 
 /** 우리 기관 초대로 받은 선정. 선정 전이면 null */
