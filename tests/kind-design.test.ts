@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cleanDocData, docTotals, testFromCatalog, testKind, testLines, type DocData, type DocTest } from "@/lib/quote-doc";
-import { cleanKd, kindOfCategory, kindStdPrice, parseCount, parseGroups, parseTimes, pdFrom, pdParts, pkSamples, type PdDesign } from "@/lib/kind-design";
+import { cleanKd, kindOfCategory, kindStdPrice, parseCount, parseGroups, parseTimeList, parseTimes, pdFrom, pdParts, pkSamples, type PdDesign } from "@/lib/kind-design";
 import { prefillRow, type CatalogRow } from "@/lib/catalog";
 import { kdExtra } from "@/lib/kind-design";
 
@@ -88,9 +88,19 @@ describe("시험 목록 → 견적서", () => {
     const pk = { types: ["단회 PK"], groups: [{ id: "a", label: "정맥군", route: "정맥", dose: "1", n: 3 }, { id: "b", label: "경구군", route: "경구", dose: "10", n: 3 }], times: ["5분", "15분", "30분", "1시간", "2시간", "4시간", "8시간", "24시간"], matrix: ["혈장"], method: "dev" as const, params: [], animal: 6_000_000, perSample: 45_000, dev: 6_000_000, report: 2_500_000 };
     expect(pkSamples(pk)).toBe(48);
     const t = testFromCatalog(base({ category: "PK/TK/ADME·생체시료분석", unit: "per_sample", kd: { pk } }), []);
-    expect(t.std.price).toBe(8_500_000);
+    // 표준가 = 고정 비용 + 표준 48검체 + 표준이 분석법 개발이면 개발비 (2026-11-21)
+    expect(t.std.price).toBe(6_000_000 + 2_500_000 + 48 * 45_000 + 6_000_000);
     expect(testLines(t).total).toBe(6_000_000 + 2_500_000 + 48 * 45_000 + 6_000_000);
-    expect(testLines({ ...t, kd: { pk: { ...pk, method: "have" } } }).total).toBe(6_000_000 + 2_500_000 + 48 * 45_000);
+    expect(testLines(t).lines).toHaveLength(0);
+    const have = testLines({ ...t, kd: { pk: { ...pk, method: "have" } } });
+    expect(have.total).toBe(6_000_000 + 2_500_000 + 48 * 45_000);
+    expect(have.lines.map((l) => l.amount)).toEqual([-6_000_000]);
+    // 48시간 한 시점 추가 = 6마리 × 1시점 × 45,000 만 더한다
+    const more = testLines({ ...t, kd: { pk: { ...pk, times: [...pk.times, "48시간"] } } });
+    expect(more.lines.map((l) => l.amount)).toEqual([6 * 45_000]);
+    // 마리를 줄이면 차감
+    const less = testLines({ ...t, kd: { pk: { ...pk, groups: pk.groups.map((g) => ({ ...g, n: 2 })) } } });
+    expect(less.lines.map((l) => l.amount)).toEqual([-16 * 45_000]);
   });
   it("약동학: 설계가 없으면 시험 목록 검체당 단가만 가져온다", () => {
     const t = testFromCatalog(base({ category: "PK/TK/ADME·생체시료분석", unit: "per_sample", std_price: 45_000 }), []);
@@ -171,5 +181,41 @@ describe("변경 수와 회신 칸", () => {
     expect(ex.cost_animal).toBe("7200000");
     expect(ex.exp_groups).toContain("양성대조군 8");
     expect(p.amount).toBe("22600000");
+  });
+});
+
+describe("개별 분석: 1식 금액 (2026-11-21 0원 버그)", () => {
+  it("시험 목록 1식 금액이 견적서 금액이 된다", () => {
+    const t = testFromCatalog(base({ category: "기타(임상병리·조직병리 등)", unit: "total", std_price: 8_000_000 }), []);
+    expect(t.std.price).toBe(8_000_000);
+    expect(testLines(t).total).toBe(8_000_000);
+    expect(testLines(t).lines).toHaveLength(0);
+  });
+  it("검체당이면 표준 검체 대비 달라진 검체만 추가·차감", () => {
+    const t = testFromCatalog(base({ category: "기타(임상병리·조직병리 등)", unit: "per_sample", kd: { other: { sample: "혈청", n: 20, perSample: 30_000, setup: 300_000, report: 1_000_000 } } }), []);
+    expect(t.std.price).toBe(300_000 + 1_000_000 + 20 * 30_000);
+    const up = testLines({ ...t, kd: { other: { ...t.kd!.other!, n: 40 } } });
+    expect(up.lines.map((l) => l.amount)).toEqual([20 * 30_000]);
+    const down = testLines({ ...t, kd: { other: { ...t.kd!.other!, n: 10 } } });
+    expect(down.total).toBe(300_000 + 1_000_000 + 10 * 30_000);
+  });
+});
+
+describe("PK 채혈 시점 읽기 (요청 → 설계)", () => {
+  it("뒤에 붙은 단위를 앞 숫자에도 건다", () => {
+    expect(parseTimeList("0.5, 1, 2, 4, 8, 24h · 총 6회")).toEqual(["0.5시간", "1시간", "2시간", "4시간", "8시간", "24시간"]);
+    expect(parseTimeList("5, 15, 30분, 1, 2, 4시간")).toEqual(["5분", "15분", "30분", "1시간", "2시간", "4시간"]);
+    expect(parseTimeList("15min, 1, 24hr")).toEqual(["15분", "1시간", "24시간"]);
+  });
+  it("횟수만 있거나 하나뿐이면 바꾸지 않는다", () => {
+    expect(parseTimeList("총 6회")).toEqual([]);
+    expect(parseTimeList("24h")).toEqual([]);
+    expect(parseTimeList("")).toEqual([]);
+  });
+  it("시점이 줄면 검체 수가 준다", () => {
+    const pk = { types: [], groups: [{ id: "g1", label: "1군", route: "경구", dose: "", n: 3 }], times: ["0.25시간", "0.5시간", "1시간", "2시간", "4시간", "8시간", "12시간", "24시간"], matrix: ["혈장"], method: "" as const, params: [], animal: null, perSample: 45000, dev: null, report: null };
+    const req = { ...pk, times: parseTimeList("0.5, 1, 2, 4, 8, 24h") };
+    expect(pkSamples(pk)).toBe(24);
+    expect(pkSamples(req)).toBe(18);
   });
 });

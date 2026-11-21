@@ -284,7 +284,13 @@ export function testFromCatalog(c: CatalogRow, rates: Rate[], full: CatalogRow =
 export function kdFromCatalog(kind: Kind, c: CatalogRow): KindDesign | undefined {
   if (kind === "pd") return { pd: c.kd?.pd ? structuredClone(c.kd.pd) : { ...pdFrom(c), lanes: pdLanes() } };
   if (kind === "pk") return { pk: c.kd?.pk ? structuredClone(c.kd.pk) : { ...emptyPk(), perSample: c.unit === "per_sample" ? c.std_price ?? c.price_min ?? null : null } };
-  if (kind === "other") return { other: c.kd?.other ? structuredClone(c.kd.other) : emptyOther(c.unit === "per_sample" ? c.std_price ?? c.price_min ?? null : c.std_price ?? null) };
+  // 1식 금액은 검체당 칸이 아니라 고정 비용(접수) 칸에 둔다. 검체당 칸에 넣으면 검체 수 0 × 금액 = 0원이 된다 (2026-11-21 고침)
+  if (kind === "other") {
+    if (c.kd?.other) return { other: structuredClone(c.kd.other) };
+    if (c.unit === "per_sample") return { other: emptyOther(c.std_price ?? c.price_min ?? null) };
+    const lot = c.std_price ?? c.price_min ?? null;
+    return { other: { ...emptyOther(lot == null ? null : 0), setup: lot } };
+  }
   return undefined;
 }
 
@@ -459,15 +465,21 @@ function kindLines(t: DocTest, k: Kind): { base: number; lines: Line[]; total: n
       if (d) lines.push({ label: `${p.label} · ${p.adj || "조정"}`, formula: `${fmt(p.base ?? 0)} → ${fmt(p.amount)}`, amount: d, kind: "group" });
     }
   } else if (k === "pk" && t.kd?.pk) {
-    const p = t.kd.pk;
-    base = (p.animal ?? 0) + (p.report ?? 0);
-    const n = pkSamples(p);
-    if (n) lines.push({ label: `검체 분석 · ${n}검체`, formula: `${p.groups.reduce((a, g) => a + g.n, 0)}마리 × ${p.times.length}시점${p.matrix.length > 1 ? ` × ${p.matrix.length}종` : ""} = ${n}검체 × ${fmt(p.perSample ?? 0)}`, amount: n * (p.perSample ?? 0), kind: "qty" });
-    if (p.method === "dev") lines.push({ label: "분석법 개발", formula: `1회 × ${fmt(p.dev ?? 0)}`, amount: p.dev ?? 0, kind: "flat" });
+    // 표준가 = 고정 비용 + 표준 설계 검체 × 검체당 단가 (+ 표준이 분석법 개발이면 개발비). 줄 = 표준과 달라진 곳만 (2026-11-21)
+    const p = t.kd.pk, sp = t.std.kd?.pk;
+    const ps = p.perSample ?? 0, n = pkSamples(p), sn = sp ? pkSamples(sp) : 0;
+    const stdDev = sp?.method === "dev";
+    base = (p.animal ?? 0) + (p.report ?? 0) + sn * ps + (stdDev ? p.dev ?? 0 : 0);
+    const d = n - sn;
+    if (d) lines.push({ label: d > 0 ? `검체 분석 추가 · ${d}검체` : `검체 분석 차감 · ${-d}검체`, formula: `${p.groups.reduce((a, g) => a + g.n, 0)}마리 × ${p.times.length}시점${p.matrix.length > 1 ? ` × ${p.matrix.length}종` : ""} = ${n}검체, 표준 ${sn}검체 → ${Math.abs(d)}검체 × ${fmt(ps)}`, amount: d * ps, kind: "qty" });
+    const dev = p.method === "dev";
+    if (dev !== stdDev) lines.push({ label: dev ? "분석법 개발" : "분석법 개발 제외", formula: `1회 × ${fmt(p.dev ?? 0)}`, amount: (dev ? 1 : -1) * (p.dev ?? 0), kind: "flat" });
   } else if (k === "other" && t.kd?.other) {
-    const o = t.kd.other;
-    base = (o.setup ?? 0) + (o.report ?? 0);
-    if (o.n) lines.push({ label: `검체 분석 · ${o.n}검체`, formula: `${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), kind: "qty" });
+    // 표준가 = 접수·보고 + 표준 검체 수 × 검체당 단가. 1식 금액은 접수 칸에 있다 (kdFromCatalog)
+    const o = t.kd.other, sn = t.std.kd?.other?.n ?? 0, ps = o.perSample ?? 0;
+    base = (o.setup ?? 0) + (o.report ?? 0) + sn * ps;
+    const d = o.n - sn;
+    if (d && ps) lines.push({ label: d > 0 ? `검체 분석 추가 · ${d}검체` : `검체 분석 차감 · ${-d}검체`, formula: `${o.n}검체, 표준 ${sn}검체 → ${Math.abs(d)}검체 × ${fmt(ps)}`, amount: d * ps, kind: "qty" });
   }
   for (const e of t.evals) {
     if (!e.on || e.base || !e.rateId) continue;
@@ -479,8 +491,8 @@ function kindLines(t: DocTest, k: Kind): { base: number; lines: Line[]; total: n
     lines.push({ label: x.label || "기타", formula: "직접 입력", amount: Math.round(n0(x.amount)), kind: "extra" });
   }
   const total = Math.max(0, base + lines.reduce((a, l) => a + l.amount, 0));
-  // 변경 수: 기관 표준과 달라진 설계 칸 + 추가 항목·직접 입력. 검체 분석 금액 자체는 변경이 아니다
-  const changes = lines.filter((l) => l.kind !== "qty").length + (sampleChanged(t, k) ? 1 : 0);
+  // 변경 수: 기관 표준과 달라진 줄 (검체 수 차이·분석법·추가 항목·직접 입력)
+  const changes = lines.length;
   return { base, lines, total, changes };
 }
 
@@ -512,11 +524,11 @@ export function kindRows(t: DocTest): KindRow[] | null {
   }
   if (k === "other" && t.kd.other) {
     const o = t.kd.other;
-    rows.push({ label: "검체 분석", note: `${o.sample ? `${o.sample} · ` : ""}${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), changed: sampleChanged(t, k) });
-    if (o.setup != null) rows.push({ label: "시료 접수·보관", note: "", amount: o.setup, changed: false });
+    if (o.perSample !== 0 || o.n) rows.push({ label: "검체 분석", note: `${o.sample ? `${o.sample} · ` : ""}${o.n}검체 × ${fmt(o.perSample ?? 0)}`, amount: o.n * (o.perSample ?? 0), changed: sampleChanged(t, k) });
+    if (o.setup != null) rows.push({ label: o.perSample === 0 ? "분석 (1식)" : "시료 접수·보관", note: "", amount: o.setup, changed: false });
     if (o.report != null) rows.push({ label: "결과 보고서", note: "", amount: o.report, changed: false });
   }
-  for (const l of testLines(t).lines) if (l.kind === "flat" && !(k === "pk" && l.label === "분석법 개발") || l.kind === "extra") rows.push({ label: l.label, note: "", amount: l.amount, changed: true });
+  for (const l of testLines(t).lines) if (l.kind === "flat" && !(k === "pk" && l.label.startsWith("분석법 개발")) || l.kind === "extra") rows.push({ label: l.label, note: "", amount: l.amount, changed: true });
   return rows.filter((r) => r.amount || r.label);
 }
 
@@ -838,4 +850,68 @@ export function docMatchesQuote(data: DocData, items: { seq: number; avail: stri
     const amount = i.amount == null || i.amount === "" ? NaN : Number(i.amount);
     return !!t && Number.isFinite(amount) && testLines(t).total === Math.round(amount);
   });
+}
+
+/* ── 독성: 의뢰자 요청 조건 → 계산기 (2026-11-21) ───────────── */
+
+/** 요청서의 포함 여부 칸 → 견적서 평가항목 이름 핵심어 · 회신 초안의 확인 칸 이름 (lib/catalog prefillRow) */
+const TOX_YN: { id: string; key: string; check: string }[] = [
+  { id: "tk", key: "TK", check: "TK 병행" },
+  { id: "formulation", key: "조제물", check: "조제물분석" },
+  { id: "histopath", key: "조직병리", check: "조직병리" },
+  { id: "doseRange", key: "용량설정", check: "용량설정시험" },
+];
+const normName = (s: string) => s.toLowerCase().replace(/[\s()·,]/g, "");
+
+/**
+ * 독성 시험에 의뢰자 요청 조건을 옮긴다. 금액은 기관이 넣은 변경 단가(testLines)로 바뀐다.
+ * - 회복시험: 표준에 회복군이 없으면 대조군·최고용량군에 넣는다(군당 성별 마릿수 = 기관 표준 회복 마릿수, 없으면 본시험의 절반). "없음"이면 뺀다
+ * - TK·조제물분석·조직병리·용량설정시험: 포함이면 그 평가항목을 켜고, 미포함이면 끈다(표준가에 들어 있는 항목은 그대로)
+ * applied: 계산기로 옮겨 금액까지 나온 조건 (회신 초안 확인 칸 이름과 같다). 단가가 없으면 옮기기만 하고 applied 에 넣지 않는다
+ */
+export function toxFromRequest(t: DocTest, get: (id: string) => string, stdRecoveryPerSex: number | null = null): { test: DocTest; applied: string[]; orig: Orig | undefined } {
+  const applied: string[] = [];
+  let groups = t.groups.map((g) => ({ ...g }));
+  let cond = { ...t.cond };
+  let phases = t.phases;
+  const recRate = t.rates.find((r) => r.kind === "recovery");
+
+  const rec = get("recovery");
+  const w = parseInt(rec, 10);
+  if (groups.length && rec === "없음" && groups.some((g) => g.rm + g.rf > 0)) {
+    groups = groups.map((g) => ({ ...g, rm: 0, rf: 0 }));
+    cond = { ...cond, recovery: "없음" };
+    phases = defaultPhases(t.weeks, t.cond.dosing, null, true);
+  } else if (groups.length && Number.isFinite(w) && w > 0) {
+    const had = groups.some((g) => g.rm + g.rf > 0);
+    const stdW = parseInt(t.std.cond.recovery, 10);
+    if (!had) {
+      const per = stdRecoveryPerSex && stdRecoveryPerSex > 0 ? stdRecoveryPerSex : Math.max(1, Math.ceil((groups[0].m || groups[0].f) / 2));
+      groups = groups.map((g, i) => (i === 0 || i === groups.length - 1 ? { ...g, rm: g.m ? per : 0, rf: g.f ? per : 0 } : g));
+      if (recRate && recRate.add != null) applied.push(`회복군 ${rec}`);
+    } else if (stdW === w) applied.push(`회복군 ${rec}`);
+    cond = { ...cond, recovery: `${w}주` };
+    phases = defaultPhases(t.weeks, t.cond.dosing, w, true);
+  }
+
+  const evals = t.evals.map((e) => ({ ...e }));
+  for (const y of TOX_YN) {
+    const v = get(y.id);
+    if (v !== "포함" && v !== "미포함") continue;
+    const e = evals.find((x) => normName(x.name).includes(normName(y.key)));
+    if (!e) continue;
+    if (v === "포함") {
+      if (!e.on) e.on = true;
+      const r = e.rateId ? t.rates.find((x) => x.id === e.rateId) : undefined;
+      if (e.base || (r && r.add != null)) applied.push(y.check);
+    } else if (e.on && !e.base) e.on = false;
+  }
+
+  const ln = (pairs: [string, string][]) => pairs.filter(([, v]) => v);
+  const lines = ln([
+    ["동물종", get("species")], ["시험법", get("method")], ["회복시험", rec],
+    ["TK 병행", get("tk")], ["조제물분석", get("formulation")], ["조직병리", get("histopath")], ["용량설정시험", get("doseRange")],
+    ["투여 간격", get("interval")], ["총 투여 횟수", get("doses")],
+  ]);
+  return { test: { ...t, groups, cond, phases, evals }, applied, orig: lines.length ? { lines } : undefined };
 }

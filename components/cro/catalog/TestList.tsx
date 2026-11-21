@@ -660,18 +660,22 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
           </section>
           )}
 
-          {(hasGroups || list.length > 0) && (
+          {/* 독성은 군 구성이 없어도(9월 입력분·Ames 등) 단가 칸을 보인다. 숨기면 계산기 단가를 넣을 곳이 없다 (2026-11-21).
+              효력·약동학·개별 분석은 설계 칸이 금액을 받으므로 저장된 추가 항목이 있을 때만 */}
+          {(!byKind || list.length > 0) && (
             <section className="td__blk">
               <h3>추가 비용 단가 <span>선택</span></h3>
               <p className="td__mut">의뢰자 조건이 설계와 다르면 견적서 금액을 이 단가로 맞춰요. 차감을 비우면 줄여도 금액이 줄지 않아요.</p>
               <div className="td__rates">
-                <span aria-hidden="true" /><span className="td__rh" aria-hidden="true">1{list[0]?.unit ?? "마리"}당 추가</span><span className="td__rh" aria-hidden="true">차감</span>
+                {list.length > 0 && <><span aria-hidden="true" /><span className="td__rh" aria-hidden="true">1{list[0]?.unit ?? "마리"}당 추가</span><span className="td__rh" aria-hidden="true">차감</span></>}
                 {list.map((r) => (
                   <RateRow key={r.id} r={r} species={d.species} onChange={(p) => setRate(r.id, p)} />
                 ))}
               </div>
               {d.species.length > 1 && hasGroups && <p className="td__mut">동물종마다 단가가 다르면 동물종 줄에 적어요. 비워 두면 {d.species[0]} 단가로 계산해요.</p>}
-              <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "flat", label: "", unit: "시험", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 항목 추가</button>
+              <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "flat", label: "", unit: "시험", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 평가항목 추가</button>
+              {/* 수량 항목 (11-06 시험 목록 통합 때 빠진 것 복구): 견적서에서 수량을 적으면 수량 × 단가로 더하거나 뺀다 */}
+              {!byKind && <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "qty", label: "", unit: "건", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 수량 항목 추가</button>}
             </section>
           )}
 
@@ -718,7 +722,7 @@ function RateRow({ r, species, onChange }: { r: Rate; species: string[]; onChang
   const fmtW = (v: number | null | undefined) => (v != null ? v.toLocaleString("ko-KR") : "");
   return (
     <>
-      {auto ? <span className="td__rl">{name} <small>1{r.unit}{others.length ? ` · ${species[0]}` : ""}</small></span> : <input className="inp" value={r.label} placeholder="항목 이름 (예: 추가 장기 조직병리)" aria-label="추가 항목 이름" onChange={(e) => onChange({ label: e.target.value.slice(0, 60), shown: e.target.value.slice(0, 60) })} />}
+      {auto ? <span className="td__rl">{name} <small>1{r.unit}{others.length ? ` · ${species[0]}` : ""}</small></span> : <input className="inp" value={r.label} placeholder={r.kind === "qty" ? "수량 항목 (예: TK 채혈 시점)" : "항목 이름 (예: 추가 장기 조직병리)"} aria-label="추가 항목 이름" onChange={(e) => onChange({ label: e.target.value.slice(0, 60), shown: e.target.value.slice(0, 60) })} />}
       <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 추가 단가`} value={r.add != null ? r.add.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ add: v ? Number(v) : null }); }} /><span>원</span></div>
       {r.kind === "flat" ? <span /> : <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 차감 단가`} placeholder="없음" value={r.deduct != null ? r.deduct.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ deduct: v ? Number(v) : null }); }} /><span>원</span></div>}
       {others.map((sp) => (
