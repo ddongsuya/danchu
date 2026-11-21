@@ -4,7 +4,7 @@
  * - 의뢰자: 요청서에서 프리셋을 고르면 시험 항목·세부 항목이 미리 선택된다
  * 항목명은 요청서 스키마(DETAILS)의 세부 항목과 정확히 같아야 한다 (catalogItems 로 검증).
  */
-import { catalogItems, itemKey } from "./catalog";
+import { catalogItems, itemKey, type CatalogRow } from "./catalog";
 
 export type PresetItem = {
   category: string;
@@ -144,7 +144,7 @@ export const PRESETS: Preset[] = [
       { category: "동물대체시험", item: "피부부식 인체피부모델(TG 431)", species: IV, method: "OECD TG 기준" },
       { category: "동물대체시험", item: "피부자극 인체피부모델(TG 439)", species: IV, method: "OECD TG 기준" },
       { category: "동물대체시험", item: "안자극 BCOP(TG 437)", species: IV, method: "OECD TG 기준" },
-      { category: "항원성·면역독성", item: "피부감작성 LLNA", species: MOUSE, requestSpecies: ["마우스"], route: "경피·피부", method: "OECD TG 429 LLNA" },
+      { category: "항원성·면역독성", item: "피부감작성 LLNA", species: ["CBA/J 마우스"], requestSpecies: ["마우스"], route: "경피·피부", method: "OECD TG 429 LLNA" },
       { category: "유전독성", item: "복귀돌연변이(Ames, TG 471)", species: IV, method: "OECD TG 기준" },
       { category: "유전독성", item: "염색체이상 in vitro(TG 473)", species: IV, method: "OECD TG 기준" },
       { category: "일반독성", item: "반복투여 4주", species: RAT, requestSpecies: ["랫드"], route: "경구(PO)", method: "OECD TG 407 (설치류 28일)" },
@@ -165,4 +165,58 @@ export function presetItems(p: Preset): (PresetItem & { key: string })[] {
 
 export function presetByKey(key: string): Preset | undefined {
   return PRESETS.find((p) => p.key === key);
+}
+
+/* ── 표준 설계 초안 (2026-11-21 사용자 승인) ──────────────
+ * 기관이 시험을 담을 때 미리 채우는 값. 식약처 「의약품등의 독성시험기준」·ICH·OECD TG 의 최소값만 넣는다.
+ * 기관마다 다른 칸(회복군 마릿수·지정 방식, 단가, GLP 수행 여부)은 비워 두고, 넣은 값도 기관이 고친다.
+ */
+const RAT_PO = { species: ["SD 랫드"], route: "경구(PO)", routes: ["경구(PO)"] };
+const IN_VITRO = { species: ["in vitro(동물 없음)"] };
+const REPEAT = { ...RAT_PO, method: "ICH M3/S4 반복투여 설계", groups_ctrl: 1, groups_test: 3 };
+const TK_DESIGN: CatalogRow["kd"] = {
+  pk: {
+    types: ["반복 PK"],
+    groups: [
+      { id: "g1", label: "저용량", route: "", dose: "", n: 0 },
+      { id: "g2", label: "중용량", route: "", dose: "", n: 0 },
+      { id: "g3", label: "고용량", route: "", dose: "", n: 0 },
+    ],
+    times: ["30분", "1시간", "2시간", "4시간", "8시간", "24시간"],
+    matrix: ["혈장"], method: "", params: ["Cmax", "Tmax", "AUC", "T½"],
+    animal: null, perSample: null, dev: null, report: null,
+  },
+};
+
+export const STANDARD_DESIGN: Record<string, Partial<CatalogRow>> = {
+  "일반독성::단회(급성)투여독성": { ...RAT_PO, method: "ICH M3 단회 설계(관찰 14일)", per_sex: 5 },
+  "일반독성::용량결정(DRF) 2주": REPEAT,
+  "일반독성::용량결정(DRF) 4주": REPEAT,
+  "일반독성::반복투여 4주": { ...REPEAT, per_sex: 10, recovery_weeks: 2, includes: ["임상병리", "조직병리(검경 포함)"] },
+  "일반독성::반복투여 13주": { ...REPEAT, per_sex: 10, recovery_weeks: 4, includes: ["임상병리", "조직병리(검경 포함)"] },
+  "국소내성::국소내성": { species: ["NZW 토끼"], method: "ICH M3 국소내성" },
+  "유전독성::복귀돌연변이(Ames, TG 471)": { ...IN_VITRO, method: "OECD TG 471", note: "균주 5종, ±S9" },
+  "유전독성::염색체이상 in vitro(TG 473)": { ...IN_VITRO, method: "OECD TG 473", note: "±S9" },
+  "유전독성::소핵 in vivo(마우스)": { species: ["ICR 마우스"], route: "경구(PO)", routes: ["경구(PO)"], method: "OECD TG 474", groups_ctrl: 2, groups_test: 3, per_sex: 5, note: "대조군: 음성·양성" },
+  "항원성·면역독성::피부감작성 LLNA": { species: ["CBA/J 마우스"], route: "경피·피부", routes: ["경피·피부"], method: "OECD TG 429 LLNA", groups_ctrl: 1, groups_test: 3, per_sex: 4, note: "군당 암컷 4 이상" },
+  "PK/TK/ADME·생체시료분석::TK(독성동태)": { kd: TK_DESIGN, note: "채혈: 투여 첫날, 마지막 주" },
+  "PK/TK/ADME·생체시료분석::분석법 검증(Full)": { ...IN_VITRO, method: "ICH M10" },
+  "조제물분석::함량": { ...IN_VITRO, method: "ICH Q2(R2)" },
+  "조제물분석::균질성": { ...IN_VITRO, method: "ICH Q2(R2)" },
+  "조제물분석::안정성": { ...IN_VITRO, method: "ICH Q2(R2)" },
+};
+
+const NUMBERS = ["groups_ctrl", "groups_test", "per_sex"] as const;
+
+/**
+ * 시험을 담을 때 채울 값: 표준 설계 위에 프리셋 값(동물종·경로·시험법·메모)을 얹는다.
+ * 프리셋이 다른 동물종이나 시험법을 고르면 군 구성·마릿수는 그 설계에 맞지 않을 수 있어 비운다.
+ */
+export function standardDesign(key: string, preset: Partial<CatalogRow> = {}): Partial<CatalogRow> {
+  const std = STANDARD_DESIGN[key] ?? {};
+  const out: Partial<CatalogRow> = { ...std, ...preset };
+  const otherSpecies = !!preset.species?.length && !!std.species?.length && preset.species[0] !== std.species[0];
+  const otherMethod = !!preset.method && !!std.method && preset.method !== std.method;
+  if (otherSpecies || otherMethod) for (const k of NUMBERS) delete out[k];
+  return out;
 }
