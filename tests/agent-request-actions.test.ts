@@ -59,6 +59,8 @@ describe("선정 뒤·질의응답 읽기 (2026-11-21, 앱에서 계약 보고�
     expect(findAction("cro", "contract_status")).toMatchObject({ level: "read", scope: "rfq" });
     expect(findAction("cro", "qna_view")).toMatchObject({ level: "read", scope: "rfq" });
     expect((findAction("cro", "ask")!.input as { required: string[] }).required).toEqual(["topic", "body"]);
+    expect(findAction("cro", "detail_view")).toMatchObject({ level: "read", scope: "rfq" });
+    expect(findAction("requester", "detail_view")).toMatchObject({ level: "read", scope: "rfq" });
   });
 });
 
