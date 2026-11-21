@@ -99,7 +99,6 @@
 .td__rates { display: grid; grid-template-columns: 1fr 150px 150px; gap: 10px 12px; align-items: center; }
 .td__rh { font-size: 12.5px; color: var(--muted); }
 .td__rl { font-size: 14.5px; }
-.td__qty { display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 8px; min-width: 0; }
 .td__rl small { color: var(--muted); font-size: 12.5px; margin-left: 4px; }
 .td__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 32px calc(14px + var(--bot)); background: var(--wh); box-shadow: 0 -8px 24px rgba(27, 27, 25, .06); }
 .td__ask { display: inline-flex; align-items: center; gap: 12px; font-size: 14px; }
@@ -159,7 +158,7 @@
   .td__btns .b1 { flex: 1; justify-content: center; height: 48px; }
   .tf__grid { grid-template-columns: 1fr; gap: 12px; }
   .td__rates { grid-template-columns: 1fr 1fr; }
-  .td__rates .td__rl, .td__rates > input.inp, .td__rates > .td__qty { grid-column: 1 / -1; }
+  .td__rates .td__rl, .td__rates > input.inp { grid-column: 1 / -1; }
   .td__rates > span:first-child { display: none; }
   .td__optrow { grid-template-columns: 1fr 120px 32px; }
   .tw__steps { margin-bottom: 24px; }

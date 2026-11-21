@@ -385,7 +385,7 @@ function Items({ data }: { data: DocData }) {
               {v.perTest && <td className="r qd__num qd__amt">{n(c.total)}</td>}
             </tr>
             {showAdj && rows && rows.map((r, k) => (
-              <tr className="qd__adj" key={k}><td /><td colSpan={3}>{r.label}{r.note && (v.formula || testKind(x) !== "pd") ? <span className="qd__formula"> {r.note}</span> : null}</td><td className="r qd__num">{r.amount < 0 ? `- ${n(-r.amount)}` : n(r.amount)}</td></tr>
+              <tr className="qd__adj" key={k}><td /><td colSpan={3}>{r.label}{r.note && (v.formula || !/×/.test(r.note)) ? <span className="qd__formula"> {r.note}</span> : null}</td><td className="r qd__num">{r.amount < 0 ? `- ${n(-r.amount)}` : n(r.amount)}</td></tr>
             ))}
             {showAdj && !rows && (
               <>

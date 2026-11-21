@@ -344,7 +344,7 @@ export function KindPriceQ({ t, k, readOnly, set }: { t: DocTest; k: Kind; readO
   }
   if (k === "pk") {
     const p = t.kd?.pk ?? emptyPk();
-    const put = (f: Partial<PkDesign>) => set((x) => { const pk = { ...(x.kd?.pk ?? emptyPk()), ...f }; return { ...x, kd: { ...x.kd, pk }, std: { ...x.std, price: kindStdPrice("pk", { pk }) } }; });
+    const put = (f: Partial<PkDesign>) => set((x) => { const pk = { ...(x.kd?.pk ?? emptyPk()), ...f }; return { ...x, kd: { ...x.kd, pk }, std: { ...x.std, price: kindStdPrice("pk", { pk: { ...pk, groups: x.std.kd?.pk?.groups ?? [], times: x.std.kd?.pk?.times ?? [], matrix: x.std.kd?.pk?.matrix ?? [], method: x.std.kd?.pk?.method ?? "" } }) } }; });
     return (
       <div className="qf__grid2">
         <Money id={`${t.uid}-ps`} label="검체당 분석 단가" value={p.perSample} disabled={readOnly} onChange={(v) => put({ perSample: v })} />
@@ -356,7 +356,7 @@ export function KindPriceQ({ t, k, readOnly, set }: { t: DocTest; k: Kind; readO
   }
   if (k === "other") {
     const o = t.kd?.other ?? emptyOther();
-    const put = (f: Partial<OtherDesign>) => set((x) => { const other = { ...(x.kd?.other ?? emptyOther()), ...f }; return { ...x, kd: { ...x.kd, other }, std: { ...x.std, price: kindStdPrice("other", { other }) } }; });
+    const put = (f: Partial<OtherDesign>) => set((x) => { const other = { ...(x.kd?.other ?? emptyOther()), ...f }; return { ...x, kd: { ...x.kd, other }, std: { ...x.std, price: kindStdPrice("other", { other: { ...other, n: x.std.kd?.other?.n ?? 0 } }) } }; });
     return (
       <div className="qf__grid2">
         <Money id={`${t.uid}-ps`} label="검체당 단가" value={o.perSample} disabled={readOnly} onChange={(v) => put({ perSample: v })} />

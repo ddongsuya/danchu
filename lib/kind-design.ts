@@ -235,8 +235,9 @@ export function pkSamples(p: PkDesign): number {
 /** 표준가 자리에 들어갈 금액 (견적서 "표준가 없음" 판단·목록 표시용). 칸이 하나도 없으면 null */
 export function kindStdPrice(kind: Kind, kd: KindDesign | undefined): number | null {
   if (kind === "pd" && kd?.pd) { const c = kd.pd.costs; return COST_KEYS.some((k) => c[k] != null) ? COST_KEYS.reduce((a, k) => a + v0(c[k]), 0) : null; }
-  if (kind === "pk" && kd?.pk) return kd.pk.perSample == null && kd.pk.animal == null ? null : v0(kd.pk.animal) + v0(kd.pk.report);
-  if (kind === "other" && kd?.other) return kd.other.perSample == null ? null : v0(kd.other.setup) + v0(kd.other.report);
+  // 표준가 = 고정 비용 + 표준 설계 검체 × 검체당 단가 (2026-11-21: 검체 분석도 표준가에 넣는다)
+  if (kind === "pk" && kd?.pk) { const p = kd.pk; return p.perSample == null && p.animal == null ? null : v0(p.animal) + v0(p.report) + pkSamples(p) * v0(p.perSample) + (p.method === "dev" ? v0(p.dev) : 0); }
+  if (kind === "other" && kd?.other) { const o = kd.other; return o.perSample == null && o.setup == null ? null : v0(o.setup) + v0(o.report) + o.n * v0(o.perSample); }
   return null;
 }
 
@@ -409,6 +410,26 @@ export function parseTimes(t: string): number | undefined {
   if (total) return Number(total[1]);
   const nums = t.replace(/총.*$/, "").match(/\d+(\.\d+)?/g);
   return nums && nums.length >= 2 ? nums.length : undefined;
+}
+/**
+ * "0.5, 1, 2, 4, 8, 24h" → ["0.5시간", "1시간", …]. 단위는 뒤에 붙은 것이 앞의 숫자들에도 걸린다
+ * ("5, 15, 30분, 1, 2, 4시간" → 5분·15분·30분·1시간·2시간·4시간). 단위가 하나도 없으면 시간. 2개 미만이면 빈 배열
+ */
+export function parseTimeList(t: string): string[] {
+  const body = t.replace(/총.*$/, "").replace(/[·;]/g, ",");
+  const toks = body.match(/\d+(\.\d+)?\s*(min|분|hr|h|시간|d|일)?/gi) ?? [];
+  const unitOf = (u: string) => (/^(min|분)$/i.test(u) ? "분" : /^(d|일)$/i.test(u) ? "일" : "시간");
+  const out: string[] = [];
+  let pending: string[] = [];
+  let last = "시간";
+  for (const tok of toks.slice(0, 24)) {
+    const m = tok.match(/^(\d+(?:\.\d+)?)\s*(\D*)$/);
+    if (!m) continue;
+    pending.push(m[1]);
+    if (m[2]) { last = unitOf(m[2].trim()); out.push(...pending.map((x) => `${x}${last}`)); pending = []; }
+  }
+  out.push(...pending.map((x) => `${x}${last}`));
+  return out.length >= 2 ? out : [];
 }
 /** "랫드 혈청, 40개" → 40. 단위가 없어도 숫자가 하나뿐이면 그 수 ("혈청 40" → 40) */
 export function parseCount(t: string): number | undefined {

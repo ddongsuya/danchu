@@ -34,17 +34,23 @@ export default async function CroReply({ params, searchParams }: { params: Promi
   const admin = s.profile.role === "admin";
   const tool = admin || canUse(s.org, "quote_tool", today);
   const tests = admin || canUse(s.org, "tests", today);
-  if (orgId && sp.doc && tool) {
-    const got = await loadDoc(orgId, sp.doc);
+  // ?doc= 없이 와도 이 요청으로 만든 견적서가 있으면 가장 최근 견적서의 계산값으로 채운다 (목록 표준가 대신, 2026-11-21)
+  let docId = sp.doc;
+  if (orgId && !docId && !admin && tool) {
+    const { data: had } = (await getSupabaseAdmin()?.from("cro_quote_docs").select("id").eq("org_id", orgId).eq("invite_id", inv.id).order("updated_at", { ascending: false }).limit(1)) ?? { data: null };
+    docId = had?.[0]?.id;
+  }
+  if (orgId && docId && tool) {
+    const got = await loadDoc(orgId, docId);
     if (got && got.head.inviteId === inv.id) {
       docFill = {
-        docNo: got.head.docNo, href: `/cro/docs/${got.head.id}`, printHref: `/cro/docs/${got.head.id}/print`,
+        docNo: got.head.docNo, auto: !sp.doc, href: `/cro/docs/${got.head.id}`, printHref: `/cro/docs/${got.head.id}/print`,
         lines: got.data.tests.filter((t) => typeof t.rfqSeq === "number").map((t) => ({ seq: t.rfqSeq as number, amount: testLines(t).total, weeks: t.weeks, extra: replyExtra(t) })),
       };
+      docLink = { href: `/cro/docs/${got.head.id}`, label: `견적서 ${got.head.docNo} 열기` };
     }
   } else if (orgId && !admin && tool) {
-    const { data: had } = (await getSupabaseAdmin()?.from("cro_quote_docs").select("id, doc_no").eq("org_id", orgId).eq("invite_id", inv.id).limit(1)) ?? { data: null };
-    docLink = had?.[0] ? { href: `/cro/docs/${had[0].id}`, label: `견적서 ${had[0].doc_no} 열기` } : { href: `/cro/docs/new?invite=${inv.id}`, label: "견적서 만들기" };
+    docLink = { href: `/cro/docs/new?invite=${inv.id}`, label: "견적서 만들기" };
   }
   return <ReplyForm token={inv.token} backHref={`/cro/r/${id}`} doneHref={`/cro/r/${id}/reply?done=1`} orgCerts={s.org?.glp_certs ?? []} docFill={docFill} docLink={docLink} catalogHref={tests ? "/cro/catalog" : null} />;
 }

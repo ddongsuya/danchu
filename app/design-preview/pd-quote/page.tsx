@@ -4,6 +4,7 @@ import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
 import { QuoteFill } from "@/components/cro/quote/QuoteFill";
 import { DocPages } from "@/components/cro/quote/DocPages";
+import { DocEditor } from "@/components/cro/quote/DocEditor";
 import { DEFAULT_VISIBLE, EMPTY_SUPPLIER, testFromCatalog, type DocData, type DocHead, type QuoteStyle } from "@/lib/quote-doc";
 import { snapFor } from "@/lib/pd-quote";
 import type { Session } from "@/lib/auth";
@@ -21,7 +22,7 @@ const NAV: NavItem[] = [
 
 /**
  * 효력 요청 반영 화면과 효력 견적서 4쪽 검토용 (로그인 없이, 저장 안 됨). 미리보기 배포에서만 열린다.
- * 값은 시안 v15 예시이고 실제 기관 단가가 아니다. ?view=doc 이면 견적서 4쪽(PDF 화면과 같은 페이지)
+ * 값은 시안 v15 예시이고 실제 기관 단가가 아니다. ?view=doc 이면 견적서 4쪽(PDF 화면과 같은 페이지), ?view=editor 면 견적서 편집 화면
  */
 export default async function PdQuotePreview({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const enabled = process.env.VERCEL_ENV === "preview" || (process.env.VERCEL_ENV !== "production" && process.env.DANCHU_DESIGN_PREVIEW === "1");
@@ -46,6 +47,7 @@ export default async function PdQuotePreview({ searchParams }: { searchParams: P
     userId: "pd-preview", email: "preview@example.invalid", org: null, pendingOrg: null,
     profile: { id: "pd-preview", email: "preview@example.invalid", role: "cro", name: "검토 계정", company: null, dept: null, phone: null, org_type: null, cro_org_id: null },
   };
+  if (sp.view === "editor") return <AppState><Shell session={session} nav={NAV}><DocEditor head={{ ...head, id: "preview" }} initial={data} style={style} catalog={[PD_ROW]} rates={{}} replyHref={null} /></Shell></AppState>;
   if (sp.view === "doc") return <div className="qprint" style={{ padding: 24 }}><DocPages head={head} data={data} style={style} /></div>;
   return (
     <AppState>

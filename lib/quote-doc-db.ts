@@ -10,7 +10,7 @@ import {
   type DocData, type DocHit, type RequestPrice, type DocTest, type DocHead, type QuoteStyle, isLayout, type Rate, type Supplier,
 } from "./quote-doc";
 import type { QuoteLineDef } from "./quote-items";
-import { cleanKd, COST_KEYS, firstInt, newPdGroup, parseCount, parseGroups, parseTimes, pkGroupsFromRequest, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
+import { cleanKd, COST_KEYS, firstInt, newPdGroup, parseCount, parseGroups, parseTimeList, parseTimes, pkGroupsFromRequest, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
 import { snapFor } from "./pd-quote";
@@ -243,15 +243,16 @@ async function requestData(orgId: string, orgName: string, a: RequestInput): Pro
     const other = picked.mismatch.includes(PRICE_CHECK_SPECIES) || picked.mismatch.includes(PRICE_CHECK_ROUTE);
     const base = other ? { ...picked.row, std_price: null } : picked.row;
     const full = (byKey.get(rowKey(line)) ?? []).find((r) => r.id === picked.row.id) ?? picked.row;
-    let test = withRequest({ ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq }, a.payload);
-    // 독성: 회복군·TK 같은 요청 조건을 기관 단가로 설계에 옮기고, 옮긴 칸은 기관 확인에서 뺀다 (2026-11-21)
-    if (testKind(test) === "tox") {
-      const get = (id: string) => { const v = a.payload[`${line.category}.${id}`]; return typeof v === "string" ? v : undefined; };
-      const r = toxFromRequest(test, { recovery: get("recovery"), tk: get("tk"), formulation: get("formulation"), histopath: get("histopath"), exposure: get("exposure") }, picked.row.recovery_per_sex ?? null);
-      test = r.test;
-      checks.set(line.seq, ck.filter((c) => !r.resolved.includes(c)));
-    } else checks.set(line.seq, ck);
-    data.tests.push(test);
+    const t0 = { ...testFromCatalog(base, rates.get(picked.row.item_key) ?? [], full), rfqSeq: line.seq };
+    if (testKind(t0) === "tox") {
+      // 독성: 요청 조건(회복군·TK 등)을 계산기로 옮긴다. 변경 단가로 금액이 나온 조건은 확인 칸에서 뺀다
+      const r = toxFromRequest(t0, (id) => reqGet(a.payload, t0.category, id), base.recovery_per_sex ?? null);
+      data.tests.push(r.orig ? { ...r.test, orig: r.orig } : r.test);
+      checks.set(line.seq, ck.filter((c) => !r.applied.includes(c)));
+    } else {
+      data.tests.push(withRequest(t0, a.payload));
+      checks.set(line.seq, ck);
+    }
   }
   await attachPrices(orgId, data);
   return { data, checks };
@@ -314,9 +315,14 @@ export async function requestInputFor(orgId: string, inviteId: string): Promise<
  * 설계는 기관 표준(시험 목록)에서 시작하고, 요청에 적힌 군 수·마릿수·채혈 시점·검체·시료 수만 맞춘다.
  * 금액은 표준과 달라진 곳만 더하거나 뺀다 (lib/kind-design pdParts)
  */
+function reqGet(payload: Values, category: string, id: string): string {
+  const v = payload[`${category}.${id}`];
+  return Array.isArray(v) ? v.join(", ") : typeof v === "string" ? v.trim() : "";
+}
+
 function withRequest(t: DocTest, payload: Values): DocTest {
   const k = testKind(t);
-  const get = (id: string) => { const v = payload[`${t.category}.${id}`]; return Array.isArray(v) ? v.join(", ") : typeof v === "string" ? v.trim() : ""; };
+  const get = (id: string) => reqGet(payload, t.category, id);
   const lines = (pairs: [string, string][]) => pairs.filter(([, v]) => v);
   if (k === "pd" && t.kd?.pd) {
     const groupsText = get("groups");
@@ -345,10 +351,9 @@ function withRequest(t: DocTest, payload: Values): DocTest {
     pk.groups = pkGroupsFromRequest(pk.groups, groupCount, perGroup);
     const sampling = get("sampling");
     const n = parseTimes(sampling);
-    if (!pk.times.length && sampling) {
-      const unit = /분|min/i.test(sampling) && !/h|시간/i.test(sampling) ? "분" : "시간";
-      pk.times = (sampling.replace(/총.*$/, "").match(/\d+(\.\d+)?/g) ?? []).slice(0, 24).map((x) => `${x}${unit}`);
-    }
+    // 의뢰자가 채혈 시점을 적었으면 그 시점으로 바꾼다. 검체 수가 달라진 만큼 검체 단가로 추가·차감된다 (kindLines)
+    const reqTimes = parseTimeList(sampling);
+    if (reqTimes.length) pk.times = reqTimes;
     const mx = (payload[`${t.category}.matrix`] as string[] | undefined) ?? [];
     if (Array.isArray(mx) && mx.length) pk.matrix = mx.filter((m) => PK_MATRIX.includes(m));
     const design = get("design");
