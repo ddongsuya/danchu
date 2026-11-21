@@ -660,13 +660,14 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
           </section>
           )}
 
-          {/* 군 구성이 없어도(9월 입력분·Ames 등) 단가 칸은 보인다. 숨기면 계산기 단가를 넣을 곳이 없다 (2026-11-21) */}
-          {(
+          {/* 독성은 군 구성이 없어도(9월 입력분·Ames 등) 단가 칸을 보인다. 숨기면 계산기 단가를 넣을 곳이 없다 (2026-11-21).
+              효력·약동학·개별 분석은 설계 칸이 금액을 받으므로 저장된 추가 항목이 있을 때만 */}
+          {(!byKind || list.length > 0) && (
             <section className="td__blk">
               <h3>추가 비용 단가 <span>선택</span></h3>
               <p className="td__mut">의뢰자 조건이 설계와 다르면 견적서 금액을 이 단가로 맞춰요. 차감을 비우면 줄여도 금액이 줄지 않아요.</p>
               <div className="td__rates">
-                <span aria-hidden="true" /><span className="td__rh" aria-hidden="true">1{list[0]?.unit ?? "마리"}당 추가</span><span className="td__rh" aria-hidden="true">차감</span>
+                {list.length > 0 && <><span aria-hidden="true" /><span className="td__rh" aria-hidden="true">1{list[0]?.unit ?? "마리"}당 추가</span><span className="td__rh" aria-hidden="true">차감</span></>}
                 {list.map((r) => (
                   <RateRow key={r.id} r={r} species={d.species} onChange={(p) => setRate(r.id, p)} />
                 ))}
@@ -674,7 +675,7 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
               {d.species.length > 1 && hasGroups && <p className="td__mut">동물종마다 단가가 다르면 동물종 줄에 적어요. 비워 두면 {d.species[0]} 단가로 계산해요.</p>}
               <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "flat", label: "", unit: "시험", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 평가항목 추가</button>
               {/* 수량 항목 (11-06 시험 목록 통합 때 빠진 것 복구): 견적서에서 수량을 적으면 수량 × 단가로 더하거나 뺀다 */}
-              <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "qty", label: "", unit: "건", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 수량 항목 추가</button>
+              {!byKind && <button type="button" className="td__link" onClick={() => { setRs([...list, { id: uid("r"), kind: "qty", label: "", unit: "건", add: null, deduct: null, shown: "" }]); setDirty(true); }}>+ 수량 항목 추가</button>}
             </section>
           )}
 
