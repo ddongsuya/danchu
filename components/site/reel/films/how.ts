@@ -103,11 +103,11 @@ export function how(cv: HTMLDivElement, P: boolean): Tl {
   const tMk = box(el(cv, "rl-mk", null, { zIndex: "0" }), (P ? 10 : M) - 4, tY + 14, P ? 92 : 98, 12);
   const cCol = box(el(cv, "rl-num", "불참", { fontSize: px(P ? 17 : 18), color: "#61615C", textAlign: "center" }), lx(2), tY + 44 + 1.5 * tRow - 10, LW);
 
-  // 6. 의뢰자에게 전달
+  // 6. 고객에게 전달
   const rw = P ? 380 : 400, rh = P ? 330 : 290;
   const rx = (W - rw) / 2, ry = P ? 170 : 110;
   const recv = sheet(cv, rx, ry, rw, rh);
-  const rTag = box(el(recv, "rl-pill", "의뢰자", { fontSize: "14px" }), 24, 22, 80, 30);
+  const rTag = box(el(recv, "rl-pill", "고객", { fontSize: "14px" }), 24, 22, 80, 30);
   box(el(recv, "rl-hd", "받은 비교 견적서", { fontSize: px(24) }), 24, 70);
   const rRows = KS.map((k, i) => {
     const y = 128 + i * (P ? 56 : 46);
@@ -128,7 +128,7 @@ export function how(cv: HTMLDivElement, P: boolean): Tl {
     [C[3], "참여를 희망하는 기관에게", "세부 내용이 전달 돼요."],
     [C[4], "기관은 세부 내용을 확인하여", "견적서를 회신 해요."],
     [C[5], "회신된 견적서가 모두 취합되어", "비교 견적이 완성돼요."],
-    [C[6], "완성된 비교견적서는", "의뢰자에게 전달 돼요."],
+    [C[6], "완성된 비교견적서는", "고객에게 전달 돼요."],
   ], END)(tl);
 
   // ---------- 초기 ----------
