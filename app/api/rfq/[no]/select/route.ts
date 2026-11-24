@@ -7,7 +7,8 @@ import { getRfqByNo, ownsRfq, type QuoteRow } from "@/lib/data";
 import { adminEmails, adminUserIds, logEvent, notifyUsers, operatorReplyTo, siteUrl } from "@/lib/notify";
 import { replyPath } from "@/lib/concierge";
 import { inviteMailTo, notifyInvitedOrgs, orgMailTargets } from "@/lib/distribute";
-import { won } from "@/lib/format";
+import { won, ymd } from "@/lib/format";
+import { contractReportDue } from "@/lib/contract-reminder";
 import { SELECT_QUOTE_ERRORS, selectQuote } from "@/lib/rpc";
 import { parseSelectReasons } from "@/lib/select-reasons";
 
@@ -79,7 +80,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
       kind: "선정",
       title: `선정됐어요 · ${rfq.rfq_no} ${rfq.substance}`,
       body: winnerPortal
-        ? `${contact}\n의뢰자와 직접 계약을 진행하고, 체결 후 계약 정보를 보고해 주세요.`
+        ? `${contact}\n의뢰자와 직접 계약을 진행하고, 체결하면 ${ymd(contractReportDue(new Date().toISOString()))}까지 계약 정보를 보고해 주세요.`
         : `${contact}\n의뢰자와 직접 계약을 진행해 주세요. 계약 진행 상황은 단추 운영자가 이 메일 주소로 여쭤볼게요.`,
       href: winnerPortal ? "/cro/awards" : winnerPath,
     },
