@@ -13,7 +13,7 @@ import { purgeLeftOrgCrm } from "@/lib/crm-purge";
 import { cronPart, stepInPart } from "@/lib/cron-parts";
 import { EARLY_OPEN_DATE, earlyOpenSms, type EarlyRole } from "@/lib/early";
 import { smsPhone } from "@/lib/sms";
-import { daysSince, reminderStage } from "@/lib/contract-reminder";
+import { confirmDueSoon, daysSince, reminderStage } from "@/lib/contract-reminder";
 import { shouldAskSponsor } from "@/lib/contract-gap";
 import { contractFollowupMail, esc, mailWrap, sendMail } from "@/lib/mail";
 import { notificationRecipients } from "@/lib/mail-preferences";
@@ -62,7 +62,7 @@ function addDays(ymd: string, n: number): string {
  * 1) 참여한 기관 중 아직 제출하지 않은 곳에 D-2·당일 리마인더 (참여 결정 전 안내에는 보내지 않는다)
  * 2) 회신 기한이 지난 요청의 비교표 공개 (제출 1건 이상, lib/compare.ts closeReplies). 제출 0건이면 열지 않고 운영자·의뢰자에게 알린다.
  *    비교표가 열리기 전 의뢰자에게는 진행 현황만 보인다 (2026-10-20 결정 1)
- * 4) 선정 여부 확인, 계약 보고 리마인더, 계약 보고 7일 뒤 이의가 없으면 자동 확정 (0025 auto_confirm_contracts)
+ * 4) 선정 여부 확인, 계약 보고 리마인더, 의뢰자 확인 기한 하루 전 알림, 계약 보고 7일 뒤 이의가 없으면 자동 확정 (0025 auto_confirm_contracts)
  * 5) 인증하지 않고 끝난 임시 요청서와 첨부 정리, 보존기간 정리
  * 6) 운영자에게 하루치 요약 메일 한 통 (견적 제출·불참·참여는 실시간으로는 앱 알림만 간다)
  * 자동 회신(기관 카탈로그 초안을 기한 당일 예비 견적으로 제출)은 0023 에서 없앴다. 견적은 참여한 기관만 낼 수 있고,
@@ -94,6 +94,7 @@ export async function GET(req: Request) {
     resent: 0,
     contractReminded: 0,
     contractConfirmed: 0,
+    confirmDueReminded: 0,
     invoiceReminded: 0,
     joinDeadlines: 0,
     lowParticipation: 0,
@@ -307,6 +308,34 @@ export async function GET(req: Request) {
         await logEvent(a.rfq_id, stage, "계약 보고 리마인더", `선정 ${days}일 경과`, null);
       }
       out.contractReminded++;
+    }
+  });
+
+  // 4-1b) 의뢰자 계약 확인 기한 하루 전 알림 (2026-11-24 사용자 결정: 기한 하루 전에 한 번). 이의 없이 기한이 지나면 4-2가 보고대로 확정하니,
+  //       그 전에 한 번 알린다. 정정으로 기한이 바뀌면 새 기한에 다시 한 번(meta.due 로 구분)
+  await run("contract-confirm-due", async () => {
+    const until = new Date(Date.now() + 864e5).toISOString();
+    const { data: rows } = await sb
+      .from("rfq_awards")
+      .select("id, rfq_id, cro_name, contract_confirm_due_at")
+      .not("contract_reported_at", "is", null)
+      .eq("contract_status", "signed")
+      .is("contract_confirmed_at", null)
+      .is("requester_disputed_at", null)
+      .gt("contract_confirm_due_at", new Date().toISOString())
+      .lte("contract_confirm_due_at", until)
+      .limit(200);
+    for (const a of rows ?? []) {
+      if (!confirmDueSoon(a.contract_confirm_due_at)) continue;
+      const due = a.contract_confirm_due_at as string;
+      const { data: ev } = await sb.from("rfq_events").select("id").eq("rfq_id", a.rfq_id).eq("kind", "confirm_due_reminded").eq("meta->>due", due).maybeSingle();
+      if (ev) continue;
+      const { data: rfq } = await sb.from("rfq_requests").select("rfq_no, user_id, email, status").eq("id", a.rfq_id).maybeSingle();
+      if (!rfq?.user_id || ["closed", "cancelled"].includes(rfq.status)) continue;
+      const when = new Date(due).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
+      await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 계약 확인 기한이 내일이에요`, body: `기관(${a.cro_name})이 보고한 계약 내용을 ${when}까지 확인해 주세요. 그때까지 이의가 없으면 보고 내용대로 확정돼요.`, href: `/app/r/${rfq.rfq_no}` }, rfq.email ? { to: [rfq.email] } : undefined);
+      await logEvent(a.rfq_id, "confirm_due_reminded", "의뢰자 계약 확인 기한 하루 전 알림", `기한 ${when}`, null, { due });
+      out.confirmDueReminded++;
     }
   });
 

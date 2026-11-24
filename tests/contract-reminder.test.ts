@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reminderStage, daysSince } from "@/lib/contract-reminder";
+import { confirmDueSoon, reminderStage, daysSince } from "@/lib/contract-reminder";
 
 const day = 864e5;
 const now = Date.parse("2026-10-09T00:00:00Z");
@@ -20,5 +20,17 @@ describe("계약 보고 리마인더 단계", () => {
   });
   it("경과일은 내림", () => {
     expect(daysSince(new Date(now - 1.9 * day).toISOString(), now)).toBe(1);
+  });
+});
+
+describe("의뢰자 계약 확인 기한 하루 전", () => {
+  const ahead = (hours: number) => new Date(now + hours * 36e5).toISOString();
+  it("기한이 24시간 안에 남았을 때만(하루 한 번 도는 예약 작업에서 한 번)", () => {
+    expect(confirmDueSoon(ahead(30), now)).toBe(false);
+    expect(confirmDueSoon(ahead(24), now)).toBe(true);
+    expect(confirmDueSoon(ahead(1), now)).toBe(true);
+    expect(confirmDueSoon(ahead(0), now)).toBe(false);
+    expect(confirmDueSoon(ahead(-2), now)).toBe(false);
+    expect(confirmDueSoon(null, now)).toBe(false);
   });
 });
