@@ -13,7 +13,7 @@ import { purgeLeftOrgCrm } from "@/lib/crm-purge";
 import { cronPart, stepInPart } from "@/lib/cron-parts";
 import { EARLY_OPEN_DATE, earlyOpenSms, type EarlyRole } from "@/lib/early";
 import { smsPhone } from "@/lib/sms";
-import { confirmDueSoon, daysSince, reminderStage } from "@/lib/contract-reminder";
+import { CONTRACT_REPORT_DAYS, confirmDueSoon, contractReportDue, daysSince, reminderStage } from "@/lib/contract-reminder";
 import { shouldAskSponsor } from "@/lib/contract-gap";
 import { contractFollowupMail, esc, mailWrap, sendMail } from "@/lib/mail";
 import { notificationRecipients } from "@/lib/mail-preferences";
@@ -235,11 +235,11 @@ export async function GET(req: Request) {
   }
   });
 
-  // 4-1) 선정 뒤 계약 보고가 없는 수주: 기관에 14·30일 리마인더, 45일에는 운영자·의뢰자에게 진행 여부를 묻는다
+  // 4-1) 선정 뒤 계약 보고가 없는 수주: 기관 보고 기한(선정 후 14일) 하루 전인 13일째와 30일에 리마인더, 45일에는 운영자·의뢰자에게 진행 여부를 묻는다
   //      성사수수료는 체결(signed)로 확인된 계약 금액이 5,000만 원 이상일 때, 계약 금액 기준으로 붙는다 (0020, 0041).
   //      체결 확인한 달에 정산하므로, 보고 누락이 곧 매출 누락이다
   await run("contract-remind", async () => {
-    const since = new Date(Date.now() - 14 * 864e5).toISOString();
+    const since = new Date(Date.now() - (CONTRACT_REPORT_DAYS - 1) * 864e5).toISOString();
     // 마지막 단계(45일)에 15일 여유를 둔 60일 창. 미체결로 기록했거나 이미 마지막 단계를 지난 오래된 수주가 창을 채워 새 수주를 밀어내지 않게 한다
     const horizon = new Date(Date.now() - 60 * 864e5).toISOString();
     const { data: awards } = await sb
@@ -301,11 +301,16 @@ export async function GET(req: Request) {
           out.contractReminded++;
           continue;
         }
-        // 앱에 자주 들어오지 않는 기관도 있어 담당자·대표 메일로도 보낸다 (14일, 30일 두 번. 흐름 재설계 디자인 2d783db).
+        // 앱에 자주 들어오지 않는 기관도 있어 담당자·대표 메일로도 보낸다 (기한 하루 전, 30일 두 번).
         // 받는 사람은 지금의 대표 메일 + 지금 소속 담당자. 메일 수신을 끈 사람은 notifyUsers 가 뺀다
         const mails = [...new Set([org?.contact_email, ...(members ?? []).map((m) => m.email)].filter((x): x is string => !!x && !!x.trim()))];
-        await notifyUsers(ids, { kind: "계약", title: `${rfq.rfq_no} 계약 체결을 보고해 주세요`, body: `${rfq.substance} · 선정 ${days}일 경과. 계약을 맺었다면 체결일과 금액을, 진행하지 않게 되었다면 단추(support@danchu.kr)에 알려 주세요.`, href: "/cro/awards" }, mails.length ? { to: mails, replyTo: operatorReplyTo() } : undefined);
-        await logEvent(a.rfq_id, stage, "계약 보고 리마인더", `선정 ${days}일 경과`, null);
+        const due = new Date(contractReportDue(a.awarded_at)).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+        // 예약 작업이 13일째를 놓치면 기한이 지난 뒤에 첫 알림이 간다. 그때는 "내일"이라 쓰지 않는다
+        const beforeDue = days < CONTRACT_REPORT_DAYS;
+        const title = beforeDue ? `${rfq.rfq_no} 계약 보고 기한이 내일이에요` : `${rfq.rfq_no} 계약 체결을 보고해 주세요`;
+        const lead = beforeDue ? `${rfq.substance} · 보고 기한 ${due}.` : `${rfq.substance} · 보고 기한 ${due} 지남.`;
+        await notifyUsers(ids, { kind: "계약", title, body: `${lead} 계약을 맺었다면 체결일과 금액을, 진행하지 않게 되었다면 단추(support@danchu.kr)에 알려 주세요.`, href: "/cro/awards" }, mails.length ? { to: mails, replyTo: operatorReplyTo() } : undefined);
+        await logEvent(a.rfq_id, stage, beforeDue ? "계약 보고 기한 하루 전 알림" : "계약 보고 리마인더", `선정 ${days}일 경과 · 기한 ${due}`, null);
       }
       out.contractReminded++;
     }

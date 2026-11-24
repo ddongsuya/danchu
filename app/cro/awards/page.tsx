@@ -7,6 +7,7 @@ import { SubstanceForm } from "@/components/cro/SubstanceForm";
 import { ymd, won } from "@/lib/format";
 import { contractConfirmState } from "@/lib/status";
 import { GAP_REASON_LABEL, isGapReason } from "@/lib/contract-gap";
+import { contractReportDue } from "@/lib/contract-reminder";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function CroAwards() {
             <div key={a.id} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div>
-                  <span className="tnum" style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)" }}>{a.rfq?.rfq_no} · 선정 {ymd(a.awarded_at)}</span>
+                  <span className="tnum" style={{ fontSize: 12, fontWeight: 600, color: "var(--brand)" }}>{a.rfq?.rfq_no} · 선정 {ymd(a.awarded_at)}{!a.contract_reported_at && ` · 보고 기한 ${ymd(contractReportDue(a.awarded_at))}`}</span>
                   <div style={{ fontSize: 20, fontWeight: 700 }}>{a.rfq?.substance}</div>
                   <div style={{ fontSize: 13, color: "var(--muted)" }}>{(a.rfq?.categories ?? []).join(" · ")}</div>
                 </div>

@@ -19,7 +19,7 @@ export function mailMissing(i: StuckInvite): boolean {
 export type StuckAward = { awarded_at: string; contract_reported_at: string | null; cro_name: string } | null;
 export type Stuck = { kind: "mail" | "no_join" | "too_soon" | "contract"; label: string; action: string; days: number };
 
-/** 계약 보고를 기다리는 날 수. 14일 리마인더(contract_remind_14)와 같은 기준 */
+/** 계약 보고를 기다리는 날 수. 기관 계약 보고 기한(선정 후 14일, lib/contract-reminder.ts)과 같다. 기한이 지나면 운영자 화면에 올린다 */
 export const CONTRACT_WAIT_DAYS = 14;
 
 const daysSince = (iso: string, now: number) => Math.max(0, Math.floor((now - new Date(iso).getTime()) / 864e5));

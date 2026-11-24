@@ -223,7 +223,7 @@ export async function sendSupportMail(a: { email: string; type: string; rfqNo: s
 }
 
 /**
- * 운영자 관리 기관에 보내는 계약 진행 확인 메일 (선정 14·30일). 담당자 계정이 없으므로 로그인 링크 없이 메일 회신으로 받는다.
+ * 운영자 관리 기관에 보내는 계약 진행 확인 메일 (선정 13·30일, 보고 기한은 선정 후 14일). 담당자 계정이 없으므로 로그인 링크 없이 메일 회신으로 받는다.
  * 회신은 운영자가 받아 수주·계약 기록에 남긴다 (replyTo 는 호출부가 운영자 주소로 둔다).
  */
 export function contractFollowupMail(a: { rfqNo: string; substance: string; croName: string; days: number; awardedOn: string }): { subject: string; html: string } {
