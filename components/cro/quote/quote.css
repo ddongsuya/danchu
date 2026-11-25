@@ -1011,3 +1011,14 @@
 
 /* 편집 화면: 효력 견적서 4쪽의 시험 구성·평가항목은 요청 반영 화면에서 고친다 */
 .qed__pdfix { max-width: 794px; width: 100%; margin: 0 auto; display: flex; justify-content: flex-end; }
+
+/* 견적서 안 단가 규칙 추가 (2026-11-26 시안 v7) */
+/* 한 줄 격자: 종류 · 이름 · (단위) · 금액 · 추가. 추가 버튼이 다음 줄로 꺾이지 않게 (2026-11-26 고침) */
+.qed__ruleadd { display: grid; grid-template-columns: 112px minmax(0, 1fr) 120px auto; align-items: center; gap: 6px 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--d-line2); }
+/* 수량 규칙은 칸이 하나 늘어 두 줄: 종류 · 이름 / 단위 · 금액 · 추가 */
+.qed__ruleadd:has(.qed__unit) { grid-template-columns: 112px minmax(0, 1fr) auto; }
+.qed__ruleadd:has(.qed__unit) .qed__in:not(.qed__sel):not(.qed__unit) { grid-column: 2 / -1; }.qed__rulehd { grid-column: 1 / -1; font-size: 12.5px; color: var(--d-ink); font-weight: 600; }
+.qed__rulehd small { font-weight: 400; color: var(--d-mut); margin-left: 4px; }
+.qed__ruleadd .qed__num { width: 100%; }
+.qed__ruleadd .btxt { font-size: 12.5px; color: var(--d-ink); }
+.qed__ruleadd .btxt, .qed__evaladd .btxt { white-space: nowrap; flex: none; }

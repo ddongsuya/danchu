@@ -380,7 +380,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
   const setG = (id: string, p: Partial<DocGroup>) => set({ groups: t.groups.map((g) => (g.id === id ? { ...g, ...p } : g)) });
   const addGroup = () => {
     const last = t.groups[t.groups.length - 1];
-    const per = t.std.groups[0]?.m ?? last?.m ?? 0;
+    const per = t.std.groups[0]?.m ?? last?.m ?? 5;
     const g: DocGroup = { id: uid("g"), label: `G${t.groups.length + 1} 시험군`, dose: "", m: per, f: per, rm: 0, rf: 0 };
     set({ groups: [...t.groups, g] });
   };
@@ -426,7 +426,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
 
       {kind !== "tox" && t.kd && <KindEdit t={t} set={set} readOnly={readOnly} />}
 
-      {(t.groups.length > 0 || t.std.groups.length > 0) && (
+      {(t.groups.length > 0 || t.std.groups.length > 0 || kind === "tox") && (
         <>
           <div className="qed__h2row"><h2 className="qd__h2">군 구성</h2><span className="tnum">총 {total0 !== total1 ? <>{total0} → <mark>{total1}</mark></> : total1}마리</span></div>
           <div className="qed__tblwrap">
@@ -482,6 +482,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
         </ul>
       ) : <p className="qed__muted">시험 목록에 표준가에 든 항목을 적어 두면 여기에 채워져요.</p>}
       {!readOnly && <EvalAdder onAdd={(name) => set({ evals: [...t.evals, { name, on: true, base: true }] })} />}
+      {!readOnly && <RuleAdder onAdd={(r) => set(r.kind === "flat" ? { rates: [...t.rates, r], evals: [...t.evals, { name: r.label, on: true, base: false, rateId: r.id }] } : { rates: [...t.rates, r], qty: { ...t.qty, [r.id]: 1 } })} />}
 
       {qtyRates.length > 0 && (
         <>
@@ -527,6 +528,38 @@ function KindEdit({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>)
         {tabs.map(([key, label]) => <button key={key} type="button" role="tab" className="chip" aria-selected={cur === key} aria-pressed={cur === key} onClick={() => setTab(key)}>{label}</button>)}
       </div>
       <div className="qed__kindbody"><KindTab tab={cur} t={t} readOnly={readOnly} set={setK} /></div>
+    </div>
+  );
+}
+
+/**
+ * 이 견적서에만 쓰는 단가 규칙 (2026-11-26 시안 v7 "규칙 추가"). 시험 목록의 가감 단가에 없는 변칙 조건을 금액과 함께 더한다.
+ * 정액: 평가항목처럼 켜면 1회 더함. 수량: 아래 수량 항목에 단가 × 수량으로 계산 (빼려면 수량 앞에 -)
+ */
+function RuleAdder({ onAdd }: { onAdd: (r: Rate) => void }) {
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"flat" | "qty">("flat");
+  const [unit, setUnit] = useState("");
+  const [add, setAdd] = useState("");
+  const won = Number(digits(add) || 0);
+  const ok = name.trim().length > 0 && won > 0;
+  const submit = () => {
+    if (!ok) return;
+    const label = name.trim().slice(0, 60);
+    onAdd({ id: uid("r"), kind, label, unit: kind === "qty" ? unit.trim().slice(0, 12) || "회" : "시험", add: won, deduct: null, shown: label });
+    setName(""); setUnit(""); setAdd("");
+  };
+  return (
+    <div className="qed__ruleadd" role="group" aria-label="단가 규칙 추가">
+      <span className="qed__rulehd">단가 규칙 추가 <small>이 견적서에만</small></span>
+      <select aria-label="규칙 종류" className="qed__in qed__sel" value={kind} onChange={(e) => setKind(e.target.value === "qty" ? "qty" : "flat")}>
+        <option value="flat">정액 (1회)</option>
+        <option value="qty">수량 × 단가</option>
+      </select>
+      <input aria-label="규칙 이름" className="qed__in" value={name} placeholder="예: 안과 검사 추가" onChange={(e) => setName(e.target.value)} />
+      {kind === "qty" && <input aria-label="단위" className="qed__in qed__unit" value={unit} placeholder="단위 (시점)" onChange={(e) => setUnit(e.target.value)} />}
+      <input aria-label="단가" className="qed__num" inputMode="numeric" value={add ? n(won) : ""} placeholder="금액" onChange={(e) => setAdd(e.target.value)} />
+      <button type="button" className="btxt" disabled={!ok} onClick={submit}>추가</button>
     </div>
   );
 }
