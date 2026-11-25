@@ -7,11 +7,13 @@ import { FAQ_ITEMS, faqAnswerText } from "@/lib/faq-page";
 import { faqPageJsonLd, jsonLdString, siteJsonLd } from "@/lib/structured-data";
 import robots from "@/app/robots";
 
-const CORE = ["비임상 CRO", "비임상 시험기관", "독성시험 견적", "비임상 시험 견적 비교"];
+const CORE = ["비임상시험", "GLP 비임상시험", "비임상 CRO", "비임상 시험기관", "독성시험 견적", "비임상 시험 견적 비교"];
 
 describe("검색 메타", () => {
-  it("홈 설명에 의뢰자가 검색하는 낱말이 들어간다", () => {
-    for (const k of CORE) expect(SITE_DESC).toContain(k);
+  it("홈 설명(검색 결과 스니펫)에 핵심 검색어가 들어가고 110~130자다", () => {
+    for (const k of ["비임상시험", "비임상 CRO", "GLP 비임상시험"]) expect(SITE_DESC).toContain(k);
+    expect(SITE_DESC.length).toBeGreaterThanOrEqual(110);
+    expect(SITE_DESC.length).toBeLessThanOrEqual(130);
   });
 
   it("공통 낱말에 핵심 검색어가 모두 있다", () => {
@@ -190,5 +192,20 @@ describe("robots", () => {
 
   it("검색에 올린 페이지는 robots 가 막는 경로와 겹치지 않는다", () => {
     for (const p of PUBLIC_PATHS) expect(allowed("*", p), p).toBe(true);
+  });
+});
+
+describe("검색엔진 수집용 파일", () => {
+  it("public/favicon.ico 가 있고 ICO 형식이다 (네이버 서치어드바이저 404 경고)", () => {
+    const f = `${publicDir}/favicon.ico`;
+    expect(existsSync(f)).toBe(true);
+    const b = readFileSync(f);
+    expect([...b.subarray(0, 4)]).toEqual([0, 0, 1, 0]);
+  });
+
+  it("Organization 로고 파일이 public 에 있다", () => {
+    const org = (siteJsonLd()["@graph"] as Record<string, unknown>[]).find((n) => n["@type"] === "Organization")!;
+    const path = String(org.logo).replace(SITE_URL, "");
+    expect(existsSync(`${publicDir}${path}`), path).toBe(true);
   });
 });
