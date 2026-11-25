@@ -537,7 +537,7 @@
   .cx-cocols > *, .cx-dealcols > * { min-width: 0; }
   .cx .cx-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 }
-@media (min-width: 960px) { .cx-mfab, .cx-mtabs { display: none; } }
+@media (min-width: 960px) { .pt .cx-mfab, .pt .cx-mtabs { display: none; } } /* .cx .b1(inline-flex)보다 뒤·같은 무게로 둬야 넓은 화면에서 숨는다 */
 @media (prefers-reduced-motion: reduce) {
   .cx .b1, .cx .b2, .cx-won, .cx-lost, .cx-icon, .cx-card, .cx-dialog, .cx-menu, .cx-dd ul { transition: opacity 160ms ease, background-color 160ms ease; }
   .cx .b1:active, .cx .b2:active, .cx-won:active, .cx-lost:active, .cx-icon:active { transform: none; }

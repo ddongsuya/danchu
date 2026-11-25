@@ -94,3 +94,20 @@ export function glpCoverage(authorities: string[], certs: string[]): { ok: boole
   const missing = authorities.map((a) => need[a]).filter((c): c is string => !!c && !certs.includes(c));
   return { ok: authorities.length > 0 && authorities.every((a) => !!need[a]) && missing.length === 0, missing: [...new Set(missing)] };
 }
+
+/**
+ * 받은 요청 표의 거르기 값 (시안 v7 c-req): 동물종·GLP 여부. 참여 전 요약에 보이는 값만 쓴다 (summaryCondOf 와 같은 범위)
+ */
+export function summaryFacetsOf(payload: Values): { species: string[]; glp: string[] } {
+  const cats = Array.isArray(payload.categories) ? payload.categories : [];
+  const species = new Set<string>();
+  const glp = new Set<string>();
+  for (const cat of cats) {
+    if (!(CATS as readonly string[]).includes(cat)) continue;
+    const sp = detail(payload, cat, "species");
+    if (Array.isArray(sp)) sp.forEach((x) => x && species.add(x));
+    const g = detail(payload, cat, "glpLevel");
+    if (g === "GLP" || g === "Non-GLP") glp.add(g);
+  }
+  return { species: [...species], glp: [...glp] };
+}
