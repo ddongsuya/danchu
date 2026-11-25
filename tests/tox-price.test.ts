@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catalogItems, itemKey, newVariant, type CatalogRow } from "@/lib/catalog";
+import { catalogItems, itemKey, newVariant, pickVariant, prefillRow, type CatalogRow } from "@/lib/catalog";
 import { cleanKd } from "@/lib/kind-design";
 import type { PriceItem } from "@/lib/price-book";
 import { standardGroups, testFromCatalog, testLines, type Rate } from "@/lib/quote-doc";
@@ -118,5 +118,19 @@ describe("독성 표준 설계 (군 이름·용량·회복)", () => {
   it("빈 독성 설계는 저장하지 않는다", () => {
     expect(cleanKd({ tox: { groups: [{ label: "", dose: "" }] } })).toBeUndefined();
     expect(cleanKd({ tox: { groups: [{ label: "x".repeat(80), dose: 3 }] } })?.tox?.groups[0]).toEqual({ label: "x".repeat(40), dose: "" });
+  });
+});
+
+describe("회신 초안 (시험 목록에서 채우기)", () => {
+  it("독성 표준 설계(kd.tox)와 직접 적은 평가항목이 있어도 초안 금액·설계가 그대로 채워진다", () => {
+    const kd = cleanKd({ tox: { groups: [{ label: "부형제 대조군", dose: "0" }] } });
+    const r = tox({ kd, includes: ["임상병리", "안과검사"], price_min: 60_000_000, source: "manual", routes: ["경구(PO)"], route: "경구(PO)" });
+    const line = { seq: 1, category: "일반독성", name: "반복투여 4주", cond: "" };
+    const p = prefillRow(line, pickVariant([r], line, { "일반독성.species": "랫드", route: "경구(PO)" }), {});
+    expect(p.checks).toEqual([]);
+    expect(p.amount).toBe("60000000");
+    expect(p.design).toMatchObject({ groups_ctrl: 1, groups_test: 3, per_sex: 10 });
+    // 설계 설명 칸(design.extra)에 갈래 설계 원본이 섞여 나가지 않는다
+    expect(Object.keys(p.design.extra as object)).not.toContain("kd");
   });
 });
