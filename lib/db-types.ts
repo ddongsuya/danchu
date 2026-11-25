@@ -619,8 +619,8 @@ export type Database = {
         Relationships: [{ foreignKeyName: "cro_price_items_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
       cro_price_settings: {
-        Row: { org_id: string; margin_pct: number; updated_at: string };
-        Insert: Ins<Database["public"]["Tables"]["cro_price_settings"]["Row"], "margin_pct" | "updated_at">;
+        Row: { org_id: string; margin_pct: number; apply_tox: boolean; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_price_settings"]["Row"], "margin_pct" | "apply_tox" | "updated_at">;
         Update: Partial<Database["public"]["Tables"]["cro_price_settings"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_price_settings_org_id_fkey"; columns: ["org_id"]; isOneToOne: true; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }];
       };
@@ -663,8 +663,8 @@ export type Database = {
       };
       /** 기관 CRM 안건 (0038). stage 문의~계약, status 진행·수주·실패 */
       cro_crm_deals: {
-        Row: { id: string; org_id: string; company_id: string | null; contact_ids: string[]; title: string; kind: string; substance: string; submit_to: string; report_lang: string; amount: number | null; expected_on: string | null; stage: string; status: string; stage_at: string; lost_reason: string; lost_note: string; won_amount: number | null; closed_at: string | null; owner: string | null; source: string; invite_id: string | null; rfq_no: string; memo: string; import_id: string | null; created_by: string | null; created_at: string; updated_at: string };
-        Insert: Ins<Database["public"]["Tables"]["cro_crm_deals"]["Row"], "id" | "created_by" | "created_at" | "updated_at" | "company_id" | "contact_ids" | "kind" | "substance" | "submit_to" | "report_lang" | "amount" | "expected_on" | "stage" | "status" | "stage_at" | "lost_reason" | "lost_note" | "won_amount" | "closed_at" | "owner" | "source" | "invite_id" | "rfq_no" | "memo" | "import_id">;
+        Row: { id: string; org_id: string; company_id: string | null; contact_ids: string[]; title: string; kind: string; substance: string; submit_to: string; report_lang: string; amount: number | null; expected_on: string | null; stage: string; status: string; stage_at: string; lost_reason: string; lost_note: string; won_reason: string; won_note: string; won_amount: number | null; closed_at: string | null; owner: string | null; source: string; invite_id: string | null; rfq_no: string; memo: string; import_id: string | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_crm_deals"]["Row"], "id" | "created_by" | "created_at" | "updated_at" | "company_id" | "contact_ids" | "kind" | "substance" | "submit_to" | "report_lang" | "amount" | "expected_on" | "stage" | "status" | "stage_at" | "lost_reason" | "lost_note" | "won_reason" | "won_note" | "won_amount" | "closed_at" | "owner" | "source" | "invite_id" | "rfq_no" | "memo" | "import_id">;
         Update: Partial<Database["public"]["Tables"]["cro_crm_deals"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_crm_deals_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_deals_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "cro_crm_companies"; referencedColumns: ["id"] } ];
       };
@@ -684,8 +684,8 @@ export type Database = {
       };
       /** 기관 CRM 기록 (0038). 미팅·통화·메일·메모 (모두 기관 담당자가 직접 남긴다) */
       cro_crm_activities: {
-        Row: { via: Via; id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; event_id: string | null; kind: string; occurred_at: string; duration_min: number | null; title: string; body: string; attendee_contacts: string[]; attendee_members: string[]; created_by: string | null; created_at: string; updated_at: string };
-        Insert: Ins<Database["public"]["Tables"]["cro_crm_activities"]["Row"], "id" | "created_by" | "created_at" | "updated_at" | "company_id" | "deal_id" | "contact_id" | "quote_doc_id" | "event_id" | "occurred_at" | "duration_min" | "title" | "body" | "attendee_contacts" | "attendee_members">;
+        Row: { via: Via; id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; event_id: string | null; kind: string; occurred_at: string; duration_min: number | null; title: string; body: string; attendee_contacts: string[]; attendee_members: string[]; files: { path: string; name: string; size: number; type: string }[]; created_by: string | null; created_at: string; updated_at: string };
+        Insert: Ins<Database["public"]["Tables"]["cro_crm_activities"]["Row"], "id" | "created_by" | "created_at" | "updated_at" | "company_id" | "deal_id" | "contact_id" | "quote_doc_id" | "event_id" | "occurred_at" | "duration_min" | "title" | "body" | "attendee_contacts" | "attendee_members" | "files">;
         Update: Partial<Database["public"]["Tables"]["cro_crm_activities"]["Row"]>;
         Relationships: [{ foreignKeyName: "cro_crm_activities_org_id_fkey"; columns: ["org_id"]; isOneToOne: false; referencedRelation: "cro_orgs"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_activities_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "cro_crm_companies"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_activities_deal_id_fkey"; columns: ["deal_id"]; isOneToOne: false; referencedRelation: "cro_crm_deals"; referencedColumns: ["id"] }, { foreignKeyName: "cro_crm_activities_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "cro_crm_contacts"; referencedColumns: ["id"] } ];
       };
