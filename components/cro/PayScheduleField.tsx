@@ -13,6 +13,8 @@ export function PayScheduleField({ value, disabled, onChange }: { value: string;
   // 예전에 자유 글로 적은 결제 조건은 줄로 못 읽는다. 지우지 않고 보여 준다
   const legacyText = value.trim() && !rows.length ? value.trim() : "";
   const err = payError(rows);
+  // 오류 문구는 지급 조건 칸 밖으로 나간 뒤에 보인다 (줄을 막 추가했을 때 빈 칸 오류가 먼저 뜨지 않게). 제출은 그 전에도 막는다
+  const [shown, setShown] = useState(false);
   const sum = rows.reduce((a, r) => a + (Number.isFinite(r.pct) ? r.pct : 0), 0);
 
   const set = (next: PayRow[]) => {
@@ -23,9 +25,9 @@ export function PayScheduleField({ value, disabled, onChange }: { value: string;
   const upd = (i: number, patch: Partial<PayRow>) => set(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   return (
-    <div className="fld paysch">
+    <div className="fld paysch" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setShown(true); }}>
       <span className="fld__lab" id="pay-lab">지급 조건</span>
-      {legacyText && <p className="paysch__legacy">예전 입력: {legacyText}. 아래에서 줄로 다시 적어 주세요.</p>}
+      {legacyText && <p className="paysch__legacy">예전 입력: {legacyText}</p>}
       {rows.length > 0 && (
         <div className="paysch__rows" role="group" aria-labelledby="pay-lab">
           <div className="paysch__head" aria-hidden="true"><span>단계</span><span>비율</span><span>지급 시점</span><span /></div>
@@ -47,13 +49,13 @@ export function PayScheduleField({ value, disabled, onChange }: { value: string;
       )}
       <div className="paysch__foot">
         {rows.length < PAY_MAX_ROWS && (
-          <button type="button" className="btxt" disabled={disabled} onClick={() => set(rows.length ? [...rows, { label: "", pct: 0, when: "최종 보고서 제출 시" }] : DEFAULT_PAY)}>
+          <button type="button" className="btxt" disabled={disabled} onClick={() => { setShown(false); set(rows.length ? [...rows, { label: "", pct: 0, when: "최종 보고서 제출 시" }] : DEFAULT_PAY); }}>
             {rows.length ? "줄 추가" : "지급 조건 추가"}
           </button>
         )}
         {rows.length > 0 && <span className={`paysch__sum tnum${sum === 100 ? "" : " is-off"}`}>합계 <b>{sum}%</b></span>}
       </div>
-      {err && <p className="fld__err" role="alert">{err}</p>}
+      {err && shown && <p className="fld__err" role="alert">{err}</p>}
     </div>
   );
 }
