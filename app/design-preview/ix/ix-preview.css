@@ -1,7 +1,7 @@
 /* 상호작용 규칙 검토 화면 전용 배치. 상태 모양 자체는 components/shell/portal.css 의 공통 규칙이다 */
-.ixp { display: grid; gap: 20px; }
+.ixp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 .ixp .ph { margin-bottom: 0; }
-.ixp__sec { display: grid; gap: 12px; }
+.ixp__sec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
 .ixp__sec > h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .ixp__note { font-size: 14px; color: var(--muted); max-width: 70ch; line-height: 1.6; }
 .ixp__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

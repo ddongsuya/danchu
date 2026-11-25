@@ -1669,7 +1669,8 @@
 
 /* 움직임 줄이기: 이동·크기 변화는 끄고 투명도 변화만 남긴다 (globals.css 가 전환 시간을 0 으로 만들어 투명도는 keyframes 로 준다) */
 @media (prefers-reduced-motion: reduce) {
-  .pt :is(.b1, .b2, .btxt, .chip, .seg button, .pt__navi, .pt__tab, .optcard, .chkcard, .card--link):active { transform: none; }
+  .pt :is(.b1, .b2, .btxt, .chip, .seg button, .pt__navi, .pt__tab, .optcard, .chkcard):active:not(:disabled, [aria-disabled="true"], :focus-visible),
+  .pt .card--link:active:not(:focus-visible) { transform: none; }
   .pt .ix-dialog, .pt .ix-dialog:not([open]) { transform: none; }
   .pt .ix-dialog[open]:not([data-instant]) { animation: ix-fade var(--d-modal) ease; }
   .pt .ix-toast, .pt .ix-toast[data-leaving] { transform: none; }
