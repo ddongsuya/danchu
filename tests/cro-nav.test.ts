@@ -29,4 +29,19 @@ describe("요금제별 기관 메뉴 (2026-11-13)", () => {
     expect(hrefs(n.nav)).toEqual(expect.arrayContaining(["/cro/deals", "/cro/clients", "/cro/reports", "/cro/docs"]));
     expect(hrefs(n.tabs)).toEqual(["/cro", "/cro/deals", "/cro/log", "/cro/more"]);
   });
+  it("Pro 메뉴 묶음은 시안 v7 순서: 업무 / CRM / 견적 / 설정", () => {
+    const n = croNav("pro", 0);
+    const groups = [...new Set(n.nav.map((x) => x.group).filter(Boolean))];
+    expect(groups).toEqual(["업무", "CRM", "견적", "설정"]);
+    expect(n.nav.filter((x) => x.group === "업무").map((x) => x.label)).toEqual(["오늘", "받은 요청"]);
+    expect(n.nav.filter((x) => x.group === "CRM").map((x) => x.label)).toEqual(["안건", "고객사", "활동", "캘린더", "분석"]);
+    expect(n.nav.filter((x) => x.group === "견적").map((x) => x.label)).toEqual(["견적서", "단가표", "시험 목록"]);
+  });
+  it("알림은 묶음 없이 남아 위 바의 종이 찾을 수 있다", () => {
+    for (const tier of ["free", "plus", "pro"] as const) {
+      const bell = croNav(tier, 2).nav.find((x) => x.icon === "bell");
+      expect(bell?.href).toBe("/cro/notifications");
+      expect(bell?.badge).toBe(2);
+    }
+  });
 });
