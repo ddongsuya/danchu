@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ymd } from "@/lib/format";
+import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 type M = { id: string; name: string | null; email: string; phone: string | null; created_at: string };
 
@@ -16,10 +18,14 @@ export function JoinRequests({ orgId, members, orgEmail = null, managed = false 
   const router = useRouter();
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
+  const confirm = useConfirm();
 
   const act = async (m: M, link: boolean) => {
     if (busy) return;
-    if (!window.confirm(link ? `${m.email}을(를) 이 기관 담당자로 연결할까요? 기관에 배포된 요청서를 모두 볼 수 있게 됩니다.` : "합류 신청을 거절할까요? 계정은 남고 기관 연결만 되지 않습니다.")) return;
+    const ok = await confirm(link
+      ? { title: `${m.email}을(를) 이 기관 담당자로 연결하시겠습니까?`, body: "기관에 배포된 요청서를 모두 볼 수 있게 됩니다.", confirmLabel: "연결" }
+      : { title: "합류 신청을 거절하시겠습니까?", body: "계정은 남고 기관 연결만 되지 않습니다.", confirmLabel: "거절", danger: true });
+    if (!ok) return;
     setBusy(m.id);
     setErr("");
     const res = await fetch(`/api/admin/users/${m.id}`, {
@@ -51,7 +57,7 @@ export function JoinRequests({ orgId, members, orgEmail = null, managed = false 
             {orgEmail && domainOf(m.email) !== domainOf(orgEmail) && <span className="pill pill--warn" style={{ marginTop: 4 }}>대표 이메일과 도메인이 다릅니다</span>}
           </span>
           <span style={{ display: "inline-flex", gap: 6, flex: "none" }}>
-            <button type="button" className="b1 bsm" disabled={!!busy} onClick={() => act(m, true)}>{busy === m.id ? "…" : "연결"}</button>
+            <Button className="b1 bsm" pending={busy === m.id} disabled={!!busy && busy !== m.id} onClick={() => act(m, true)}>연결</Button>
             <button type="button" className="b2 bsm b2--danger" disabled={!!busy} onClick={() => act(m, false)}>거절</button>
           </span>
         </div>
