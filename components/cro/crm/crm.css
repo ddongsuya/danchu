@@ -580,3 +580,35 @@
   .cx .b1:active, .cx .b2:active, .cx-won:active, .cx-lost:active, .cx-icon:active { transform: none; }
   @starting-style { .cx-dialog[open], .cx-menu, .cx-dd[open] ul { transform: none; } }
 }
+
+/* 오늘 (2026-11-26 시안 v7 c-today): 받은 요청 표 짜임(board.css .bd)을 그대로 쓰고 이 화면에만 필요한 것 */
+.cx-t__hd { padding-bottom: 14px; }
+.cx-t__date { font-size: 13px; color: var(--muted); }
+.cx-t__acts { margin-left: auto; display: flex; gap: 8px; }
+.cx-t__h { font-size: 14px; font-weight: 600; color: var(--ink); margin: 4px 0 8px; display: flex; gap: 6px; align-items: baseline; }
+.cx-t__h .tnum { font-weight: 400; color: var(--muted); font-size: 13px; }
+.cx-t .bd-tb td .b2.bsm { height: 28px; padding: 0 10px; font-size: 13px; }
+.cx-t .bd-tb tr[data-done="1"] td { color: var(--muted); }
+.cx-t__need { margin-top: 28px; }
+.cx-t__list { list-style: none; margin: 0; padding: 0; }
+.cx-t__list li { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--card-line); }
+.cx-t__list li:last-child { border-bottom: 0; }
+.cx-t__lt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cx-t__lt b { font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cx-t__lt small { font-size: 12px; color: var(--muted); }
+.pt .cx-t__go, .pt .cx-t__cal { font-size: 13px; font-weight: 500; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.cx-t__cal { display: inline-block; margin-top: 10px; }
+.cx-t__empty { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 4px; color: var(--muted); }
+.cx-t__stats { margin: 0; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--card-line); border-radius: var(--r-lg); }
+.cx-t__stats > div { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.cx-t__stats > div + div { border-left: 1px solid var(--card-line); }
+.cx-t__stats dt { font-size: 12px; color: var(--muted); }
+.cx-t__stats dd { margin: 0; font-size: 20px; font-weight: 600; color: var(--ink); }
+.cx-t__task { padding: 8px 4px; }
+@media (max-width: 959px) {
+  .cx-t__acts { display: none; }
+  .cx-t__date { width: 100%; margin-top: -8px; }
+  .cx-t__split > .bd-r.cx-t__side { display: flex; border-left: 0; border-top: 1px solid var(--card-line); margin-top: 20px; padding: 16px var(--bd-px) 96px; }
+  .cx-t .bd-ls a .bd-pill, .cx-t .bd-ls a > .tnum { grid-column: 2; grid-row: 1 / 3; }
+}
+@media (max-width: 959px) { .cx-t__split section:first-child { margin-top: 12px; } }
