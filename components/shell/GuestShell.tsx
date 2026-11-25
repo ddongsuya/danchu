@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lockup } from "@/components/Logo";
 import "./portal.css";
+import "./tokens-openai.css";
 
 /**
  * 로그인 전 방문자가 요청서를 쓰는 화면의 셸. 포털과 같은 토큰·컴포넌트를 쓰되 메뉴는 없다.

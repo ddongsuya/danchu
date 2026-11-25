@@ -5,6 +5,7 @@ import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "./portal.css";
+import "./tokens-openai.css";
 import { Bell, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
 /** soon: 아직 열리지 않은 메뉴 (사전예약 기간). 누를 수 없고 옆에 열리는 날을 적는다 */

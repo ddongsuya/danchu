@@ -1,0 +1,66 @@
+/* ── 로그인 뒤 화면(.pt: /app · /cro · /admin · /q) 토큰, 2026-11-26 시안 v7 ─────────────────
+   OpenAI Platform·ChatGPT 짜임에 맞춘 흑백 중립. 형광펜 노랑과 Host Grotesk는 쓰지 않는다(사용자 결정 11-26).
+   "차이" 강조는 노랑 대신 옅은 회색 바탕 + 굵기로.
+   모서리: 입력·버튼 8, 카드·패널 12, 필터·배지만 pill.
+   랜딩(.a)은 그대로 둔다. 랜딩을 바꿀지는 시안을 보고 정하기로 함(사용자 11-26). 그때까지 CLAUDE.md "랜딩과 앱 체계 일치"의 예외.
+   이름은 app/globals.css 와 같은 변수를 .pt 안에서 덮어쓴다. 화면 코드는 바꾸지 않아도 된다. */
+
+.pt {
+  --brand: #0d0d0d;
+  --brand-dark: #2b2b2b;
+  --brand-tint: #ececec;   /* 예전 형광펜 옅게 → 옅은 회색 */
+  --brand-line: #d4d4d4;
+  --acc-fill: #e3e3e3;     /* 예전 형광펜 진하게 → 회색 */
+
+  --ink: #0d0d0d;
+  --ink-2: #2b2b2b;
+  --body: #2b2b2b;
+  --muted: #5d5d5d;
+  --placeholder: #6b6b6b;
+  --faint: #a3a3a3;
+
+  --input-line: #d4d4d4;
+  --card-line: #e6e6e6;
+  --dash: #cfcfcf;
+  --track: #ececec;
+
+  --surface: #f3f3f3;      /* 바깥 캔버스 */
+  --white: #fdfdfd;        /* 본문 패널 */
+  --band: #ececec;
+  --on-brand: #fdfdfd;
+
+  --r-sm: 8px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--font-sans);
+  letter-spacing: -0.005em;
+}
+
+:root[data-theme="dark"] .pt {
+  --brand: #ececec;
+  --brand-dark: #cfcfcf;
+  --brand-tint: #2f2f2f;
+  --brand-line: #3a3a3a;
+  --acc-fill: #3a3a3a;
+
+  --ink: #ececec;
+  --ink-2: #cfcfcf;
+  --body: #cfcfcf;
+  --muted: #a8a8a8;
+  --placeholder: #9a9a9a;
+  --faint: #6a6a6a;
+
+  --input-line: #3a3a3a;
+  --card-line: #2f2f2f;
+  --dash: #4a4a4a;
+  --track: #2a2a2a;
+
+  --surface: #131313;
+  --white: #212121;
+  --band: #262626;
+  --on-brand: #131313;
+}
+
+.pt ::selection { background: var(--ink); color: var(--white); }

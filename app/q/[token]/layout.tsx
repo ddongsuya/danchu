@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Lockup } from "@/components/Logo";
 import "@/components/shell/portal.css";
+import "@/components/shell/tokens-openai.css";
 
 export const metadata: Metadata = { title: "단추 · 견적 회신", robots: { index: false, follow: false } };
 
