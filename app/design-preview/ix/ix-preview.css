@@ -1,0 +1,15 @@
+/* 상호작용 규칙 검토 화면 전용 배치. 상태 모양 자체는 components/shell/portal.css 의 공통 규칙이다 */
+.ixp { display: grid; gap: 20px; }
+.ixp .ph { margin-bottom: 0; }
+.ixp__sec { display: grid; gap: 12px; }
+.ixp__sec > h2 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.ixp__note { font-size: 14px; color: var(--muted); max-width: 70ch; line-height: 1.6; }
+.ixp__row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ixp__grid { min-width: 980px; }
+.ixp__grid th[scope="row"] { font-size: 13px; color: var(--ink); white-space: nowrap; }
+.ixp__grid td { vertical-align: middle; }
+.ixp__grid button { pointer-events: none; }
+.ixp__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-width: 520px; }
+.ixp__list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; background: var(--sf); border-radius: var(--r-md); font-size: 14px; }
+.ixp__states { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 899px) { .ixp__states { grid-template-columns: minmax(0, 1fr); } }
