@@ -168,7 +168,11 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
       prev = s;
     }
     if (end) {
-      Object.assign(deal, { status: end.status, closed_at: iso(end.at, "17:00"), lost_reason: end.reason ?? "", won_amount: end.status === "won" ? deal.amount : null, stage: end.status === "won" ? "contract" : deal.stage });
+      Object.assign(deal, {
+        status: end.status, closed_at: iso(end.at, "17:00"), lost_reason: end.status === "lost" ? end.reason ?? "" : "", won_reason: end.status === "won" ? end.reason ?? "" : "",
+        won_note: end.status === "won" && end.reason === "일정" ? "회복군 제외안으로 최종보고서(안)을 2주 당길 수 있었음" : "",
+        won_amount: end.status === "won" ? deal.amount : null, stage: end.status === "won" ? "contract" : deal.stage,
+      });
       history.push({ id: id(5000 + hn++), deal_id: deal.id, from_stage: prev, to_stage: deal.stage, from_status: "open", to_status: end.status, reason: end.reason ?? "", actor: "member", created_by: deal.owner, at: iso(end.at, "17:00") });
     }
     deals.push(deal);
@@ -179,12 +183,14 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   manual(14, { title: "유전독성 3종", company_id: id(5), contact_ids: [id(107)], amount: 33_000_000, owner: OH }, [["inquiry", -30], ["quote", -22], ["negotiation", -15]]);
   manual(15, { title: "안전성약리 핵심 3종", company_id: id(6), contact_ids: [id(108)], amount: 62_000_000 }, [["inquiry", -45], ["quote", -38], ["negotiation", -25], ["intake", -12], ["contract", -3]]);
   manual(16, { title: "효력 · 마우스 종양 모델", kind: "pd", company_id: id(5), contact_ids: [id(107)], amount: 87_000_000, owner: CHOI }, [["inquiry", -12], ["quote", -5]]);
-  manual(17, { title: "급성독성 · 랫드", company_id: id(2), contact_ids: [id(104)], amount: 29_000_000 }, [["inquiry", -35], ["quote", -28], ["negotiation", -14]], { status: "won", at: -3 });
+  manual(17, { title: "급성독성 · 랫드", company_id: id(2), contact_ids: [id(104)], amount: 29_000_000 }, [["inquiry", -35], ["quote", -28], ["negotiation", -14]], { status: "won", at: -3, reason: "일정" });
   manual(18, { title: "PK · 비글 단회", kind: "pk", company_id: id(5), contact_ids: [id(107)], amount: 41_000_000, owner: OH }, [["inquiry", -50], ["quote", -40]], { status: "lost", at: -6, reason: "일정" });
   manual(19, { title: "유전독성 3종", company_id: id(1), contact_ids: [id(102)], amount: 29_000_000, created_at: iso(-80) }, [["inquiry", -80], ["quote", -70]], { status: "lost", at: -60, reason: "가격" });
   // 지난 6개월 끝난 안건 (보고서용)
   const titles = ["단회투여독성 · 랫드", "4주 반복투여 · 비글", "유전독성 3종", "피부 감작 LLNA", "안전성약리 핵심 3종", "효력 · 당뇨 모델", "PK · 랫드 반복", "생식독성 배·태자"];
   const reasons = ["가격", "다른 기관 선정", "가격", "일정", "다른 기관 선정", "의뢰자 계획 변경", "가격", "응답 없음", "다른 기관 선정", "일정"];
+  // 수주 이유: 몇 건은 적지 않은 채로 (단추가 저절로 수주로 바꾼 안건처럼)
+  const wonWhy = ["시험 설계·전문성", "일정", "기존 거래", "가격", "", "시험 설계·전문성", "응답 속도"];
   for (let k = 0; k < 30; k++) {
     const startD = -170 + k * 5;
     const reach = [1, 2, 4, 1, 3, 2, 4, 0, 2, 3][k % 10];
@@ -195,7 +201,7 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
     manual(100 + k, {
       title: titles[k % titles.length], kind: k % 5 === 2 ? "pd" : k % 7 === 3 ? "pk" : "tox", company_id: id(2 + (k % 5)), amount: (25 + ((k * 37) % 160)) * 1_000_000,
       source: k % 3 === 0 ? "danchu" : k % 3 === 1 ? "manual" : "import", owner: [ME, OH, CHOI][k % 3], rfq_no: k % 3 === 0 ? `R-26${String(5 + Math.floor(k / 6)).padStart(2, "0")}-00${k}` : "",
-    }, moves, won ? { status: "won", at: endAt } : { status: "lost", at: endAt, reason: reasons[k % reasons.length] });
+    }, moves, won ? { status: "won", at: endAt, reason: wonWhy[k % wonWhy.length] } : { status: "lost", at: endAt, reason: reasons[k % reasons.length] });
   }
 
   const ev = (n: number, deal: number | null, c: number | null, title: string, starts: string, ends: string | null, o: Partial<CrmEvent> = {}): CrmEvent => ({
@@ -216,7 +222,13 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   const activities = [
     act(1, 3, 1, "email", iso(0, "09:12"), "회복군 제외 시 일정 문의", "회복군 4주를 빼면 최종보고서(안)을 언제 받을 수 있는지 궁금합니다. 내일 미팅 때 일정표로 설명 부탁드립니다.", { contact_id: id(101) }),
     act(2, 3, 1, "call", iso(-3, "16:40"), "", "회복군을 빼면 일정을 2주 당길 수 있는지 문의. 시험책임자와 확인한 뒤 미팅에서 답하기로 함.", { contact_id: id(101), attendee_contacts: [id(101)], duration_min: 12 }),
-    act(3, 3, 1, "meeting", iso(-10, "10:00"), "", "TK 채혈 시점을 1·13주로 조정. 회복군을 둘지 의뢰자 내부 검토 중.", { contact_id: id(101), attendee_contacts: [id(101), id(102)], attendee_members: [ME, CHOI], duration_min: 50 }),
+    act(3, 3, 1, "meeting", iso(-10, "10:00"), "", "참석: 박 팀장, 윤 연구원 / 김 책임, 최 박사\n1. TK 채혈 시점을 1·13주로 조정\n2. 회복군을 둘지 의뢰자 내부 검토 중\n3. 다음 미팅까지 회복군 제외안 일정표 준비", {
+      contact_id: id(101), attendee_contacts: [id(101), id(102)], attendee_members: [ME, CHOI], duration_min: 50,
+      files: [
+        { path: `org/${id(403)}/00000000-0000-4000-8000-000000000001-meeting.m4a`, name: "가람바이오 미팅 녹음.m4a", size: 18_400_000, type: "audio/mp4" },
+        { path: `org/${id(403)}/00000000-0000-4000-8000-000000000002-minutes.docx`, name: "회의록 · TK 시점 조정.docx", size: 48_200, type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+      ],
+    }),
     act(4, 11, 2, "call", iso(-4, "11:20"), "", "4주 반복 군만 먼저 진행할 수 있는지 문의. 유효기간 전에 다시 통화하기로.", { contact_id: id(104), attendee_contacts: [id(104)], duration_min: 9 }),
     act(5, 12, 3, "meeting", iso(-6, "14:00"), "", "시설 방문 희망. 견적은 5종 묶음으로 다시 받기로.", { contact_id: id(105), duration_min: 40 }),
     act(6, 14, 5, "memo", iso(-15, "18:00"), "", "예산 확정 전까지 대기. 담당 이사가 다음 분기에 다시 연락 준다고 함.", { created_by: OH, attendee_members: [OH] }),
@@ -238,6 +250,9 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   });
   const quotes = [
     qd(1, 11, 2, "Q-2611-002", "단회·반복 독성 패키지", 120_000_000, { contact_id: id(104), valid_until: d(3) }),
+    qd(6, 17, 2, "Q-2610-044", "급성독성 · 랫드", 29_000_000, { contact_id: id(104), sent_at: iso(-28), created_at: iso(-28) }),
+    qd(7, 19, 1, "Q-2609-012", "유전독성 3종", 31_000_000, { contact_id: id(102), sent_at: iso(-70), created_at: iso(-70) }),
+    qd(8, 3, 1, "Q-2611-015", "13주 반복투여독성 · 랫드 (회복군 제외안)", 198_000_000, { contact_id: id(101), sent_at: iso(-4), created_at: iso(-4), invite_id: null }),
     qd(2, 12, 3, "Q-2610-031", "생물학적 안전성 5종", 52_000_000, { contact_id: id(105), sent_at: iso(-25), created_at: iso(-25) }),
     qd(3, 12, 3, "Q-2611-007", "생물학적 안전성 5종 (묶음)", 48_000_000, { contact_id: id(105), sent_at: iso(-5), created_at: iso(-5) }),
     qd(4, 15, 6, "Q-2610-018", "안전성약리 핵심 3종", 62_000_000, { contact_id: id(108), sent_at: iso(-38), created_at: iso(-38) }),
