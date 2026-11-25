@@ -28,15 +28,15 @@ const KIND_TAB: [Kind, string][] = [["tox", "독성시험"], ["pd", "효력시�
 type Props = { items: CatalogItem[]; initialRows: CatalogRow[]; initialRates: Record<string, Rate[]>; orgCategories: string[]; readOnly?: boolean; /** 검토 화면용: 처음 보기를 고정 */ startView?: "list" | "pick" | "wizard" };
 type View = { kind: "list" } | { kind: "pick" } | { kind: "wizard"; queue: string[]; at: number };
 
-const priceOf = (r: CatalogRow) => r.std_price ?? r.price_min ?? null;
-const digits = (s: string, n = 13) => s.replace(/[^\d]/g, "").slice(0, n);
+export const priceOf = (r: CatalogRow) => r.std_price ?? r.price_min ?? null;
+export const digits = (s: string, n = 13) => s.replace(/[^\d]/g, "").slice(0, n);
 const COMMON_SPECIES = ["SD 랫드", "Wistar 랫드", "ICR 마우스", "C57BL/6 마우스", "비글", "NZW 토끼", "원숭이(영장류)", "in vitro(동물 없음)"];
 const COMMON_ROUTES = ["경구(PO)", "정맥(IV)", "피하(SC)", "근육(IM)", "복강(IP)", "경피·피부", "흡입", "해당 없음"];
-const routesOf = (r: CatalogRow) => (r.routes?.length ? r.routes : r.route ? [r.route] : []);
-const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+export const routesOf = (r: CatalogRow) => (r.routes?.length ? r.routes : r.route ? [r.route] : []);
+export const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 /** 설계 한 줄 (목록·서랍 요약) */
-function designLine(r: CatalogRow): string {
+export function designLine(r: CatalogRow): string {
   const p: string[] = [];
   const g = (r.groups_ctrl ?? 0) + (r.groups_test ?? 0);
   if (g) p.push(`${g}군`);
@@ -49,7 +49,7 @@ function condLine(r: CatalogRow): string {
   return [r.species.join(", "), routesOf(r).join(", "), designLine(r)].filter(Boolean).join(", ");
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T & { error?: string; ok?: boolean }> {
+export async function postJson<T>(url: string, body: unknown): Promise<T & { error?: string; ok?: boolean }> {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
   if (!res) throw new Error("연결이 끊겼어요. 네트워크를 확인하고 다시 저장해 주세요.");
   const d = (await res.json().catch(() => ({}))) as T & { error?: string };
@@ -339,7 +339,7 @@ function Pick({ items, rows, orgCategories, first, readOnly, onBack, onAdd }: {
 
 /* ── 공통 입력 ──────────────────────────────────────────── */
 
-function Money({ id, label, value, onChange, unit = "원", help, big }: { id: string; label: string; value: number | null; onChange: (v: number | null) => void; unit?: string; help?: string; big?: boolean }) {
+export function Money({ id, label, value, onChange, unit = "원", help, big }: { id: string; label: string; value: number | null; onChange: (v: number | null) => void; unit?: string; help?: string; big?: boolean }) {
   return (
     <div className="fld">
       <label className="fld__lab" htmlFor={id}>{label}</label>
@@ -351,7 +351,7 @@ function Money({ id, label, value, onChange, unit = "원", help, big }: { id: st
     </div>
   );
 }
-function Int({ id, label, value, onChange, unit, max, placeholder }: { id: string; label: string; value: number | null; onChange: (v: number | null) => void; unit: string; max: number; placeholder?: string }) {
+export function Int({ id, label, value, onChange, unit, max, placeholder }: { id: string; label: string; value: number | null; onChange: (v: number | null) => void; unit: string; max: number; placeholder?: string }) {
   return (
     <div className="fld">
       <label className="fld__lab" htmlFor={id}>{label}</label>
@@ -364,14 +364,14 @@ function Int({ id, label, value, onChange, unit, max, placeholder }: { id: strin
 }
 
 /** 표준가 기준(대표) 조건: 첫 번째 동물종 · 첫 번째 경로 */
-function baseLabel(r: CatalogRow): string {
+export function baseLabel(r: CatalogRow): string {
   return [r.species[0], routesOf(r)[0]].filter(Boolean).join(", ");
 }
-const multi = (r: CatalogRow) => r.species.length > 1 || routesOf(r).length > 1;
+export const multi = (r: CatalogRow) => r.species.length > 1 || routesOf(r).length > 1;
 const front = (list: string[], v: string) => [v, ...list.filter((x) => x !== v)];
 
 /** 가능한 동물종·투여 경로 (여러 개 체크). 2개 이상이면 표준가 기준을 고른다 */
-function CondPick({ row, onChange, k, small }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string; small?: boolean }) {
+export function CondPick({ row, onChange, k, small }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string; small?: boolean }) {
   const [allSpecies, setAllSpecies] = useState(false);
   const [allRoutes, setAllRoutes] = useState(false);
   const routes = routesOf(row);
@@ -422,7 +422,7 @@ function CondPick({ row, onChange, k, small }: { row: CatalogRow; onChange: (p: 
 }
 
 /** 기준이 아닌 동물종·경로일 때 표준가. 동물종은 기준 경로, 경로는 기준 동물종일 때 금액 */
-function CondPrices({ row, onChange, k, perSample }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string; perSample: boolean }) {
+export function CondPrices({ row, onChange, k, perSample }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string; perSample: boolean }) {
   const routes = routesOf(row);
   const list = row.cond_prices ?? [];
   const lines = [
@@ -451,7 +451,7 @@ function CondPrices({ row, onChange, k, perSample }: { row: CatalogRow; onChange
   );
 }
 
-function MethodField({ id, row, onChange, chips }: { id: string; row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; chips?: boolean }) {
+export function MethodField({ id, row, onChange, chips }: { id: string; row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; chips?: boolean }) {
   const methods = methodOptions(row.category, row.item);
   const custom = !!row.method && !methods.includes(row.method);
   const [typing, setTyping] = useState(custom);
@@ -482,7 +482,7 @@ function MethodField({ id, row, onChange, chips }: { id: string; row: CatalogRow
   );
 }
 
-function DesignFields({ row, onChange, k }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string }) {
+export function DesignFields({ row, onChange, k }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; k: string }) {
   return (
     <div className="tf__grid">
       <Int id={`${k}-gc`} label="대조군" value={row.groups_ctrl} onChange={(v) => onChange({ groups_ctrl: v })} unit="군" max={20} />
@@ -493,6 +493,51 @@ function DesignFields({ row, onChange, k }: { row: CatalogRow; onChange: (p: Par
       <div className="fld">
         <label className="fld__lab" htmlFor={`${k}-dosing`}>투여 기간·횟수</label>
         <input id={`${k}-dosing`} className="inp" value={row.dosing ?? ""} onChange={(e) => onChange({ dosing: e.target.value.slice(0, 120) || null })} placeholder="예: 28일, 1일 1회" />
+      </div>
+    </div>
+  );
+}
+
+/** 따로 받는 항목과 금액 (견적서에서 켜면 그 금액을 더한다) */
+export function OptionsField({ row, onChange, label = "따로 받는 항목과 금액" }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; label?: string }) {
+  const set = (options: CatalogRow["options"]) => onChange({ options });
+  return (
+    <div className="fld">
+      {label && <span className="fld__lab">{label}</span>}
+      {row.options.map((o, i) => (
+        <div key={i} className="td__optrow">
+          <input className="inp" value={o.name} aria-label="항목 이름" placeholder="항목 이름" onChange={(e) => set(row.options.map((x, j) => (j === i ? { ...x, name: e.target.value.slice(0, 80) } : x)))} />
+          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${o.name || "항목"} 금액`} value={o.amount != null ? o.amount.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value); set(row.options.map((x, j) => (j === i ? { ...x, amount: v ? Number(v) : null } : x))); }} /><span>원</span></div>
+          <button type="button" className="btxt" aria-label={`${o.name || "항목"} 빼기`} onClick={() => set(row.options.filter((_, j) => j !== i))}><X size={16} aria-hidden="true" /></button>
+        </div>
+      ))}
+      <div className="chips">
+        {OPTION_SUGGEST.filter((s) => !row.options.some((o) => o.name === s)).slice(0, 5).map((s) => <button key={s} type="button" className="chip chip--md" onClick={() => set([...row.options, { name: s, amount: null }])}>+ {s}</button>)}
+        <button type="button" className="chip chip--md" onClick={() => set([...row.options, { name: "", amount: null }])}>+ 직접 적기</button>
+      </div>
+    </div>
+  );
+}
+
+/** 표준가에 든 평가항목. 자주 쓰는 이름 말고도 기관이 직접 적은 이름을 둘 수 있다 */
+export function IncludesField({ row, onChange, label = "표준가에 든 항목" }: { row: CatalogRow; onChange: (p: Partial<CatalogRow>) => void; label?: string }) {
+  const [text, setText] = useState("");
+  const own = row.includes.filter((x) => !(INCLUDE_KEYS as readonly string[]).includes(x));
+  const add = () => {
+    const v = text.replace(/\s+/g, " ").trim().slice(0, 60);
+    if (v && !row.includes.includes(v)) onChange({ includes: [...row.includes, v] });
+    setText("");
+  };
+  return (
+    <div className="fld">
+      {label && <span className="fld__lab">{label}</span>}
+      <div className="chips">
+        {INCLUDE_KEYS.map((key) => <button key={key} type="button" className="chip chip--md" aria-pressed={row.includes.includes(key)} onClick={() => onChange({ includes: toggle(row.includes, key) })}>{key}</button>)}
+        {own.map((key) => <button key={key} type="button" className="chip chip--md tc__own" aria-pressed="true" aria-label={`${key} 빼기`} onClick={() => onChange({ includes: row.includes.filter((x) => x !== key) })}>{key}<X size={12} aria-hidden="true" /></button>)}
+      </div>
+      <div className="tc__addrow">
+        <input className="inp" value={text} maxLength={60} placeholder="직접 적기 (예: 안과검사, 심전도)" aria-label="평가항목 직접 적기" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <button type="button" className="b2" onClick={add} disabled={!text.trim()}>추가</button>
       </div>
     </div>
   );
@@ -518,6 +563,8 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
   const byKind = kind !== "tox";
   /** 효력은 저장된 줄이면 모델 표준 화면에서 설계·표준가를 고친다 (0047) */
   const modelPage = kind === "pd" && !isNewId(d.id);
+  /** 독성은 저장된 줄이면 표준 설계 화면에서 군 구성·평가항목을 고친다 (2026-11-26) */
+  const toxPage = kind === "tox" && !isNewId(d.id);
   // 효력·약동학·개별 분석은 군·동물 수 금액을 설계 칸(군당·마리당·검체당)에서 받는다. 여기는 한 번 더하는 항목만
   const hasGroups = !byKind && standardGroups(d).length > 0;
   const list = (rs ?? defaultRates(hasGroups)).filter((r) => !byKind || r.kind === "flat" || r.kind === "qty");
@@ -586,37 +633,21 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
                 </div>
                 <Link className="td__link" href={`/cro/catalog/model/${d.id}`}>표준 설계 열기</Link>
               </div>
-            ) : !designOpen && !byKind ? (
+            ) : (toxPage || !designOpen) && !byKind ? (
               <div className="td__sum">
                 <div>
-                  <p>{designLine(d)}</p>
+                  <p>{designLine(d) || "군 구성 없음"}</p>
                   {d.includes.length > 0 && <p className="td__mut">포함: {d.includes.slice(0, 3).join(", ")}{d.includes.length > 3 ? ` 외 ${d.includes.length - 3}개` : ""}</p>}
                 </div>
-                <button type="button" className="td__link" onClick={() => setDesignOpen(true)}>고치기</button>
+                {toxPage
+                  ? <Link className="td__link" href={`/cro/catalog/tox/${d.id}`} onClick={(e) => { if (dirty && !window.confirm("저장하지 않은 내용이 있어요. 표준 설계로 넘어갈까요?")) e.preventDefault(); }}>표준 설계 열기</Link>
+                  : <button type="button" className="td__link" onClick={() => setDesignOpen(true)}>고치기</button>}
               </div>
             ) : (
               <div className="td__open">
                 {byKind ? <KindStructure row={d} onChange={set} k={k} /> : <DesignFields row={d} onChange={set} k={k} />}
-                {!byKind && <div className="fld">
-                  <span className="fld__lab">표준가에 든 항목</span>
-                  <div className="chips">
-                    {INCLUDE_KEYS.map((key) => <button key={key} type="button" className="chip chip--md" aria-pressed={d.includes.includes(key)} onClick={() => set({ includes: toggle(d.includes, key) })}>{key}</button>)}
-                  </div>
-                </div>}
-                <div className="fld">
-                  <span className="fld__lab">따로 받는 항목과 금액</span>
-                  {d.options.map((o, i) => (
-                    <div key={i} className="td__optrow">
-                      <input className="inp" value={o.name} aria-label="항목 이름" placeholder="항목 이름" onChange={(e) => set({ options: d.options.map((x, j) => (j === i ? { ...x, name: e.target.value.slice(0, 80) } : x)) })} />
-                      <div className="numin"><input type="text" inputMode="numeric" aria-label={`${o.name || "항목"} 금액`} value={o.amount != null ? o.amount.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value); set({ options: d.options.map((x, j) => (j === i ? { ...x, amount: v ? Number(v) : null } : x)) }); }} /><span>원</span></div>
-                      <button type="button" className="btxt" aria-label={`${o.name || "항목"} 빼기`} onClick={() => set({ options: d.options.filter((_, j) => j !== i) })}><X size={16} aria-hidden="true" /></button>
-                    </div>
-                  ))}
-                  <div className="chips">
-                    {OPTION_SUGGEST.filter((s) => !d.options.some((o) => o.name === s)).slice(0, 5).map((s) => <button key={s} type="button" className="chip chip--md" onClick={() => set({ options: [...d.options, { name: s, amount: null }] })}>+ {s}</button>)}
-                    <button type="button" className="chip chip--md" onClick={() => set({ options: [...d.options, { name: "", amount: null }] })}>+ 직접 적기</button>
-                  </div>
-                </div>
+                {!byKind && <IncludesField row={d} onChange={set} />}
+                <OptionsField row={d} onChange={set} />
                 {extras.length > 0 && (
                   <div className="fld">
                     <span className="fld__lab">{d.category} 추가 조건</span>
@@ -708,7 +739,7 @@ function Drawer({ row, rates, readOnly, onClose, onSave, onRemove }: {
   );
 }
 
-function RateRow({ r, species, onChange }: { r: Rate; species: string[]; onChange: (p: Partial<Rate>) => void }) {
+export function RateRow({ r, species, onChange, addHint, spHints }: { r: Rate; species: string[]; onChange: (p: Partial<Rate>) => void; /** 빈 추가 단가 칸에 보일 값 (예: 단가표 단가) */ addHint?: string; /** 동물종 줄의 빈 추가 단가 칸에 보일 값 */ spHints?: Record<string, string> }) {
   const auto = r.kind === "animal" || r.kind === "recovery" || r.kind === "group";
   const name = r.kind === "animal" ? "본시험 동물" : r.kind === "recovery" ? "회복군 동물" : r.kind === "group" ? "투여군" : r.label;
   const others = auto ? species.slice(1) : [];
@@ -723,12 +754,12 @@ function RateRow({ r, species, onChange }: { r: Rate; species: string[]; onChang
   return (
     <>
       {auto ? <span className="td__rl">{name} <small>1{r.unit}{others.length ? ` · ${species[0]}` : ""}</small></span> : <input className="inp" value={r.label} placeholder={r.kind === "qty" ? "수량 항목 (예: TK 채혈 시점)" : "항목 이름 (예: 추가 장기 조직병리)"} aria-label="추가 항목 이름" onChange={(e) => onChange({ label: e.target.value.slice(0, 60), shown: e.target.value.slice(0, 60) })} />}
-      <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 추가 단가`} value={r.add != null ? r.add.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ add: v ? Number(v) : null }); }} /><span>원</span></div>
+      <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 추가 단가`} placeholder={addHint} value={r.add != null ? r.add.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ add: v ? Number(v) : null }); }} /><span>원</span></div>
       <div className="numin"><input type="text" inputMode="numeric" aria-label={`${name || "항목"} 차감 단가`} placeholder={fmtW(r.add) || "추가와 같음"} value={r.deduct != null ? r.deduct.toLocaleString("ko-KR") : ""} onChange={(e) => { const v = digits(e.target.value, 12); onChange({ deduct: v ? Number(v) : null }); }} /><span>원</span></div>
       {others.map((sp) => (
         <Fragment key={sp}>
           <span className="td__rl td__rl--sp">{sp}</span>
-          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 추가 단가`} placeholder={fmtW(r.add) || "대표와 같음"} value={fmtW(r.bySpecies?.[sp]?.add)} onChange={(e) => setSp(sp, "add", e.target.value)} /><span>원</span></div>
+          <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 추가 단가`} placeholder={spHints?.[sp] || fmtW(r.add) || "대표와 같음"} value={fmtW(r.bySpecies?.[sp]?.add)} onChange={(e) => setSp(sp, "add", e.target.value)} /><span>원</span></div>
           <div className="numin"><input type="text" inputMode="numeric" aria-label={`${sp} ${name} 차감 단가`} placeholder={fmtW(r.bySpecies?.[sp]?.add) || fmtW(r.deduct) || fmtW(r.add) || "추가와 같음"} value={fmtW(r.bySpecies?.[sp]?.deduct)} onChange={(e) => setSp(sp, "deduct", e.target.value)} /><span>원</span></div>
         </Fragment>
       ))}
