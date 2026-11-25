@@ -14,22 +14,23 @@ export const CPATHS: CrmPaths = {
   docs: "/cro/docs", newDoc: "/cro/docs/new", ics: "/api/cro/crm/ics", exportXlsx: "/api/cro/crm/export",
 };
 export const NAV: NavItem[] = [
-  { href: B, label: "오늘", icon: "today", exact: true },
-  { href: CPATHS.deals, label: "안건", icon: "deals" },
-  { href: CPATHS.clients, label: "고객사", icon: "clients" },
-  { href: CPATHS.reports, label: "보고서", icon: "report" },
-  { href: PATHS.pipe, label: "받은 요청", icon: "inbox", group: "견적" },
+  { href: B, label: "오늘", icon: "today", exact: true, group: "업무" },
+  { href: PATHS.pipe, label: "받은 요청", icon: "inbox", group: "업무" },
+  { href: CPATHS.deals, label: "안건", icon: "deals", group: "CRM" },
+  { href: CPATHS.clients, label: "고객사", icon: "clients", group: "CRM" },
+  { href: CPATHS.log, label: "활동", icon: "note", group: "CRM" },
+  { href: CPATHS.calendar, label: "캘린더", icon: "calendar", group: "CRM" },
+  { href: CPATHS.reports, label: "분석", icon: "report", group: "CRM" },
   { href: "/cro/docs", label: "견적서", icon: "quote", group: "견적" },
   { href: "/design-preview/catalog", label: "시험 목록", icon: "list", group: "견적" },
-  { href: CPATHS.calendar, label: "캘린더", icon: "calendar", group: "견적" },
-  { href: "/cro/notifications", label: "알림", icon: "bell", group: "견적" },
+  { href: "/cro/notifications", label: "알림", icon: "bell", badge: 2 },
   { href: "/cro/org", label: "기관", icon: "org", group: "설정" },
   { href: "/cro/billing", label: "요금제·결제", icon: "receipt", group: "설정" },
 ];
 export const TABS: NavItem[] = [
   { href: B, label: "오늘", icon: "today", exact: true },
   { href: CPATHS.deals, label: "안건", icon: "deals" },
-  { href: CPATHS.log, label: "기록", icon: "note" },
+  { href: CPATHS.log, label: "활동", icon: "note" },
   { href: "/cro/more", label: "더보기", icon: "more" },
 ];
 
