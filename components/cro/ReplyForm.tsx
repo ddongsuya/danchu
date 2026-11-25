@@ -12,6 +12,7 @@ import { uploadToSigned } from "@/lib/upload";
 import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
 import type { Cat } from "@/lib/rfq-schema";
 import { EfficacyCosts } from "@/components/cro/EfficacyCosts";
+import { PayScheduleField } from "@/components/cro/PayScheduleField";
 import { EFFICACY_CAT } from "@/lib/efficacy";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
@@ -146,6 +147,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // 지급 조건 줄 검사 결과 (PayScheduleField 가 올린다). 저장된 값은 늘 올바른 줄이라 처음은 없음
+  const [payErr, setPayErr] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const revision = useRef(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -299,7 +302,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
   const plan = planQuote({ rows: rfq.rows, items, steps: steps.filter((st) => st.name.trim()) });
   const finalW = plan.finalReportWeek ?? maxW;
   const allNo = items.length > 0 && items.every((it) => it.avail === "불가");
-  const commonOk = !!common.startDate;
+  const commonOk = !!common.startDate && !payErr;
   const pending = items.filter((it) => it.checks && it.checks.length).length;
   // 견적서 PDF는 선택 첨부 (2026-11-18 사용자 결정)
   const canSubmit = !readOnly && filled === items.length && !allNo && commonOk && pending === 0;
@@ -312,7 +315,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         : pending
           ? `확인 필요 ${pending}건 남음`
         : !commonOk
-          ? "착수 가능일을 입력하세요"
+          ? payErr ? "지급 조건을 확인하세요" : "착수 가능일을 입력하세요"
           : isSubmitted
             ? "수정 내용 제출"
             : "견적 제출";
@@ -490,11 +493,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
                 <label className="fld__lab" htmlFor="start">전체 착수 가능일<span className="req">*</span></label>
                 <input id="start" className="inp" type="date" disabled={readOnly || busy} value={common.startDate} onChange={(e) => updCommon({ startDate: e.target.value })} />
               </div>
-              <div className="fld">
-                <label className="fld__lab" htmlFor="pay">결제 조건 (선급 · 중도 · 잔금 %)</label>
-                <input id="pay" className="inp" placeholder="예: 30 · 40 · 30" disabled={readOnly || busy} value={common.payTerms} onChange={(e) => updCommon({ payTerms: e.target.value.slice(0, 60) })} />
-              </div>
             </div>
+            <PayScheduleField value={common.payTerms} disabled={readOnly || busy} onChange={(payTerms, err) => { setPayErr(err); updCommon({ payTerms }); }} />
             <div className="fld">
               <span className="fld__lab">보고서 언어</span>
               <div className="chips">

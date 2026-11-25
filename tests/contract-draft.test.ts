@@ -38,7 +38,11 @@ describe("계약서(안)", () => {
     const d = buildContractDraft(base);
     const text = JSON.stringify(d.articles);
     expect(d.articles[2]!.body[0]).toContain("금 육천일십칠만오원정(₩60,170,005");
-    expect(text).toContain("선급 50% · 잔금 50%");
+    // 예전 숫자 입력 "50/50" 도 지급 조건 줄로 읽어 금액까지 적는다 (lib/pay-schedule)
+    expect(d.articles[3]!.body).toEqual([
+      "갑은 계약 금액을 다음과 같이 나누어 지급한다: 선급 50%(금 30,085,002원, 계약 시), 잔금 50%(금 30,085,003원, 최종 보고서 제출 시).",
+      "을은 지급 시기마다 세금계산서를 발행한다.",
+    ]);
     expect(text).toContain("2026년 12월 7일에 시험을 착수");
     expect(text).toContain("16주 안에 최종 보고서");
     expect(text).toContain("최종 보고서(국문)");

@@ -6,6 +6,7 @@
  * 순수 함수. 테스트 대상.
  */
 import { payTerms } from "./format";
+import { parsePay, payAmounts, payError } from "./pay-schedule";
 import { wonKo } from "./pd-quote";
 
 export type ContractParty = { name: string; contact: string | null; bizNo: string | null; address: string | null };
@@ -57,6 +58,16 @@ export function contractAmounts(items: ContractInput["items"]): { tests: Contrac
   return { tests, supply, vat, total: supply + vat };
 }
 
+/** 제4조 본문: 기관 회신의 지급 조건 줄을 계약 금액으로 환산 (lib/pay-schedule). 줄로 못 읽는 글은 그대로, 비었으면 협의 */
+function payBody(raw: string | null, pay: string, total: number): string[] {
+  const rows = parsePay(raw);
+  if (!rows.length || payError(rows)) return [pay ? `갑은 계약 금액을 다음과 같이 지급한다: ${pay}.` : "지급 시기와 방법은 갑과 을이 협의하여 정한다."];
+  const amounts = payAmounts(rows, total);
+  // 조항 본문은 화면에서 번호 목록이라 줄마다 번호를 달지 않고 한 문장으로 잇는다
+  const parts = rows.map((r, i) => `${r.label} ${r.pct}%(금 ${won(amounts[i])}원${r.when ? `, ${r.when}` : ""})`);
+  return [`갑은 계약 금액을 다음과 같이 나누어 지급한다: ${parts.join(", ")}.`];
+}
+
 export function buildContractDraft(a: ContractInput): ContractDraft {
   const { tests, supply, vat, total } = contractAmounts(a.items);
   const weeks = a.quote.final_weeks ?? (tests.reduce((m, t) => Math.max(m, t.weeks ?? 0), 0) || null);
@@ -73,7 +84,7 @@ export function buildContractDraft(a: ContractInput): ContractDraft {
       ],
     },
     { no: 3, title: "계약 금액", body: [`계약 금액은 금 ${wonKo(total)}원정(₩${won(total)}, 공급가액 ${won(supply)}원과 부가가치세 ${won(vat)}원)으로 한다.`] },
-    { no: 4, title: "지급 조건", body: [pay ? `갑은 계약 금액을 다음과 같이 지급한다: ${pay}.` : "지급 시기와 방법은 갑과 을이 협의하여 정한다.", "을은 지급 시기마다 세금계산서를 발행한다."] },
+    { no: 4, title: "지급 조건", body: [...payBody(a.quote.pay_terms, pay, total), "을은 지급 시기마다 세금계산서를 발행한다."] },
     {
       no: 5,
       title: "시험 기간",
