@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listNotifications } from "@/lib/data";
 import { ago } from "@/lib/format";
@@ -39,10 +40,9 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
         </div>
       )}
       {list.length === 0 ? (
-        <div className="empty">
-          <b>알림이 없어요</b>
-          견적 도착, 회신 마감, 계약 진행 소식이 여기에 쌓여요.
-        </div>
+        kind
+          ? <EmptyState kind="filtered" title={`${kind} 알림이 없습니다`} clearHref={href("", 1)}>다른 종류를 고르거나 필터를 지우세요.</EmptyState>
+          : <EmptyState title="알림이 없습니다">견적 도착, 회신 마감, 계약 진행 소식이 여기에 쌓입니다.</EmptyState>
       ) : (
         <div className="stack" style={{ gap: 8 }}>
           {list.map((n) => {

@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 export type TransitionRow = { rfqNo: string; replyBy: string; joinBy: string; offers: string[] };
 
@@ -11,10 +13,12 @@ export function OptInTransition({ rows }: { rows: TransitionRow[] }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; failed?: string[] } | null>(null);
   const offers = rows.reduce((n, r) => n + r.offers.length, 0);
+  const confirm = useConfirm();
 
   const run = async () => {
     if (busy) return;
-    if (!window.confirm(`열린 요청 ${rows.length}건의 참여 결정 기한을 오늘부터 다시 잡고, 관리 기관 ${offers}곳에 참여 안내 메일을 다시 보냅니다. 진행할까요?`)) return;
+    const ok = await confirm({ title: "참여 선택형으로 전환하시겠습니까?", body: `열린 요청 ${rows.length}건의 참여 결정 기한을 오늘부터 다시 잡고, 관리 기관 ${offers}곳에 참여 안내 메일을 다시 보냅니다.`, confirmLabel: "전환 실행" });
+    if (!ok) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -48,9 +52,9 @@ export function OptInTransition({ rows }: { rows: TransitionRow[] }) {
         </ul>
       </details>
       <div className="optin-tr__actions">
-        <button type="button" className="b1 bsm" onClick={run} disabled={busy || rows.length === 0 || !!msg?.ok} aria-busy={busy}>
-          {busy ? "전환 중…" : msg?.ok ? "전환함" : "전환 실행"}
-        </button>
+        <Button className="b1 bsm" onClick={run} pending={busy} disabled={rows.length === 0 || !!msg?.ok}>
+          {msg?.ok ? "전환함" : "전환 실행"}
+        </Button>
         {msg && (
           <span role={msg.ok ? "status" : "alert"} className={msg.ok ? "optin-tr__ok" : "optin-tr__err"}>
             {msg.text}

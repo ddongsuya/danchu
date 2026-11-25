@@ -4,6 +4,7 @@ import { Lockup } from "@/components/Logo";
 import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
+import { UiProvider } from "@/components/ui/UiProvider";
 import "./portal.css";
 import { Bell, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
@@ -40,6 +41,8 @@ export function Shell({ session, nav, tabs, plan, usage, chat, children }: { ses
 
   return (
     <div className={chat ? "pt pt--chat" : "pt"}>
+      {/* 토스트·확인 창을 셸에 한 번만 둔다 (components/ui). 아래 화면은 useToast()·useConfirm() 으로 부른다 */}
+      <UiProvider>
       {/* 첫 장면 높이 기준 (--vhpx). 인앱 브라우저가 svh 를 크게 잡는 문제를 랜딩과 같은 방법으로 피한다 */}
       <ViewportHeight />
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
@@ -113,6 +116,7 @@ export function Shell({ session, nav, tabs, plan, usage, chat, children }: { ses
         </nav>
       </div>
       </div>
+      </UiProvider>
     </div>
   );
 }

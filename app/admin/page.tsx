@@ -12,6 +12,7 @@ import { missingProdEnv } from "@/lib/env";
 import { readSchemaStatus } from "@/lib/schema-version";
 import { sentryEnabled } from "@/lib/observe";
 import { SearchBox } from "@/components/admin/SearchBox";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Pager } from "@/components/admin/Pager";
 import { OptInTransition, type TransitionRow } from "@/components/admin/OptInTransition";
 import { planOptInTransition } from "@/lib/opt-in-transition";
@@ -101,7 +102,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </div>
 
       {list.length === 0 ? (
-        <div className="empty"><b>{q ? `"${q}"에 맞는 요청이 없습니다` : "요청이 없습니다"}</b></div>
+        q || status
+          ? <EmptyState kind="filtered" title={q ? `"${q}"에 맞는 요청이 없습니다` : "이 상태의 요청이 없습니다"} clearHref="/admin">검색어나 상태를 바꾸거나 필터를 지우세요.</EmptyState>
+          : <EmptyState title="요청이 없습니다">의뢰자가 요청서를 보내면 여기에 쌓입니다.</EmptyState>
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl tbl--stack">

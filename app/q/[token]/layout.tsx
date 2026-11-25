@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Lockup } from "@/components/Logo";
+import { UiProvider } from "@/components/ui/UiProvider";
 import "@/components/shell/portal.css";
 
 export const metadata: Metadata = { title: "단추 · 견적 회신", robots: { index: false, follow: false } };
@@ -9,6 +10,7 @@ export const metadata: Metadata = { title: "단추 · 견적 회신", robots: { 
 export default function TokenLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="pt">
+      <UiProvider>
       <div className="pt__body">
         <header className="pt__top" style={{ display: "block" }}>
           <div className="pt__topin" style={{ maxWidth: 1080, margin: "0 auto" }}>
@@ -21,6 +23,7 @@ export default function TokenLayout({ children }: { children: React.ReactNode })
         </header>
         <main className="pt__main" style={{ paddingBottom: 48 }}>{children}</main>
       </div>
+      </UiProvider>
     </div>
   );
 }
