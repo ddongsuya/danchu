@@ -8,7 +8,7 @@ import { dday, ymd } from "@/lib/format";
 import { testNamesOf } from "@/lib/quote-items";
 import type { Values } from "@/lib/rfq-schema";
 import { Pager } from "./Pager";
-import "@/components/cro/requests-board.css";
+import "@/components/cro/board.css";
 
 /**
  * 운영자 접수 (2026-11-26 시안 v7 a-intake). 위: 제목 + 탭(멈춤 · 진행 · 선정 · 전체) + 검색.
@@ -40,24 +40,24 @@ export function IntakeBoard({ list, hasMore, query, counts, stuck }: { list: Rfq
   const active = list.find((r) => r.rfq_no === query.sel) ?? list[0] ?? null;
   const why = (r: RfqSummary) => stuck.get(r.rfq_no) ?? [];
   return (
-    <div className="rq">
-      <div className="rq-hd">
+    <div className="bd">
+      <div className="bd-hd">
         <h1>접수</h1>
-        <nav className="rq-seg" aria-label="거르기">
+        <nav className="bd-seg" aria-label="거르기">
           {(["stuck", "live", "won", "all"] as IntakeTab[]).map((t) => (
             <Link key={t} href={intakeHref(query, { tab: t, status: "", sel: "", page: 1 })} scroll={false} aria-current={query.tab === t && !query.status ? "page" : undefined}>
               {TAB_LABEL[t]}<em className="tnum">{counts[t]}</em>
             </Link>
           ))}
         </nav>
-        <form className="rq-search" action="/admin" role="search">
+        <form className="bd-search" action="/admin" role="search">
           {query.tab !== "stuck" && <input type="hidden" name="tab" value={query.tab} />}
           {query.status && <input type="hidden" name="status" value={query.status} />}
           <MagnifyingGlass size={16} aria-hidden="true" />
           <input name="q" defaultValue={query.q} placeholder="번호 · 회사 · 시험물질 · 이메일" aria-label="번호 · 회사 · 시험물질 · 이메일 검색" />
         </form>
       </div>
-      <nav className="rq-fn" aria-label="진행 단계">
+      <nav className="bd-fn" aria-label="진행 단계">
         {FLOW.map(([k, label]) => (
           <Link key={k} href={intakeHref(query, { tab: "all", status: query.status === k ? "" : k, sel: "", page: 1 })} scroll={false} aria-current={query.status === k ? "true" : undefined}>
             <span>{label}</span>
@@ -66,13 +66,13 @@ export function IntakeBoard({ list, hasMore, query, counts, stuck }: { list: Rfq
         ))}
       </nav>
       {!active ? (
-        <div className="rq-empty">
+        <div className="bd-empty">
           <b>{query.q ? `"${query.q}"에 맞는 요청이 없습니다` : query.tab === "stuck" && !query.status ? "멈춘 요청이 없습니다" : "요청이 없습니다"}</b>
         </div>
       ) : (
-        <div className="rq-split rq-split--adm">
-          <div className="rq-l">
-            <table className="rq-tb">
+        <div className="bd-split bd-split--adm">
+          <div className="bd-l">
+            <table className="bd-tb">
               <thead>
                 <tr><th>요청 번호</th><th>의뢰자</th><th>시험</th><th className="r">전달</th><th className="r">참여</th><th>{query.tab === "stuck" ? "멈춘 이유" : "상태"}</th><th className="r">경과</th></tr>
               </thead>
@@ -82,27 +82,27 @@ export function IntakeBoard({ list, hasMore, query, counts, stuck }: { list: Rfq
                   const days = w.length ? Math.max(...w.map((x) => x.days)) : daysSince(r.created_at);
                   return (
                     <tr key={r.id} aria-selected={r.id === active.id}>
-                      <td className="rq-mo"><Link href={intakeHref(query, { sel: r.rfq_no })} scroll={false} className="rq-row">{r.rfq_no}</Link></td>
+                      <td className="bd-mo"><Link href={intakeHref(query, { sel: r.rfq_no })} scroll={false} className="bd-row">{r.rfq_no}</Link></td>
                       <td>{r.company}</td>
-                      <td className="rq-tt">{testNamesOf(r.payload as Values) || r.substance}</td>
+                      <td className="bd-tt">{testNamesOf(r.payload as Values) || r.substance}</td>
                       <td className="r tnum">{r.sent}곳</td>
                       <td className="r tnum">{r.joined}곳</td>
-                      <td>{w.length ? <span className={`rq-pill ${w.some((x) => x.kind === "no_join") ? "rq-pill--b" : "rq-pill--w"}`}>{w[0].label}{w.length > 1 ? ` 외 ${w.length - 1}` : ""}</span> : <span className="rq-pill rq-pill--o">{statusLabel(r.status, r.outcome)}</span>}</td>
+                      <td>{w.length ? <span className={`bd-pill ${w.some((x) => x.kind === "no_join") ? "bd-pill--b" : "bd-pill--w"}`}>{w[0].label}{w.length > 1 ? ` 외 ${w.length - 1}` : ""}</span> : <span className="bd-pill bd-pill--o">{statusLabel(r.status, r.outcome)}</span>}</td>
                       <td className="r tnum">{days}일</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-            <ul className="rq-ls">
+            <ul className="bd-ls">
               {list.map((r) => {
                 const w = why(r);
                 return (
                   <li key={r.id}>
                     <Link href={`/admin/r/${r.rfq_no}`}>
-                      <span className="rq-ls__t"><span className="rq-mo">{r.rfq_no}</span> · {r.company}</span>
-                      <span className="rq-ls__s tnum">{[testNamesOf(r.payload as Values) || r.substance, `${r.sent}곳`, `${r.joined}곳`].join(" · ")}</span>
-                      {w.length ? <span className={`rq-pill ${w.some((x) => x.kind === "no_join") ? "rq-pill--b" : "rq-pill--w"}`}>{w[0].label}</span> : <span className="rq-pill rq-pill--o">{statusLabel(r.status, r.outcome)}</span>}
+                      <span className="bd-ls__t"><span className="bd-mo">{r.rfq_no}</span> · {r.company}</span>
+                      <span className="bd-ls__s tnum">{[testNamesOf(r.payload as Values) || r.substance, `${r.sent}곳`, `${r.joined}곳`].join(" · ")}</span>
+                      {w.length ? <span className={`bd-pill ${w.some((x) => x.kind === "no_join") ? "bd-pill--b" : "bd-pill--w"}`}>{w[0].label}</span> : <span className="bd-pill bd-pill--o">{statusLabel(r.status, r.outcome)}</span>}
                     </Link>
                   </li>
                 );
@@ -131,17 +131,17 @@ function Side({ r, why }: { r: RfqSummary; why: Stuck[] }) {
     ["회신 기한", r.reply_by ? `${r.reply_by.slice(5)}${dd && ["received", "distributed", "quoted"].includes(r.status) ? ` (${dd.n < 0 ? `${-dd.n}일 지남` : dd.label})` : ""}` : "-"],
   ];
   return (
-    <aside className="rq-r" aria-labelledby="ad-title">
-      <div className="rq-r__hd">
-        <h2 id="ad-title" className="rq-mo">{r.rfq_no}</h2>
+    <aside className="bd-r" aria-labelledby="ad-title">
+      <div className="bd-r__hd">
+        <h2 id="ad-title" className="bd-mo">{r.rfq_no}</h2>
       </div>
-      <dl className="rq-pr">
+      <dl className="bd-pr">
         {props.map(([k, v]) => (<div key={k}><dt>{k}</dt><dd className="tnum">{v}</dd></div>))}
       </dl>
       {why.length > 0 && (
-        <section className="rq-sec" aria-label="조치">
-          <h3 className="rq-h3">조치</h3>
-          <ul className="rq-todo">
+        <section className="bd-sec" aria-label="조치">
+          <h3 className="bd-h3">조치</h3>
+          <ul className="bd-todo">
             {why.map((w) => (
               <li key={w.kind}>
                 <span><b>{w.action}</b><small>{w.label}</small></span>
@@ -151,7 +151,7 @@ function Side({ r, why }: { r: RfqSummary; why: Stuck[] }) {
           </ul>
         </section>
       )}
-      <div className="rq-acts">
+      <div className="bd-acts">
         <Link href={`/admin/r/${r.rfq_no}`} className="b1">요청 열기</Link>
       </div>
     </aside>
