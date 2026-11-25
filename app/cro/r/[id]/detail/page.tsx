@@ -5,6 +5,7 @@ import { loadByInvite } from "@/lib/quote-load";
 import { loadOptsFor } from "@/lib/concierge";
 import { loadDetailForInvite } from "@/lib/detail-data";
 import { DetailReply } from "@/components/cro/DetailReply";
+import { docForInvite } from "@/lib/quote-doc-db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,5 +19,7 @@ export default async function CroDetailReply({ params }: { params: Promise<{ id:
   if (!got || !got.joined) notFound();
   const d = await loadDetailForInvite(inv.id, inv.rfq_id, got.rfq.rows);
   if (!d) redirect(`/cro/r/${id}`);
-  return <DetailReply token={inv.token} view={{ no: got.rfq.no, substance: got.rfq.substance, ...d }} backHref={`/cro/r/${id}`} operator={got.operator} />;
+  // 1차 견적서를 견적서 툴로 만들었으면, 그걸 복사해 2차 견적서를 쓸 수 있게 한다 (시안 v7)
+  const firstDoc = inv.cro_org_id ? await docForInvite(inv.cro_org_id, inv.id) : null;
+  return <DetailReply token={inv.token} view={{ no: got.rfq.no, substance: got.rfq.substance, ...d }} backHref={`/cro/r/${id}`} operator={got.operator} firstDocId={firstDoc?.id} />;
 }

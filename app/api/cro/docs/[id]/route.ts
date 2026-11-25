@@ -36,13 +36,13 @@ export async function PUT(req: Request, { params }: Ctx) {
   return NextResponse.json({ ok: true, updatedAt: r.updatedAt });
 }
 
-/** POST { action: "copy" } — 복제 */
+/** POST { action: "copy" } — 복제. { action: "round2" } — 같은 요청·안건에 이어 붙는 2차 견적서 (시안 v7) */
 export async function POST(req: Request, { params }: Ctx) {
   const o = await org();
   if (!o) return denied();
   const b = (await req.json().catch(() => ({}))) as { action?: unknown };
-  if (b.action !== "copy") return NextResponse.json({ error: "알 수 없는 요청이에요." }, { status: 400 });
-  const r = await copyDoc(o.orgId, o.s.userId, (await params).id);
+  if (b.action !== "copy" && b.action !== "round2") return NextResponse.json({ error: "알 수 없는 요청이에요." }, { status: 400 });
+  const r = await copyDoc(o.orgId, o.s.userId, (await params).id, b.action === "round2");
   if (!r.id) return NextResponse.json({ error: r.error }, { status: 500 });
   return NextResponse.json({ ok: true, id: r.id });
 }

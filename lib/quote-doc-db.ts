@@ -407,11 +407,22 @@ export async function deleteDoc(orgId: string, id: string): Promise<boolean> {
   return !error;
 }
 
-/** 견적서를 복제한다 (새 번호, 단추 요청 연결은 풀린다) */
-export async function copyDoc(orgId: string, userId: string | null, id: string): Promise<{ id?: string; error?: string }> {
+/**
+ * 견적서를 복제한다 (새 번호). 보통은 단추 요청·안건 연결이 풀린다.
+ * keepLinks: 2차 견적서처럼 같은 요청·안건·고객사·담당자에 이어 붙일 때 (2026-11-26 시안 v7)
+ */
+export async function copyDoc(orgId: string, userId: string | null, id: string, keepLinks = false): Promise<{ id?: string; error?: string }> {
   const got = await loadDoc(orgId, id);
   if (!got) return { error: "견적서를 찾지 못했어요." };
-  return insertDoc(orgId, userId, { client: got.head.client, substance: got.head.substance, data: got.data });
+  const made = await insertDoc(orgId, userId, { client: got.head.client, substance: got.head.substance, data: got.data });
+  if (!keepLinks || !made.id) return made;
+  const sb = getSupabaseAdmin();
+  const { data: src } = await sb!.from("cro_quote_docs").select("invite_id, rfq_no, deal_id, company_id, contact_id").eq("id", id).eq("org_id", orgId).maybeSingle();
+  if (src) {
+    const { error } = await sb!.from("cro_quote_docs").update(src).eq("id", made.id).eq("org_id", orgId);
+    if (error) console.error("cro_quote_docs round2 link", error);
+  }
+  return made;
 }
 
 /* ── 양식 제작 요청 ── */
