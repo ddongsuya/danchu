@@ -109,8 +109,14 @@ describe("공개 규칙", () => {
   it("의뢰자 목록 한 줄에는 합계만 있다", () => {
     const row = { id: "r", rfq_no: "DC-2026-0002", substance: "물질", categories: ["독성"], status: "open", created_at: "2026-11-01", join_by: null, reply_by: "2026-11-20", sent: 5, opened: 3, joined: 2, cap: 5, submitted: 1, compared_at: null, selected_quote_id: null, company: "회사", email: "x@y" };
     const out = requesterItem(row as never);
-    expect(out).toMatchObject({ no: "DC-2026-0002", sent: 5, joined: 2, submitted: 1, compareOpen: false, selected: false });
+    expect(out).toMatchObject({ no: "DC-2026-0002", sent: 5, joined: 2, submitted: 1, compareOpen: false, selected: false, outcome: null });
     expect(JSON.stringify(out)).not.toContain("x@y");
+  });
+  it("선정 없이 마무리한 사유는 주고, 메모는 주지 않는다", () => {
+    const row = { id: "r", rfq_no: "DC-2026-0003", substance: "물질", categories: [], status: "closed", created_at: "2026-11-01", join_by: null, reply_by: null, sent: 3, opened: 3, joined: 2, cap: 5, submitted: 2, compared_at: "2026-11-10", selected_quote_id: null, outcome: "보류", outcome_note: "가나바이오와 협의" };
+    const out = requesterItem(row as never);
+    expect(out.outcome).toBe("보류");
+    expect(JSON.stringify(out)).not.toContain("가나바이오");
   });
   it("비교표가 열리기 전에는 기관명·금액 없이 숫자만", () => {
     const v = compareView(

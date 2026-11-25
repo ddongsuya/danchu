@@ -112,6 +112,8 @@ export type AgentRequesterItem = {
   submitted: number;
   compareOpen: boolean;
   selected: boolean;
+  /** 선정 없이 마무리한 사유(외부 진행·보류·취소). 에이전트 앱이 보류한 요청에만 "다시 열기"를 보인다. 메모(outcome_note)는 넣지 않는다 */
+  outcome: string | null;
 };
 
 /** 의뢰자 자기 요청 목록 한 줄. 기관별 정보는 넣지 않는다(합계만, lib/data.ts listRequestsForUser 와 같은 규칙) */
@@ -129,6 +131,7 @@ export function requesterItem(r: RfqSummary): AgentRequesterItem {
     submitted: r.submitted,
     compareOpen: comparisonOpened(r),
     selected: !!r.selected_quote_id,
+    outcome: r.outcome ?? null,
   };
 }
 
