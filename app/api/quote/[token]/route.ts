@@ -15,6 +15,7 @@ import { saveQuote, type QuoteHeader, type QuoteItemInput } from "@/lib/rpc";
 import { entrySourceFor, loadOptsFor, PROXY_BEFORE_JOIN, proxyEntryAllowed } from "@/lib/concierge";
 import { audit } from "@/lib/audit";
 import { quoteQuotaError } from "@/lib/plan-usage";
+import { parsePay, payError } from "@/lib/pay-schedule";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -165,7 +166,8 @@ function parseBody(raw: unknown, rows: QuoteLineDef[]): Parsed | string {
   const common: ReplyCommon = {
     validUntil: YMD.test(s(c.validUntil)) ? s(c.validUntil) : "",
     startDate: YMD.test(s(c.startDate)) ? s(c.startDate) : "",
-    payTerms: s(c.payTerms, 60),
+    // 지급 조건 줄(lib/pay-schedule)을 글로 담는다. 6줄 × (이름 20 + 시점 30) 여유
+    payTerms: s(c.payTerms, 400),
     substanceQty: s(c.substanceQty, 120),
     reportLang: REPORT_LANGS.includes(s(c.reportLang)) ? s(c.reportLang) : "",
     includes: Array.isArray(c.includes) ? (c.includes as unknown[]).filter((x): x is string => typeof x === "string" && INCL_KEYS.includes(x)) : [],
@@ -335,6 +337,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (parsed.items.every((it) => it.avail === "불가")) return NextResponse.json({ error: "전 항목 불가는 견적 대신 요청 화면에서 '참여 철회'로 처리해 주세요." }, { status: 400 });
   if (parsed.items.some((it) => it.avail !== "불가" && Number(it.amount) < 1)) return NextResponse.json({ error: "가능·조건부 가능 항목의 금액은 1원 이상이어야 해요." }, { status: 400 });
   if (!parsed.common.startDate) return NextResponse.json({ error: "착수 가능일을 입력해 주세요." }, { status: 400 });
+  const payErr = payError(parsePay(parsed.common.payTerms));
+  if (payErr) return NextResponse.json({ error: payErr }, { status: 400 });
   const today = todaySeoul();
   if (parsed.common.startDate < today) return NextResponse.json({ error: "착수 가능일은 오늘 이후 날짜여야 해요." }, { status: 400 });
   if (parsed.common.validUntil && parsed.common.validUntil < today) return NextResponse.json({ error: "견적 유효기한이 이미 지났어요. 날짜를 확인해 주세요." }, { status: 400 });
