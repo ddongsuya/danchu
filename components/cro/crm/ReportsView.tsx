@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { CaretDown, DownloadSimple } from "@phosphor-icons/react/dist/ssr";
-import { FORECAST_MIN_CLOSED, STAGE_LABEL, STATUS_LABEL, buildForecast, buildReport, type ForecastBucket, type Status } from "@/lib/crm-deals";
-import { todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
+import { FORECAST_MIN_CLOSED, STAGE_LABEL, buildForecast, buildReport, type ForecastBucket, closedLabel } from "@/lib/crm-deals";
+import { personLabel, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
+import { buildQuoteFunnel, type PerfRow } from "@/lib/crm-analysis";
 import { qs } from "./opts";
 import type { CrmCtx } from "./ctx";
 import "./crm.css";
 
 export const PERIODS = { m1: "이번 달", m3: "최근 3개월", m6: "최근 6개월", y: "올해" } as const;
 type Period = keyof typeof PERIODS;
-const TABS = { p: "파이프라인", w: "수주·실패", f: "매출 예측", a: "활동" } as const;
+const TABS = { p: "파이프라인", q: "견적 성과", w: "수주·실패", f: "매출 예측", a: "활동" } as const;
 type Tab = keyof typeof TABS;
 export type ReportsQuery = { tab: Tab; p: Period; owner: string };
 
@@ -34,7 +35,8 @@ export function periodRange(p: Period, now = Date.now()): [string, string] {
 const ym = (ymd: string) => `${ymd.slice(0, 4)}년 ${+ymd.slice(5, 7)}월`;
 
 /**
- * 보고서 (시안 v5 7번). 파이프라인(단계별로 넘어간 안건 · 단계에 머문 날) · 수주·실패(수주율 · 실패 사유 · 출처별) · 매출 예측(진행 중 안건을 계약 예상 달로) · 활동(사람별 기록 수).
+ * 보고서 (시안 v5 7번, v7). 파이프라인(단계별로 넘어간 안건 · 단계에 머문 날) · 견적 성과(보낸 견적 → 선정 → 계약, 고객사·담당자별) ·
+ * 수주·실패(수주율 · 수주 이유 · 실패 사유 · 출처별) · 매출 예측(진행 중 안건을 계약 예상 달로) · 활동(사람별 기록 수).
  * CRM 숫자는 기관 안에서만 본다. 단추의 노출 순서나 청구에는 쓰지 않는다.
  */
 export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
@@ -52,6 +54,9 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
   const exportHref = qs(paths.exportXlsx, { from, to });
   const range = q.tab === "f" ? "진행 중인 안건" : from.slice(0, 7) === to.slice(0, 7) ? ym(from) : `${ym(from)} ~ ${from.slice(0, 4) === to.slice(0, 4) ? `${+to.slice(5, 7)}월` : ym(to)}`;
   const fc = q.tab === "f" ? buildForecast({ deals: data.deals, history: data.history, owner: q.owner || null, now }) : null;
+  const qf = q.tab === "q" ? buildQuoteFunnel({ deals: data.deals, history: data.history, quotes: data.quotes, danchu: c.danchu, from, to, owner: q.owner || null }) : null;
+  const maxWon = Math.max(1, ...r.wonReasons.map((x) => x.count));
+  const ct = new Map(data.contacts.map((x) => [x.id, personLabel(x.name, x.title)]));
   return (
     <div className="cx">
       <header className="cx-ph">
@@ -123,6 +128,43 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
         </div>
       )}
 
+      {qf && (
+        <div className="cx-rep">
+          <div className="cx-rep__col">
+            <section className="cx-panel" aria-labelledby="r-qf">
+              <div><h2 id="r-qf">보낸 견적에서 계약까지</h2><p className="cx-cap">기간 안에 처음 견적을 보낸 안건 {qf.sent}건이 어디까지 갔는지</p></div>
+              {qf.sent ? (
+                <ol className="cx-funnel cx-funnel--q">
+                  {([["보낸 견적", qf.sent, null], ["선정", qf.selected, qf.selectRate], ["계약", qf.contracted, qf.contractRate]] as const).map(([nm, n, rate], i) => (
+                    <li key={nm}>
+                      {i > 0 && <span className="cx-conv tnum" aria-label={`앞 단계에서 ${rate ?? 0}% 넘어감`}>↓ {rate ?? 0}%</span>}
+                      <div className="cx-fr">
+                        <span className="cx-fr__nm">{nm}</span>
+                        <span className="cx-fr__trk"><span className="cx-fr__fill tnum" style={{ width: `${Math.max(6, (n / qf.sent) * 100)}%` }}>{n}</span></span>
+                        <span className="cx-fr__rt tnum">{i === 0 ? `견적서 ${qf.docs}장` : <>보낸 견적의 <b>{Math.round((n / qf.sent) * 100)}%</b></>}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : <p className="cx-none">이 기간에 보낸 견적이 없어요. 견적서에 보낸 날을 적거나 단추 요청에 견적을 내면 여기에 모여요.</p>}
+              {qf.sent > 0 && <p className="cx-cap">안건 하나에 2차·3차 견적을 보내도 한 건으로 셉니다. 선정은 수주했거나 단추 요청에서 의뢰자가 우리 견적을 고른 안건, 계약은 계약 단계까지 간 수주와 단추에 체결로 보고한 안건이에요.</p>}
+            </section>
+            <PerfTable title="고객사별" id="r-qco" rows={qf.byCompany} name={(id) => (id ? co.get(id) ?? "고객사" : "고객사 정하지 않음")} href={(id) => (id ? `${paths.clients}/${id}` : null)} />
+          </div>
+          <div className="cx-rep__col">
+            <section className="cx-panel" aria-label="견적 성과 요약">
+              <dl className="cx-wonline">
+                <div><dt>선정률</dt><dd className="tnum">{qf.selectRate != null ? `${qf.selectRate}%` : "-"}</dd></div>
+                <div><dt>계약 전환</dt><dd className="tnum">{qf.overallRate != null ? `${qf.overallRate}%` : "-"}</dd></div>
+                <div><dt>계약 금액</dt><dd className="tnum">{wonKo(qf.byCompany.reduce((s, x) => s + x.wonSum, 0))}</dd></div>
+              </dl>
+              <p className="cx-cap">선정률은 보낸 견적 중 선정된 비율, 계약 전환은 보낸 견적 중 계약까지 간 비율이에요.</p>
+            </section>
+            <PerfTable title="담당자별" id="r-qct" rows={qf.byContact} name={(id) => (id ? ct.get(id) ?? "담당자" : "")} sub={(x) => ("companyId" in x && x.companyId ? co.get(x.companyId as string) ?? "" : "")} narrow />
+          </div>
+        </div>
+      )}
+
       {q.tab === "w" && (
         <div className="cx-rep">
           <div className="cx-rep__col">
@@ -137,7 +179,7 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
                       {r.closed.slice(0, 30).map((d) => (
                         <tr key={d.id}>
                           <td><Link href={`${paths.deals}/${d.id}`} className="cx-tlink">{d.title}</Link>{d.company_id && <small className="cx-muted"> · {co.get(d.company_id)}</small>}</td>
-                          <td><span className={`cx-st cx-st--${d.status}`}>{STATUS_LABEL[d.status as Status]}{d.lost_reason ? ` · ${d.lost_reason}` : ""}</span></td>
+                          <td><span className={`cx-st cx-st--${d.status}`}>{closedLabel(d)}</span></td>
                           <td>{d.owner ? mem.get(d.owner) ?? "-" : "-"}</td>
                           <td className="r tnum">{wonKo(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</td>
                           <td className="r tnum">{d.closed_at ? ymdKst(d.closed_at).slice(5).replace("-", ".") : ""}</td>
@@ -150,6 +192,14 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
             </section>
           </div>
           <div className="cx-rep__col">
+            <section className="cx-panel" aria-labelledby="r-won-reasons">
+              <div><h2 id="r-won-reasons">수주 이유</h2><p className="cx-cap tnum">{r.won}건</p></div>
+              {r.wonReasons.length ? (
+                <ul className="cx-hbar">
+                  {r.wonReasons.map((x) => <li key={x.reason}><span>{x.reason}</span><span className="cx-hbar__trk"><i style={{ width: `${(x.count / maxWon) * 100}%` }} /></span><span className="tnum cx-muted">{x.count}</span></li>)}
+                </ul>
+              ) : <p className="cx-none">이 기간에 수주한 안건이 없어요.</p>}
+            </section>
             <section className="cx-panel" aria-labelledby="r-reasons">
               <div><h2 id="r-reasons">실패 사유</h2><p className="cx-cap tnum">{r.lost}건</p></div>
               {r.reasons.length ? (
@@ -234,6 +284,40 @@ function WinLine({ r }: { r: ReturnType<typeof buildReport> }) {
         <div><dt>수주 · 실패</dt><dd className="tnum">{r.won} · {r.lost}건</dd></div>
       </dl>
       <p className="cx-cap">수주율은 기간 안에 끝난 안건 중 수주한 비율이에요.</p>
+    </section>
+  );
+}
+
+/** 고객사별·담당자별 견적 성과 표 */
+function PerfTable({ title, id, rows, name, sub, href, narrow = false }: {
+  title: string; id: string; rows: PerfRow[]; name: (id: string | null) => string; sub?: (x: PerfRow) => string; href?: (id: string | null) => string | null; narrow?: boolean;
+}) {
+  return (
+    <section className="cx-panel" aria-labelledby={id}>
+      <div><h2 id={id}>{title}</h2><p className="cx-cap tnum">{rows.length ? `${rows.length}${title === "담당자별" ? "명" : "곳"} · 보낸 견적이 많은 순` : ""}</p></div>
+      {rows.length ? (
+        <div className="cx-tablewrap cx-tablewrap--flat">
+          <table className={`cx-table cx-table--perf${narrow ? " cx-table--perf-n" : ""}`}>
+            <thead><tr><th>{title.replace("별", "")}</th><th className="r">보낸 견적</th><th className="r">선정</th><th className="r">계약</th>{!narrow && <th className="r">선정률</th>}{!narrow && <th className="r">계약 금액</th>}</tr></thead>
+            <tbody>
+              {rows.slice(0, 20).map((x) => {
+                const link = href?.(x.id);
+                const s = sub?.(x);
+                return (
+                  <tr key={x.id ?? "none"}>
+                    <td>{link ? <Link href={link} className="cx-tlink">{name(x.id)}</Link> : name(x.id)}{s && <small className="cx-muted cx-cellsub">{s}</small>}</td>
+                    <td className="r tnum">{x.sent}</td>
+                    <td className="r tnum">{x.selected}</td>
+                    <td className="r tnum">{x.contracted}</td>
+                    {!narrow && <td className="r tnum">{x.rate != null ? `${x.rate}%` : "-"}</td>}
+                    {!narrow && <td className="r tnum">{x.wonSum ? wonKo(x.wonSum) : <span className="cx-muted">-</span>}</td>}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : <p className="cx-none">{title === "담당자별" ? "견적서에 받는 사람을 정하거나 안건에 담당자를 붙이면 여기에 모여요." : "이 기간에 보낸 견적이 없어요."}</p>}
     </section>
   );
 }
