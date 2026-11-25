@@ -4,6 +4,7 @@ import { dbReady, listCroOrgs } from "@/lib/data";
 import { ymd } from "@/lib/format";
 import { QuickApprove } from "@/components/admin/QuickApprove";
 import { SearchBox } from "@/components/admin/SearchBox";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 import { ManagedOrgForm } from "@/components/admin/ManagedOrgForm";
 
@@ -71,7 +72,11 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
         </>
       )}
       <div className="sec-title"><h2>{status ? ST[status]?.[0] ?? "기관" : "전체 기관"} {rest.length}</h2></div>
-      {rest.length === 0 ? <div className="empty"><b>기관이 없습니다</b>CRO가 가입 신청하거나 운영자가 기관을 추가하면 여기에 나타납니다.</div> : <Table rows={rest} />}
+      {rest.length === 0
+        ? (q || status
+          ? <EmptyState kind="filtered" title={q ? `"${q}"에 맞는 기관이 없습니다` : "이 상태의 기관이 없습니다"} clearHref="/admin/cros">검색어나 상태를 바꾸거나 필터를 지우세요.</EmptyState>
+          : <EmptyState title="기관이 없습니다">기관이 가입 신청하거나 운영자가 위에서 기관을 추가하면 여기에 나타납니다.</EmptyState>)
+        : <Table rows={rest} />}
     </>
   );
 }

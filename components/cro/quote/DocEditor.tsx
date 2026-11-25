@@ -10,6 +10,7 @@ import {
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
 import { PD_PAGES, PdCover, PdDetailPage, PdEvalPage, PdQuotePage, pdDocTest } from "./PdPages";
 import { COND_LABEL, Cover, DetailPage, GuidePage, Logo, brandVars, QuotePage, SchedulePage, condLine, guidePages, pageCount, pageKeys, type PageKey } from "./DocPages";
@@ -44,6 +45,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const router = useRouter();
   const [head, setHead] = useState<DocHead>(head0);
   const [data, setData] = useState<DocData>(initial);
+  const confirm = useConfirm();
   const [page, setPage] = useState<PageKey>(initial.tests[0] ? `detail:${initial.tests[0].uid}` : "cover");
   const [mode, setMode] = useState<Mode>("edit");
   const [pane, setPane] = useState<Pane>("desk");
@@ -89,8 +91,8 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const setH = (patch: Partial<DocHead>) => { const next = { ...head, ...patch }; setHead(next); queue(next, data); };
   const setTest = (u: string, patch: Partial<DocTest>) => setDoc({ tests: data.tests.map((t) => (t.uid === u ? { ...t, ...patch } : t)) });
   const addTest = (t: DocTest) => { setDoc({ tests: [...data.tests, t] }); setPage(`detail:${t.uid}`); setPicker(false); setPane("desk"); };
-  const removeTest = (t: DocTest) => {
-    if (!window.confirm(`"${t.title}" 시험을 견적서에서 뺄까요?`)) return;
+  const removeTest = async (t: DocTest) => {
+    if (!(await confirm({ title: `"${t.title}" 시험을 견적서에서 빼시겠습니까?`, body: "이 시험에 입력한 설계와 금액도 함께 빠집니다.", confirmLabel: "빼기", danger: true }))) return;
     const rest = data.tests.filter((x) => x.uid !== t.uid);
     setDoc({ tests: rest });
     setPage(rest[0] ? `detail:${rest[0].uid}` : "cover");
@@ -651,8 +653,9 @@ function ClientView({ data, rfqNo }: { data: DocData; rfqNo: string }) {
 function DocMenu({ id, onDone }: { id: string; onDone: (href: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const confirm = useConfirm();
   const act = async (action: "copy" | "delete") => {
-    if (action === "delete" && !window.confirm("이 견적서를 삭제할까요? 되돌릴 수 없어요.")) return;
+    if (action === "delete" && !(await confirm({ title: "이 견적서를 삭제하시겠습니까?", body: "삭제하면 되돌릴 수 없습니다.", confirmLabel: "삭제", danger: true }))) return;
     setBusy(true); setErr("");
     const r = await fetch(`/api/cro/docs/${id}`, { method: action === "delete" ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: action === "copy" ? JSON.stringify({ action: "copy" }) : undefined }).catch(() => null);
     const d = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;

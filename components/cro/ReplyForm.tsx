@@ -12,6 +12,7 @@ import { uploadToSigned } from "@/lib/upload";
 import { designSummary, EXPLAIN_FIELDS, ROUTES, SPECIES } from "@/lib/catalog";
 import type { Cat } from "@/lib/rfq-schema";
 import { EfficacyCosts } from "@/components/cro/EfficacyCosts";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { EFFICACY_CAT } from "@/lib/efficacy";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
@@ -209,8 +210,13 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, pdf]);
-  const leave = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if ((dirty || pdf) && !window.confirm("아직 저장·제출하지 않은 변경사항 또는 첨부가 있어요. 이 화면을 나갈까요?")) e.preventDefault();
+  const confirm = useConfirm();
+  // 확인 창은 비동기라 링크 이동을 먼저 막고, "나가기"를 고르면 같은 주소로 보낸다
+  const leave = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!(dirty || pdf) || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    const href = e.currentTarget.getAttribute("href");
+    if (href && (await confirm({ title: "이 화면을 나가시겠습니까?", body: "아직 저장·제출하지 않은 변경사항 또는 첨부가 있습니다.", confirmLabel: "나가기", cancelLabel: "계속 쓰기", danger: true }))) router.push(href);
   };
   const queueSave = (nextItems: ReplyItem[], nextNote: string, nextCommon: ReplyCommon, nextSteps: ScheduleStep[] = steps) => {
     if (readOnly) return;
