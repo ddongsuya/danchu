@@ -33,6 +33,7 @@ import { DesignHints } from "@/components/guide/DesignHints";
 import { requestChecks } from "@/lib/design-guide";
 import { needsCda } from "@/lib/request-policy";
 import { AttachmentNotice } from "@/components/AttachmentNotice";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { KINDS, isKind, type Kind } from "@/lib/study-kinds";
 
 const KIND_ORDER: Kind[] = ["tox", "pd", "pk", "other"];
@@ -93,6 +94,7 @@ export function NewRequest({
   guest?: boolean;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [phase, setPhase] = useState<"start" | "advisor" | "edit" | "chat">("start");
   /** 네 갈래 첫 화면에서 고른 갈래. 있으면 시험 항목을 그 갈래 것만 보여 준다 (이미 고른 항목은 남긴다) */
   const [kind, setKind] = useState<Kind | null>(null);
@@ -214,15 +216,13 @@ export function NewRequest({
     setEditingReview(true);
     go(n);
   };
-  const applyPreset = (key: string, replace = false) => {
+  const applyPreset = async (key: string, replace = false) => {
     const p = PRESETS.find((x) => x.key === key);
     if (!p) return;
     if (
       replace &&
       cats.length &&
-      !window.confirm(
-        "시험 항목과 항목별 상세 조건을 이 구성으로 바꿀까요? 일정·물질·첨부는 유지돼요.",
-      )
+      !(await confirm({ title: "시험 항목을 이 구성으로 바꾸시겠습니까?", body: "시험 항목과 항목별 상세 조건이 바뀝니다. 일정·물질·첨부는 그대로 둡니다.", confirmLabel: "바꾸기" }))
     )
       return;
     setUndo(values);
@@ -531,11 +531,9 @@ export function NewRequest({
               </button>
               <button
                 className="b2"
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
-                      "저장된 초안을 지우고 새로 작성할까요? 이미 접수된 요청은 삭제되지 않아요.",
-                    )
+                    await confirm({ title: "저장된 초안을 지우고 새로 작성하시겠습니까?", body: "이미 접수된 요청은 삭제되지 않습니다.", confirmLabel: "새로 쓰기", danger: true })
                   ) {
                     clearDraft(userId);
                     if (!guest) clearDraft(GUEST);

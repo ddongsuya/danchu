@@ -8,6 +8,7 @@ import { dday, ymd } from "@/lib/format";
 import { testNamesOf } from "@/lib/quote-items";
 import type { Values } from "@/lib/rfq-schema";
 import { Pager } from "./Pager";
+import { EmptyState } from "@/components/ui/EmptyState";
 import "@/components/cro/board.css";
 
 /**
@@ -67,7 +68,9 @@ export function IntakeBoard({ list, hasMore, query, counts, stuck }: { list: Rfq
       </nav>
       {!active ? (
         <div className="bd-empty">
-          <b>{query.q ? `"${query.q}"에 맞는 요청이 없습니다` : query.tab === "stuck" && !query.status ? "멈춘 요청이 없습니다" : "요청이 없습니다"}</b>
+          {query.q || query.status
+            ? <EmptyState kind="filtered" title={query.q ? `"${query.q}"에 맞는 요청이 없습니다` : "이 단계의 요청이 없습니다"} clearHref={intakeHref(query, { q: "", status: "", sel: "", page: 1 })} />
+            : <EmptyState title={query.tab === "stuck" ? "멈춘 요청이 없습니다" : "요청이 없습니다"} />}
         </div>
       ) : (
         <div className="bd-split bd-split--adm">

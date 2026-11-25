@@ -39,7 +39,8 @@ import { applyDocEdits, applyReplyFields, docView, parseDocEdits, replyFromDoc, 
 import { loadQuote } from "./quote-load";
 import { RETENTION } from "./retention";
 import { ACT_KINDS, CONTACT_ROLES, EVENT_KINDS, EVENT_MODES, TASK_CATS } from "./crm-shape";
-import { LOST_REASONS, STAGES, STATUSES } from "./crm-deals";
+import { LOST_REASONS, STAGES, STATUSES, WON_REASONS } from "./crm-deals";
+import { activityFilePaths, removeCrmFiles } from "./crm-files";
 import type { PlanFeature } from "./plans";
 import { checkRequestValues, createGate, requestSchema, REQUEST_SCHEMA_VERSION } from "./agent-request";
 import { matchOrgs } from "./distribute";
@@ -815,8 +816,8 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
   },
   {
     name: "deal_move", role: "cro", scope: "org", level: "auto", area: "crm", label: "안건 단계 옮기기", tool: true, feature: "crm", target: { kind: "deals", op: "move" },
-    description: "안건 단계(문의·견적·협의·접수·계약)를 옮기거나 수주·실패로 닫는다. 실패면 사유를 고른다. 금액은 받지 않는다.",
-    input: obj({ id: ref("deal", "안건"), stage: oneOf(STAGES, "inquiry 문의, quote 견적, negotiation 협의, intake 접수, contract 계약"), status: oneOf(STATUSES, "open 진행, won 수주, lost 실패"), reason: oneOf(LOST_REASONS, "실패 사유"), note: str("메모", 1000) }, ["id"]),
+    description: `안건 단계(문의·견적·협의·접수·계약)를 옮기거나 수주·실패로 닫는다. 수주면 이유(${WON_REASONS.join(", ")}), 실패면 사유(${LOST_REASONS.join(", ")})를 reason 에 고른다. 이미 수주한 안건에 status won 과 reason 을 보내면 수주 이유만 고친다. 금액은 받지 않는다.`,
+    input: obj({ id: ref("deal", "안건"), stage: oneOf(STAGES, "inquiry 문의, quote 견적, negotiation 협의, intake 접수, contract 계약"), status: oneOf(STATUSES, "open 진행, won 수주, lost 실패"), reason: oneOf([...new Set([...WON_REASONS, ...LOST_REASONS])], "수주 이유(수주) 또는 실패 사유(실패)"), note: str("메모", 1000) }, ["id"]),
     run: async (c) => {
       // 금액(won_amount)은 비서가 넣지 않는다. 수주 금액은 안건 금액을 따르고, 고칠 때는 사람이 단추 화면에서
       const { won_amount: _w, follow_up_on: _f, ...body } = c.body;
@@ -983,7 +984,7 @@ export function catalogFor(s: Pick<AgentSession, "role" | "org">): { name: strin
 }
 
 /** 등록부 판. 액션을 더하거나 모양을 바꾸면 올린다(에이전트가 목록을 다시 읽는다) */
-export const CATALOG_VERSION = "2026-11-21.4";
+export const CATALOG_VERSION = "2026-11-26.1";
 
 /* ── 실행과 기록 ── */
 
@@ -1130,6 +1131,8 @@ export async function undoAgentAction(s: AgentSession, logId: string, now = Date
   let error: unknown = null;
   if (log.undo === "delete") {
     if (current) ({ error } = await sb.from(table).delete().eq("id", log.target_id!).eq("org_id", orgId));
+    // 비서가 만든 기록에 사람이 나중에 붙인 첨부도 함께 지운다
+    if (!error && current && kind === "activities") await removeCrmFiles(sb, activityFilePaths([{ files: current.files }]));
   } else {
     ({ error } = await sb.from(table).update(log.before as never).eq("id", log.target_id!).eq("org_id", orgId));
     if (!error && log.undo === "move" && current) {

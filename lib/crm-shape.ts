@@ -16,7 +16,7 @@ export type CrmContact = {
 };
 export type CrmDeal = {
   id: string; org_id: string; company_id: string | null; contact_ids: string[]; title: string; kind: string; substance: string; submit_to: string; report_lang: string;
-  amount: number | null; expected_on: string | null; stage: string; status: string; stage_at: string; lost_reason: string; lost_note: string; won_amount: number | null; closed_at: string | null;
+  amount: number | null; expected_on: string | null; stage: string; status: string; stage_at: string; lost_reason: string; lost_note: string; won_reason: string; won_note: string; won_amount: number | null; closed_at: string | null;
   owner: string | null; source: string; invite_id: string | null; rfq_no: string; memo: string; import_id: string | null; created_by: string | null; created_at: string; updated_at: string;
 };
 export type DealHistory = {
@@ -30,8 +30,12 @@ export type CrmEvent = {
 export type CrmActivity = {
   id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; event_id: string | null; kind: string;
   occurred_at: string; duration_min: number | null; title: string; body: string; attendee_contacts: string[]; attendee_members: string[];
+  /** 첨부 (0051). 비공개 버킷 crm-files. 쓰기는 /api/cro/crm/files 만 (lib/crm-files.ts) */
+  files: CrmFile[];
   created_by: string | null; created_at: string; updated_at: string;
 };
+/** 기록 첨부 한 개 (녹음·회의록·자료) */
+export type CrmFile = { path: string; name: string; size: number; type: string };
 export type CrmTaskAction = { id: string; task_id: string; body: string; at: string; created_by: string | null };
 export type CrmTask = {
   id: string; org_id: string; company_id: string | null; deal_id: string | null; contact_id: string | null; quote_doc_id: string | null; activity_id: string | null; title: string; memo: string;
@@ -48,6 +52,8 @@ export type Member = { id: string; name: string };
 // ─── 라벨 ───
 export const ACT_KIND: Record<string, string> = { meeting: "미팅", call: "통화", email: "메일", memo: "메모" };
 export const ACT_KINDS = ["meeting", "call", "email", "memo"] as const;
+/** 기록 본문 최대 글자 수 (0038 의 check 와 같다). 회의록을 붙여 넣을 수 있게 넉넉하게 */
+export const ACT_BODY_MAX = 20000;
 export const EVENT_KIND: Record<string, string> = { meeting: "미팅", call: "통화", deadline: "기한", other: "기타" };
 export const EVENT_KINDS = ["meeting", "call", "deadline", "other"] as const;
 export const EVENT_MODE: Record<string, string> = { in_person: "대면", video: "화상", phone: "전화" };
@@ -195,7 +201,7 @@ export function parseActivity(b: Record<string, unknown>, partial = false, now =
   const kind = b.kind === undefined && partial ? undefined : oneOf(b.kind, ACT_KINDS);
   if (kind === null) return { ok: false, error: "미팅·통화·메일·메모 중 하나를 골라 주세요." };
   const title = strOr(b.title, 200);
-  const body = strOr(b.body, 8000);
+  const body = strOr(b.body, ACT_BODY_MAX);
   if (!partial && !title && !body) return { ok: false, error: "내용을 적어 주세요." };
   let occurred_at: string | undefined;
   if (b.date !== undefined || !partial) {

@@ -455,6 +455,36 @@
   .cx-dealcols > .cx-rail { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
   .cx-rep { grid-template-columns: minmax(0, 1fr) 320px; }
 }
+/* 기록 첨부 (0051): 파일 한 줄 = 아이콘 · 이름 · 녹음 표시 · 크기 · 빼기 */
+.cx-files { display: grid; gap: 6px; justify-items: start; }
+.cx-files__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; width: 100%; }
+.cx-files__list li { display: flex; align-items: center; gap: 8px; min-height: 30px; max-width: 100%; width: max-content; padding: 0 2px 0 8px; border-radius: var(--r-sm); background: var(--white); font-size: 13px; color: var(--ink); }
+.cx-files__list li > svg { flex: none; color: var(--muted); }
+.cx-files__n { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-files__s, .cx-files__list .cx-chip { flex: none; }
+.cx-files__list a.cx-files__n { font-size: 13px; color: var(--ink); }
+.cx-files__s { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+.cx-files__list .crm-confirm { flex: none; padding-right: 6px; }
+.cx-files__add { min-height: 28px; }
+.cx-files__add:focus-within { color: var(--ink); outline: 2px solid var(--ink); outline-offset: 2px; border-radius: var(--r-sm); }
+.cx-files__add[data-busy="1"] { cursor: progress; color: var(--ink); }
+.cx-compose .cx-files { padding: 0 4px; }
+.cx-compose .cx-files__list li { background: var(--surface); }
+.cx-compose__lab { font-size: 12.5px; color: var(--muted); padding: 0 4px; }
+/* 기록 줄: "파일 첨부"는 지우기 옆에, 줄에 마우스를 올리거나 키보드로 들어갈 때만 */
+.cx-ev .cx-files__add { position: absolute; right: 52px; top: 30px; min-height: 0; opacity: 0; transition: opacity 160ms ease; }
+.cx-ev:hover .cx-files__add, .cx-ev:focus-within .cx-files__add, .cx-ev .cx-files__add[data-busy="1"] { opacity: 1; }
+.cx-ev .cx-files--row:not(:has(.cx-files__list)):not(:has(.crm-err)) { display: contents; }
+@media (hover: none) { .cx-ev .cx-files__add { display: none; } }
+/* 견적 성과 */
+.cx-funnel--q .cx-fr { grid-template-columns: 68px minmax(0, 1fr) 120px; }
+.cx-funnel--q .cx-conv { padding-left: 88px; }
+.cx-table--perf { min-width: 0; }
+.cx-table--perf td:first-child { min-width: 9em; }
+.cx-cellsub { display: block; margin-top: 1px; }
+.cx-table--ppl { min-width: 720px; }
+.cx-table--ppl tbody tr[data-on="1"] td { background: var(--cx-f2); }
+.cx-table--ppl td:last-child { white-space: nowrap; }
 @media (max-width: 1100px) and (min-width: 960px) {
   .cx-board { grid-template-columns: repeat(5, minmax(180px, 1fr)); overflow-x: auto; padding-bottom: 6px; }
 }
@@ -520,6 +550,13 @@
   .cx-fr { grid-template-columns: 44px minmax(0, 1fr) 84px; gap: 10px; }
   .cx-conv { padding-left: 56px; }
   .cx-hbar li { grid-template-columns: 96px minmax(0, 1fr) 24px; }
+  .cx-funnel--q .cx-fr { grid-template-columns: 60px minmax(0, 1fr) 96px; }
+  .cx-funnel--q .cx-conv { padding-left: 70px; }
+  .cx-table--ppl th:nth-child(3), .cx-table--ppl td:nth-child(3), .cx-table--ppl th:nth-child(6), .cx-table--ppl td:nth-child(6), .cx-table--ppl th:nth-child(7), .cx-table--ppl td:nth-child(7) { display: none; }
+  .cx-table--ppl { min-width: 0; }
+  .cx-table--perf:not(.cx-table--perf-n) th:nth-child(5), .cx-table--perf:not(.cx-table--perf-n) td:nth-child(5) { display: none; }
+  .cx-table--perf td:first-child { min-width: 7em; }
+  .cx-files__list li > .cx-chip { display: none; }
   .cx-src2 { grid-template-columns: 1fr 1fr; }
   .cx-search input { width: 100%; }
   .cx-preview { margin-bottom: 10px; }

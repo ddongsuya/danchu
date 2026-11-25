@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   board, buildForecast, buildReport, buildTimeline, danchuNext, danchuPatch, danchuSrcOf, danchuTarget, dealRows, filterDeals, guessField, guessStage, monthClosed, parseDeal, parseWon, parseYmd,
-  planImport, stageSpans, todayList, type DanchuSrc,
+  planImport, stageSpans, todayList, isWonReason, WON_REASONS, WON_UNSET, type DanchuSrc,
 } from "@/lib/crm-deals";
-import type { CrmDeal, CrmTask, DealHistory } from "@/lib/crm-shape";
+import { buildQuoteFunnel, contactStats, forContact } from "@/lib/crm-analysis";
+import { CRM_FILES_PER_ACTIVITY, CRM_FILE_MAX, activityFilePaths, cleanFiles, crmFileError, crmFilePath, isAudioFile, isCrmFilePath, sizeLabel } from "@/lib/crm-files";
+import type { CrmDeal, CrmQuote, CrmTask, DealHistory } from "@/lib/crm-shape";
 
 const NOW = new Date("2026-11-09T10:00:00+09:00").getTime(); // 월요일
 const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -24,7 +26,7 @@ const award = (o: Record<string, unknown> = {}) => ({
 const src = (i: any, a: any = null): DanchuSrc => danchuSrcOf(i, a);
 const deal = (o: Partial<CrmDeal> = {}): CrmDeal => ({
   id: U(100), org_id: "o", company_id: null, contact_ids: [], title: "안건", kind: "", substance: "", submit_to: "", report_lang: "", amount: null, expected_on: null,
-  stage: "inquiry", status: "open", stage_at: iso("2026-11-02T09:00:00"), lost_reason: "", lost_note: "", won_amount: null, closed_at: null, owner: null, source: "manual",
+  stage: "inquiry", status: "open", stage_at: iso("2026-11-02T09:00:00"), lost_reason: "", lost_note: "", won_reason: "", won_note: "", won_amount: null, closed_at: null, owner: null, source: "manual",
   invite_id: null, rfq_no: "", memo: "", import_id: null, created_by: null, created_at: iso("2026-11-02T09:00:00"), updated_at: iso("2026-11-02T09:00:00"), ...o,
 });
 
@@ -242,5 +244,88 @@ describe("엑셀 가져오기", () => {
     expect(v.ok && v.value).toMatchObject({ amount: 45_000_000, stage: "quote", kind: "tox", contact_ids: [U(1)] });
     expect(parseDeal({ title: "x", amount: "많이" }).ok).toBe(false);
     expect(parseDeal({ title: "x", stage: "won" }).ok).toBe(false);
+  });
+});
+
+describe("수주 이유 · 견적 성과 (0051)", () => {
+  const q = (n: number, o: Partial<CrmQuote> = {}): CrmQuote => ({
+    id: U(300 + n), doc_no: `Q-${n}`, title: "", client: "", supply: 1, status: "sent", sent_at: iso("2026-11-03T10:00:00"), valid_until: null, deal_id: null, company_id: null, contact_id: null,
+    rfq_no: null, updated_at: iso("2026-11-03T10:00:00"), created_at: iso("2026-11-03T10:00:00"), issued_on: "2026-11-03", invite_id: null, ...o,
+  });
+  it("수주 이유 분포: 목록 순서로 세고 적지 않은 수주는 따로", () => {
+    const won = (n: number, reason: string) => deal({ id: U(n), stage: "contract", status: "won", won_reason: reason, closed_at: iso("2026-11-05T10:00:00") });
+    const r = buildReport({ deals: [won(1, "일정"), won(2, "가격"), won(3, "일정"), won(4, "")], history: [], activities: [], tasks: [], members: [], from: "2026-11-01", to: "2026-11-30", now: NOW });
+    expect(r.wonReasons).toEqual([{ reason: "일정", count: 2 }, { reason: "가격", count: 1 }, { reason: WON_UNSET, count: 1 }]);
+    expect(WON_REASONS).toContain("시험 설계·전문성");
+    expect(isWonReason("다른 기관 선정")).toBe(false);
+  });
+  it("보낸 견적 → 선정 → 계약: 안건 하나에 견적서 두 장이어도 한 건, 단추 선정은 계약 전에도 선정", () => {
+    const won = deal({ id: U(1), company_id: U(50), contact_ids: [U(60)], stage: "contract", status: "won", won_amount: 70, closed_at: iso("2026-11-20T10:00:00") });
+    const lost = deal({ id: U(2), company_id: U(50), stage: "quote", status: "lost", lost_reason: "가격", closed_at: iso("2026-11-20T10:00:00") });
+    const danchuSel = deal({ id: U(3), stage: "negotiation", invite_id: U(1), source: "danchu" });
+    const s = src(inv({ status: "submitted", quote: quote({ first_submitted_at: iso("2026-11-04T10:00:00") }) }), award());
+    const f = buildQuoteFunnel({
+      deals: [won, lost, danchuSel], history: [],
+      quotes: [q(1, { deal_id: U(1), contact_id: U(61) }), q(2, { deal_id: U(1), sent_at: iso("2026-11-10T10:00:00") }), q(3, { deal_id: U(2) }), q(4, { company_id: U(51) }), q(5, { sent_at: null }), q(6, { sent_at: iso("2026-10-01T10:00:00") })],
+      danchu: new Map([[U(1), s]]), from: "2026-11-01", to: "2026-11-30",
+    });
+    expect([f.docs, f.sent, f.selected, f.contracted]).toEqual([4, 4, 2, 1]);
+    expect([f.selectRate, f.contractRate, f.overallRate]).toEqual([50, 50, 25]);
+    expect(f.byCompany[0]).toMatchObject({ id: U(50), sent: 2, selected: 1, contracted: 1, wonSum: 70, rate: 50 });
+    expect(f.byCompany.at(-1)!.id).toBeNull();
+    expect(f.byContact.map((x) => x.id)).toEqual([U(61)]); // 견적서의 받는 사람이 안건의 주 담당보다 먼저
+    // 단추 계약 체결 보고는 계약
+    const signed = src(inv({ status: "submitted", quote: quote({ first_submitted_at: iso("2026-11-04T10:00:00") }) }), award({ contract_status: "signed", contract_reported_at: iso("2026-11-20T10:00:00") }));
+    expect(buildQuoteFunnel({ deals: [danchuSel], history: [], quotes: [], danchu: new Map([[U(1), signed]]), from: "2026-11-01", to: "2026-11-30" }).contracted).toBe(1);
+    // 담당 영업으로 거르면 안건 없는 견적서는 빠진다
+    expect(buildQuoteFunnel({ deals: [{ ...won, owner: "m1" }], history: [], quotes: [q(1, { deal_id: U(1) }), q(4)], danchu: new Map(), from: "2026-11-01", to: "2026-11-30", owner: "m1" }).sent).toBe(1);
+  });
+  it("담당자별: 보낸 견적서·안건 결과·마지막 연락, 한 사람의 기록만 모으기", () => {
+    const p = U(60);
+    const d1 = deal({ id: U(1), contact_ids: [p], stage: "contract", status: "won", won_amount: 5 });
+    const d2 = deal({ id: U(2), contact_ids: [U(61), p] });
+    const d3 = deal({ id: U(3), contact_ids: [U(61)] });
+    const acts = [
+      { contact_id: p, attendee_contacts: [], occurred_at: iso("2026-11-02T10:00:00") },
+      { contact_id: U(61), attendee_contacts: [p], occurred_at: iso("2026-11-06T10:00:00") },
+      { contact_id: U(61), attendee_contacts: [], occurred_at: iso("2026-11-08T10:00:00") },
+    ];
+    const st = contactStats({ contacts: [{ id: p }], deals: [d1, d2, d3], quotes: [q(1, { contact_id: p }), q(2, { contact_id: p, sent_at: null })], activities: acts, history: [], danchu: new Map() }).get(p)!;
+    expect(st).toEqual({ quotes: 1, deals: 2, open: 1, won: 1, lost: 0, contracted: 1, wonSum: 5, lastAt: iso("2026-11-06T10:00:00") });
+    const only = forContact(p, { activities: acts, quotes: [q(1, { contact_id: p }), q(2, { deal_id: U(2) }), q(3, { deal_id: U(3) })], deals: [d1, d2, d3] });
+    expect([only.activities.length, only.quotes.map((x) => x.doc_no), [...only.dealIds]]).toEqual([2, ["Q-1", "Q-2"], [U(1), U(2)]]);
+  });
+});
+
+describe("기록 첨부 (0051)", () => {
+  const org = U(7);
+  const act = U(8);
+  it("녹음·문서·이미지만, 50MB까지. 확장자로 본다", () => {
+    expect(crmFileError("회의 녹음.m4a", 1000)).toBeNull();
+    expect(crmFileError("회의록.docx", CRM_FILE_MAX)).toBeNull();
+    expect(crmFileError("큰 녹음.wav", CRM_FILE_MAX + 1)).toMatch(/50MB/);
+    expect(crmFileError("page.html", 10)).not.toBeNull();
+    expect(crmFileError("setup.exe", 10)).not.toBeNull();
+    expect(crmFileError("빈.pdf", 0)).not.toBeNull();
+    expect(isAudioFile({ name: "a.MP3", type: "" })).toBe(true);
+    expect(isAudioFile({ name: "a.pdf", type: "application/pdf" })).toBe(false);
+  });
+  it("경로는 기관/기록/uuid-이름, 다른 기관·기록·상위 경로는 거절", () => {
+    const path = crmFilePath(org, act, "회의록 11월.docx", "11111111-2222-4333-8444-555555555555");
+    expect(path).toBe(`${org}/${act}/11111111-2222-4333-8444-555555555555-11.docx`);
+    expect(isCrmFilePath(path, org, act)).toBe(true);
+    expect(isCrmFilePath(path, U(9), act)).toBe(false);
+    expect(isCrmFilePath(path, org, U(9))).toBe(false);
+    expect(isCrmFilePath(`${org}/${act}/../x`, org, act)).toBe(false);
+    expect(isCrmFilePath(`${org}/${act}/sub/11111111-2222-4333-8444-555555555555-a.pdf`, org, act)).toBe(false);
+  });
+  it("DB 값은 모양이 맞는 것만 10개까지, 지울 경로 모으기", () => {
+    const f = (n: number) => ({ path: `p${n}`, name: `n${n}.pdf`, size: n, type: "application/pdf" });
+    expect(cleanFiles([f(1), null, { path: "x" }, "y", f(2)])).toEqual([f(1), f(2)]);
+    expect(cleanFiles(Array.from({ length: 12 }, (_, i) => f(i + 1)))).toHaveLength(CRM_FILES_PER_ACTIVITY);
+    expect(cleanFiles("[]")).toEqual([]);
+    expect(activityFilePaths([{ files: [f(1)] }, { files: null }, {}])).toEqual(["p1"]);
+    expect(sizeLabel(1536)).toBe("2KB");
+    expect(sizeLabel(12 * 1024 * 1024)).toBe("12MB");
   });
 });

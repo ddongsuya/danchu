@@ -29,12 +29,12 @@ export async function GET(req: Request) {
   const sheets = [
     {
       name: "안건",
-      widths: [36, 20, 18, 10, 8, 8, 14, 14, 14, 12, 12, 12, 10, 14, 30],
+      widths: [36, 20, 18, 10, 8, 8, 14, 14, 14, 16, 30, 12, 12, 12, 10, 14, 30],
       rows: [
-        ["안건", "고객사", "담당자", "단계", "상태", "갈래", "금액", "계약 금액", "실패 사유", "문의일", "끝난 날", "예상 계약", "출처", "단추 요청", "메모"].map(h),
+        ["안건", "고객사", "담당자", "단계", "상태", "갈래", "금액", "계약 금액", "실패 사유", "수주 이유", "결과 메모", "문의일", "끝난 날", "예상 계약", "출처", "단추 요청", "메모"].map(h),
         ...deals.map((x) => [
           x.title, x.company_id ? co.get(x.company_id) ?? "" : "", x.contact_ids.map((id) => ct.get(id) ?? "").filter(Boolean).join(", "), STAGE_LABEL[x.stage as Stage] ?? x.stage, STATUS_LABEL[x.status as Status] ?? x.status,
-          DEAL_KIND[x.kind] ?? "", n(x.amount), n(x.won_amount), x.lost_reason, ymdKst(x.created_at), x.closed_at ? ymdKst(x.closed_at) : "", x.expected_on ?? "", SOURCE_LABEL[x.source] ?? x.source, x.rfq_no, x.memo,
+          DEAL_KIND[x.kind] ?? "", n(x.amount), n(x.won_amount), x.lost_reason, x.won_reason ?? "", (x.status === "won" ? x.won_note : x.status === "lost" ? x.lost_note : "") ?? "", ymdKst(x.created_at), x.closed_at ? ymdKst(x.closed_at) : "", x.expected_on ?? "", SOURCE_LABEL[x.source] ?? x.source, x.rfq_no, x.memo,
         ] as Cell[]),
       ],
     },
