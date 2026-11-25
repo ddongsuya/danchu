@@ -48,7 +48,7 @@ export default async function DetailPreview({ searchParams }: { searchParams: Pr
       first: { total, weeks: 22, items: ROWS.map((r) => ({ seq: r.seq, name: r.name, amount: r.amount, weeks: r.weeks, avail: "가능" })) },
       reply: null,
     };
-    return <DetailReply token="preview" view={view} backHref="/design-preview/detail?role=board" preview />;
+    return <DetailReply token="preview" view={view} backHref="/design-preview/detail?role=board" preview firstDocId="preview" />;
   }
 
   if (role === "board") {
