@@ -376,7 +376,6 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
       {firstDocId && (
         <div className="cr-doc__tool">
           <button type="button" className="cr-lk" disabled={docBusy || preview} onClick={makeRound2}>{docBusy ? "견적서를 만드는 중이에요" : "견적서 툴에서 2차 견적서 만들기"}</button>
-          <p>1차 견적서를 복사해 열어요. 군 구성과 단가 규칙으로 고친 뒤 PDF로 받아 둘 수 있어요.</p>
           {docErr && <p className="cr-err" role="alert">{docErr}</p>}
         </div>
       )}
