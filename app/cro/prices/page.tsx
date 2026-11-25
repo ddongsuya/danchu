@@ -8,7 +8,7 @@ import "@/components/cro/prices/prices.css";
 
 export const dynamic = "force-dynamic";
 
-/** 효력시험 기관 단가표 (0047). 분류마다 다른 칸으로 넣고, 관리비·이익 %와 단가 바꾼 기록을 옆에 둔다 */
+/** 기관 단가표 (0047). 효력시험 표준가에 쓰고, 켜면 독성시험 동물 단가에도 쓴다 (0051). 관리비·이익 %와 단가 바꾼 기록을 옆에 둔다 */
 export default async function CroPricesPage() {
   const s = await requireSession("cro");
   const org = s.org;

@@ -160,7 +160,7 @@
   .td__rates { grid-template-columns: 1fr 1fr; }
   .td__rates .td__rl, .td__rates > input.inp { grid-column: 1 / -1; }
   .td__rates > span:first-child { display: none; }
-  .td__optrow { grid-template-columns: 1fr 120px 32px; }
+  .td__optrow { grid-template-columns: minmax(0, 1fr) 144px 32px; }
   .tw__steps { margin-bottom: 24px; }
   .tw__nav { position: fixed; left: 0; right: 0; bottom: calc(64px + var(--bot)); z-index: var(--z-nav, 30); padding: 12px 16px; margin: 0; background: var(--wh); box-shadow: 0 -8px 24px rgba(27, 27, 25, .06); flex-direction: row-reverse; gap: 12px; }
   .tw__nav .b1 { flex: 1; height: 52px; justify-content: center; }
@@ -249,3 +249,8 @@
   .tk__money--sm { grid-template-columns: minmax(0, 1fr) 120px; }
   .tk__x { width: 28px; }
 }
+
+/* 평가항목 직접 적기 (2026-11-26) */
+.pt .chip.tc__own { display: inline-flex; align-items: center; gap: 6px; }
+.tc__addrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; max-width: 440px; }
+.pt .tc__addrow .b2 { height: auto; padding: 0 16px; font-size: 14px; }

@@ -17,6 +17,7 @@ import {
   switchCond,
   testFromCatalog,
   testLines,
+  blankTest,
   toxFromRequest,
   type DocData,
   type Rate,
@@ -405,5 +406,18 @@ describe("독성: 의뢰자 요청 조건을 계산기로 옮긴다 (2026-11-21)
   it("의뢰자 원안을 남긴다", () => {
     const r = toxFromRequest(testFromCatalog(row, rates), ask({ recovery: "4주", tk: "포함", species: "랫드" }));
     expect(r.orig?.lines).toEqual([["동물종", "랫드"], ["회복시험", "4주"], ["TK 병행", "포함"]]);
+  });
+});
+
+describe("견적서 안에서 더한 단가 규칙 (2026-11-26 시안 v7)", () => {
+  it("정액 규칙은 평가항목을 켜면 1회, 수량 규칙은 수량 × 단가로 더한다", () => {
+    const t = blankTest("4주 반복투여독성");
+    const flat = { id: "rx1", kind: "flat" as const, label: "안과 검사 추가", unit: "시험", add: 2_000_000, deduct: null, shown: "안과 검사 추가" };
+    const qty = { id: "rx2", kind: "qty" as const, label: "채혈 시점 추가", unit: "시점", add: 800_000, deduct: null, shown: "채혈 시점 추가" };
+    const doc = { ...t, std: { ...t.std, price: 100_000_000 }, rates: [flat, qty], evals: [{ name: flat.label, on: true, base: false, rateId: flat.id }], qty: { rx2: 3 } };
+    const r = testLines(doc);
+    expect(r.total).toBe(100_000_000 + 2_000_000 + 2_400_000);
+    const off = testLines({ ...doc, evals: [{ ...doc.evals[0], on: false }], qty: { rx2: -1 } });
+    expect(off.total).toBe(100_000_000 - 800_000);
   });
 });
