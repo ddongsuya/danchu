@@ -61,3 +61,19 @@ describe("계약서(안)", () => {
     expect(d.special).toEqual([]);
   });
 });
+
+describe("연동: 2차 견적 금액 + 지급 조건 줄 → 계약서 제3·4조 (시안 v7)", () => {
+  it("2차에서 고친 금액으로 계약 금액을 잡고, 지급 줄 금액 합이 계약 금액과 같다", async () => {
+    const { applyDetailEdits } = await import("@/lib/detail-quote");
+    const items = applyDetailEdits(
+      [{ seq: 1, name: "4주 반복", avail: "가능", amount: 100_000_000, weeks: 16 }, { seq: 2, name: "TK", avail: "가능", amount: 20_000_000, weeks: 4 }],
+      [{ seq: 2, amount: 26_000_000, weeks: null, mode: "as_requested", reason: "" }],
+    );
+    const d = buildContractDraft({ ...base, items, quote: { ...base.quote, pay_terms: "착수금 30% 계약 시 · 중도금 40% 중간 보고서 제출 시 · 잔금 30% 최종 보고서 제출 시" } });
+    expect(d.articles[2]!.body[0]).toContain("₩138,600,000");
+    const pay = d.articles[3]!.body[0];
+    expect(pay).toContain("착수금 30%(금 41,580,000원, 계약 시)");
+    const sum = [...pay.matchAll(/금 ([\d,]+)원/g)].reduce((a, m) => a + Number(m[1].replace(/,/g, "")), 0);
+    expect(sum).toBe(138_600_000);
+  });
+});
