@@ -4,7 +4,7 @@ import { orderToKeys } from "./schedule";
 import { cleanKd, COST_KEYS, type KindDesign } from "./kind-design";
 import { loadPriceBook, type PriceBook } from "./price-book-db";
 import { pdStdPrice } from "./pd-price";
-import { catalogItems, isNewId, itemKey, INCLUDE_KEYS, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type CondPrice, type Glp } from "./catalog";
+import { catalogItems, isNewId, itemKey, PER_SAMPLE_CATS, SPECIES, ROUTES, CATEGORY_ORDER, type CatalogRow, type CondPrice, type Glp } from "./catalog";
 
 /** 0037 전 행은 routes 가 없다. 그때는 route 하나를 목록으로 본다 */
 function routesOf(r: Record<string, unknown>): { route: string | null; routes: string[] } {
@@ -71,6 +71,8 @@ const int = (v: unknown, max = 9999) => (typeof v === "number" && Number.isFinit
 const big = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : typeof v === "string" && /^\d{1,13}$/.test(v) ? Number(v) : null);
 const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) || null : null);
 const arr = (v: unknown, allow?: readonly string[]) => (Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === "string" && (!allow || allow.includes(x))).slice(0, 30) : []);
+/** 표준가에 든 평가항목: 자주 쓰는 이름(INCLUDE_KEYS) 말고도 기관이 직접 적은 이름을 받는다 (2026-11-26). 겹치는 이름은 하나만 */
+const names = (v: unknown, n = 30, len = 60) => (Array.isArray(v) ? [...new Set((v as unknown[]).flatMap((x) => (typeof x === "string" && x.trim() ? [x.replace(/\s+/g, " ").trim().slice(0, len)] : [])))].slice(0, n) : []);
 
 /** 클라이언트 행 → DB 행 (입력값은 여기서만 정리한다). 항목이 스키마에 없으면 null */
 function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string; item: string }>, sort: number): TablesInsert<"cro_catalog"> | null {
@@ -121,7 +123,7 @@ function toDb(orgId: string, raw: unknown, valid: Map<string, { category: string
     groups_ctrl: int(r.groups_ctrl, 20), groups_test: int(r.groups_test, 20), per_sex: int(r.per_sex, 200),
     recovery_weeks: int(r.recovery_weeks, 52), recovery_per_sex: int(r.recovery_per_sex, 100),
     dosing: str(r.dosing, 120), weeks: int(r.weeks, 200),
-    includes: arr(r.includes, INCLUDE_KEYS), options,
+    includes: names(r.includes), options,
     unit: r.unit === "per_sample" || (r.unit == null && PER_SAMPLE_CATS.includes(it.category)) ? "per_sample" : "total",
     // 표준가 한 칸 (2026-11-06): 견적서(std_price)와 회신 초안(price_min)이 같은 값을 쓴다. 범위(상한)는 더 받지 않는다
     std_price: big(r.std_price) ?? big(r.price_min), price_min: big(r.std_price) ?? big(r.price_min), price_max: null,
