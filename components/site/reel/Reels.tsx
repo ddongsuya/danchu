@@ -15,7 +15,7 @@ export function AboutReel() {
 
 import { how, howDims } from "./films/how";
 export function HowReel() {
-  return <Reel build={how} dims={howDims} reserve={96} label="요청서를 접수하면 분야가 맞는 기관에 전달되고, 참여한 기관이 세부 내용을 확인해 견적서를 회신하며, 모인 견적서가 비교 견적이 되어 의뢰자에게 전달되는 과정" />;
+  return <Reel build={how} dims={howDims} reserve={96} label="요청서를 접수하면 분야가 맞는 기관에 전달되고, 참여한 기관이 세부 내용을 확인해 견적서를 회신하며, 모인 견적서가 비교 견적이 되어 고객에게 전달되는 과정" />;
 }
 
 import { croHero, croHeroDims, croSteps, croStepsDims, CRO_STEPS, croReply, croReplyDims, croRules, croRulesDims } from "./films/cro";

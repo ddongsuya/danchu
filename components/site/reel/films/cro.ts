@@ -377,7 +377,7 @@ export function croReply(cv: HTMLDivElement, P: boolean): Tl {
   {
     const d = sheet(cv, pos[1][0], pos[1][1], dw, dh); docs.push(d);
     box(el(d, "", "견 적 서", { fontSize: "20px", fontWeight: "700", letterSpacing: ".3em", width: "100%", textAlign: "center" }), 0, 16);
-    box(el(d, "rl-sm", "수신 의뢰자 귀하", { fontSize: "12px" }), 16, 52);
+    box(el(d, "rl-sm", "수신 고객사 귀중", { fontSize: "12px" }), 16, 52);
     box(el(d, "rl-sm", "기관 B", { fontSize: "12px", color: "#1B1B19" }), dw - 60, 52);
     box(el(d, "", null, { background: "#1B1B19", height: "2px" }), 16, 74, dw - 32);
     [["반복투여 4주", "92,000,000"], ["Ames", "10,500,000"]].forEach(([n, v], i) => {
@@ -501,9 +501,9 @@ export function croRules(cv: HTMLDivElement, P: boolean): Tl {
     const t = box(el(cv, "rl-chip", P ? "서로 볼<br>수 없음" : "서로 볼 수<br>없음", { fontSize: px(P ? 13 : 14), lineHeight: "1.25", textAlign: "center", padding: "6px 4px", borderColor: "#1B1B19", whiteSpace: "normal" }), lx(i) + LW + gap / 2 - tw / 2, laneTop + laneH * 0.62, tw);
     return { w, t };
   });
-  // 위: 의뢰자 / 비교표
+  // 위: 고객 / 비교표
   const topW = P ? 220 : 240;
-  const client = box(el(cv, "rl-pill", "의뢰자", { fontSize: px(fs + 2) }), W / 2 - topW / 2, 24, topW, 56);
+  const client = box(el(cv, "rl-pill", "고객", { fontSize: px(fs + 2) }), W / 2 - topW / 2, 24, topW, 56);
   const board = box(el(cv, "rl-node", "비교표", { fontSize: px(fs + 2), borderWidth: "2px" }), W / 2 - topW / 2, 24, topW, 56);
   // 기한 막대
   const dl = box(el(cv), M, laneTop - (P ? 70 : 64), W - M * 2, 50);

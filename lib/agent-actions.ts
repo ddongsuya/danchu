@@ -544,8 +544,8 @@ export const AGENT_ACTIONS: readonly ActionDef[] = [
       return qna ? { status: 200, body: { qna, topics: QNA_TOPICS.map(([id, label]) => ({ id, label })) } } : notFound();
     },
   },
-  { name: "ask", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자에게 질의", description: "참여 뒤 비교표가 열리기 전까지 의뢰자에게 질의를 보낸다(투여 경로·물질 보유량 등).", input: CRO_ASK_INPUT, run: viaInvite(croQna, { withAction: "ask" }) },
-  { name: "answer", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "의뢰자 질의에 답변", description: "의뢰자 질의에 답한다.", input: CRO_ANSWER_INPUT, run: viaInvite(croQna, { withAction: "answer" }) },
+  { name: "ask", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "고객에게 질의", description: "참여 뒤 비교표가 열리기 전까지 의뢰자에게 질의를 보낸다(투여 경로·물질 보유량 등).", input: CRO_ASK_INPUT, run: viaInvite(croQna, { withAction: "ask" }) },
+  { name: "answer", role: "cro", scope: "rfq", level: "confirm", area: "qna", label: "고객 질의에 답변", description: "의뢰자 질의에 답한다.", input: CRO_ANSWER_INPUT, run: viaInvite(croQna, { withAction: "answer" }) },
   { name: "quote_draft", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적 임시 저장", description: "견적 초안을 단추에 임시 저장한다(의뢰자에게 보이지 않는다). 금액은 단추 계산 또는 사람이 넣은 값.", input: passthrough("단추 회신 본문"), run: viaInvite(saveQuote, { method: "PUT" }) },
   { name: "quote_upload", role: "cro", scope: "rfq", level: "auto", area: "quote", label: "견적서 PDF 올릴 주소", description: "견적서 PDF를 올릴 주소를 받는다(선택 첨부).", input: obj({ name: str("파일 이름"), size: { type: "integer", minimum: 1 }, type: str("파일 형식", 60) }, ["name", "size"]), run: viaInvite(uploadUrl) },
   {

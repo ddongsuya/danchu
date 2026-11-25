@@ -10,7 +10,7 @@ import { allConsented, ConsentChecks, type ConsentItem } from "./ConsentChecks";
 const CONSENTS: ConsentItem[] = [
   { id: "terms", label: <><a href="/terms" target="_blank" rel="noopener noreferrer">이용약관</a>과 <a href="/terms/cro" target="_blank" rel="noopener noreferrer">기관 이용약관</a>에 동의합니다.</> },
   { id: "privacy", label: <><a href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 수집·이용</a>에 동의합니다.</> },
-  { id: "compare", label: "비교표는 의뢰자에게만 전달되고, 다른 기관의 견적은 볼 수 없다는 점을 확인합니다." },
+  { id: "compare", label: "비교표는 요청한 고객에게만 전달되고, 다른 기관의 견적은 볼 수 없다는 점을 확인합니다." },
 ];
 
 const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "기후에너지환경부·국립환경과학원", "농촌진흥청", "농림축산검역본부"];
@@ -91,7 +91,7 @@ export function SignupCroView() {
           </Field>
         </div>
 
-        <Field id="glp" label="보유 GLP 인증" help="의뢰자에게 공개돼요.">
+        <Field id="glp" label="보유 GLP 인증" help="고객에게 공개돼요.">
           <div className="chipset" role="group" aria-label="보유 GLP 인증">
             {GLP_OPTS.map((o) => (
               <button key={o} type="button" className="chip" aria-pressed={glp.includes(o)} onClick={() => toggle(glp, setGlp, o)}>{o}</button>

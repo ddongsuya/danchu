@@ -39,7 +39,7 @@ export function about(cv: HTMLDivElement, P: boolean): Tl {
     return p;
   });
 
-  const client = box(el(world, "rl-pill", "의뢰자", { fontSize: px(fs) }), cli.x, cli.y, cli.w, cli.h);
+  const client = box(el(world, "rl-pill", "고객", { fontSize: px(fs) }), cli.x, cli.y, cli.w, cli.h);
   const orgs = KS.map((k, i) => box(el(world, "rl-node", `기관 ${k}`, { fontSize: px(fs) }), orgX[i], orgY, orgW, orgH));
 
   // 0. 따로 연락: 연락 수단 칩이 선을 타고 내려간다
