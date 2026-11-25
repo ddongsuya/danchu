@@ -8,7 +8,8 @@ import { usePathname } from "next/navigation";
  * ReqThreads: 사이드바의 진행 중·끝남 요청 목록. ReqTop: 본문 위 얇은 제목 줄. ReqColumn: 본문 가운데 열 폭.
  * 목록은 app/app/layout.tsx 가 listRequestsForUser 로 읽어 넘긴다. 여기서는 데이터를 읽지 않는다.
  */
-export type ReqThread = { no: string; substance: string; categories: string[]; done: boolean };
+/** title: 시험 이름 (동물종), 시안 "DC-122 · 4주 반복투여독성 (랫드)". 없으면 시험물질 */
+export type ReqThread = { no: string; substance: string; title?: string; categories: string[]; done: boolean };
 
 /** /app/r/DC-2026-0001/... → DC-2026-0001 */
 function currentNo(pathname: string): string | null {
@@ -22,9 +23,9 @@ function Group({ label, items, on }: { label: string; items: ReqThread[]; on: st
     <div className="rq-threads__g">
       <span className="pt__grp">{label}</span>
       {items.map((t) => (
-        <Link key={t.no} href={`/app/r/${t.no}`} className="rq-thread" aria-current={t.no === on ? "page" : undefined} title={`${t.no} · ${t.substance} · ${t.categories.join(", ")}`}>
+        <Link key={t.no} href={`/app/r/${t.no}`} className="rq-thread" aria-current={t.no === on ? "page" : undefined} title={`${t.no} · ${t.title || t.substance} · ${t.substance}`}>
           <span className="tnum">{t.no}</span>
-          <span className="rq-thread__t">{t.substance}</span>
+          <span className="rq-thread__t">{t.title || t.substance}</span>
         </Link>
       ))}
     </div>
@@ -61,7 +62,7 @@ export function ReqTop({ items, path }: { items: ReqThread[]; path?: string }) {
   const t = items.find((i) => i.no === no);
   const rest = pathname.slice(`/app/r/${no}`.length).split("/").filter(Boolean);
   const sub = rest.length ? SUB[rest[0]] ?? "" : "";
-  const name = <><span className="tnum">{no}</span>{t ? ` · ${t.substance}` : ""}</>;
+  const name = <><span className="tnum">{no}</span>{t ? ` · ${t.title || t.substance}` : ""}</>;
   return (
     <div className="rq-top">
       <p className="rq-top__t">

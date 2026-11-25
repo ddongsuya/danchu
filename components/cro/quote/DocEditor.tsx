@@ -380,7 +380,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
   const setG = (id: string, p: Partial<DocGroup>) => set({ groups: t.groups.map((g) => (g.id === id ? { ...g, ...p } : g)) });
   const addGroup = () => {
     const last = t.groups[t.groups.length - 1];
-    const per = t.std.groups[0]?.m ?? last?.m ?? 5;
+    const per = t.std.groups[0]?.m ?? last?.m ?? 0;
     const g: DocGroup = { id: uid("g"), label: `G${t.groups.length + 1} 시험군`, dose: "", m: per, f: per, rm: 0, rf: 0 };
     set({ groups: [...t.groups, g] });
   };
@@ -475,6 +475,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   <input type="checkbox" checked={e.on} disabled={readOnly} onChange={(ev) => set({ evals: t.evals.map((x, j) => (j === k ? { ...x, on: ev.target.checked } : x)) })} />
                   <span className={!e.base && e.on ? "qed__mk" : undefined}>{e.name}</span>
                 </label>
+                {!readOnly && r && isOwnRule(r) && <button type="button" className="btxt qed__del" aria-label={`${e.name} 규칙 삭제`} onClick={() => set(dropRule(t, r.id))}>삭제</button>}
                 <small>{e.base ? (r && deductOf(r) ? (e.on ? `기본 · 빼면 - ${n(deductOf(r))}` : `제외 - ${n(deductOf(r))}`) : "기본") : e.on ? "추가" : r?.add ? `추가 시 + ${n(r.add)}` : "추가 시 금액 없음"}</small>
               </li>
             );
@@ -496,6 +497,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   {r.unit}
                 </span>
                 <small className="tnum">{r.add ? `${n(r.add)} / ${r.unit}` : "단가 없음"}</small>
+                {!readOnly && isOwnRule(r) && <button type="button" className="btxt qed__del" aria-label={`${r.shown} 규칙 삭제`} onClick={() => set(dropRule(t, r.id))}>삭제</button>}
               </li>
             ))}
           </ul>
@@ -532,6 +534,15 @@ function KindEdit({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>)
   );
 }
 
+/** 이 견적서에서 직접 더한 규칙 (시험 목록 단가와 구분, id 앞머리). 이것만 지울 수 있다 */
+const OWN_RULE = "own";
+const isOwnRule = (r: Rate) => r.id.startsWith(OWN_RULE);
+function dropRule(t: DocTest, id: string): Partial<DocTest> {
+  const qty = { ...t.qty };
+  delete qty[id];
+  return { rates: t.rates.filter((r) => r.id !== id), evals: t.evals.filter((e) => e.rateId !== id), qty };
+}
+
 /**
  * 이 견적서에만 쓰는 단가 규칙 (2026-11-26 시안 v7 "규칙 추가"). 시험 목록의 가감 단가에 없는 변칙 조건을 금액과 함께 더한다.
  * 정액: 평가항목처럼 켜면 1회 더함. 수량: 아래 수량 항목에 단가 × 수량으로 계산 (빼려면 수량 앞에 -)
@@ -546,19 +557,29 @@ function RuleAdder({ onAdd }: { onAdd: (r: Rate) => void }) {
   const submit = () => {
     if (!ok) return;
     const label = name.trim().slice(0, 60);
-    onAdd({ id: uid("r"), kind, label, unit: kind === "qty" ? unit.trim().slice(0, 12) || "회" : "시험", add: won, deduct: null, shown: label });
+    onAdd({ id: uid(OWN_RULE), kind, label, unit: kind === "qty" ? unit.trim().slice(0, 12) || "회" : "시험", add: won, deduct: null, shown: label });
     setName(""); setUnit(""); setAdd("");
   };
   return (
     <div className="qed__ruleadd" role="group" aria-label="단가 규칙 추가">
       <span className="qed__rulehd">단가 규칙 추가 <small>이 견적서에만</small></span>
-      <select aria-label="규칙 종류" className="qed__in qed__sel" value={kind} onChange={(e) => setKind(e.target.value === "qty" ? "qty" : "flat")}>
-        <option value="flat">정액 (1회)</option>
-        <option value="qty">수량 × 단가</option>
-      </select>
-      <input aria-label="규칙 이름" className="qed__in" value={name} placeholder="예: 안과 검사 추가" onChange={(e) => setName(e.target.value)} />
-      {kind === "qty" && <input aria-label="단위" className="qed__in qed__unit" value={unit} placeholder="단위 (시점)" onChange={(e) => setUnit(e.target.value)} />}
-      <input aria-label="단가" className="qed__num" inputMode="numeric" value={add ? n(won) : ""} placeholder="금액" onChange={(e) => setAdd(e.target.value)} />
+      <label className="qed__fl qed__fl--sel">종류
+        <select className="qed__in qed__sel" value={kind} onChange={(e) => setKind(e.target.value === "qty" ? "qty" : "flat")}>
+          <option value="flat">정액 (1회)</option>
+          <option value="qty">수량 × 단가</option>
+        </select>
+      </label>
+      <label className="qed__fl qed__fl--name">이름
+        <input className="qed__in" value={name} placeholder="안과 검사 추가" onChange={(e) => setName(e.target.value)} />
+      </label>
+      {kind === "qty" && (
+        <label className="qed__fl qed__fl--unit">단위
+          <input className="qed__in qed__unit" value={unit} placeholder="시점" onChange={(e) => setUnit(e.target.value)} />
+        </label>
+      )}
+      <label className="qed__fl qed__fl--amt">{kind === "qty" ? "단가 (원)" : "금액 (원)"}
+        <input className="qed__num" inputMode="numeric" value={add ? n(won) : ""} onChange={(e) => setAdd(e.target.value)} />
+      </label>
       <button type="button" className="btxt" disabled={!ok} onClick={submit}>추가</button>
     </div>
   );

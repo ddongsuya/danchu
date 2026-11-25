@@ -26,8 +26,16 @@ export type StoryProps = {
   confirm?: boolean;
   /** 질의응답 바로가기 (0045). 참여한 기관이 있을 때. 없으면 운영자 문의 */
   qna?: { total: number; pending: number } | null;
-  /** 제목 아래 붙는 주요 조건 (규제 기관, 참여 자리, CDA 등) */
+  /** 제목 아래 붙는 주요 조건 (CDA, 지명 기관에만 등) */
   conditions?: string[];
+  /** 제목 아래 시험 조건 (동물종 · 투여 경로 · GLP). 없으면 분야 */
+  facets?: string[];
+  /** 참여 결정 기한 (YYYY-MM-DD) */
+  joinBy?: string | null;
+  /** 선정 전 마무리를 할 수 있다 (바로 가기에 "요청 마무리") */
+  canEnd?: boolean;
+  /** 회신 기한이 지났는데 참여한 기관이 없다 (시안 v7 r-req-stuck: 띠에 요청 마무리 · 기한 연장 요청) */
+  stuck?: boolean;
   /** 상태 줄 아래 (다음 할 일 띠) */
   next?: ReactNode;
   /** 왼쪽 열 맨 위 (계약 확인·결과 알림처럼 지금 정할 것) */
@@ -104,10 +112,13 @@ function statusOf(p: StoryProps): { title: string; lead: string } {
   if (!p.started) return { title: "아직 기관에 보내지 않음", lead: "첨부를 확인한 뒤 참여 안내를 보낼 수 있어요." };
   if (f.sent === 0) return { title: "보낼 기관 확인 중", lead: "분야에 바로 맞는 기관이 없어 운영자가 안내할 기관을 확인하고 있어요. 보통 영업일 1~2일 걸려요." };
   if (p.comparedAt) return f.submitted ? { title: `비교 보고서 열림 · 견적 ${f.submitted}건`, lead: "참여한 기관의 금액·기간·항목을 같은 기준으로 맞춰 봤어요." } : { title: "견적 없이 회신 마감", lead: "기한을 늘리거나 마무리할지 정해 주세요." };
-  return {
-    title: `기관 ${f.sent}곳에 요청 · 참여 ${f.joined}곳 · 견적 ${f.submitted}건`,
-    lead: f.joined ? (p.replyBy ? `비교 보고서는 늦어도 회신 기한 ${md(p.replyBy)} 다음 날 열려요.` : "참여한 곳이 모두 내면 비교 보고서가 열려요.") : "기관이 요약을 보고 참여를 정하는 중이에요.",
-  };
+  // 진행 중 (시안 v7): 굵은 한 줄만. "참여 결정 기한 12-01 · 6곳 중 참여 0곳", "견적 1건 도착 · 회신 기한 12-15"
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  const reply = p.replyBy ? ` · 회신 기한 ${md(p.replyBy)}` : "";
+  if (p.stuck && p.replyBy) return { title: `회신 기한 ${md(p.replyBy)} 지남 · 참여 ${f.joined}곳`, lead: "" };
+  if (f.submitted) return { title: `견적 ${f.submitted}건 도착${reply}`, lead: "" };
+  if (p.joinBy && p.joinBy >= today) return { title: `참여 결정 기한 ${md(p.joinBy)} · ${f.sent}곳 중 참여 ${f.joined}곳`, lead: "" };
+  return { title: `${f.sent}곳 중 참여 ${f.joined}곳${reply}`, lead: "" };
 }
 
 /**
@@ -120,8 +131,13 @@ export function RequestStory(p: StoryProps) {
   const track = trackOf(p, ended);
   const steps = stepsOf(p, ended);
   const st = statusOf(p);
-  const sub = [`접수 ${md(p.createdAt)}`, p.categories.join(", "), ...(p.conditions ?? [])].filter(Boolean).join(" · ");
-  const action = p.confirm ? (
+  const sub = [`${md(p.createdAt)} 접수`, ...(p.facets?.length ? p.facets : [p.categories.join(", ")]), ...(p.conditions ?? [])].filter(Boolean).join(" · ");
+  const action = p.stuck ? (
+    <>
+      <Link href={`/app/r/${p.no}?end=1#end`} scroll={false} className="b2">요청 마무리</Link>
+      <Link href={`/app/support?rfq=${p.no}`} className="b1">기한 연장 요청</Link>
+    </>
+  ) : p.confirm ? (
     <a href="#contract-confirm" className="b1">계약 내용 확인</a>
   ) : p.canCompare ? (
     <Link href={`/app/r/${p.no}/compare`} className={p.award ? "b2" : "b1"}>비교 보고서 받아보기</Link>
@@ -176,13 +192,13 @@ export function RequestStory(p: StoryProps) {
         </div>
         <aside className="rq-grid__side" aria-label="요약">
           {p.side}
-          <section className="card rq-card" aria-labelledby="num-title">
-            <h2 id="num-title" className="rq-card__h">참여 현황</h2>
+          <section className="card rq-card rq-card--nums" aria-labelledby="num-title">
+            <h2 id="num-title" className="sr-only">참여 현황</h2>
             <dl className="rq-nums">
               <div><dt>보낸 곳</dt><dd className="tnum">{f.sent}</dd></div>
               <div><dt>열람</dt><dd className="tnum">{f.opened}</dd></div>
               <div><dt>참여</dt><dd className="tnum">{f.joined}</dd></div>
-              <div><dt>제출</dt><dd className="tnum">{f.submitted}</dd></div>
+              {(f.joined > 0 || f.submitted > 0) && <div><dt>제출</dt><dd className="tnum">{f.submitted}</dd></div>}
             </dl>
             {p.children && <div className="rq-card__more">{p.children}</div>}
           </section>
@@ -196,7 +212,8 @@ export function RequestStory(p: StoryProps) {
                   <span className="tnum">{p.qna.pending ? `답변 대기 ${p.qna.pending}` : p.qna.total ? `${p.qna.total}건` : ""}</span>
                 </li>
               )}
-              <li><Link href={`/app/support?rfq=${p.no}`}>이 요청 문의</Link></li>
+              <li><Link href={`/app/support?rfq=${p.no}`}>문의</Link></li>
+              {p.canEnd && !p.stuck && <li><Link href={`/app/r/${p.no}?end=1#end`} scroll={false}>요청 마무리</Link></li>}
             </ul>
           </section>
         </aside>

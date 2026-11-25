@@ -9,6 +9,8 @@ import { PREREG_NAV_REQ } from "@/components/app/prereg-nav";
 import { daysToPilot } from "@/lib/prereg";
 import { sessionInPrereg } from "@/lib/prereg-server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { summaryFacetsOf, testNamesOf } from "@/lib/quote-items";
+import type { Values } from "@/lib/rfq-schema";
 
 export const metadata: Metadata = {
   title: "단추 · 내 견적 요청",
@@ -52,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     tabs.push(back);
     nav.push(back);
   }
-  const threads: ReqThread[] = list.map((r) => ({ no: r.rfq_no, substance: r.substance, categories: r.categories, done: ["closed", "cancelled"].includes(r.status) }));
+  const threads: ReqThread[] = list.map((r) => ({ no: r.rfq_no, substance: r.substance, title: threadTitle(r.payload as Values), categories: r.categories, done: ["closed", "cancelled"].includes(r.status) }));
   return (
     <AppState>
       <script
@@ -75,4 +77,12 @@ async function reserved(email: string, role: "req" | "cro"): Promise<boolean> {
   if (!sb) return false;
   const { data } = await sb.from("early_signups").select("id").eq("role", role).eq("email", email.toLowerCase()).maybeSingle();
   return !!data;
+}
+
+/** 사이드바 요청 이름 (시안 v7): 시험 이름, 동물종이 하나면 괄호로. 세부 시험이 없으면 빈 값 (시험물질로 대신) */
+function threadTitle(p: Values): string {
+  const name = testNamesOf(p);
+  if (!name) return "";
+  const { species } = summaryFacetsOf(p);
+  return species.length === 1 ? `${name} (${species[0]})` : name;
 }
