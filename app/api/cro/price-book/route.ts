@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { featureError } from "@/lib/plan-usage";
 import { currentVia } from "@/lib/agent-context";
 import { parseItem, parseMargin } from "@/lib/price-book";
-import { archiveItem, createItem, loadPriceBook, setMargin, updateItem } from "@/lib/price-book-db";
+import { archiveItem, createItem, loadPriceBook, setApplyTox, setMargin, updateItem } from "@/lib/price-book-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
  *   PATCH  {id, ...같은 칸}      항목 고치기 (단가가 바뀌면 기록)
  *   DELETE {id}                  항목 숨기기 (옛 견적서가 가리킬 수 있어 지우지 않는다)
  *   PUT    {margin_pct}          관리비·이익 %
+ *   PUT    {apply_tox}           독성시험 동물 단가에도 쓰기 (0051, 켜고 끄기)
  * 기관 담당자 모두 같이 쓴다. 다른 기관 행은 찾지 못한 것으로 답한다.
  */
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
@@ -95,6 +96,15 @@ export async function PUT(req: Request) {
   const g = await gate();
   if ("err" in g) return g.err;
   const b = await body(req);
+  if (b && "apply_tox" in b) {
+    if (typeof b.apply_tox !== "boolean") return bad("켜기·끄기 값이 맞지 않아요.");
+    try {
+      await setApplyTox(g.sb!, g.orgId, b.apply_tox);
+      return NextResponse.json({ apply_tox: b.apply_tox });
+    } catch (e) {
+      return fail("apply_tox", e);
+    }
+  }
   const pct = parseMargin(b?.margin_pct);
   if (pct === null) return bad("관리비·이익은 0~300 사이 숫자로 적어 주세요.");
   try {

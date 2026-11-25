@@ -73,6 +73,10 @@
 .pb .pb__mval:hover:not(:disabled) { border-bottom-color: var(--cline); }
 .pb .pb__mval:focus { border-bottom-color: var(--ink); }
 .pb__mrow .bsm { margin-left: auto; align-self: center; }
+/* 독성시험 동물 단가에도 쓰기 (0051) */
+.pb__toxrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pb__toxrow h2 { text-wrap: balance; }
+.pb__tox .tgl:disabled { opacity: .5; }
 .pb__log { display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
 .pb__log ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .pb__log li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; font-size: 13px; color: var(--body); }

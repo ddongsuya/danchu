@@ -6,20 +6,23 @@ import type { Via } from "./db-types";
 import { itemFromDb, previewImport, type ImportRow, type ItemInput, type PriceItem } from "./price-book";
 
 export type PriceLog = { id: number; item_name: string; before: number | null; after: number | null; via: string; changed_at: string };
-export type PriceBook = { items: PriceItem[]; marginPct: number; log: PriceLog[] };
+/** applyTox (0051): 독성시험 동물 단가에도 쓴다. 없으면 끔 */
+export type PriceBook = { items: PriceItem[]; marginPct: number; log: PriceLog[]; applyTox?: boolean };
 
 export async function loadPriceBook(sb: Admin, orgId: string, opts: { archived?: boolean } = {}): Promise<PriceBook> {
   let q = sb.from("cro_price_items").select("*").eq("org_id", orgId);
   if (!opts.archived) q = q.eq("archived", false);
   const [items, set, log] = await Promise.all([
     q.order("category").order("sort").order("created_at"),
-    sb.from("cro_price_settings").select("margin_pct").eq("org_id", orgId).maybeSingle(),
+    // 0051 전 DB 에는 apply_tox 칸이 없다. 칸 이름을 적으면 읽기가 통째로 실패해 관리비 % 까지 0 이 되므로 * 로 읽는다
+    sb.from("cro_price_settings").select("*").eq("org_id", orgId).maybeSingle(),
     sb.from("cro_price_log").select("id, item_name, before, after, via, changed_at").eq("org_id", orgId).order("changed_at", { ascending: false }).limit(20),
   ]);
   if (items.error) throw items.error;
   return {
     items: (items.data ?? []).flatMap((r) => itemFromDb(r as Record<string, unknown>) ?? []),
     marginPct: Number(set.data?.margin_pct ?? 0) || 0,
+    applyTox: (set.data as { apply_tox?: unknown } | null)?.apply_tox === true,
     log: (log.data ?? []) as PriceLog[],
   };
 }
@@ -59,6 +62,12 @@ export async function archiveItem(sb: Admin, orgId: string, id: string, by: stri
 
 export async function setMargin(sb: Admin, orgId: string, pct: number): Promise<void> {
   const { error } = await sb.from("cro_price_settings").upsert({ org_id: orgId, margin_pct: pct, updated_at: new Date().toISOString() }, { onConflict: "org_id" });
+  if (error) throw error;
+}
+
+/** 단가표를 독성시험 동물 단가에도 쓸지 (0051). 관리비 % 는 건드리지 않는다 */
+export async function setApplyTox(sb: Admin, orgId: string, on: boolean): Promise<void> {
+  const { error } = await sb.from("cro_price_settings").upsert({ org_id: orgId, apply_tox: on, updated_at: new Date().toISOString() }, { onConflict: "org_id" });
   if (error) throw error;
 }
 
