@@ -1538,3 +1538,27 @@
   .rp-tabs { gap: 20px; margin-bottom: 16px; }
   .pt .rp-tabs button { font-size: 14px; padding: 10px 0; }
 }
+
+/* 지급 조건 줄 (2026-11-26 시안 v7, components/cro/PayScheduleField) */
+.paysch__rows { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.paysch__head, .paysch__row { display: grid; grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1.4fr) 32px; gap: 8px; align-items: center; }
+.paysch__head { font-size: 12px; color: var(--muted); }
+.paysch__pct { position: relative; display: block; }
+.paysch__pct .inp { padding-right: 26px; text-align: right; width: 100%; }
+.paysch__pct > span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+.paysch__x { width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); border-radius: var(--r-md); }
+.paysch__x:hover:not(:disabled) { color: var(--ink); background: var(--band); }
+.paysch__x:active:not(:disabled) { transform: scale(.97); }
+.paysch__foot { display: flex; align-items: center; gap: 12px; max-width: 640px; }
+.paysch__foot .btxt { padding-left: 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.paysch__sum { margin-left: auto; font-size: 13px; color: var(--muted); }
+.paysch__sum b { color: var(--ink); font-weight: 600; }
+.paysch__sum.is-off b { color: var(--err); }
+.paysch__legacy { font-size: 13px; color: var(--muted); }
+@media (max-width: 639px) {
+  .paysch__head { display: none; }
+  .paysch__row { grid-template-columns: minmax(0, 1fr) 88px 32px; }
+  .paysch__row > select { grid-column: 1 / 3; grid-row: 2; }
+  .paysch__rows { gap: 12px; }
+  .paysch__row { padding-bottom: 12px; border-bottom: 1px solid var(--cline); }
+}
