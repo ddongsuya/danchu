@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CaretRight, Check, EnvelopeSimple, FileText, Handshake, LockSimple, NotePencil, PencilSimple, Phone, Plus } from "@phosphor-icons/react/dist/ssr";
-import { DEAL_KIND, STAGE_LABEL, STATUS_LABEL, amountLabel, buildTimeline, byDay, stageSpans, type Stage, type Status, type TimelineItem } from "@/lib/crm-deals";
+import { DEAL_KIND, STAGE_LABEL, STATUS_LABEL, amountLabel, buildTimeline, byDay, stageSpans, type Stage, type Status, type TimelineItem, closedLabel } from "@/lib/crm-deals";
 import { CONTACT_ROLE, EVENT_MODE, hmKst, mdW, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
 import { ActivityDelete, ContactForm, SheetButton } from "./forms";
-import { CloseButtons, Composer, CopyText, DealDelete, DealForm, DoneButton, StageBar } from "./deal-ui";
+import { CloseButtons, Composer, CopyText, DealDelete, DealForm, DoneButton, StageBar, WonReasonButton } from "./deal-ui";
+import { ActivityFiles } from "./files-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
@@ -37,6 +38,7 @@ export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: strin
             {dealHref && <> · <Link href={dealHref} className="cx-lk">안건 열기</Link></>}
           </p>
         )}
+        {x.ref?.type === "activity" && <ActivityFiles activityId={x.ref.id} files={x.files ?? []} />}
         {x.ref?.type === "activity" && <span className="cx-ev__del"><ActivityDelete id={x.ref.id} /></span>}
       </div>
       <time className="cx-ev__tm tnum" dateTime={x.at}>{hmKst(x.at)}</time>
@@ -94,7 +96,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
             <span aria-hidden="true">·</span><b className="tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</b>
             {d.owner && <><span aria-hidden="true">·</span><span>담당 {mem.get(d.owner) ?? "-"}</span></>}
             {r.danchuNo && <span className="cx-chip"><span className="cx-d" aria-hidden="true">단</span>단추 {r.danchuNo}</span>}
-            {d.status !== "open" && <span className={`cx-st cx-st--${d.status}`}>{STATUS_LABEL[d.status as Status]}{d.lost_reason ? ` · ${d.lost_reason}` : ""}</span>}
+            {d.status !== "open" && <span className={`cx-st cx-st--${d.status}`}>{closedLabel(d)}</span>}
           </p>
         </div>
         <div className="cx-ph__acts">
@@ -123,6 +125,12 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
         <dl className="cx-facts">
           <div><dt>{d.status === "won" ? "계약 금액" : "금액"}</dt><dd className="cx-facts__big tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</dd></div>
           {d.status === "won" && d.won_amount != null && d.amount != null && d.won_amount !== d.amount && <div><dt>견적 금액</dt><dd className="tnum">{wonKo(d.amount)}</dd></div>}
+          {d.status === "won" && (
+            <div>
+              <dt>수주 이유</dt>
+              <dd>{d.won_reason || <span className="cx-muted">적지 않음</span>}<WonReasonButton dealId={d.id} reason={d.won_reason} note={d.won_note} />{d.won_note && <small className="cx-muted cx-facts__note">{d.won_note}</small>}</dd>
+            </div>
+          )}
           {d.status === "lost" && <div><dt>실패 사유</dt><dd>{d.lost_reason || "기타"}{d.lost_note && <small className="cx-muted cx-facts__note">{d.lost_note}</small>}</dd></div>}
           <div><dt>예상 계약</dt><dd className="tnum">{d.expected_on ? `${d.expected_on.slice(0, 4)}년 ${+d.expected_on.slice(5, 7)}월` : <span className="cx-muted">정하지 않음</span>}</dd></div>
           <div><dt>시험 갈래</dt><dd>{d.kind ? DEAL_KIND[d.kind] : <span className="cx-muted">-</span>}{src?.cats.length ? <span className="cx-muted"> · {src.cats.slice(0, 2).join(", ")}</span> : null}</dd></div>

@@ -14,7 +14,7 @@ import { inviteStage } from "./status";
 import { clientKeyOf } from "./pipeline";
 import {
   addDaysYmd, dLabel, hmKst, mondayOf, normName, todayKst, wonKo, ymdKst, companyKeys, findCompanyByName, mdW, personLabel, ACT_KIND, EVENT_MODE,
-  type CrmActivity, type CrmCompany, type CrmContact, type CrmDeal, type CrmEvent, type CrmQuote, type CrmTask, type DealHistory, type Member,
+  type CrmActivity, type CrmCompany, type CrmContact, type CrmDeal, type CrmEvent, type CrmFile, type CrmQuote, type CrmTask, type DealHistory, type Member,
 } from "./crm-shape";
 
 const DAY = 864e5;
@@ -29,6 +29,16 @@ export const STATUS_LABEL: Record<Status, string> = { open: "진행", won: "수�
 /** 실패 사유 (보고서의 실패 사유 막대). "다른 기관 선정"은 단추가 저절로 고르기도 한다 */
 export const LOST_REASONS = ["가격", "일정", "다른 기관 선정", "의뢰자 계획 변경", "응답 없음", "기타"] as const;
 export type LostReason = (typeof LOST_REASONS)[number];
+/** 수주 이유 (0051, 보고서의 수주 이유 막대). 기관 담당자가 수주로 바꿀 때 하나 고른다. 단추가 저절로 수주로 바꾼 안건은 비어 있고 나중에 적는다 */
+export const WON_REASONS = ["가격", "일정", "시험 설계·전문성", "기존 거래", "응답 속도", "기타"] as const;
+export type WonReason = (typeof WON_REASONS)[number];
+export const isWonReason = (v: unknown): v is WonReason => typeof v === "string" && (WON_REASONS as readonly string[]).includes(v);
+export const isLostReason = (v: unknown): v is LostReason => typeof v === "string" && (LOST_REASONS as readonly string[]).includes(v);
+/** 끝난 안건 한 줄: "수주 · 일정", "실패 · 가격", 이유가 없으면 "수주" */
+export function closedLabel(d: Pick<CrmDeal, "status" | "lost_reason" | "won_reason">): string {
+  const reason = d.status === "lost" ? d.lost_reason : d.status === "won" ? d.won_reason : "";
+  return `${STATUS_LABEL[d.status as Status] ?? d.status}${reason ? ` · ${reason}` : ""}`;
+}
 /** 시험 갈래 (견적 요청 네 갈래와 같은 말) */
 export const DEAL_KINDS = ["tox", "pd", "pk", "other"] as const;
 export const DEAL_KIND: Record<string, string> = { tox: "독성", pd: "효력", pk: "약동학", other: "개별 분석" };
@@ -400,6 +410,8 @@ export type TimelineItem = {
   diffNote?: string;
   dealId: string | null;
   ref?: { type: "activity" | "task"; id: string };
+  /** 기록 첨부 (녹음·회의록·자료) */
+  files?: CrmFile[];
 };
 
 export function buildTimeline(a: {
@@ -429,7 +441,7 @@ export function buildTimeline(a: {
     }
     out.push({
       at: x.occurred_at, kind: x.kind as TimelineItem["kind"], who, title, sub: [sub, !a.deals ? "" : x.deal_id ? dealT.get(x.deal_id) ?? "" : ""].filter(Boolean).join(" · "),
-      body: x.body || undefined, dealId: x.deal_id, ref: { type: "activity", id: x.id },
+      body: x.body || undefined, dealId: x.deal_id, ref: { type: "activity", id: x.id }, files: x.files?.length ? x.files : undefined,
     });
   }
   // 단계 변경: 기관 담당자가 옮긴 것만 따로 한 줄. 단추가 옮긴 것은 단추 이벤트 줄에 붙인다
@@ -607,6 +619,8 @@ export type Report = {
   dwell: { stage: Stage; days: number | null; n: number }[];
   winRate: number | null; wonSum: number; won: number; lost: number;
   reasons: { reason: string; count: number }[];
+  /** 수주 이유 분포. 적지 않은 수주는 "적지 않음" */
+  wonReasons: { reason: string; count: number }[];
   bySource: { key: "danchu" | "direct"; label: string; won: number; closed: number; rate: number | null }[];
   activity: { member: string; meeting: number; call: number; email: number; memo: number; tasks: number }[];
   closed: CrmDeal[];
@@ -643,10 +657,8 @@ export function buildReport(a: { deals: CrmDeal[]; history: DealHistory[]; activ
   const closed = deals.filter((d) => d.closed_at && inR(d.closed_at)).sort((x, y) => (y.closed_at as string).localeCompare(x.closed_at as string));
   const won = closed.filter((d) => d.status === "won");
   const lost = closed.filter((d) => d.status === "lost");
-  const rc = new Map<string, number>();
-  for (const d of lost) rc.set(d.lost_reason || "기타", (rc.get(d.lost_reason || "기타") ?? 0) + 1);
-  const reasons = [...LOST_REASONS.map((r) => ({ reason: r as string, count: rc.get(r) ?? 0 })), ...[...rc.entries()].filter(([r]) => !(LOST_REASONS as readonly string[]).includes(r)).map(([reason, count]) => ({ reason, count }))]
-    .filter((x) => x.count > 0).sort((x, y) => y.count - x.count);
+  const reasons = reasonCounts(lost.map((d) => d.lost_reason || "기타"), LOST_REASONS);
+  const wonReasons = reasonCounts(won.map((d) => d.won_reason || WON_UNSET), WON_REASONS);
   const src = (key: "danchu" | "direct") => {
     const cs = closed.filter((d) => (key === "danchu") === (d.source === "danchu"));
     const w = cs.filter((d) => d.status === "won").length;
@@ -661,8 +673,19 @@ export function buildReport(a: { deals: CrmDeal[]; history: DealHistory[]; activ
   void now;
   return {
     from: a.from, to: a.to, funnel, dwell, winRate: pct(won.length, closed.length), wonSum: won.reduce((s, d) => s + (d.won_amount ?? d.amount ?? 0), 0), won: won.length, lost: lost.length,
-    reasons, bySource: [src("danchu"), src("direct")], activity, closed, created: cohort.length,
+    reasons, wonReasons, bySource: [src("danchu"), src("direct")], activity, closed, created: cohort.length,
   };
+}
+
+/** 보고서에서 수주 이유를 적지 않은 수주 */
+export const WON_UNSET = "적지 않음";
+/** 사유 목록 순서로 세고, 목록에 없는 값(예전 값·적지 않음)은 뒤에. 많은 순 */
+function reasonCounts(values: string[], list: readonly string[]): { reason: string; count: number }[] {
+  const rc = new Map<string, number>();
+  for (const v of values) rc.set(v, (rc.get(v) ?? 0) + 1);
+  return [...list.filter((r) => rc.has(r)), ...[...rc.keys()].filter((r) => !list.includes(r))]
+    .map((reason) => ({ reason, count: rc.get(reason) ?? 0 }))
+    .sort((x, y) => y.count - x.count);
 }
 
 // ─── 매출 예측 ───

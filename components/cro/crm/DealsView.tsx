@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CaretDown, Kanban, ListBullets, MagnifyingGlass, Plus, UploadSimple } from "@phosphor-icons/react/dist/ssr";
-import { DEAL_KIND, DEAL_KINDS, STAGES, STAGE_LABEL, isStage, STATUS_LABEL, amountLabel, board, filterDeals, monthClosed, nextLabel, type Stage, type Status } from "@/lib/crm-deals";
+import { DEAL_KIND, DEAL_KINDS, STAGES, STAGE_LABEL, isStage, STATUS_LABEL, amountLabel, board, filterDeals, monthClosed, nextLabel, type Stage, closedLabel } from "@/lib/crm-deals";
 import { wonKo, ymdKst } from "@/lib/crm-shape";
 import { SheetButton } from "./forms";
 import { Board, DealForm, type BoardColumn } from "./deal-ui";
@@ -146,7 +146,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
                     <tr key={r.deal.id}>
                       <td><Link href={`${paths.deals}/${r.deal.id}`} className="cx-tlink">{r.deal.title}</Link>{r.danchuNo && <small className="cx-muted"> · 단추 {r.danchuNo}</small>}</td>
                       <td>{r.company ?? <span className="cx-muted">{r.danchuNo ? "선정 뒤 보여요" : "-"}</span>}</td>
-                      <td>{r.deal.status === "open" ? <span className="cx-st">{STAGE_LABEL[r.deal.stage as Stage]}</span> : <span className={`cx-st cx-st--${r.deal.status}`}>{STATUS_LABEL[r.deal.status as Status]}{r.deal.lost_reason ? ` · ${r.deal.lost_reason}` : ""}</span>}</td>
+                      <td>{r.deal.status === "open" ? <span className="cx-st">{STAGE_LABEL[r.deal.stage as Stage]}</span> : <span className={`cx-st cx-st--${r.deal.status}`}>{closedLabel(r.deal)}</span>}</td>
                       <td>{r.deal.status === "open" ? (r.flag?.label === "다음 할 일 없음" ? <span className="cx-flag cx-flag--warn">다음 할 일 없음</span> : nextLabel(r.next, now) || "-") : <span className="cx-muted tnum">{r.deal.closed_at ? ymdKst(r.deal.closed_at) : ""}</span>}</td>
                       <td>{r.deal.owner ? mem.get(r.deal.owner) ?? "-" : "-"}</td>
                       <td className="r tnum">{amountLabel(r.deal.status === "won" ? r.deal.won_amount ?? r.deal.amount : r.deal.amount)}</td>

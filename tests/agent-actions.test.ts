@@ -265,7 +265,7 @@ describe("브리핑 (3단계: 먼저 챙기기)", () => {
     companies: [{ ...base, id: "c1", name: "가람바이오", aliases: [], industry: "", biz_no: "", address: "", website: "", email_domain: "", memo: "", owner: null, source: "manual", first_deal_on: null }],
     contacts: [{ ...base, id: "p1", company_id: "c1", name: "박 팀장", dept: "", title: "팀장", role: null, email: "park@garam.example", phone: "010-1234-5678", mobile: "", memo: "", source: "manual", danchu_key: null }],
     deals: [
-      { ...base, id: "d1", company_id: "c1", contact_ids: ["p1"], title: "랫드 4주 독성", kind: "tox", substance: "", submit_to: "", report_lang: "", amount: 48_500_000, expected_on: null, stage: "quote", status: "open", stage_at: iso("2026-11-01T09:00:00"), lost_reason: "", lost_note: "", won_amount: null, closed_at: null, owner: ME, source: "manual", invite_id: null, rfq_no: "", memo: "", import_id: null },
+      { ...base, id: "d1", company_id: "c1", contact_ids: ["p1"], title: "랫드 4주 독성", kind: "tox", substance: "", submit_to: "", report_lang: "", amount: 48_500_000, expected_on: null, stage: "quote", status: "open", stage_at: iso("2026-11-01T09:00:00"), lost_reason: "", lost_note: "", won_reason: "", won_note: "", won_amount: null, closed_at: null, owner: ME, source: "manual", invite_id: null, rfq_no: "", memo: "", import_id: null },
     ],
     history: [],
     events: [{ ...base, id: "e1", company_id: "c1", deal_id: "d1", contact_id: null, quote_doc_id: null, kind: "meeting", title: "가람 미팅", starts_at: iso("2026-11-19T14:00:00"), ends_at: null, all_day: false, mode: "video", location: "", attendee_contacts: [], attendee_members: [], attendees_extra: "", requests: "", remind: false, reminded_at: null, done_at: null }],
