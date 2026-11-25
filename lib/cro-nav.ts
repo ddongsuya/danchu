@@ -23,28 +23,32 @@ export function croTier(org: { plan?: string | null; plan_next?: string | null; 
 export function croNav(tier: CroTier, unread: number, p: CroPaths = CRO_PATHS): { nav: NavItem[]; tabs: NavItem[]; home: string } {
   const has = (f: PlanFeature) => PLANS[tier].features.includes(f);
   const nav: NavItem[] = [];
+  // 2026-11-26 시안 v7: Pro는 업무 / CRM / 견적 / 설정 네 묶음. 알림은 넓은 화면에서 위 바의 종으로 간다
   if (has("crm")) {
     nav.push(
-      { href: p.today, label: "오늘", icon: "today", exact: true },
-      { href: p.deals, label: "안건", icon: "deals" },
-      { href: p.clients, label: "고객사", icon: "clients" },
-      { href: p.reports, label: "보고서", icon: "report" },
+      { href: p.today, label: "오늘", icon: "today", exact: true, group: "업무" },
+      { href: p.requests, label: "받은 요청", icon: "inbox", group: "업무" },
+      { href: p.deals, label: "안건", icon: "deals", group: "CRM" },
+      { href: p.clients, label: "고객사", icon: "clients", group: "CRM" },
+      { href: p.log, label: "활동", icon: "note", group: "CRM" },
     );
+    if (has("tests")) nav.push({ href: p.calendar, label: "캘린더", icon: "calendar", group: "CRM" });
+    nav.push({ href: p.reports, label: "분석", icon: "report", group: "CRM" });
+    if (has("quote_tool")) nav.push({ href: p.docs, label: "견적서", icon: "quote", group: "견적" }, { href: p.prices, label: "단가표", icon: "tag", group: "견적" });
+    if (has("tests")) nav.push({ href: p.catalog, label: "시험 목록", icon: "list", group: "견적" });
+  } else {
+    nav.push({ href: p.requests, label: "받은 요청", icon: "inbox" });
+    if (has("quote_tool")) nav.push({ href: p.docs, label: "견적서", icon: "quote" }, { href: p.prices, label: "단가표", icon: "tag" });
+    if (has("tests")) nav.push({ href: p.catalog, label: "시험 목록", icon: "list" }, { href: p.calendar, label: "캘린더", icon: "calendar" });
   }
-  const g = has("crm") ? { group: "견적" } : {};
-  nav.push({ href: p.requests, label: "받은 요청", icon: "inbox", ...g });
-  if (has("quote_tool")) nav.push({ href: p.docs, label: "견적서", icon: "quote", ...g });
-  if (has("quote_tool")) nav.push({ href: p.prices, label: "단가표", icon: "tag", ...g });
-  if (has("tests")) nav.push({ href: p.catalog, label: "시험 목록", icon: "list", ...g });
-  if (has("tests")) nav.push({ href: p.calendar, label: "캘린더", icon: "calendar", ...g });
-  nav.push({ href: p.notifications, label: "알림", icon: "bell", badge: unread, ...g });
+  nav.push({ href: p.notifications, label: "알림", icon: "bell", badge: unread });
   nav.push({ href: p.org, label: "기관", icon: "org", group: "설정" }, { href: p.billing, label: "요금제·결제", icon: "receipt", group: "설정" });
 
   const tabs: NavItem[] = has("crm")
     ? [
         { href: p.today, label: "오늘", icon: "today", exact: true },
         { href: p.deals, label: "안건", icon: "deals" },
-        { href: p.log, label: "기록", icon: "note" },
+        { href: p.log, label: "활동", icon: "note" },
         { href: p.more, label: "더보기", icon: "more", badge: unread },
       ]
     : [

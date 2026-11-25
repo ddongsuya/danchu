@@ -5,7 +5,7 @@ import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
 import "./portal.css";
-import { ArrowUpRight, BookOpenText } from "@phosphor-icons/react/dist/ssr";
+import { Bell, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
 /** soon: 아직 열리지 않은 메뉴 (사전예약 기간). 누를 수 없고 옆에 열리는 날을 적는다 */
 /** group: 넓은 화면 사이드바에서 이 항목 위에 작은 묶음 이름을 단다 (앞 항목과 묶음이 다를 때만) */
@@ -28,22 +28,38 @@ export function Shell({ session, nav, tabs, plan, usage, children }: { session: 
   // 이름을 누르면 프로필로 (운영자는 메뉴에 프로필이 없어 여기가 유일한 길이다)
   const profileHref = role === "admin" ? "/admin/profile" : role === "cro" ? "/cro/profile" : "/app/profile";
 
+  // 2026-11-26 시안 v7: 알림은 위 바의 종으로. 사이드바에는 알림 항목을 빼고 나머지를 묶음대로 둔다
+  const bell = nav.find((i) => i.icon === "bell");
+  const sideNav = bell ? nav.filter((i) => i !== bell) : nav;
+
   return (
     <div className="pt">
       {/* 첫 장면 높이 기준 (--vhpx). 인앱 브라우저가 svh 를 크게 잡는 문제를 랜딩과 같은 방법으로 피한다 */}
       <ViewportHeight />
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
+      {/* 넓은 화면: 전체 폭 위 바(브랜드 / 조직 · 요금제 … 사용량 · 자료실 · 알림 · 프로필). 좁은 화면에서는 아래 pt__top 이 대신한다 */}
+      <header className="pt__bar">
+        <Link href={nav[0]?.href ?? "/"} className="pt__barbrand"><Lockup size={22} /></Link>
+        <span className="pt__barsep" aria-hidden="true">/</span>
+        <span className="pt__barorg">{org || who}</span>
+        <span className="pt__role">{ROLE_LABEL[role]}</span>
+        {plan && <span className="pt__role pt__plan">{plan}</span>}
+        <span className="pt__barsp" />
+        {usage && <Link href="/cro/billing" className="pt__usage">{usage}</Link>}
+        <a href="/guide/library" className="pt__baric" aria-label="가이드라인 자료실"><BookOpenText size={20} aria-hidden="true" /></a>
+        {bell && (
+          <Link href={bell.href} className="pt__baric" aria-label={bell.badge ? `알림 ${bell.badge}건` : "알림"}>
+            <Bell size={20} aria-hidden="true" />
+            {bell.badge ? <span className="pt__bardot" aria-hidden="true" /> : null}
+          </Link>
+        )}
+        <Link href={profileHref} className="pt__avatar pt__baravatar" aria-label={`프로필 · ${who}`}>{who.slice(0, 1)}</Link>
+      </header>
+      <div className="pt__frame">
       <aside className="pt__side">
-        <Link href={nav[0]?.href ?? "/"} className="pt__sbrand">
-          <Lockup size={24} />
-          <span className="pt__role" style={{ marginLeft: "auto" }}>{ROLE_LABEL[role]}</span>
-          {plan && <span className="pt__role pt__plan">{plan}</span>}
-        </Link>
-        <div className="pt__nav-label">내 워크스페이스</div>
         <nav className="pt__nav" aria-label="주요 메뉴">
-          <NavLinks items={nav} variant="side" />
+          <NavLinks items={sideNav} variant="side" />
         </nav>
-        <a href="/guide/library" className="pt__guide"><BookOpenText size={20} aria-hidden="true" /><span>가이드라인 자료실</span><ArrowUpRight size={15} aria-hidden="true" /></a>
         <div className="pt__user">
           <Link href={profileHref} className="pt__identity" aria-label={`프로필 · ${who}`}><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
             <b>{who}</b>
@@ -86,6 +102,7 @@ export function Shell({ session, nav, tabs, plan, usage, children }: { session: 
         <nav className="pt__tabs" aria-label="주요 메뉴">
           <TabLinks items={tabs ?? nav} />
         </nav>
+      </div>
       </div>
     </div>
   );
