@@ -1,4 +1,5 @@
 import type { Admin } from "./supabase";
+import { activityFilePaths, removeCrmFiles } from "./crm-files";
 
 /** 담당자가 모두 떠난 뒤 CRM 자료를 지우기까지 두는 날 수. 개인정보처리방침·기관 이용 조건의 "30일"과 같다 */
 export const CRM_PURGE_DAYS = 30;
@@ -49,6 +50,10 @@ export async function purgeLeftOrgCrm(sb: Admin, now = Date.now()): Promise<{ ma
     const { count } = await sb.from("profiles").select("id", { count: "exact", head: true }).eq("cro_org_id", orgId);
     if (count) continue;
     let rows = 0;
+    // 기록 첨부(비공개 버킷 crm-files)도 함께. 표를 지우기 전에 경로를 모은다
+    const { data: acts, error: aErr } = await sb.from("cro_crm_activities").select("files").eq("org_id", orgId).limit(50000);
+    if (aErr) throw new Error(`crm-purge files: ${aErr.message}`);
+    await removeCrmFiles(sb, activityFilePaths(acts ?? []));
     for (const t of TABLES) {
       const { count: n, error: e } = await sb.from(t).delete({ count: "exact" }).eq("org_id", orgId);
       if (e) throw new Error(`crm-purge ${t}: ${e.message}`);

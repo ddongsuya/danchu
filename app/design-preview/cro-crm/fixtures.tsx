@@ -141,7 +141,7 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   let hn = 0;
   const base = (n: number, o: Partial<CrmDeal>): CrmDeal => ({
     id: id(1000 + n), org_id: "org", company_id: null, contact_ids: [], title: "", kind: "tox", substance: "", submit_to: "", report_lang: "", amount: null, expected_on: null,
-    stage: "inquiry", status: "open", stage_at: iso(-1), lost_reason: "", lost_note: "", won_amount: null, closed_at: null, owner: ME, source: "manual", invite_id: null, rfq_no: "",
+    stage: "inquiry", status: "open", stage_at: iso(-1), lost_reason: "", lost_note: "", won_reason: "", won_note: "", won_amount: null, closed_at: null, owner: ME, source: "manual", invite_id: null, rfq_no: "",
     memo: "", import_id: null, created_by: ME, created_at: iso(-30), updated_at: iso(-1), ...o,
   });
   const danchuDeal = (n: number, inv: (typeof invites)[number], o: Partial<CrmDeal> = {}) => {
@@ -211,7 +211,7 @@ export function crmSample(now = Date.now()): { data: CrmData; danchu: Map<string
   ];
   const act = (n: number, deal: number | null, c: number | null, kind: string, when: string, title: string, body: string, o: Partial<CrmActivity> = {}): CrmActivity => ({
     id: id(400 + n), org_id: "org", company_id: c ? id(c) : null, deal_id: deal ? id(1000 + deal) : null, contact_id: null, quote_doc_id: null, event_id: null, kind, occurred_at: when, duration_min: null, title, body,
-    attendee_contacts: [], attendee_members: [ME], created_by: ME, created_at: when, updated_at: when, ...o,
+    attendee_contacts: [], attendee_members: [ME], files: [], created_by: ME, created_at: when, updated_at: when, ...o,
   });
   const activities = [
     act(1, 3, 1, "email", iso(0, "09:12"), "회복군 제외 시 일정 문의", "회복군 4주를 빼면 최종보고서(안)을 언제 받을 수 있는지 궁금합니다. 내일 미팅 때 일정표로 설명 부탁드립니다.", { contact_id: id(101) }),
