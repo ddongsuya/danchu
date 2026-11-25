@@ -21,9 +21,10 @@ const DONE = ["closed", "cancelled"];
 /** 가로 축에서 같은 날 겹친 일정을 아래로 내리는 한 칸의 높이. 일정 하나가 점·이름·상태·요청 번호 네 줄(약 80px)이다 */
 const TL_ROW = 84;
 
-export function RequestOverview({ name, list, today }: { name: string; list: RequestListItem[]; today: string }) {
+/** query: 주소의 ?q= (사이드바 "요청 검색"). 있으면 요청 수와 상관없이 검색 칸을 열고 커서를 둔다 */
+export function RequestOverview({ name, list, today, query: initial }: { name: string; list: RequestListItem[]; today: string; query?: string }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initial ?? "");
   const events = timelineEvents(list, today);
   const c = timelineCounts(events, today);
   const lay = timelineLayout(events, today);
@@ -37,7 +38,8 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
   const filtered = source.filter((r) => `${r.rfq_no} ${r.substance} ${r.categories.join(" ")}`.toLocaleLowerCase().includes(query));
   const firstLate = events.find((e) => e.kind === "late");
   const firstOpen = events.find((e) => e.kind === "open");
-  const tools = list.length > 8;
+  const searching = initial !== undefined;
+  const tools = list.length > 8 || searching;
   const short = (d: string) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
   // 세로 축에서 오늘 선이 들어갈 자리
   const todayAt = events.findIndex((e) => e.date > today);
@@ -126,7 +128,7 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
               <label className="rs-search">
                 <MagnifyingGlass size={18} aria-hidden="true" />
                 <span className="sr-only">요청 번호, 물질명, 시험 분야 검색</span>
-                <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명" />
+                <input type="search" autoFocus={searching} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명" />
               </label>
             </div>
           )}
