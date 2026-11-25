@@ -407,11 +407,27 @@ export async function deleteDoc(orgId: string, id: string): Promise<boolean> {
   return !error;
 }
 
-/** 견적서를 복제한다 (새 번호, 단추 요청 연결은 풀린다) */
-export async function copyDoc(orgId: string, userId: string | null, id: string): Promise<{ id?: string; error?: string }> {
+/**
+ * 견적서를 복제한다 (새 번호). 보통은 단추 요청·안건 연결이 풀린다.
+ * keepLinks: 2차 견적서처럼 같은 요청·안건·고객사·담당자에 이어 붙일 때 (2026-11-26 시안 v7)
+ */
+export async function copyDoc(orgId: string, userId: string | null, id: string, keepLinks = false): Promise<{ id?: string; error?: string }> {
   const got = await loadDoc(orgId, id);
   if (!got) return { error: "견적서를 찾지 못했어요." };
-  return insertDoc(orgId, userId, { client: got.head.client, substance: got.head.substance, data: got.data });
+  const sb = getSupabaseAdmin();
+  const { data: src } = keepLinks ? await sb!.from("cro_quote_docs").select("invite_id, rfq_no, deal_id, company_id, contact_id").eq("id", id).eq("org_id", orgId).maybeSingle() : { data: null };
+  // 2차 견적서는 요청마다 한 부: 이미 만든 것이 있으면 새로 만들지 않고 그것을 연다 (두 번 눌러 두 부가 생기지 않게)
+  if (src?.invite_id) {
+    const { data: had } = await sb!.from("cro_quote_docs").select("id").eq("org_id", orgId).eq("invite_id", src.invite_id).neq("id", id).order("created_at").limit(1);
+    if (had?.[0]) return { id: had[0].id };
+  }
+  const made = await insertDoc(orgId, userId, { client: got.head.client, substance: got.head.substance, data: got.data });
+  if (!keepLinks || !made.id) return made;
+  if (src) {
+    const { error } = await sb!.from("cro_quote_docs").update(src).eq("id", made.id).eq("org_id", orgId);
+    if (error) console.error("cro_quote_docs round2 link", error);
+  }
+  return made;
 }
 
 /* ── 양식 제작 요청 ── */

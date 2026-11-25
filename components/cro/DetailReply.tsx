@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CaretRight, PencilSimple } from "@phosphor-icons/react";
 import { DETAIL_STATUS_LABEL, revisedTotal, type DetailLine, type DetailReplyItem, type DetailStatus } from "@/lib/detail-quote";
 import { md, won } from "@/lib/format";
@@ -44,7 +45,25 @@ const digits = (v: string) => Number(v.replace(/[^\d]/g, "")) || 0;
 /** 차이 표시: +600만 원 */
 const delta = (n: number) => `${n >= 0 ? "+" : "-"}${won(Math.abs(n))}`;
 
-export function DetailReply({ token, view, backHref, fileToken, operator = false, preview = false }: { token: string; view: DetailReplyView; backHref: string; fileToken?: string; operator?: boolean; preview?: boolean }) {
+/** firstDocId: 1차 견적서(견적서 툴)가 있으면 복사해 2차 견적서를 쓰는 버튼을 단다 (기관 포털만, 2026-11-26 시안 v7) */
+export function DetailReply({ token, view, backHref, fileToken, operator = false, preview = false, firstDocId }: { token: string; view: DetailReplyView; backHref: string; fileToken?: string; operator?: boolean; preview?: boolean; firstDocId?: string }) {
+  const router = useRouter();
+  const [docBusy, setDocBusy] = useState(false);
+  const [docErr, setDocErr] = useState("");
+  const makeRound2 = async () => {
+    if (!firstDocId || docBusy) return;
+    setDocBusy(true);
+    setDocErr("");
+    try {
+      const r = await fetch(`/api/cro/docs/${firstDocId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "round2" }) });
+      const j = (await r.json().catch(() => ({}))) as { id?: string; error?: string };
+      if (!r.ok || !j.id) throw new Error(j.error || "견적서를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.");
+      router.push(`/cro/docs/${j.id}`);
+    } catch (e) {
+      setDocErr(e instanceof Error ? e.message : "견적서를 만들지 못했어요.");
+      setDocBusy(false);
+    }
+  };
   const open = view.status === "sent" && !view.expired && !view.closed;
   const [step, setStep] = useState<Step>(open ? { k: "start" } : { k: "done", mode: view.status === "submitted" ? "revise" : view.status === "kept" ? "keep" : "decline" });
   const [said, setSaid] = useState<Said[]>([]);
@@ -354,6 +373,12 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
         })}
         <li><span>전체 기간</span><b>{shownWeeks ? `${shownWeeks}주` : "-"}</b></li>
       </ul>
+      {firstDocId && (
+        <div className="cr-doc__tool">
+          <button type="button" className="cr-lk" disabled={docBusy || preview} onClick={makeRound2}>{docBusy ? "견적서를 만드는 중이에요" : "견적서 툴에서 2차 견적서 만들기"}</button>
+          {docErr && <p className="cr-err" role="alert">{docErr}</p>}
+        </div>
+      )}
       {operator && <p className="cr-doc__foot">운영자 화면</p>}
     </article>
   );

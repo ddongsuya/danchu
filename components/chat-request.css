@@ -333,3 +333,7 @@ span.cr-me { cursor: default; }
 .cr-doc__list b { font-weight: 600; text-align: right; }
 .cr-doc__files { display: grid; gap: 4px; margin-top: 12px; font-size: 13.5px; }
 .cr-doc__files a { color: var(--ink); text-underline-offset: 3px; }
+
+/* 2차 견적: 견적서 툴로 이어 쓰기 (2026-11-26 시안 v7) */
+.cr-doc__tool { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--card-line); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.cr-doc__tool p { font-size: 13px; color: var(--muted); margin: 0; }

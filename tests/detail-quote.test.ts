@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanDetail, detailLines, replyItemsOf, revisedTotal } from "@/lib/detail-quote";
+import { applyDetailEdits, cleanDetail, detailLines, replyItemsOf, revisedTotal } from "@/lib/detail-quote";
 import type { Values } from "@/lib/rfq-schema";
 
 const payload: Values = { categories: ["일반독성"], "일반독성.recovery": "2주", "일반독성.species": ["랫드"], storage: "미정" };
@@ -32,5 +32,21 @@ describe("2차 회신", () => {
       { seq: 1, amount: 100, weeks: 4, mode: "assumed", reason: "가정" },
       { seq: 2, amount: null, weeks: null, mode: "as_requested", reason: "" },
     ]);
+  });
+});
+
+describe("계약서는 2차 회신 금액을 쓴다 (2026-11-26)", () => {
+  const first = [{ seq: 1, name: "4주 반복", avail: "가능", amount: 100, weeks: 10 }, { seq: 2, name: "TK", avail: "가능", amount: 30, weeks: 4 }];
+  it("고친 줄만 금액·기간을 바꾸고 나머지는 1차 그대로", () => {
+    expect(applyDetailEdits(first, [{ seq: 2, amount: 45, weeks: null, mode: "as_requested", reason: "" }])).toEqual([first[0], { ...first[1], amount: 45 }]);
+  });
+  it("고친 줄 합계가 2차 총액(revisedTotal)과 같다", () => {
+    const edits = [{ seq: 1, amount: 90, weeks: 12, mode: "as_requested" as const, reason: "" }];
+    const after = applyDetailEdits(first, edits);
+    expect(after.reduce((a, i) => a + (i.amount ?? 0), 0)).toBe(revisedTotal(130, first, edits));
+    expect(after[0].weeks).toBe(12);
+  });
+  it("고친 줄이 없으면 그대로", () => {
+    expect(applyDetailEdits(first, [])).toEqual(first);
   });
 });
