@@ -7,10 +7,10 @@ import { LIBRARY, TOPICS } from "@/lib/guideline-library";
 import "./page.css";
 
 export const metadata: Metadata = pageMeta(
-  "비임상 시험 가이드 · 단추",
-  "어떤 비임상 시험이 필요한지, 반복투여독성은 몇 주가 필요한지 ICH·식약처 가이드라인으로 확인하세요.",
+  "비임상시험 가이드 · 단추",
+  "어떤 비임상시험이 필요한지, 반복투여독성은 몇 주가 필요한지 ICH·식약처 가이드라인 근거 조항으로 확인하세요.",
   "/guide",
-  ["독성시험 가이드", "비임상 독성시험 설계", "비임상 시험 종류"],
+  ["독성시험 가이드", "비임상 독성시험 설계", "비임상 시험 종류", "비임상시험 종류", "GLP 비임상시험"],
 );
 
 export default function Page() {

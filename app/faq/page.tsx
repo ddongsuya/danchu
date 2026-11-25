@@ -7,10 +7,10 @@ import { faqPageJsonLd } from "@/lib/structured-data";
 import "./page.css";
 
 export const metadata: Metadata = pageMeta(
-  "자주 묻는 질문 · 단추",
-  "비임상 시험 견적 요청, 기관 회신, 비교표, 기밀, 계약에 대해 자주 묻는 질문을 모았어요.",
+  "비임상시험 견적 자주 묻는 질문 · 단추",
+  "비임상시험 견적 요청부터 비임상 CRO 회신, 비교표, 기밀, 계약까지 자주 묻는 질문을 모았어요.",
   "/faq",
-  ["비임상 시험 견적", "CRO 견적 비교"],
+  ["비임상 시험 견적", "비임상시험 견적", "비임상 CRO 견적", "CRO 견적 비교"],
 );
 
 export default function Page() {

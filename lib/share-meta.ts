@@ -7,9 +7,9 @@ import type { Metadata } from "next";
  * 이미지를 바꾸면 파일 이름도 바꾼다(카카오는 같은 주소의 이미지를 오래 캐시한다).
  */
 export const SITE_URL = "https://danchu.kr";
-export const SITE_TITLE = "단추 · 비임상 시험 비교 견적표";
+export const SITE_TITLE = "단추 · 비임상시험 비교 견적표, 비임상 CRO 견적 비교";
 export const SITE_DESC =
-  "비임상 시험 견적 비교를 요청서 한 번으로 시작해요. 여러 비임상 CRO·비임상 시험기관의 독성시험 견적을 같은 양식으로 받아 비교해요.";
+  "비임상시험 견적을 한 번 요청으로 여러 비임상 CRO·시험기관에서 같은 양식으로 받아 비교해요. 독성·효력·약동학 시험과 GLP 비임상시험의 항목별 금액·기간·조건을 나란히 보고 기관을 직접 고르세요.";
 export const SHARE_IMAGE = {
   url: "/og-share.png",
   width: 1200,
@@ -23,6 +23,9 @@ export const SHARE_IMAGE = {
  * 시험을 수행하거나 순위를 매기지 않는다(PRODUCT.md). 기관을 늘리거나 실적을 앞세우는 말은 넣지 않는다.
  */
 export const SITE_KEYWORDS = [
+  "비임상시험",
+  "비임상시험 견적",
+  "GLP 비임상시험",
   "비임상 CRO",
   "비임상 시험기관",
   "독성시험 견적",

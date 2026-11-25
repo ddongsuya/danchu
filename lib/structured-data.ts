@@ -27,7 +27,7 @@ export function siteJsonLd(): Json {
         name: "단추",
         alternateName: "Danchu",
         url: SITE_URL,
-        logo: `${SITE_URL}/icons/icon-512.png`,
+        logo: `${SITE_URL}/images/danchu-logo.png`,
         description: `${SERVICE_DESC}. 여러 비임상 시험기관의 견적을 같은 양식으로 받아 나란히 비교하는 비교 견적표를 제공해요.`,
         email: SUPPORT_EMAIL,
         contactPoint: {
