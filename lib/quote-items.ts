@@ -111,3 +111,9 @@ export function summaryFacetsOf(payload: Values): { species: string[]; glp: stri
   }
   return { species: [...species], glp: [...glp] };
 }
+
+/** 표 한 칸에 쓰는 시험 이름: 세부 시험 종류(없으면 분야), 셋째부터는 "외 n" */
+export function testNamesOf(payload: Values): string {
+  const names = [...new Set(quoteRowsFromPayload(payload).map((r) => r.name))];
+  return names.length > 2 ? `${names.slice(0, 2).join(" · ")} 외 ${names.length - 2}` : names.join(" · ");
+}

@@ -172,13 +172,16 @@ export async function listPendingMembers(orgId: string): Promise<MemberRow[]> {
 export const ADMIN_PAGE = 50;
 
 /** 운영자 요청 목록. 검색은 번호·회사·물질·이메일 부분 일치, 한 페이지 +1 로 다음 페이지 유무를 안다 */
-export async function listAllRequests(status?: string, q?: string, page = 1): Promise<{ list: RfqSummary[]; hasMore: boolean }> {
+/** opts.statuses: 여러 단계 묶음(운영자 접수 화면의 진행·선정 탭), opts.nos: 요청 번호 목록(멈춤 탭) */
+export async function listAllRequests(status?: string, q?: string, page = 1, opts: { statuses?: string[]; nos?: string[] } = {}): Promise<{ list: RfqSummary[]; hasMore: boolean }> {
   const c = sb();
   const from = (Math.max(1, page) - 1) * ADMIN_PAGE;
   let query = c.from("rfq_requests").select("*").order("created_at", { ascending: false }).range(from, from + ADMIN_PAGE);
   // "overdue": 회신 기한이 지났는데 아직 비교표가 열리지 않은 요청 (운영자가 기한 연장·마무리를 정해야 한다)
   if (status === "overdue") query = query.in("status", OVERDUE_STATUSES).lt("reply_by", todaySeoulDate());
   else if (status) query = query.eq("status", status);
+  if (opts.statuses) query = query.in("status", opts.statuses);
+  if (opts.nos) query = query.in("rfq_no", opts.nos.length ? opts.nos : ["-"]);
   if (q) {
     const term = `%${likeExact(q.trim().slice(0, 60))}%`;
     query = query.or(`rfq_no.ilike.${orValue(term)},company.ilike.${orValue(term)},substance.ilike.${orValue(term)},email.ilike.${orValue(term)}`);
