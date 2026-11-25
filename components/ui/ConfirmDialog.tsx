@@ -51,10 +51,16 @@ export function ConfirmDialog({ open, title, body, confirmLabel = "확인", canc
       ref={ref}
       className="ix-dialog"
       aria-labelledby="ix-dialog-title"
+      // 결과는 누른 버튼·Esc·바깥 누르기에서 바로 정한다. close 이벤트는 브라우저에 따라 늦게 오거나 오지 않아 보조로만 쓴다
+      onCancel={(e) => { e.preventDefault(); onResult(false); }}
       onClose={(e) => { if (open) onResult(e.currentTarget.returnValue === "ok"); }}
-      onClick={(e) => { if (e.target === e.currentTarget) e.currentTarget.close(""); }}
+      onClick={(e) => { if (e.target === e.currentTarget) onResult(false); }}
     >
-      <form method="dialog" className="ix-dialog__in">
+      <form
+        method="dialog"
+        className="ix-dialog__in"
+        onSubmit={(e) => { e.preventDefault(); onResult((e.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "ok"); }}
+      >
         <h2 id="ix-dialog-title" className="ix-dialog__title">{title}</h2>
         {body && <div className="ix-dialog__body">{body}</div>}
         <div className="ix-dialog__acts">
