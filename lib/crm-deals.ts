@@ -34,6 +34,11 @@ export const WON_REASONS = ["가격", "일정", "시험 설계·전문성", "기
 export type WonReason = (typeof WON_REASONS)[number];
 export const isWonReason = (v: unknown): v is WonReason => typeof v === "string" && (WON_REASONS as readonly string[]).includes(v);
 export const isLostReason = (v: unknown): v is LostReason => typeof v === "string" && (LOST_REASONS as readonly string[]).includes(v);
+/** 끝난 안건 한 줄: "수주 · 일정", "실패 · 가격", 이유가 없으면 "수주" */
+export function closedLabel(d: Pick<CrmDeal, "status" | "lost_reason" | "won_reason">): string {
+  const reason = d.status === "lost" ? d.lost_reason : d.status === "won" ? d.won_reason : "";
+  return `${STATUS_LABEL[d.status as Status] ?? d.status}${reason ? ` · ${reason}` : ""}`;
+}
 /** 시험 갈래 (견적 요청 네 갈래와 같은 말) */
 export const DEAL_KINDS = ["tox", "pd", "pk", "other"] as const;
 export const DEAL_KIND: Record<string, string> = { tox: "독성", pd: "효력", pk: "약동학", other: "개별 분석" };
