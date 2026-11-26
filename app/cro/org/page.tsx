@@ -38,7 +38,7 @@ export default async function CroOrgPage() {
         <span className={`pill ${st[1]}`}>{st[0]}</span>
       </div>
 
-      {org?.status === "pending" && <div className="note note--warn lq-set__note">운영자가 기관 정보를 확인하는 중이에요. 승인되면 메일로 알려요. 그동안 아래 정보를 보완해 두면 심사가 빨라져요.</div>}
+      {org?.status === "pending" && <div className="note note--warn lq-set__note">운영자가 기관 정보를 확인하는 중이에요. 승인되면 메일로 알려요.</div>}
 
       <div className="lq-set">
         {org ? (

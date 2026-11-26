@@ -208,7 +208,7 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
                 <Field label="다시 연락할 날 (선택)" htmlFor={`${hid}-f`} help="고르면 그날 '다시 연락하기' 할 일이 생겨요.">
                   <input id={`${hid}-f`} className="inp tnum" type="date" min={todayKst()} value={follow} onChange={(e) => setFollow(e.target.value)} />
                 </Field>
-                {deal.danchu && <p className="cx-danchu-note"><span className="cx-d" aria-hidden="true">단</span>단추에서 온 안건은 의뢰자가 다른 기관을 고르면 &quot;다른 기관 선정&quot;으로 저절로 바뀌어요.</p>}
+                {deal.danchu && <p className="cx-danchu-note"><span className="cx-d" aria-hidden="true">단</span>단추에서 온 안건은 의뢰자가 다른 기관을 고르면 &quot;다른 기관 선정&quot;으로 자동으로 바뀌어요.</p>}
               </>
             )}
             <Err msg={err} />
@@ -476,7 +476,7 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
                   </article>
                 );
               })}
-              {!c.cards.length && <p className="cx-col__empty">{c.stage === "inquiry" ? "새 문의를 안건으로 만들거나 엑셀에서 가져와요." : "이 단계 안건이 없어요."}</p>}
+              {!c.cards.length && <p className="cx-col__empty">{c.stage === "inquiry" ? "이 단계 안건이 없어요." : "이 단계 안건이 없어요."}</p>}
             </div>
           </section>
         ))}

@@ -152,7 +152,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
           <nav className="qed__toc">
             <Toc on={page === "cover"} onClick={() => { setPage("cover"); setPane("desk"); }} title="표지" sub="의뢰자, 견적번호" thumb="cover" />
             <Toc on={page === "quote"} onClick={() => { setPage("quote"); setPane("desk"); }} title="견적서" sub={`시험 ${data.tests.length}건 · 합계`} thumb="quote" />
-            <Toc on={!!test} onClick={() => { if (data.tests[0]) { setPage(`detail:${data.tests[0].uid}`); setPane("desk"); } }} title={pdx ? "시험 구성" : "시험 상세 설명"} sub={pdx ? "스키마, 군 구성" : data.tests.length ? "시험 설계 편집" : "시험을 추가하세요"} thumb="detail" />
+            <Toc on={!!test} onClick={() => { if (data.tests[0]) { setPage(`detail:${data.tests[0].uid}`); setPane("desk"); } }} title={pdx ? "시험 구성" : "시험 상세 설명"} sub={pdx ? "스키마, 군 구성" : data.tests.length ? "시험 설계 편집" : "시험 없음"} thumb="detail" />
             {!pdx && data.tests.length > 0 && (
               <ol className="qed__tests">
                 {data.tests.map((t) => {
@@ -170,7 +170,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
             )}
             {pdx
               ? <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="평가항목" sub={`${(pdx.t.kd?.pd?.evals ?? []).filter((e) => !e.optional).length}개 항목`} thumb="schedule" />
-              : <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험을 추가하세요"} thumb="schedule" />}
+              : <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험 없음"} thumb="schedule" />}
             {guides.length > 0 && <Toc on={gk >= 0} onClick={() => { setPage("guide:0"); setPane("desk"); }} title="시험 안내" sub={`시험 종류 ${guides.flat().length}건`} thumb="detail" />}
             {guides.length > 1 && (
               <ol className="qed__tests">
@@ -224,7 +224,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
               {test && <TestEdit t={test} idx={data.tests.indexOf(test)} count={data.tests.length} head={head} style={style} set={(p) => setTest(test.uid, p)} onRemove={() => removeTest(test)} onMove={(d) => move(test, d)} pageNo={pageNo} total={total} readOnly={readOnly} />}
               {page === "schedule" && <ScheduleEdit data={data} setTest={setTest} head={head} style={style} total={total} readOnly={readOnly} />}
               {guideEl}
-              {page.startsWith("detail:") && !test && <div className="qd"><p className="qed__empty">시험을 추가하면 여기에서 설계를 고칠 수 있어요.</p></div>}
+              {page.startsWith("detail:") && !test && <div className="qd"><p className="qed__empty">아직 시험이 없어요.</p></div>}
             </div>
           )}
         </main>
@@ -272,7 +272,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
                 <tr className="qed__grand"><td>합계금액</td><td className="tnum">{n(totals.grand)}</td></tr>
               </tbody>
             </table>
-            <p className="qed__muted">{head.validUntil ? <>견적 유효기간 <b className="tnum">{head.validUntil}</b>까지</> : "견적 유효기간을 표지에서 정하세요"}{scheduleWeeks(data) ? <> · 착수부터 최종 보고서까지 <b>{scheduleWeeks(data)}주</b></> : null}</p>
+            <p className="qed__muted">{head.validUntil ? <>견적 유효기간 <b className="tnum">{head.validUntil}</b>까지</> : "견적 유효기간은 표지에서 정해요"}{scheduleWeeks(data) ? <> · 착수부터 최종 보고서까지 <b>{scheduleWeeks(data)}주</b></> : null}</p>
           </section>
 
           <section className="qed__memo">
@@ -483,7 +483,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
             );
           })}
         </ul>
-      ) : <p className="qed__muted">시험 목록에 표준가에 든 항목을 적어 두면 여기에 채워져요.</p>}
+      ) : <p className="qed__muted">시험 목록에 표준가에 든 항목이 없어요.</p>}
       {!readOnly && <EvalAdder onAdd={(name) => set({ evals: [...t.evals, { name, on: true, base: true }] })} />}
       {!readOnly && <RuleAdder onAdd={(r) => set(r.kind === "flat" ? { rates: [...t.rates, r], evals: [...t.evals, { name: r.label, on: true, base: false, rateId: r.id }] } : { rates: [...t.rates, r], qty: { ...t.qty, [r.id]: 1 } })} />}
 
@@ -644,7 +644,7 @@ function ScheduleEdit({ data, setTest, head, style, total, readOnly }: { data: D
       <section className="qd qd--edit" style={brandVars(style)}>
         <PageHead head={head} style={style} />
         <h1 className="qd__h1">시험 수행 일정표</h1>
-        <p className="qd__lead">시험물질 입고 주를 1주로 셉니다. 시험마다 시작 주와 단계를 고쳐요.</p>
+        <p className="qd__lead">시험물질 입고 주를 1주로 계산해요.</p>
         {data.tests.map((t) => (
           <div key={t.uid} className="qed__sched">
             <div className="qed__h2row">
@@ -674,7 +674,7 @@ function ScheduleEdit({ data, setTest, head, style, total, readOnly }: { data: D
             {!readOnly && <button type="button" className="btxt" onClick={() => { const last = t.phases[t.phases.length - 1]; setTest(t.uid, { phases: [...t.phases, { id: uid("p"), name: "새 단계", start: last ? last.start + (last.kind === "point" ? 1 : last.weeks) : 0, weeks: 1, kind: "report" }] }); }}><Plus size={14} aria-hidden="true" /> 단계 추가</button>}
           </div>
         ))}
-        {!data.tests.length && <p className="qed__muted">시험을 추가하면 시험 목록의 기간으로 일정이 채워져요.</p>}
+        {!data.tests.length && <p className="qed__muted">아직 시험이 없어요.</p>}
       </section>
       <p className="qed__under">PDF에서는 이렇게 보여요</p>
       <SchedulePage head={head} data={data} style={style} i={3 + data.tests.length} total={total} />
@@ -688,7 +688,7 @@ function ClientView({ data, rfqNo }: { data: DocData; rfqNo: string }) {
   return (
     <div className="qed__client">
       <h2 className="qed__h qed__h--lg">의뢰자가 비교표에서 보는 값</h2>
-      <p className="qed__muted">단추 요청 {rfqNo}의 회신 화면에 시험별 금액과 기간을 채워요. 의뢰자는 여러 기관의 값을 나란히 봐요.</p>
+      <p className="qed__muted">단추 요청 {rfqNo}의 회신 화면에 시험별 금액과 기간을 채워요.</p>
       <table className="tbl qed__ctbl">
         <thead><tr><th>시험</th><th>조건</th><th className="r">기간</th><th className="r">금액</th></tr></thead>
         <tbody>
@@ -753,7 +753,7 @@ export function TestPicker({ catalog, rates, onAdd, onClose }: { catalog: Catalo
             ))}
           </div>
         ))}
-        {!byItem.size && <p className="qed__muted">{catalog.length ? "찾는 시험이 없어요." : "시험 목록에 담은 시험이 없어요. 시험 목록에 조건과 표준가를 적어 두면 그 값으로 채워져요."}</p>}
+        {!byItem.size && <p className="qed__muted">{catalog.length ? "찾는 시험이 없어요." : "시험 목록에 담은 시험이 없어요."}</p>}
       </div>
       <div className="qed__dlgfoot">
         <Link href="/cro/catalog" className="btxt">시험 목록 열기</Link>

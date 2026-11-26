@@ -87,7 +87,7 @@ export function ContactView({ c, companyId, contactId }: { c: CrmCtx; companyId:
                   </section>
                 ))}
               </div>
-            ) : <p className="cx-none">{person.name}님과의 기록이 아직 없어요. 안건 화면에서 통화·미팅을 남길 때 이 사람을 고르면 여기에 모여요.</p>}
+            ) : <p className="cx-none">{person.name}님과의 기록이 아직 없어요.</p>}
           </section>
         </div>
 

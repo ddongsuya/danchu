@@ -321,7 +321,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         : pending
           ? `확인 필요 ${pending}건 남음`
         : !commonOk
-          ? payErr ? "지급 조건을 확인하세요" : "착수 가능일을 입력하세요"
+          ? payErr ? "지급 조건을 확인해 주세요" : "착수 가능일을 입력해 주세요"
           : isSubmitted
             ? "수정 내용 제출"
             : "견적 제출";
@@ -365,7 +365,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         <div className="lr-head__main">
           <span className="lr-no tnum">견적 회신 · {rfq.no}</span>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p className="lr-sub">시험마다 수행 가능 여부와 금액·기간을 적으세요. 금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수예요. 앞 단계를 고르면 전체 일정이 순서대로 그려져요.</p>
+          <p className="lr-sub">금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수예요.</p>
         </div>
         <div className="lr-head__side">
           <span className="pill pill--sf tnum">{filled} / {items.length} 항목 완료</span>
@@ -379,7 +379,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         <div className="note note--tint lr-note">
           <span>
             <b>견적서 {docFill.docNo}의 금액으로 시험 {docApplied}개를 채웠어요.</b>{" "}
-            견적서 PDF를 함께 보내려면 저장해 아래에 첨부하세요.{" "}
+            견적서 PDF는 저장한 뒤 아래에 첨부해 주세요.{" "}
             <Link href={docFill.printHref} style={{ color: "var(--brand)", fontWeight: 600 }}>PDF 저장</Link>{" · "}
             <Link href={docFill.href} style={{ color: "var(--brand)", fontWeight: 600 }}>견적서 고치기</Link>
           </span>
@@ -387,14 +387,14 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
       )}
       {docLink && (!docFill || docApplied === 0) && !readOnly && (
         <p className="lr-hint">
-          표준가와 추가 비용으로 견적서를 만들어 금액을 채울 수 있어요. <Link href={docLink.href} style={{ color: "var(--brand)", fontWeight: 600 }}>{docLink.label}</Link>
+          <Link href={docLink.href} style={{ color: "var(--brand)", fontWeight: 600 }}>{docLink.label}</Link>
         </p>
       )}
       {data.draft?.prefilled && !readOnly && (
         <div className="note lr-note">
           <span>
             <b>시험 목록으로 초안을 채웠어요.</b>{" "}
-            {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
+            {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출해 주세요.` : "금액·기간을 확인하고 제출해 주세요."}{" "}
             {catalogHref && <Link href={catalogHref} style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>}
           </span>
         </div>
@@ -474,7 +474,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
                 <div className="lr-item__more">
                   {checks.length > 0 && !readOnly && (
                     <div className="lr-item__check">
-                      <span>요청 조건이 등록한 기본 조건과 달라요. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
+                      <span>요청 조건이 등록한 기본 조건과 달라요. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 눌러 주세요.</span>
                       <button type="button" className="b2 bsm" disabled={busy} onClick={() => confirmChecks(r.seq)}>현재 금액과 기간으로 회신</button>
                     </div>
                   )}
@@ -527,7 +527,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
           </div>
           <div className="fld">
             <span className="fld__lab">기본 포함 항목</span>
-            <span className="fld__help">총액에 포함된 것만 선택하세요. 비교표의 핵심 행이에요.</span>
+            <span className="fld__help">총액에 포함된 것만 골라 주세요.</span>
             <div className="chips">
               {INCL_KEYS.map((k) => {
                 const on = common.includes.includes(k);
@@ -540,7 +540,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
           {orgCerts && (
             <div className="fld">
               <span className="fld__lab">보유 GLP 인증 (기관 정보에서 자동)</span>
-              <span style={{ fontSize: 14, color: "var(--body)" }}>{orgCerts.length ? orgCerts.join(" · ") : "등록된 인증이 없어요. 기관 탭에서 등록하세요."}</span>
+              <span style={{ fontSize: 14, color: "var(--body)" }}>{orgCerts.length ? orgCerts.join(" · ") : "등록된 인증이 없어요. 기관 탭에서 등록해 주세요."}</span>
             </div>
           )}
           <div className="fld">

@@ -20,7 +20,7 @@ export function CroHome({ orgName, items, awards, now }: { orgName: string; item
     soon.length ? `회신 마감이 ${Math.max(0, Math.min(...soon.map((i) => dday(i.replyBy).n)))}일 안으로 남은 요청이 ${soon.length}건 있어요.` : "",
     t.undecided ? `참여 결정을 기다리는 요청이 ${t.undecided}건이에요.` : "",
     awards.length ? `선정된 요청 ${awards.length}건은 계약 결과 보고를 기다리고 있어요.` : "",
-  ].filter(Boolean).join(" ") || (items.length ? "지금 회신할 요청은 없어요. 새 요청이 오면 알림으로 알려요." : "분야가 맞는 요청이 들어오면 참여 안내를 이메일과 알림으로 보내요.");
+  ].filter(Boolean).join(" ") || (items.length ? "지금 회신할 요청이 없어요." : "아직 받은 요청이 없어요.");
   const todoHref = todo?.kind === "invite" ? `/cro/r/${todo.item.id}` : "/cro/awards";
   const todoLabel = todo?.kind === "invite" ? actionLabel(todo.item) : todo ? "계약 결과 보고" : "";
 

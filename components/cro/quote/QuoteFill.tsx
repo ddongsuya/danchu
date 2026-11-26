@@ -199,7 +199,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
 
   if (step === "kind") {
     h = "어떤 견적서인가요?";
-    lead = "갈래에 따라 견적서의 칸과 금액 계산이 달라져요. 받은 요청에서 만들면 요청의 갈래와 의뢰자 원안이 그대로 들어와요.";
+    lead = "갈래에 따라 견적서의 칸과 금액 계산이 달라져요.";
     const count = (k: Kind) => catalog.filter((c) => kindOfCategory(c.category) === k).length;
     body = (
       <div className="qf__kinds" role="radiogroup" aria-label="견적서 갈래">
@@ -453,7 +453,7 @@ function TestsQ({ catalog, kind, rates, tests, readOnly, onChange }: { catalog: 
     return (
       <div className="qf__empty">
         <b>시험 목록에 담은 시험이 없어요</b>
-        <span>시험 목록에 조건과 표준가를 적어 두면 여기에서 고를 수 있어요. 아래에서 시험 이름을 직접 적어도 돼요.</span>
+        <span>아래에 시험 이름을 직접 적어도 돼요.</span>
         <Link className="b2 bsm" href="/cro/catalog">시험 목록 열기</Link>
         <Own value={own} setValue={setOwn} onAdd={(name) => onChange([...tests, blankTest(name, kind)])} disabled={readOnly} />
         {manual.length > 0 && <ManualList tests={manual} onRemove={(u) => onChange(tests.filter((t) => t.uid !== u))} />}

@@ -59,7 +59,7 @@ async function Invoices({ orgId, today }: { orgId: string; today: string }) {
     : { data: [], error: null };
   const list = (data ?? []) as Pick<BillingInvoiceRow, "id" | "invoice_no" | "month" | "total" | "due_date" | "status" | "paid_on">[];
   if (error) return <div className="note note--warn" role="alert">청구서를 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>;
-  if (!list.length) return <EmptyState title="아직 청구서가 없어요">청구서가 나오면 이메일과 알림으로 알려요.</EmptyState>;
+  if (!list.length) return <EmptyState title="아직 청구서가 없어요" />;
   return (
     <div className="card tbl-wrap">
       <table className="tbl tbl--stack">

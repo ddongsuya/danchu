@@ -69,7 +69,7 @@ export function CroStory({ got, replyHref, detail, qna, notices, main, side, sid
     { n: "2", t: summary ? (got.declined ? "불참했어요" : got.closed ? "참여하기 전에 닫혔어요" : "요약을 보고 참여를 정해요") : got.withdrawn ? "참여했다가 철회했어요" : "참여했어요", s: summary ? (got.closed && !got.declined ? "" : joinBy ? `참여 결정 기한 ${joinBy}` : "") : "요청서 전체가 열렸어요", state: summary && !ended ? "now" : "done" },
     { n: "3", t: submitted ? "회신을 다 썼어요" : summary ? "회신을 써요" : `회신 항목 ${p.total}개 중 ${p.done}개를 썼어요`, s: !summary && !submitted && p.left.length ? `남은 항목: ${p.left.slice(0, 3).join(", ")}${p.left.length > 3 ? ` 외 ${p.left.length - 3}개` : ""}` : "", state: submitted ? "done" : !summary && !ended ? "now" : "next" },
     { n: "4", t: submitted ? "견적을 제출했어요" : "회신 마감", s: `회신 기한 ${md(rfq.replyBy)}${got.closed ? "" : " · 지나면 이 요청에 회신할 수 없어요"}`, state: submitted ? "done" : "next" },
-    { n: "5", t: "의뢰자가 비교표를 보고 기관을 골라요", s: got.closedReason === "selected" ? "의뢰자가 기관을 골랐어요. 결과는 알림으로 확인하세요" : summary ? "" : "결과는 알림으로 알려요", state: got.closedReason === "selected" ? "done" : submitted && !got.closed ? "now" : "next" },
+    { n: "5", t: "의뢰자가 비교표를 보고 기관을 골라요", s: got.closedReason === "selected" ? "의뢰자가 기관을 골랐어요" : summary ? "" : "결과는 알림으로 알려요", state: got.closedReason === "selected" ? "done" : submitted && !got.closed ? "now" : "next" },
   ];
   // 제출한 뒤에는 "비교표 공개 기다림"이 지금 단계다. 닫힌 요청은 지금 단계가 없다
   if (ended) for (const s of steps) if (s.state === "now") s.state = "next";

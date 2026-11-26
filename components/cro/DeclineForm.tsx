@@ -10,13 +10,13 @@ import { useRouter } from "next/navigation";
  */
 const COPY = {
   decline: {
-    help: "사유는 단추 운영자에게만 전달돼요. 불참해도 다음 참여 안내에 영향이 없어요.",
+    help: "사유는 단추 운영자에게만 전달돼요.",
     placeholder: "예: 해당 시험 항목 미수행, 일정 불가, 시설 점검 중",
     submit: "불참으로 처리",
     operatorSubmit: "기관이 알린 불참 기록",
   },
   withdraw: {
-    help: "제출 전에는 언제든 철회할 수 있고, 철회하면 청구하지 않아요. 작성 중이던 내용은 의뢰자에게 보이지 않아요. 사유는 단추 운영자에게만 전달돼요.",
+    help: "작성 중이던 내용은 의뢰자에게 보이지 않아요. 사유는 단추 운영자에게만 전달돼요.",
     placeholder: "예: 일정 조정이 어려움, 요청 조건 확인 결과 수행 불가",
     submit: "참여 철회",
     operatorSubmit: "기관이 알린 철회 기록",

@@ -15,7 +15,7 @@ import { todaySeoul } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "단추 CRO",
-  description: "배포된 견적 요청을 확인하고 단추 표준 양식으로 회신해요.",
+  description: "받은 견적 요청을 확인하고 회신해요.",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추 CRO" },
   robots: { index: false, follow: false },
 };
