@@ -169,8 +169,8 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
     <div className="pb">
       <header className="pb__head">
         <div>
-          <span className="pb__crumb">{applyTox ? "효력시험, 독성시험 동물" : "효력시험"}</span>
           <h1>단가표</h1>
+          <p className="pb__crumb">{applyTox ? "효력시험, 독성시험 동물" : "효력시험"}</p>
         </div>
       </header>
 
