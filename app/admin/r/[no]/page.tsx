@@ -1,6 +1,4 @@
 import { mailMissing, stuckReasons } from "@/lib/stuck";
-import { funnel } from "@/lib/request-story";
-import { AdminStory } from "@/components/admin/AdminStory";
 import { needsCda, participation, participationLabel, seatState, seatsDetailLabel } from "@/lib/request-policy";
 import { CdaPanel } from "@/components/admin/CdaPanel";
 import Link from "next/link";
@@ -9,7 +7,7 @@ import { requireSession } from "@/lib/auth";
 import { getRfqByNo, getRfqDetail, listCroOrgs } from "@/lib/data";
 import { contractConfirmState, inviteStageLabel, statusLabel, statusTone } from "@/lib/status";
 import { proxyEntryAllowed } from "@/lib/concierge";
-import { Crumb, StatusPill } from "@/components/app/ui";
+import { StatusPill } from "@/components/app/ui";
 import { DistributePanel } from "@/components/admin/DistributePanel";
 import { AdminActions } from "@/components/admin/AdminActions";
 import { DeadlineForm } from "@/components/admin/DeadlineForm";
@@ -18,6 +16,9 @@ import { InviteActions } from "@/components/admin/InviteActions";
 import { RequestTerms } from "@/components/admin/RequestTerms";
 import { ContractRecord } from "@/components/admin/ContractRecord";
 import { DisputeResolve } from "@/components/admin/DisputeResolve";
+import { RequestFrame, requestTabOf } from "@/components/admin/RequestFrame";
+import { AdminSection } from "@/components/admin/Blocks";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { todaySeoul } from "@/lib/format";
 import { labelMap } from "@/lib/rfq-schema";
 import { quoteRowsFromPayload } from "@/lib/quote-items";
@@ -27,9 +28,10 @@ import { beforeDeadline, pendingInvites } from "@/lib/reply-window";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminRfq({ params }: { params: Promise<{ no: string }> }) {
+export default async function AdminRfq({ params, searchParams }: { params: Promise<{ no: string }>; searchParams: Promise<{ tab?: string }> }) {
   await requireSession("admin");
   const { no } = await params;
+  const tab = requestTabOf((await searchParams).tab);
   const rfq = await getRfqByNo(no);
   if (!rfq) notFound();
   const [d, orgs] = await Promise.all([getRfqDetail(rfq), listCroOrgs("approved")]);
@@ -49,209 +51,222 @@ export default async function AdminRfq({ params }: { params: Promise<{ no: strin
   const counts = participation(rfq.cro_count, d.invites);
   const joinBy = rfq.join_by ? new Date(rfq.join_by).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
   const canExtendJoin = !!joinBy && ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !rfq.selected_quote_id;
+  const cda = needsCda(rfq.confidentiality);
 
-  return (
+  const tags = (
     <>
-      <Crumb href="/admin" label="접수 현황" />
-      <AdminStory
-        no={rfq.rfq_no}
-        substance={rfq.substance}
-        company={rfq.company}
-        categories={rfq.categories}
-        status={rfq.status}
-        createdAt={rfq.created_at}
-        distributedAt={rfq.distributed_at}
-        replyBy={rfq.reply_by}
-        comparedAt={rfq.compared_at}
-        award={d.award ? { name: d.award.cro_name, at: d.award.awarded_at, reportedAt: d.award.contract_reported_at ?? null } : null}
-        f={funnel(d.invites)}
-        stuck={stuckReasons(rfq, d.invites, d.award, today)}
-      >
-        <div className="rs-aside">
-          <div className="rs-tags">
-            <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
-            <span className="tag">{rfq.purpose ?? "목적 미입력"}</span>
-            <span className="tag">{rfq.confidentiality ?? "일반"}</span>
-            <span className="tag">참여 자리 {rfq.cro_count ?? "-"}</span>
-            {Array.isArray(p.nominees) && p.nominees.length > 0 && <span className="tag">지명 {(p.nominees as string[]).join(", ")}</span>}
-            {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
-            {d.files.length > 0 && <span className="tag">첨부 {d.files.length}</span>}
-          </div>
-        </div>
-      </AdminStory>
+      <StatusPill tone={statusTone(rfq.status)}>{statusLabel(rfq.status, rfq.outcome)}</StatusPill>
+      <span className="tag">{rfq.purpose ?? "목적 미입력"}</span>
+      <span className="tag">{rfq.confidentiality ?? "일반"}</span>
+      <span className="tag">참여 자리 {rfq.cro_count ?? "-"}</span>
+      {Array.isArray(p.nominees) && p.nominees.length > 0 && <span className="tag">지명 {(p.nominees as string[]).join(", ")}</span>}
+      {rfq.submitted_step === 2 && <span className="tag">상세 입력</span>}
+      {d.files.length > 0 && <span className="tag">첨부 {d.files.length}</span>}
+    </>
+  );
 
-      <section className="rs-block" id="ops" aria-labelledby="ops-title">
-      <p className="rs-bk">운영 작업</p>
-      <h2 id="ops-title" className="rs-h2">안내, 기한, 기관별 회신</h2>
-      <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="stack" style={{ gap: 16 }}>
-          <div className="card card--pad">
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>참여 안내 추가{rfq.nominees_only && <span className="pill pill--warn" style={{ marginLeft: 8 }}>지명 기관에만 안내</span>}</h2>
-            {rfq.status === "cancelled" || rfq.status === "closed" ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>종료된 요청입니다.</p>
-            ) : (
-              <DistributePanel
-                no={rfq.rfq_no}
-                categories={rfq.categories}
-                defaultReplyBy={defaultReplyBy}
-                replyByLocked={!!rfq.reply_by}
-                nomineesOnly={!!rfq.nominees_only}
-                orgs={orgs.map((o) => ({ id: o.id, name: o.name, categories: o.categories, glp: o.glp_certs, email: o.contact_email, members: o.members, invited: invitedOrgIds.has(o.id), managed: !!o.managed }))}
-                today={today}
-                autoDistribute={rfq.auto_distribute !== false}
-              />
-            )}
-          </div>
+  const deadline = (
+    <>
+      {rfq.reply_by ? <span className="adm-line tnum">기한 {md(rfq.reply_by)}{rfq.compared_at ? <span className="pill pill--sf">회신 마감 {mdhm(rfq.compared_at)}</span> : rfq.reply_by < today ? <span className="pill pill--warn">지남</span> : null}</span> : null}
+      {canChangeDeadline && <DeadlineForm no={rfq.rfq_no} current={rfq.reply_by} min={rfq.distributed_at && rfq.reply_by && nextDay(rfq.reply_by) > today ? nextDay(rfq.reply_by) : today} />}
+    </>
+  );
 
-          <div className="card card--pad">
-            <div className="sec-title" style={{ margin: "0 0 10px" }}>
-              <h2>회신 현황 <span className="tnum">{participationLabel(counts)} · 제출 {counts.submitted} · 안내 {d.invites.length}</span></h2>
-              <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                {rfq.reply_by ? <span>{`기한 ${md(rfq.reply_by)}`}{rfq.compared_at ? <span className="pill pill--sf" style={{ marginLeft: 6 }}>회신 마감 {mdhm(rfq.compared_at)}</span> : rfq.reply_by < today ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>지남</span> : null}</span> : null}
-                {canChangeDeadline && <DeadlineForm no={rfq.rfq_no} current={rfq.reply_by} min={rfq.distributed_at && rfq.reply_by && nextDay(rfq.reply_by) > today ? nextDay(rfq.reply_by) : today} />}
-              </span>
-            </div>
-            {joinBy && (
-              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13, color: "var(--muted)", marginBottom: 10 }}>
-                <span className="tnum">참여 결정 기한 {md(joinBy)}{rfq.join_by && new Date(rfq.join_by).getTime() < Date.now() ? " · 지남" : ""} · {seatsDetailLabel(seats)}</span>
-                {canExtendJoin && <JoinByForm no={rfq.rfq_no} current={joinBy} min={today} max={rfq.reply_by} extended={!!rfq.join_by_extended_at} />}
-              </div>
-            )}
-            {d.invites.length === 0 ? (
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>아직 참여 안내를 보내지 않았습니다.</p>
-            ) : (
-              <div className="tbl-wrap">
-                {/* 휴대폰 폭에서는 행을 카드처럼 세운다 (tbl--stack, 칸 이름은 data-label) */}
-                <table className="tbl tbl--stack">
-                  <thead>
-                    <tr><th>기관</th><th>상태</th><th>참여</th><th>열람</th><th>총액 · 기간</th><th>링크</th></tr>
-                  </thead>
-                  <tbody>
-                    {d.invites.map((i) => {
-                      const q = d.quotes.find((x) => x.invite_id === i.id);
-                      return (
-                        <tr key={i.id}>
-                          <td>
-                            <div style={{ fontWeight: 600 }}>{i.cro_name}</div>
-                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{i.cro_email} · 기한 {i.reply_by}{mailMissing(i) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</div>
-                          </td>
-                          <td data-label="상태">
-                            <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{inviteStageLabel(i)}</span>{i.source === "nominated" && <span className="pill pill--tint" style={{ marginLeft: 6 }}>지명</span>}{q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf" style={{ marginLeft: 6 }}>대리 입력</span>}
-                            {i.decline_reason && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>{i.decline_reason}</div>}
-                          </td>
-                          <td data-label="참여" className="tnum" style={{ fontSize: 12 }} title={i.join_terms_version ? `조건 판 ${i.join_terms_version}` : undefined}>{joinCell(i)}</td>
-                          <td data-label="열람" className="tnum" style={{ fontSize: 12 }}>{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
-                          <td data-label="총액 · 기간" className="tnum">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
-                          <td data-label="링크">
-                            {proxyEntryAllowed(i) ? (
-                              <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }} title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
-                            ) : i.revoked_at ? (
-                              <span style={{ fontSize: 12, color: "var(--muted)" }}>취소됨</span>
-                            ) : (
-                              // 참여 전에는 회신 링크(토큰)를 내보내지 않는다. 운영자 전용 요약 화면으로 연다 (운영자는 대신 참여할 수 없다)
-                              <Link href={`/admin/r/${rfq.rfq_no}/offer/${i.id}`} style={{ fontSize: 12 }} title="기관이 참여하기 전이라 요약만 보입니다. 운영자는 대신 참여하거나 견적을 입력할 수 없습니다. 기관에 링크를 다시 보내려면 메일 재발송을 쓰세요.">요약 보기</Link>
-                            )}
-                            {["sent", "draft", "submitted"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} canCancel={i.status !== "submitted" && (!!rfq.compared_at || (!i.joined_at && i.status !== "draft"))} /></div>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div className="card card--pad">
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>진행 관리</h2>
-            {needsCda(rfq.confidentiality) && <CdaPanel no={rfq.rfq_no} invites={d.invites.map((i) => ({ id: i.id, cro_name: i.cro_name, cda_signed_at: i.cda_signed_at }))} />}
-            {!done && <div style={{ marginBottom: 12 }}><RequestTerms no={rfq.rfq_no} croCount={rfq.cro_count} confidentiality={rfq.confidentiality} /></div>}
-            <AdminActions
-              no={rfq.rfq_no}
-              status={rfq.status}
-              submitted={submitted.length}
-              pending={pendingInvites(d.invites)}
-              early={beforeDeadline(rfq.reply_by)}
-              closed={!!rfq.compared_at}
-              note={rfq.admin_note ?? ""}
-              award={d.award ? { cro: d.award.cro_name, at: ymd(d.award.awarded_at), contract: d.award.contract_reported_at ? `${d.award.contract_date} · ${won(d.award.contract_amount ?? 0)}` : "" } : null}
-            />
-            {d.award && (
-              <div style={{ marginTop: 12 }}>
-                <ContractRecord awardId={d.award.id} status={d.award.contract_status} reported={!!d.award.contract_reported_at} today={today} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} note={d.award.contract_note} quoteAmount={d.award.fee_basis_amount ?? d.quotes.find((x) => x.id === d.award!.quote_id)?.total_amount ?? null} />
-                {d.award.contract_reported_at && (() => {
-                  // 계약 확인 (2026-10-20 결정 2, 0025): 의뢰자 확인·이의·7일 뒤 자동 확정
-                  const cs = contractConfirmState(d.award);
-                  return cs ? <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", overflowWrap: "anywhere" }}>계약 확인 · <b style={{ fontWeight: 600, color: cs.tone === "warn" ? "var(--warn)" : cs.tone === "ok" ? "var(--ok)" : "var(--ink)" }}>{cs.label}</b></p> : null;
-                })()}
-                {d.award.requester_disputed_at && !d.award.dispute_resolved_at && !d.award.contract_confirmed_at ? <div style={{ marginTop: 10 }}><DisputeResolve awardId={d.award.id} /></div> : null}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="stack" style={{ gap: 16 }}>
-          <div className="card card--rows">
-            <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>의뢰자</div>
-            {[["회사", rfq.company], ["담당자", `${rfq.contact_name}${p.dept ? ` · ${p.dept}` : ""}`], ["이메일", rfq.email], ["전화", rfq.phone ?? "-"], ["기관 유형", rfq.org_type ?? "-"], ["계정", rfq.user_id ? "연결됨" : "미가입"]].map(([k, v]) => (
-              <div key={k} className="kv"><span className="kv__k">{k}</span><span className="kv__v">{v}</span></div>
-            ))}
-          </div>
-
-          <div className="card card--pad">
-            <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>회신 표 행 {rows.length}</h2>
-            <div className="stack" style={{ gap: 6 }}>
-              {rows.map((r) => (
-                <div key={r.seq} style={{ padding: "8px 12px", background: "var(--sf)", borderRadius: 10, fontSize: 13 }}>
-                  <b style={{ fontWeight: 600 }}>{r.name}</b> <span style={{ color: "var(--brand)" }}>{r.category}</span>
-                  {r.cond && <div style={{ color: "var(--muted)" }}>{r.cond}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {d.files.length > 0 && (
-            <div className="card card--rows">
-              <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>첨부</div>
-              {d.files.map((f) => (
-                <div key={f.id} className="kv"><a href={`/api/files/${f.id}`}>{f.file_name}{!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}</a><span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span></div>
-              ))}
+  const replies = (
+    <div className="adm-split">
+      <div className="adm-col">
+        <AdminSection id="replies" title="회신 현황" count={`${participationLabel(counts)} · 제출 ${counts.submitted} · 안내 ${d.invites.length}`} actions={deadline}>
+          {joinBy && (
+            <div className="adm-line adm-sec__sub">
+              <span className="tnum">참여 결정 기한 {md(joinBy)}{rfq.join_by && new Date(rfq.join_by).getTime() < Date.now() ? " · 지남" : ""} · {seatsDetailLabel(seats)}</span>
+              {canExtendJoin && <JoinByForm no={rfq.rfq_no} current={joinBy} min={today} max={rfq.reply_by} extended={!!rfq.join_by_extended_at} />}
             </div>
           )}
-
-          <details className="card" style={{ padding: "0 18px" }}>
-            <summary style={{ padding: "14px 0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>입력한 전체 항목</summary>
-            <div className="card--rows" style={{ padding: "0 0 8px" }}>
-              {Object.entries(labels)
-                .filter(([id]) => { const v = p[id]; return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v; })
-                .map(([id, label]) => (
-                  <div key={id} className="kv" style={{ fontSize: 13 }}>
-                    <span className="kv__k">{label}</span>
-                    <span className="kv__v" style={{ fontWeight: 500 }}>{Array.isArray(p[id]) ? (p[id] as string[]).join(", ") : String(p[id])}</span>
-                  </div>
-                ))}
+          {d.invites.length === 0 ? (
+            <EmptyState title="아직 참여 안내를 보내지 않았습니다" action={done ? undefined : <Link href={`/admin/r/${rfq.rfq_no}?tab=dist`} className="b2 bsm">참여 안내 추가</Link>}>분야가 맞는 기관을 골라 안내를 보내면 기관별 회신이 여기에 쌓입니다.</EmptyState>
+          ) : (
+            <div className="card tbl-wrap">
+              {/* 휴대폰 폭에서는 행을 카드처럼 세운다 (tbl--stack, 칸 이름은 data-label) */}
+              <table className="tbl tbl--stack">
+                <thead>
+                  <tr><th>기관</th><th>상태</th><th>참여</th><th>열람</th><th className="num">총액 · 기간</th><th>링크</th></tr>
+                </thead>
+                <tbody>
+                  {d.invites.map((i) => {
+                    const q = d.quotes.find((x) => x.invite_id === i.id);
+                    return (
+                      <tr key={i.id}>
+                        <td>
+                          <span className="strong">{i.cro_name}</span>
+                          <span className="sub">{i.cro_email} · 기한 {i.reply_by}{mailMissing(i) ? <span className="pill pill--warn" style={{ marginLeft: 6 }}>메일 미발송</span> : null}</span>
+                        </td>
+                        <td data-label="상태">
+                          <span className="adm-tags adm-tags--cell">
+                            <span className={`pill ${i.status === "submitted" ? "pill--ok" : i.status === "declined" ? "pill--err" : i.status === "draft" ? "pill--warn" : "pill--sf"}`}>{inviteStageLabel(i)}</span>
+                            {i.source === "nominated" && <span className="pill pill--tint">지명</span>}
+                            {q?.status === "submitted" && q.entry_source === "operator" && <span className="pill pill--sf">대리 입력</span>}
+                          </span>
+                          {i.decline_reason && <span className="sub">{i.decline_reason}</span>}
+                        </td>
+                        <td data-label="참여" className="tnum adm-small" title={i.join_terms_version ? `조건 판 ${i.join_terms_version}` : undefined}>{joinCell(i)}</td>
+                        <td data-label="열람" className="tnum adm-small">{i.opened_at ? mdhm(i.opened_at) : "-"}</td>
+                        <td data-label="총액 · 기간" className="num">{q?.status === "submitted" ? `${won(q.total_amount ?? 0)} · ${q.total_weeks ?? "-"}주` : "-"}{q?.pdf_path && <> · <a href={`/api/quotes/${q.id}/pdf`}>PDF</a></>}</td>
+                        <td data-label="링크" className="adm-small">
+                          {proxyEntryAllowed(i) ? (
+                            <a href={`/q/${i.token}`} target="_blank" rel="noopener noreferrer" title="기관이 보낸 견적서 PDF를 대신 입력합니다. 운영자가 연 것은 기관 열람으로 기록되지 않습니다.">{managedIds.has(i.cro_org_id ?? "") ? "대리 입력" : "회신 링크"}</a>
+                          ) : i.revoked_at ? (
+                            <span className="sub">취소됨</span>
+                          ) : (
+                            // 참여 전에는 회신 링크(토큰)를 내보내지 않는다. 운영자 전용 요약 화면으로 연다 (운영자는 대신 참여할 수 없다)
+                            <Link href={`/admin/r/${rfq.rfq_no}/offer/${i.id}`} title="기관이 참여하기 전이라 요약만 보입니다. 운영자는 대신 참여하거나 견적을 입력할 수 없습니다. 기관에 링크를 다시 보내려면 메일 재발송을 쓰세요.">요약 보기</Link>
+                          )}
+                          {["sent", "draft", "submitted"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} canCancel={i.status !== "submitted" && (!!rfq.compared_at || (!i.joined_at && i.status !== "draft"))} /></div>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </details>
+          )}
+        </AdminSection>
+      </div>
 
-          <div className="card card--pad">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700 }}>이력</h2>
-              <Link href={`/admin/r/${rfq.rfq_no}/qna`} style={{ fontSize: 13 }}>질의응답 기록</Link>
+      <div className="adm-col">
+        <section className="card adm-box" aria-labelledby="manage-h">
+          <h2 id="manage-h" className="adm-box__h">진행 관리</h2>
+          {!done && <RequestTerms no={rfq.rfq_no} croCount={rfq.cro_count} confidentiality={rfq.confidentiality} />}
+          <AdminActions
+            no={rfq.rfq_no}
+            status={rfq.status}
+            submitted={submitted.length}
+            pending={pendingInvites(d.invites)}
+            early={beforeDeadline(rfq.reply_by)}
+            closed={!!rfq.compared_at}
+            note={rfq.admin_note ?? ""}
+            award={d.award ? { cro: d.award.cro_name, at: ymd(d.award.awarded_at), contract: d.award.contract_reported_at ? `${d.award.contract_date} · ${won(d.award.contract_amount ?? 0)}` : "" } : null}
+          />
+        </section>
+
+        <div className="card card--rows">
+          <div className="adm-cap">의뢰자</div>
+          {[["회사", rfq.company], ["담당자", `${rfq.contact_name}${p.dept ? ` · ${p.dept}` : ""}`], ["이메일", rfq.email], ["전화", rfq.phone ?? "-"], ["기관 유형", rfq.org_type ?? "-"], ["계정", rfq.user_id ? "연결됨" : "미가입"]].map(([k, v]) => (
+            <div key={k} className="kv"><span className="kv__k">{k}</span><span className="kv__v">{v}</span></div>
+          ))}
+        </div>
+
+        <div className="card card--rows">
+          <div className="adm-cap">회신 표 행 <span className="tnum">{rows.length}</span></div>
+          {rows.map((r) => (
+            <div key={r.seq} className="adm-row">
+              <b>{r.name}</b> <span className="adm-row__cat">{r.category}</span>
+              {r.cond && <span className="sub">{r.cond}</span>}
             </div>
-            <div className="stack" style={{ gap: 8 }}>
-              {d.events.length === 0 && <span style={{ fontSize: 13, color: "var(--muted)" }}>없음</span>}
-              {[...d.events].reverse().map((e) => (
-                <div key={e.id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
-                  <span><b style={{ fontWeight: 600 }}>{e.title}</b>{e.body ? <span style={{ color: "var(--muted)" }}> · {e.body}</span> : null}</span>
-                  <span className="tnum" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{mdhm(e.created_at)}</span>
+          ))}
+        </div>
+
+        {d.files.length > 0 && (
+          <div className="card card--rows">
+            <div className="adm-cap">첨부</div>
+            {d.files.map((f) => (
+              <div key={f.id} className="kv"><a href={`/api/files/${f.id}`}>{f.file_name}{!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}</a><span className="tnum adm-small">{(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span></div>
+            ))}
+          </div>
+        )}
+
+        <details className="card adm-more">
+          <summary>입력한 전체 항목</summary>
+          <div className="card--rows adm-more__rows">
+            {Object.entries(labels)
+              .filter(([id]) => { const v = p[id]; return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v; })
+              .map(([id, label]) => (
+                <div key={id} className="kv adm-small">
+                  <span className="kv__k">{label}</span>
+                  <span className="kv__v" style={{ fontWeight: 500 }}>{Array.isArray(p[id]) ? (p[id] as string[]).join(", ") : String(p[id])}</span>
                 </div>
               ))}
-            </div>
           </div>
+        </details>
+      </div>
+    </div>
+  );
+
+  const distribute = (
+    <section className="card adm-box" aria-labelledby="dist-h">
+      <h2 id="dist-h" className="adm-box__h"><span>참여 안내 추가{rfq.nominees_only && <span className="pill pill--warn" style={{ marginLeft: 8 }}>지명 기관에만 안내</span>}</span></h2>
+      {done ? (
+        <p className="adm-box__p">종료된 요청입니다.</p>
+      ) : (
+        <DistributePanel
+          no={rfq.rfq_no}
+          categories={rfq.categories}
+          defaultReplyBy={defaultReplyBy}
+          replyByLocked={!!rfq.reply_by}
+          nomineesOnly={!!rfq.nominees_only}
+          orgs={orgs.map((o) => ({ id: o.id, name: o.name, categories: o.categories, glp: o.glp_certs, email: o.contact_email, members: o.members, invited: invitedOrgIds.has(o.id), managed: !!o.managed }))}
+          today={today}
+          autoDistribute={rfq.auto_distribute !== false}
+        />
+      )}
+    </section>
+  );
+
+  const award = d.award;
+  const contract = !award ? (
+    <EmptyState title="선택한 기관이 없습니다">의뢰자가 비교표에서 기관을 선택하면 계약 결과를 여기에 기록합니다.</EmptyState>
+  ) : (
+    <div className="adm-split">
+      <div className="adm-col">
+        <AdminSection id="contract" title="계약 기록">
+          <ContractRecord awardId={award.id} status={award.contract_status} reported={!!award.contract_reported_at} today={today} minDate={new Date(award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} note={award.contract_note} quoteAmount={award.fee_basis_amount ?? d.quotes.find((x) => x.id === award.quote_id)?.total_amount ?? null} />
+          {award.requester_disputed_at && !award.dispute_resolved_at && !award.contract_confirmed_at ? <div style={{ marginTop: 12 }}><DisputeResolve awardId={award.id} /></div> : null}
+        </AdminSection>
+      </div>
+      <div className="adm-col">
+        <div className="card card--rows">
+          <div className="adm-cap">선정</div>
+          {(() => {
+            // 계약 확인 (2026-10-20 결정 2, 0025): 의뢰자 확인·이의·7일 뒤 자동 확정
+            const cs = award.contract_reported_at ? contractConfirmState(award) : null;
+            return [
+              ["선정 기관", award.cro_name],
+              ["선정일", ymd(award.awarded_at)],
+              ["계약 보고", award.contract_reported_at ? `${award.contract_date} · ${won(award.contract_amount ?? 0)}` : "없음"],
+              ...(cs ? [["계약 확인", cs.label]] : []),
+            ].map(([k, v]) => <div key={k} className="kv"><span className="kv__k">{k}</span><span className="kv__v tnum">{v}</span></div>);
+          })()}
         </div>
       </div>
-      </section>
-    </>
+    </div>
+  );
+
+  const history = (
+    <AdminSection id="history" title="이력" count={d.events.length} actions={<Link href={`/admin/r/${rfq.rfq_no}/qna`} className="b2 bsm">질의응답 기록</Link>}>
+      {d.events.length === 0 ? (
+        <EmptyState title="기록이 없습니다">요청 접수, 안내, 기한 변경 같은 일이 생기면 여기에 쌓입니다.</EmptyState>
+      ) : (
+        <div className="card card--rows adm-events">
+          {[...d.events].reverse().map((e) => (
+            <div key={e.id}>
+              <time dateTime={e.created_at}>{mdhm(e.created_at)}</time>
+              <span><b>{e.title}</b>{e.body ? <span> · {e.body}</span> : null}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </AdminSection>
+  );
+
+  const body = tab === "dist" ? distribute
+    : tab === "cda" && cda ? <CdaPanel no={rfq.rfq_no} invites={d.invites.map((i) => ({ id: i.id, cro_name: i.cro_name, cda_signed_at: i.cda_signed_at }))} />
+    : tab === "contract" ? contract
+    : tab === "hist" ? history
+    : replies;
+
+  return (
+    <RequestFrame no={rfq.rfq_no} substance={rfq.substance} company={rfq.company} createdAt={rfq.created_at} tags={tags} stuck={stuckReasons(rfq, d.invites, d.award, today)} tab={tab === "cda" && !cda ? "" : tab} showCda={cda}>
+      {body}
+    </RequestFrame>
   );
 }
 
