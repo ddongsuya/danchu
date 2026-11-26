@@ -14,8 +14,8 @@ export function PortalError({ error, retry }: { error: Error & { digest?: string
     Sentry.captureException(error, { tags: { where: "portal-error-boundary" } });
   }, [error]);
   return (
-    <ErrorState title="화면을 불러오지 못했습니다" code={error.digest} onRetry={retry}>
-      저장한 내용은 그대로 있습니다. 다시 시도해도 같으면 support@danchu.kr로 알려 주세요.
+    <ErrorState title="화면을 불러오지 못했어요" code={error.digest} onRetry={retry}>
+      다시 시도해도 같으면 support@danchu.kr로 알려 주세요.
     </ErrorState>
   );
 }

@@ -29,7 +29,7 @@ export default async function SelectCro({ params, searchParams }: { params: Prom
     return (
       <>
         <Crumb href={`/app/r/${rfq.rfq_no}`} label={rfq.rfq_no} />
-        <div className="note note--ok">이미 CRO를 선택한 요청이에요. 진행 상태는 요청 상세에서 확인하세요.</div>
+        <div className="note note--ok">이미 CRO를 선택한 요청이에요.</div>
       </>
     );
   }

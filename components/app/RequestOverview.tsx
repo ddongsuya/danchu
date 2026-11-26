@@ -51,7 +51,7 @@ export function RequestOverview({ name, list, today, query: initial }: { name: s
           <div>
             <p className="rs-k">{name} 님의 견적 요청</p>
             {list.length === 0 ? (
-              <h1 id="home-title" className="tlh__h1">첫 견적 요청을 보내 보세요</h1>
+              <h1 id="home-title" className="tlh__h1">아직 견적 요청이 없어요</h1>
             ) : c.todo + c.due === 0 ? (
               <h1 id="home-title" className="tlh__h1">{c.open ? `보고서 ${c.open}건 열림` : active.length ? `진행 중 ${active.length}건` : `끝난 요청 ${list.length}건`}</h1>
             ) : (

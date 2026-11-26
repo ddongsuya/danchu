@@ -38,8 +38,8 @@ export const LONG_ACTION_TIMEOUT_MS = 30_000;
  */
 export function failureText(e: unknown, fallback: string): string {
   const name = e instanceof Error || (typeof DOMException !== "undefined" && e instanceof DOMException) ? (e as Error).name : "";
-  if (name === "TimeoutError") return "응답이 30초 넘게 없어 멈췄습니다. 잠시 뒤 다시 시도하세요.";
-  if (name === "TypeError") return "서버에 연결하지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요.";
+  if (name === "TimeoutError") return "응답이 30초 넘게 없어 멈췄어요. 잠시 뒤 다시 시도해 주세요.";
+  if (name === "TypeError") return "서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.";
   if (e instanceof Error && e.message) return e.message;
   return fallback;
 }

@@ -41,8 +41,8 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
       )}
       {list.length === 0 ? (
         kind
-          ? <EmptyState kind="filtered" title={`${kind} 알림이 없습니다`} clearHref={href("", 1)}>다른 종류를 고르거나 필터를 지우세요.</EmptyState>
-          : <EmptyState title="알림이 없습니다">견적 도착, 회신 마감, 계약 진행 소식이 여기에 쌓입니다.</EmptyState>
+          ? <EmptyState kind="filtered" title={`${kind} 알림 없음`} clearHref={href("", 1)} />
+          : <EmptyState title="알림 없음" />
       ) : (
         <div className="stack" style={{ gap: 8 }}>
           {list.map((n) => {

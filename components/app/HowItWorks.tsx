@@ -9,7 +9,7 @@ type Step = { t: string; s: string; href?: string; go?: string };
  */
 const STEPS: Record<"requester" | "cro" | "admin", { title: string; steps: Step[] }> = {
   requester: {
-    title: "견적 요청은 이렇게 진행돼요",
+    title: "견적 요청 진행 순서",
     steps: [
       { t: "요청서 쓰기", s: "독성·효력·약동학·개별 분석 중 하나를 고르고 물질과 시험 항목, 희망 일정을 적어요.", href: "/app/new", go: "새 견적 요청" },
       { t: "기관에 참여 안내", s: "분야가 맞는 기관에 요청 요약이 가요. 회사명과 연락처는 기관을 선택하기 전까지 가려져요." },
@@ -19,7 +19,7 @@ const STEPS: Record<"requester" | "cro" | "admin", { title: string; steps: Step[
     ],
   },
   cro: {
-    title: "요청 회신은 이렇게 진행돼요",
+    title: "요청 회신 진행 순서",
     steps: [
       { t: "참여 안내 받기", s: "분야가 맞는 요청이 오면 이메일과 알림으로 알려요. 의뢰자 회사명과 연락처는 선정 전까지 가려져요." },
       { t: "참여 정하기", s: "요청 요약을 보고 참여를 누르면 시험물질명, 의뢰자 설명, 첨부가 열려요." },
@@ -29,7 +29,7 @@ const STEPS: Record<"requester" | "cro" | "admin", { title: string; steps: Step[
     ],
   },
   admin: {
-    title: "운영은 이렇게 돌아가요",
+    title: "운영 순서",
     steps: [
       { t: "접수", s: "첨부 업로드가 끝난 요청은 분야가 맞는 기관에 참여 안내가 자동으로 나가요." },
       { t: "사람 손이 필요한 요청", s: "맞는 기관이 없거나, 참여 기관이 없거나, 기한이 지난 요청은 이 화면의 지금 할 일에 모여요. 요청 화면에서 기관을 고르거나 기한을 늘려요." },

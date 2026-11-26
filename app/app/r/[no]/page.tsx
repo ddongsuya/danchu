@@ -291,7 +291,7 @@ export default async function RequestDetail({ params, searchParams }: { params: 
 
       {canCompare && !d.award && (
         <DockAfter watch=".rq-banner__a">
-          <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">비교 보고서 받아보기</Link>
+          <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">비교 보고서 보기</Link>
         </DockAfter>
       )}
     </>

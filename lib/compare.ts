@@ -133,7 +133,7 @@ export async function announceCompareOpened(rfqIn: RfqRow | string, reason: Comp
     {
       kind: "비교",
       title: `비교표가 열렸어요 · ${r.rfq_no}`,
-      body: `${lead} 견적 ${count}건${pending ? ` · ${pending}곳 미제출` : ""}. 이제 기관 이름과 금액을 나란히 보고 기관을 선택할 수 있어요. 견적은 더 바뀌지 않아요.`,
+      body: `${lead} 견적 ${count}건${pending ? ` · ${pending}곳 미제출` : ""}. 견적은 더 바뀌지 않아요.`,
       href: `/app/r/${r.rfq_no}/compare`,
     },
     { to: [r.email], subject: `[단추] ${r.rfq_no} 비교표가 열렸어요 · 견적 ${count}건` },

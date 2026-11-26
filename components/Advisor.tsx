@@ -104,7 +104,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
           <div>
             <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>가이드라인 찾아보기</p>
             <h1 ref={heading} tabIndex={-1} style={{ textWrap: "balance", scrollMarginTop: 24 }}>답하신 상황에 해당하는 시험이에요</h1>
-            <p>가이드라인 근거를 함께 확인하세요. 체크를 풀어 빼거나, 다음 단계에서 더할 수 있어요.</p>
+            <p>체크를 풀어 빼거나, 다음 단계에서 더할 수 있어요.</p>
           </div>
         </div>
 
@@ -141,7 +141,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.notes.length > 0 && (
             <section className="dcard">
-              {sec(`확인할 점 ${advice.notes.length}`, "분야를 눌러 펼쳐 보세요.")}
+              {sec(`확인할 점 ${advice.notes.length}`)}
               {[...new Set(advice.notes.map((n) => n.topic ?? "기타"))].map((topic, i) => {
                 const list = advice.notes.filter((n) => (n.topic ?? "기타") === topic);
                 return (
@@ -160,7 +160,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.prereq.length > 0 && (
             <section className="dcard">
-              {sec("일정상 먼저 끝나야 하는 것", "독성시험 착수일을 잡을 때 이 기간을 함께 보세요.")}
+              {sec("일정상 먼저 끝나야 하는 것")}
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4, fontSize: 14, color: "var(--body)" }}>
                 {advice.prereq.map((x) => <li key={x}>{x}</li>)}
               </ul>
@@ -169,7 +169,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
 
           {advice.askCro.length > 0 && (
             <section className="dcard">
-              {sec("기관마다 다른 부분", "가이드라인이 정하지 않아 기관의 방식이 서로 달라요. 단추가 기준을 정하지 않고, 기관에 설명을 요청해 비교표에 나란히 보여요.")}
+              {sec("기관마다 다른 부분", "가이드라인이 정하지 않아 기관마다 방식이 달라요. 비교표에 기관별 설명을 나란히 보여요.")}
               <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4, fontSize: 14, color: "var(--body)" }}>
                 {advice.askCro.map((x) => <li key={x}>{x}</li>)}
               </ul>
@@ -212,7 +212,7 @@ export function Advisor({ onApply, onManual }: { onApply: (v: Values) => void; o
       <span className="tnum">{STEP_TITLES[current.step - 1]} · {index + 1} / {qs.length}</span>
     </div>
     <div className="advisor__progress" aria-hidden="true"><div style={{ transform: `scaleX(${done.filter((id) => qs.some((q) => q.id === id)).length / qs.length})` }} /></div>
-    <div className="ph"><div><h1>필요한 시험 찾기</h1><p>한 질문씩 답해 주세요. 이전 답변은 언제든 수정할 수 있어요.</p></div></div>
+    <div className="ph"><div><h1>필요한 시험 찾기</h1><p>이전 답변은 언제든 고칠 수 있어요.</p></div></div>
     {summary(previous)}
     <section key={current.id} className="dcard advisor__question" role="group" aria-labelledby="advisor-question">
       <div>
