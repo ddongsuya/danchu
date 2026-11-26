@@ -83,3 +83,20 @@ function croStoryJoined(now: number) {
     joined: true, withdrawn: false, canRejoin: false, operator: false, seats: null, joinBy: null,
   };
 }
+
+/** 견적 회신 화면 미리보기 (/design-preview?view=reply). 요청 화면 예시와 같은 요청, 일부 항목은 작성 중 */
+export function replyFixture(now: number) {
+  const base = croStoryJoined(now);
+  const rows = base.rfq.rows.map((r) => ({ cond: "", ...r }));
+  const items = base.draft.items.map((it) => ({
+    ...it,
+    avail: (it.seq === 5 ? "조건부 가능" : it.avail) as "" | "가능" | "조건부 가능",
+    amount: it.seq === 5 ? "6000000" : it.amount,
+    weeks: it.seq === 5 ? "6" : it.weeks,
+    reason: "",
+    source: it.seq === 2 ? ("catalog" as const) : undefined,
+    checks: it.seq === 2 ? ["회복 4주"] : [],
+  }));
+  const common = { validUntil: "", startDate: "", payTerms: "", substanceQty: "", reportLang: "국문", includes: ["임상병리", "조직병리(검경 포함)"] };
+  return { rfq: { ...base.rfq, rows }, draft: { items, note: "", pdfName: "", status: "draft" as const, common, steps: [] } };
+}

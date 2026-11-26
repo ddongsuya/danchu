@@ -15,6 +15,7 @@ import { EfficacyCosts } from "@/components/cro/EfficacyCosts";
 import { PayScheduleField } from "@/components/cro/PayScheduleField";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { EFFICACY_CAT } from "@/lib/efficacy";
+import "./layout-request.css";
 
 const AVAILS: ReplyItem["avail"][] = ["가능", "조건부 가능", "불가"];
 const MAX_PDF = 20 * 1024 * 1024;
@@ -112,7 +113,7 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
   );
 }
 
-type Loaded = {
+export type ReplyLoaded = {
   rfq: RfqView;
   draft: { items: ReplyItem[]; note: string; pdfName: string; status: string; common: ReplyCommon; prefilled?: boolean; steps?: ScheduleStep[] } | null;
   expired?: boolean;
@@ -135,10 +136,10 @@ type Loaded = {
 /** auto: ?doc= 없이 이 요청의 최근 견적서로 채운 것. 기관이 이미 저장한 회신 초안이 있으면 덮어쓰지 않는다 */
 export type DocFill = { docNo: string; href: string; printHref: string; auto?: boolean; lines: { seq: number; amount: number; weeks: number | null; extra?: Record<string, string | string[]> }[] };
 
-/** catalogHref: 시험 목록 링크. null 이면 그 요금제에 시험 목록이 없어 링크를 두지 않는다 */
-export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink, catalogHref = "/cro/catalog" }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string }; catalogHref?: string | null }) {
+/** catalogHref: 시험 목록 링크. null 이면 그 요금제에 시험 목록이 없어 링크를 두지 않는다. preview: 검토 화면(/design-preview)용 예시 데이터. 주면 불러오지 않는다 */
+export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLink, catalogHref = "/cro/catalog", preview }: { token: string; backHref: string; doneHref: string; orgCerts?: string[]; docFill?: DocFill; docLink?: { href: string; label: string }; catalogHref?: string | null; preview?: ReplyLoaded }) {
   const router = useRouter();
-  const [data, setData] = useState<Loaded | null>(null);
+  const [data, setData] = useState<ReplyLoaded | null>(null);
   const [items, setItems] = useState<ReplyItem[]>([]);
   const [common, setCommon] = useState<ReplyCommon>(EMPTY_COMMON);
   const [note, setNote] = useState("");
@@ -157,9 +158,8 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
   const saveAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    fetch(`/api/quote/${token}`)
-      .then((r) => r.json())
-      .then((d: Loaded & { error?: string }) => {
+    (preview ? Promise.resolve(preview) : fetch(`/api/quote/${token}`).then((r) => r.json()))
+      .then((d: ReplyLoaded & { error?: string }) => {
         if (d.error) throw new Error(d.error);
         if (d.joined === false) {
           // 참여 전 요약에는 회신 표를 채울 내용이 없다. 요청 화면으로 돌려보내 참여를 먼저 결정하게 한다
@@ -175,7 +175,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         if (d.draft && !d.draft.prefilled) setSaved("saved");
       })
       .catch((e) => setError(e instanceof Error ? e.message : "불러오지 못했어요."));
-  }, [token, backHref, router]);
+  }, [token, backHref, router, preview]);
 
   // 견적서에서 "회신 보내기"로 왔으면 시험별 금액·기간을 한 번 채운다 (요청 행 번호가 같은 시험만)
   const filledFromDoc = useRef(false);
@@ -354,27 +354,29 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
   };
 
   const savedLabel = isSubmitted && dirty ? "수정 내용 미제출" : saved === "saving" ? "저장 중…" : saved === "saved" ? (isSubmitted ? "제출본" : "초안 저장됨") : saved === "failed" ? "저장 실패" : "";
+  const periodLabel = plan.finalWeek != null ? `최종보고서 ${plan.finalReportWeek ?? plan.finalWeek}주차` : maxW ? `${maxW}주` : "기간 미입력";
 
   return (
-    <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <Link href={backHref} onClick={leave} className="crumb" style={{ margin: 0 }}>
-          <Caret size={14} /> 요청서
-        </Link>
-        <span role="status" style={{ fontSize: 12, fontWeight: 600, color: saved === "saved" ? "var(--ok)" : saved === "failed" ? "var(--err)" : "var(--muted)" }}>{readOnly ? "" : savedLabel}</span>
-      </div>
-      {saved === "failed" && !readOnly && !isSubmitted && <div className="note note--err"><span>초안을 저장하지 못했어요. 화면을 닫기 전에 다시 저장해 주세요.</span><button className="b2" type="button" onClick={() => queueSave(items, note, common)}>초안 다시 저장</button></div>}
-      {pdf && <p className="fld__help">첨부파일은 견적 제출 시 업로드돼요. 화면을 닫으면 다시 선택해야 해요.</p>}
-      <div className="ph">
-        <div>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--brand)" }}>견적 회신 · {rfq.no} · {filled} / {items.length} 항목 완료</p>
+    <div className="lr lr-reply">
+      <Link href={backHref} onClick={leave} className="crumb lr-crumb">
+        <Caret size={14} /> 요청서
+      </Link>
+      <header className="lr-head">
+        <div className="lr-head__main">
+          <span className="lr-no tnum">견적 회신 · {rfq.no}</span>
           <h1>가능 여부·금액·기간을 채우세요</h1>
-          <p>시험마다 수행 가능 여부와 금액·기간을 적으세요. 금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수예요. 앞 단계를 고르면 전체 일정이 순서대로 그려져요.</p>
+          <p className="lr-sub">시험마다 수행 가능 여부와 금액·기간을 적으세요. 금액은 VAT 별도, 기간은 동물 입고부터 보고서 초안까지의 주 수예요. 앞 단계를 고르면 전체 일정이 순서대로 그려져요.</p>
         </div>
-      </div>
+        <div className="lr-head__side">
+          <span className="pill pill--sf tnum">{filled} / {items.length} 항목 완료</span>
+          <span role="status" className={`lr-head__state${saved === "saved" ? " lr-head__state--ok" : saved === "failed" ? " lr-head__state--err" : ""}`}>{readOnly ? "" : savedLabel}</span>
+        </div>
+      </header>
+      {saved === "failed" && !readOnly && !isSubmitted && <div className="note note--err lr-note"><span>초안을 저장하지 못했어요. 화면을 닫기 전에 다시 저장해 주세요.</span><button className="b2" type="button" onClick={() => queueSave(items, note, common)}>초안 다시 저장</button></div>}
+      {pdf && <p className="fld__help lr-note">첨부파일은 견적 제출 시 업로드돼요. 화면을 닫으면 다시 선택해야 해요.</p>}
 
       {docFill && docApplied > 0 && !readOnly && (
-        <div className="note note--tint" style={{ marginBottom: 16 }}>
+        <div className="note note--tint lr-note">
           <span>
             <b>견적서 {docFill.docNo}의 금액으로 시험 {docApplied}개를 채웠어요.</b>{" "}
             견적서 PDF를 함께 보내려면 저장해 아래에 첨부하세요.{" "}
@@ -384,36 +386,49 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
         </div>
       )}
       {docLink && (!docFill || docApplied === 0) && !readOnly && (
-        <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+        <p className="lr-hint">
           표준가와 추가 비용으로 견적서를 만들어 금액을 채울 수 있어요. <Link href={docLink.href} style={{ color: "var(--brand)", fontWeight: 600 }}>{docLink.label}</Link>
         </p>
       )}
       {data.draft?.prefilled && !readOnly && (
-        <div className="note" style={{ marginBottom: 16 }}>
-          <b>시험 목록으로 초안을 채웠어요.</b>{" "}
-          {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
-          {catalogHref && <Link href={catalogHref} style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>}
+        <div className="note lr-note">
+          <span>
+            <b>시험 목록으로 초안을 채웠어요.</b>{" "}
+            {pending ? `요청 조건이 등록한 기본 조건과 다른 항목 ${pending}건에 "확인 필요"가 붙어 있어요. 금액·기간을 확인하고 제출하세요.` : "금액·기간이 맞는지 보고 바로 제출할 수 있어요."}{" "}
+            {catalogHref && <Link href={catalogHref} style={{ color: "var(--brand)", fontWeight: 600 }}>시험 목록 고치기</Link>}
+          </span>
         </div>
       )}
 
       {rfq.ask.length > 0 && (
-        <div className="note note--tint" style={{ marginBottom: 16, flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+        <div className="note note--tint lr-note lr-note--col">
           <b>회신에서 설명해 주세요</b>
           <span style={{ fontSize: 13 }}>가이드라인이 정하지 않아 기관마다 다른 부분이에요. 해당 항목의 설계 설명 칸이나 전달 사항에 기관의 방식을 적어 주세요. 의뢰자는 기관별 설명을 나란히 봐요.</span>
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: "flex", flexDirection: "column", gap: 3 }}>
+          <ul className="lr-ul" style={{ fontSize: 13 }}>
             {rfq.ask.map((x) => <li key={x}>{x}</li>)}
           </ul>
         </div>
       )}
 
       {readOnly && (
-        <div className="note note--err" style={{ marginBottom: 16 }}>
+        <div className="note note--err lr-note">
           {data.closed ? data.closedMessage || "이 요청의 회신이 닫혔어요." : data.expired ? "이 링크는 만료되어 열람만 할 수 있어요. 연장이 필요하면 support@danchu.kr로 알려주세요." : data.withdrawn ? "참여를 철회한 요청이에요. 철회는 되돌릴 수 없어요." : data.declined ? (data.canRejoin ? "불참으로 처리한 요청이에요. 참여 결정 기한 전이고 자리가 남아 있으면 요청 화면에서 다시 참여할 수 있어요." : "불참으로 처리한 요청이에요.") : "회신 기한이 지나 제출한 견적을 수정할 수 없어요."}
         </div>
       )}
 
-      <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="stack" style={{ gap: 12 }}>
+      <section className="lr-sec" aria-labelledby="lr-items-title">
+        <div className="lr-sec__head">
+          <h2 id="lr-items-title">가능 여부 · 금액 · 기간 <span className="lr-sec__n tnum">{items.length}</span></h2>
+          <span className="lr-sec__aside">금액은 VAT 별도 · 기간은 주</span>
+        </div>
+        <div className="card lr-items">
+          <div className="lr-items__head" aria-hidden="true">
+            <span />
+            <span>시험</span>
+            <span>가능 여부</span>
+            <span className="lr-num">금액 (원)</span>
+            <span className="lr-num">기간 (주)</span>
+          </div>
           {rfq.rows.map((r) => {
             const it = items.find((x) => x.seq === r.seq)!;
             const nodes = [
@@ -425,149 +440,150 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
             const perSample = it.unit === "per_sample";
             const checks = it.checks ?? [];
             const src = it.source === "catalog" ? "시험 목록" : it.source === "learned" ? "최근 회신" : "";
+            const ok = done(it) && !checks.length;
             return (
-              <div id={`reply-item-${r.seq}`} tabIndex={-1} key={r.seq} className="card" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, borderColor: checks.length ? "var(--warn, #C98A1B)" : undefined }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700 }}>{r.name}</span>
-                    {(r.cond || (r.category !== r.name ? r.category : "")) && <span style={{ fontSize: 12, color: "var(--muted)" }}>{r.cond || r.category}</span>}
+              <div id={`reply-item-${r.seq}`} tabIndex={-1} key={r.seq} className={`lr-item${checks.length ? " lr-item--check" : ""}`}>
+                <div className="lr-item__row">
+                  <span className={`lr-item__done${ok ? " lr-item__done--on" : ""}`} aria-label={ok ? "작성 완료" : "작성 전"} role="img">
+                    <CheckMark size={12} />
+                  </span>
+                  <div className="lr-item__name">
+                    <b>{r.name}</b>
+                    {(r.cond || (r.category !== r.name ? r.category : "")) && <span>{r.cond || r.category}</span>}
                     {(src || checks.length > 0) && (
-                      <span style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-                        {src && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--surface2, #F1EEE8)", color: "var(--muted)" }}>{src}</span>}
-                        {checks.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, background: "var(--tint)", color: "var(--brand)" }}>확인 필요 · {checks.join(" · ")}</span>}
+                      <span className="lr-item__tags">
+                        {src && <span className="pill pill--sf">{src}</span>}
+                        {checks.length > 0 && <span className="pill pill--tint">확인 필요 · {checks.join(" · ")}</span>}
                       </span>
                     )}
                   </div>
-                  <span style={{ flex: "none", width: 22, height: 22, borderRadius: "50%", background: done(it) && !checks.length ? "var(--brand)" : "var(--dash)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                    <CheckMark size={12} />
-                  </span>
-                </div>
-                {checks.length > 0 && !readOnly && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12.5, color: "var(--body)", background: "var(--tint)", borderRadius: 10, padding: "8px 12px" }}>
-                    <span>요청 조건이 등록한 기본 조건과 달라요. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
-                    <button type="button" className="b2 bsm" style={{ flex: "none" }} disabled={busy} onClick={() => confirmChecks(r.seq)}>현재 금액과 기간으로 회신</button>
+                  <div className="seg seg--full lr-item__avail" role="group" aria-label={`${r.name} 수행 가능 여부`}>
+                    {AVAILS.map((a) => (
+                      <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} disabled={readOnly || busy} onClick={() => update(r.seq, { avail: a })}>{a}</button>
+                    ))}
                   </div>
-                )}
-                <div className="seg seg--full" role="group" aria-label={`${r.name} 수행 가능 여부`}>
-                  {AVAILS.map((a) => (
-                    <button key={a} type="button" aria-pressed={it.avail === a} data-no={a === "불가" ? "1" : "0"} disabled={readOnly || busy} onClick={() => update(r.seq, { avail: a })}>{a}</button>
-                  ))}
-                </div>
-                {perSample && !no && (
-                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)", gap: 8 }}>
-                    <div className="numin">
-                      <input type="text" inputMode="numeric" placeholder="검체당 단가" style={{ paddingRight: 70 }} disabled={readOnly || busy} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
-                      <span>원/검체</span>
-                    </div>
-                    <div className="numin">
-                      <input type="text" inputMode="numeric" placeholder="검체 수" disabled={readOnly || busy} value={it.sampleCount ?? ""} onChange={(e) => update(r.seq, { sampleCount: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })} aria-label={`${r.name} 검체 수`} />
-                      <span>건</span>
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)", gap: 8 }}>
-                  <div className="numin">
-                    <input type="text" inputMode="numeric" placeholder={perSample ? "총액 (단가×검체 수)" : "금액"} disabled={no || readOnly || busy || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
+                  <div className="numin lr-item__amount">
+                    <input type="text" inputMode="numeric" placeholder={perSample ? "총액" : "금액"} disabled={no || readOnly || busy || (perSample && !!it.unitPrice && !!it.sampleCount)} value={it.amount ? Number(it.amount).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { amount: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 금액`} />
                     <span>원</span>
                   </div>
-                  <div className="numin">
+                  <div className="numin lr-item__weeks">
                     <input type="text" inputMode="numeric" placeholder="기간" disabled={no || readOnly || busy} value={it.weeks} onChange={(e) => update(r.seq, { weeks: e.target.value.replace(/[^\d]/g, "").slice(0, 3) })} aria-label={`${r.name} 예상 소요기간`} />
                     <span>주</span>
                   </div>
                 </div>
-                {!no && <ItemSchedule it={it} rfq={rfq} nodes={nodes} disabled={readOnly || busy} onChange={(patch) => update(r.seq, patch)} />}
-                {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly || busy} onChange={(d) => update(r.seq, { design: d })} />}
-                {!no && r.category === EFFICACY_CAT && <EfficacyCosts value={it.design ?? {}} disabled={readOnly || busy} onChange={(d, total) => update(r.seq, total ? { design: d, amount: total } : { design: d })} />}
-                {needReason && (
-                  <input className="inp" style={{ height: 44, fontSize: 14 }} placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly || busy} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
-                )}
+                <div className="lr-item__more">
+                  {checks.length > 0 && !readOnly && (
+                    <div className="lr-item__check">
+                      <span>요청 조건이 등록한 기본 조건과 달라요. 금액·기간을 이 조건에 맞게 고치거나, 등록한 조건을 모두 확인한 뒤 아래 버튼을 누르세요.</span>
+                      <button type="button" className="b2 bsm" disabled={busy} onClick={() => confirmChecks(r.seq)}>현재 금액과 기간으로 회신</button>
+                    </div>
+                  )}
+                  {needReason && (
+                    <input className="inp lr-item__reason" placeholder={it.avail === "불가" ? "불가 사유 (필수)" : "조건 · 조건 충족 시 기준 금액 (필수)"} disabled={readOnly || busy} value={it.reason ?? ""} onChange={(e) => update(r.seq, { reason: e.target.value.slice(0, 500) })} aria-label={`${r.name} 사유`} />
+                  )}
+                  {perSample && !no && (
+                    <div className="lr-item__sample">
+                      <div className="numin">
+                        <input type="text" inputMode="numeric" placeholder="검체당 단가" style={{ paddingRight: 70 }} disabled={readOnly || busy} value={it.unitPrice ? Number(it.unitPrice).toLocaleString("ko-KR") : ""} onChange={(e) => update(r.seq, { unitPrice: e.target.value.replace(/[^\d]/g, "").slice(0, 13) })} aria-label={`${r.name} 검체당 단가`} />
+                        <span>원/검체</span>
+                      </div>
+                      <div className="numin">
+                        <input type="text" inputMode="numeric" placeholder="검체 수" disabled={readOnly || busy} value={it.sampleCount ?? ""} onChange={(e) => update(r.seq, { sampleCount: e.target.value.replace(/[^\d]/g, "").slice(0, 6) })} aria-label={`${r.name} 검체 수`} />
+                        <span>건</span>
+                      </div>
+                    </div>
+                  )}
+                  {!no && <ItemSchedule it={it} rfq={rfq} nodes={nodes} disabled={readOnly || busy} onChange={(patch) => update(r.seq, patch)} />}
+                  {!no && <DesignEditor value={it.design ?? {}} category={r.category} disabled={readOnly || busy} onChange={(d) => update(r.seq, { design: d })} />}
+                  {!no && r.category === EFFICACY_CAT && <EfficacyCosts value={it.design ?? {}} disabled={readOnly || busy} onChange={(d, total) => update(r.seq, total ? { design: d, amount: total } : { design: d })} />}
+                </div>
               </div>
             );
           })}
         </div>
+      </section>
 
-        <div className="stack" style={{ gap: 12 }}>
-          <ScheduleCard rfq={rfq} items={items} steps={steps} startDate={common.startDate} disabled={readOnly || busy} learned={!!data.draft?.prefilled && (steps.length > 0 || items.some((it) => it.reportWeeks || it.afterSeqs?.length))} onSteps={updSteps} />
-          <div className="card card--pad stack" style={{ gap: 14 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>공통 조건</h2>
-            <div className="grid2">
-              <div className="fld">
-                <label className="fld__lab" htmlFor="valid">견적 유효기간 <span style={{ fontWeight: 400, color: "var(--muted)" }}>(비우면 제출일 +30일)</span></label>
-                <input id="valid" className="inp" type="date" disabled={readOnly || busy} value={common.validUntil} onChange={(e) => updCommon({ validUntil: e.target.value })} />
-              </div>
-              <div className="fld">
-                <label className="fld__lab" htmlFor="start">전체 착수 가능일<span className="req">*</span></label>
-                <input id="start" className="inp" type="date" disabled={readOnly || busy} value={common.startDate} onChange={(e) => updCommon({ startDate: e.target.value })} />
-              </div>
-            </div>
-            <PayScheduleField value={common.payTerms} disabled={readOnly || busy} onChange={(payTerms, err) => { setPayErr(err); updCommon({ payTerms }); }} />
+      <section className="lr-sec" aria-labelledby="lr-common-title">
+        <div className="lr-sec__head"><h2 id="lr-common-title">공통 조건</h2></div>
+        <div className="card card--pad lr-form">
+          <div className="grid2">
             <div className="fld">
-              <span className="fld__lab">보고서 언어</span>
-              <div className="chips">
-                {REPORT_LANGS.map((l) => (
-                  <button key={l} type="button" className="chip" aria-pressed={common.reportLang === l} disabled={readOnly || busy} onClick={() => updCommon({ reportLang: l })}>{l}</button>
-                ))}
-              </div>
+              <label className="fld__lab" htmlFor="valid">견적 유효기간 <span style={{ fontWeight: 400, color: "var(--muted)" }}>(비우면 제출일 +30일)</span></label>
+              <input id="valid" className="inp" type="date" disabled={readOnly || busy} value={common.validUntil} onChange={(e) => updCommon({ validUntil: e.target.value })} />
             </div>
             <div className="fld">
-              <span className="fld__lab">기본 포함 항목</span>
-              <span className="fld__help">총액에 포함된 것만 선택하세요. 비교표의 핵심 행이에요.</span>
-              <div className="chips">
-                {INCL_KEYS.map((k) => {
-                  const on = common.includes.includes(k);
-                  return (
-                    <button key={k} type="button" className="chip" aria-pressed={on} disabled={readOnly || busy} onClick={() => updCommon({ includes: on ? common.includes.filter((x) => x !== k) : [...common.includes, k] })}>{k}</button>
-                  );
-                })}
-              </div>
-            </div>
-            {orgCerts && (
-              <div className="fld">
-                <span className="fld__lab">보유 GLP 인증 (기관 정보에서 자동)</span>
-                <span style={{ fontSize: 14, color: "var(--body)" }}>{orgCerts.length ? orgCerts.join(" · ") : "등록된 인증이 없어요. 기관 탭에서 등록하세요."}</span>
-              </div>
-            )}
-            <div className="fld">
-              <label className="fld__lab" htmlFor="note">제외 항목 · 별도 옵션 · 의뢰자 전달 사항</label>
-              <textarea id="note" className="ta" rows={4} disabled={readOnly || busy} value={note} onChange={(e) => { setNote(e.target.value); queueSave(items, e.target.value, common); }} placeholder="예: 영문 보고서 별도 +8,000,000원, 시험물질 보관 비용 미포함, 조직병리 판독 +18,000,000원" aria-describedby="note-help" />
-              <span id="note-help" className="fld__help">이메일·전화번호·링크는 선정 전까지 의뢰자 화면에서 가려져요. 연락처는 선정되면 서로 공개돼요.</span>
+              <label className="fld__lab" htmlFor="start">전체 착수 가능일<span className="req">*</span></label>
+              <input id="start" className="inp" type="date" disabled={readOnly || busy} value={common.startDate} onChange={(e) => updCommon({ startDate: e.target.value })} />
             </div>
           </div>
-
-          <div>
-            <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => pickPdf(e.target.files?.[0] ?? null)} />
-            <button
-              type="button"
-              disabled={readOnly || busy}
-              onClick={() => fileRef.current?.click()}
-              style={{ width: "100%", border: `1px dashed ${pdf || pdfName ? "var(--brand)" : "var(--dash)"}`, background: pdf || pdfName ? "var(--tint)" : "var(--wh)", borderRadius: 12, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, fontSize: 14, color: "var(--muted)", textAlign: "left" }}
-            >
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {pdf ? pdf.name : pdfName || <>정식 견적서 PDF (원본, 선택)</>}
-              </span>
-              <span style={{ color: "var(--brand)", fontWeight: 600, flex: "none" }}>{readOnly ? "" : pdf || pdfName ? "교체" : "첨부"}</span>
-            </button>
-            <p className="fld__help" style={{ marginTop: 6 }}>비교표와 PDF가 다르면 PDF가 우선해요. 단추가 불일치를 발견하면 확인을 요청해요.</p>
-          </div>
-
-          {/* 제출 전 알아 둘 것: 휴대폰에서 아래에 붙는 제출 칸이 화면을 덮지 않게 칸 밖으로 뺐다 (2026-10-31) */}
-          {!readOnly && <p className="fld__help" style={{ margin: 0 }}>제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보여요. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없어요. 다른 기관에는 보이지 않아요.</p>}
-
-          {error && <p className="note note--err" role="alert">{error}</p>}
-
-          <div className="card card--pad stack reply-submit" style={{ gap: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>총 견적액 · VAT 별도 · {plan.finalWeek != null ? `최종보고서 ${plan.finalReportWeek ?? plan.finalWeek}주차` : maxW ? `${maxW}주` : "기간 미입력"}</span>
-              <span className="tnum" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>{total ? won(total) : "-"}</span>
+          <PayScheduleField value={common.payTerms} disabled={readOnly || busy} onChange={(payTerms, err) => { setPayErr(err); updCommon({ payTerms }); }} />
+          <div className="fld">
+            <span className="fld__lab">보고서 언어</span>
+            <div className="chips">
+              {REPORT_LANGS.map((l) => (
+                <button key={l} type="button" className="chip" aria-pressed={common.reportLang === l} disabled={readOnly || busy} onClick={() => updCommon({ reportLang: l })}>{l}</button>
+              ))}
             </div>
-            {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
-            {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
-            <button type="button" className="b1 blg bfull" disabled={!canSubmit || busy} onClick={submit}>
-              {busy ? "제출 중…" : blockedLabel}
-            </button>
+          </div>
+          <div className="fld">
+            <span className="fld__lab">기본 포함 항목</span>
+            <span className="fld__help">총액에 포함된 것만 선택하세요. 비교표의 핵심 행이에요.</span>
+            <div className="chips">
+              {INCL_KEYS.map((k) => {
+                const on = common.includes.includes(k);
+                return (
+                  <button key={k} type="button" className="chip" aria-pressed={on} disabled={readOnly || busy} onClick={() => updCommon({ includes: on ? common.includes.filter((x) => x !== k) : [...common.includes, k] })}>{k}</button>
+                );
+              })}
+            </div>
+          </div>
+          {orgCerts && (
+            <div className="fld">
+              <span className="fld__lab">보유 GLP 인증 (기관 정보에서 자동)</span>
+              <span style={{ fontSize: 14, color: "var(--body)" }}>{orgCerts.length ? orgCerts.join(" · ") : "등록된 인증이 없어요. 기관 탭에서 등록하세요."}</span>
+            </div>
+          )}
+          <div className="fld">
+            <label className="fld__lab" htmlFor="note">제외 항목 · 별도 옵션 · 의뢰자 전달 사항</label>
+            <textarea id="note" className="ta" rows={4} disabled={readOnly || busy} value={note} onChange={(e) => { setNote(e.target.value); queueSave(items, e.target.value, common); }} placeholder="예: 영문 보고서 별도 +8,000,000원, 시험물질 보관 비용 미포함, 조직병리 판독 +18,000,000원" aria-describedby="note-help" />
+            <span id="note-help" className="fld__help">이메일·전화번호·링크는 선정 전까지 의뢰자 화면에서 가려져요. 연락처는 선정되면 서로 공개돼요.</span>
           </div>
         </div>
+      </section>
+
+      <section className="lr-sec" aria-label="전체 일정">
+        <ScheduleCard rfq={rfq} items={items} steps={steps} startDate={common.startDate} disabled={readOnly || busy} learned={!!data.draft?.prefilled && (steps.length > 0 || items.some((it) => it.reportWeeks || it.afterSeqs?.length))} onSteps={updSteps} />
+      </section>
+
+      <section className="lr-sec" aria-labelledby="lr-pdf-title">
+        <div className="lr-sec__head"><h2 id="lr-pdf-title">견적서 PDF</h2><span className="lr-sec__aside">선택</span></div>
+        <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(e) => pickPdf(e.target.files?.[0] ?? null)} />
+        <button type="button" className={`lr-file${pdf || pdfName ? " lr-file--on" : ""}`} disabled={readOnly || busy} onClick={() => fileRef.current?.click()}>
+          <span className="lr-file__name">{pdf ? pdf.name : pdfName || <>정식 견적서 PDF (원본, 선택)</>}</span>
+          <span className="lr-file__act">{readOnly ? "" : pdf || pdfName ? "교체" : "첨부"}</span>
+        </button>
+        <p className="fld__help" style={{ marginTop: 6 }}>비교표와 PDF가 다르면 PDF가 우선해요. 단추가 불일치를 발견하면 확인을 요청해요.</p>
+      </section>
+
+      {/* 제출 전 알아 둘 것: 휴대폰에서 아래에 붙는 제출 칸이 화면을 덮지 않게 칸 밖으로 뺐다 (2026-10-31) */}
+      {!readOnly && <p className="fld__help lr-note">제출한 견적은 비교표가 열릴 때 기관명과 함께 의뢰자에게 보여요. 비교표가 열리기 전까지 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없어요. 다른 기관에는 보이지 않아요.</p>}
+
+      {error && <p className="note note--err lr-note" role="alert">{error}</p>}
+
+      <div className="card reply-submit lr-bar">
+        <div className="lr-bar__sum">
+          <span className="lr-bar__k">총 견적액 · VAT 별도 · {periodLabel}</span>
+          <span className="lr-bar__v tnum">{total ? won(total) : "-"}</span>
+          {(readOnly || !canSubmit) && <span className="lr-bar__state" role="status">{blockedLabel}</span>}
+        </div>
+        <div className="lr-bar__acts">
+          {!readOnly && (filled < items.length || pending > 0) && <button type="button" className="b2" onClick={() => { const item = items.find((it) => !done(it) || it.checks?.length); if (item) { const target = document.getElementById(`reply-item-${item.seq}`); target?.scrollIntoView({ block: "center" }); target?.focus(); } }}>확인할 항목으로 이동</button>}
+          {allNo && !readOnly && <Link href={`${backHref}?decline=1`} onClick={leave} className="b2">참여 철회</Link>}
+          <button type="button" className="b1" disabled={!canSubmit || busy} onClick={submit}>
+            {busy ? "제출 중…" : isSubmitted ? "수정 내용 제출" : "견적 제출"}
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
