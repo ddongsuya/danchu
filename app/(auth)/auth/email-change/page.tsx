@@ -18,7 +18,7 @@ export default async function EmailChangePage({ searchParams }: { searchParams: 
   return (
     <div className="auth__card">
       <div>
-        <h1 className="auth__title">로그인 이메일을 바꿔요</h1>
+        <h1 className="auth__title">로그인 이메일 변경</h1>
         <p className="auth__sub">잠시 후 자동으로 넘어가요. 로그인되어 있지 않으면 먼저 로그인 화면이 열려요.</p>
       </div>
       <EmailChangeConfirm token={token} />

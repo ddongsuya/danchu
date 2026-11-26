@@ -60,7 +60,7 @@ function Signup() {
           <p>
             <b>{f.email}</b>로 보낸 메일의 버튼을 누르면 가입이 완료되고 {next === "/app/new" ? "바로 견적 요청 화면이 열려요" : "바로 로그인돼요"}.
           </p>
-          <p style={{ fontSize: 14, color: "var(--muted)" }}>휴대폰에서 쓰시려면 휴대폰의 메일 앱에서 버튼을 누르세요. 링크를 누른 기기에서 로그인돼요.</p>
+          <p style={{ fontSize: 14, color: "var(--muted)" }}>링크를 누른 기기에서 로그인돼요.</p>
           <p style={{ fontSize: 14, color: "var(--muted)" }}>메일이 오지 않으면 스팸함을 확인해 주세요. 이 주소로 이미 접수한 견적 요청이 있다면 로그인 후 자동으로 연결돼요.</p>
           <button type="button" className="btn--ghost" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await postJson("/api/auth/magic", { email: f.email, next }); setMailed(true); } catch (e) { setError(e instanceof Error ? e.message : "메일을 보내지 못했어요."); } finally { setBusy(false); } }}>{busy ? "보내는 중…" : "확인 메일 다시 받기"}</button>
           <button type="button" className="btn--ghost" onClick={() => setDone(false)}>다른 이메일로 가입</button><ErrorBox>{error}</ErrorBox>
@@ -73,7 +73,6 @@ function Signup() {
     <div className="auth__card auth__card--wide">
       <div>
         <h1 className="auth__title">{next === "/app/new" ? "요청서를 보내려면 계정이 필요해요" : "의뢰자 가입"}</h1>
-        <p className="auth__sub">업무용 이메일로 가입하고, 무료로 견적을 받아보세요.</p>
       </div>
 
       <form className="auth__form" onSubmit={submit}>
@@ -126,7 +125,7 @@ function Signup() {
 
         <ErrorBox>{error}</ErrorBox>
         <button type="submit" className="btn--next" disabled={!ok || busy}>
-          {busy ? "만드는 중…" : "가입하고 확인 메일 받기"}
+          {busy ? "만드는 중…" : "가입"}
         </button>
       </form>
 

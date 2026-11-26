@@ -7,12 +7,12 @@ import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/com
 
 const ERRORS: Record<string, string> = {
   link: "링크를 확인하지 못했어요. 메일의 버튼을 다시 눌러주세요.",
-  expired: "링크가 만료됐거나 이미 쓰였어요. 아래에서 새 링크를 받아보세요.",
+  expired: "링크가 만료됐거나 이미 쓰였어요. 아래에서 새 링크를 받아 주세요.",
   config: "지금은 로그인을 쓸 수 없어요. support@danchu.kr로 알려주세요.",
 };
 
 const NOTICES: Record<string, string> = {
-  deleted: "탈퇴가 완료됐어요. 그동안 단추를 이용해주셔서 감사합니다.",
+  deleted: "탈퇴가 완료됐어요.",
 };
 
 export function LoginView() {
@@ -75,7 +75,7 @@ function Login() {
     <div className="auth__card">
       <div>
         <h1 className="auth__title">로그인</h1>
-        <p className="auth__sub">{next === "/app/new" ? "로그인하면 쓰던 요청서로 바로 이어져요." : fromMail ? "메일에서 누른 화면은 로그인한 뒤에 열려요. 비밀번호가 없다면 이메일만 적어 주세요. 그 화면으로 바로 들어가는 링크를 보내요." : "다시 오셨네요. 진행 중인 견적을 확인하세요."}</p>
+        {next === "/app/new" ? <p className="auth__sub">로그인하면 쓰던 요청서로 바로 이어져요.</p> : fromMail ? <p className="auth__sub">로그인하면 메일에서 누른 화면이 열려요.</p> : null}
       </div>
 
       <div className="auth__tabs" role="group" aria-label="로그인 방법">
@@ -92,7 +92,7 @@ function Login() {
             <PasswordInput id="pw" value={pw} onChange={setPw} placeholder="비밀번호" autoComplete="current-password" />
           </Field>
         ) : (
-          <p className="field__help" style={{ margin: 0 }}>비밀번호 없이, 메일로 받은 링크 하나로 로그인하세요.</p>
+          <p className="field__help" style={{ margin: 0 }}>메일로 받은 링크로 로그인해요.</p>
         )}
         {notice && <p className="field__help" role="status" style={{ margin: 0 }}>{notice}</p>}
         <ErrorBox>{error}</ErrorBox>
