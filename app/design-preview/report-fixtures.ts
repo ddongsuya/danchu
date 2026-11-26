@@ -53,20 +53,31 @@ export const ADMIN_FUNNEL: AdminFunnel = {
   ],
 };
 
-/** 기관 요청 이야기 미리보기 (회신 6개 중 4개 작성) */
-export function croStoryFixture(now: number) {
+/** 기관 요청 화면 미리보기 (회신 6개 중 4개 작성). before: 참여 전 요약 (참여 결정 칸) */
+export function croStoryFixture(now: number, before = false) {
+  const base = croStoryJoined(now);
+  if (!before) return base;
+  const joinBy = new Date(now + 864e5).toISOString();
+  return {
+    ...base,
+    rfq: { ...base.rfq, full: false, substance: "", overview: [["시험 분야", "일반독성, 유전독성"], ["제출처", "식약처(MFDS)"], ["희망 착수", "2027-01"], ["기밀 등급", "일반"], ["첨부", "2개 (참여하면 열려요)"]] },
+    draft: null, joined: false, joinBy, seats: { cap: 3, used: 1, reserved: 0, open: 2 },
+  };
+}
+
+function croStoryJoined(now: number) {
   const d = (n: number) => new Date(now + n * 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   const rows = [
-    { seq: 1, name: "반복투여 13주 · 설치류", category: "일반독성" },
+    { seq: 1, name: "반복투여 13주 · 설치류", category: "일반독성", cond: "랫드 SD · 경구 · 4군 · 암수 각 10 · 회복 4주 · GLP" },
     { seq: 2, name: "반복투여 13주 · 비설치류", category: "일반독성" },
-    { seq: 3, name: "복귀돌연변이(Ames, TG 471)", category: "유전독성" },
+    { seq: 3, name: "복귀돌연변이(Ames, TG 471)", category: "유전독성", cond: "5균주 · S9 유무 · GLP" },
     { seq: 4, name: "소핵 in vivo(랫드)", category: "유전독성" },
     { seq: 5, name: "TK(독성동태)", category: "PK/TK/ADME·생체시료분석" },
     { seq: 6, name: "조제물분석", category: "조제물분석" },
   ];
   const items = rows.map((r) => ({ seq: r.seq, avail: r.seq <= 4 ? "가능" : "", amount: r.seq <= 4 ? "10000000" : "", weeks: r.seq <= 4 ? "13" : "" }));
   return {
-    rfq: { full: true, no: "DEMO-008", substance: "예시 물질 E", categories: ["일반독성", "유전독성"], client: "바이오 벤처 (선정 시 공개)", masked: false, identityMasked: true, ddayLabel: "D-2", urgent: true, confid: "일반", overview: [["제출처", "식약처(MFDS)"]], rows, common: [], situation: [], ask: [], attachments: "없음", replyBy: d(2), authorities: ["식약처(MFDS)"], files: [] },
+    rfq: { full: true, no: "DEMO-008", substance: "예시 물질 E", categories: ["일반독성", "유전독성"], client: "바이오 벤처 (선정 시 공개)", masked: false, identityMasked: true, ddayLabel: "D-2", urgent: true, confid: "일반", overview: [["제출처", "식약처(MFDS)"], ["희망 착수", "2027-01"], ["보고서", "국문"]], rows, common: [["시험물질 제공", "의뢰자 제공 · 순도 99% 이상"], ["보관 조건", "냉장 2~8°C"]], situation: [], ask: ["회복군 동물 수를 정하는 기준"], attachments: "1개", replyBy: d(2), authorities: ["식약처(MFDS)"], files: [{ id: "preview", name: "시험물질 정보.pdf", size: 217000 }] },
     draft: { items, note: "", pdfName: "", status: "draft", common: {} },
     inviteId: "x", rfqId: "x", croName: "예시 기관 A", croOrgId: null, token: "preview", expired: false, locked: false, declined: false, closed: false, closedReason: null,
     joined: true, withdrawn: false, canRejoin: false, operator: false, seats: null, joinBy: null,
