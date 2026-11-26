@@ -3,6 +3,7 @@ import { dbReady, listCroOrgs, listProfiles } from "@/lib/data";
 import { UserRow } from "@/components/admin/UserRow";
 import { SearchBox } from "@/components/admin/SearchBox";
 import { Pager } from "@/components/admin/Pager";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,15 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
         </div>
         <div className="ph__actions"><SearchBox q={q} placeholder="이메일 · 이름 · 회사" /></div>
       </div>
+      {users.length === 0 ? (
+        q
+          ? <EmptyState kind="filtered" title={`"${q}"에 맞는 사용자가 없습니다`} clearHref="/admin/users">이메일, 이름, 회사 중 하나로 다시 찾아 주세요.</EmptyState>
+          : <EmptyState title="사용자가 없습니다">가입한 계정이 여기에 나타납니다.</EmptyState>
+      ) : (
       <div className="card tbl-wrap">
         <table className="tbl">
           <thead>
-            <tr><th>이름 · 이메일</th><th>회사 · 기관</th><th>역할</th><th>기관 연결</th><th /><th /></tr>
+            <tr><th>이름 · 이메일</th><th>회사 · 기관</th><th>역할</th><th>기관 연결</th><th><span className="sr-only">저장</span></th><th><span className="sr-only">삭제</span></th></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -32,6 +38,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
           </tbody>
         </table>
       </div>
+      )}
       <Pager page={page} hasMore={hasMore} href={(p) => `/admin/users?${new URLSearchParams({ ...(q ? { q } : {}), ...(p > 1 ? { page: String(p) } : {}) })}`} />
     </>
   );

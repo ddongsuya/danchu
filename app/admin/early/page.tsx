@@ -2,6 +2,9 @@ import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { mdhm } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { AdminSection } from "@/components/admin/Blocks";
 import {
   EARLY_DELETE_AFTER, EARLY_GLP, EARLY_KIND_LABEL, EARLY_KINDS, EARLY_MONTHLY, EARLY_ORG_TYPES, EARLY_QUOTE_COUNT, EARLY_WHEN, EARLY_YEARLY,
 } from "@/lib/early";
@@ -28,7 +31,7 @@ export default async function AdminEarly() {
   const sb = dbReady() ? getSupabaseAdmin() : null;
   if (!sb) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
   const { data, error } = await sb.from("early_signups").select("*").order("created_at", { ascending: false }).limit(2000);
-  if (error) return <div className="empty"><b>예약을 읽지 못했습니다</b><p>마이그레이션 0035를 적용했는지 확인해 주세요. ({error.message})</p></div>;
+  if (error) return <ErrorState title="예약을 읽지 못했습니다">마이그레이션 0035를 적용했는지 확인해 주세요. ({error.message})</ErrorState>;
   const rows = data ?? [];
   const req = rows.filter((r) => r.role === "req");
   const cro = rows.filter((r) => r.role === "cro");
@@ -44,7 +47,7 @@ export default async function AdminEarly() {
         <thead><tr><th>{title}</th><th className="num">건</th></tr></thead>
         <tbody>
           {opts.map((o) => <tr key={o}><td>{o}</td><td className="num tnum">{count(list, (r) => get(r) === o)}</td></tr>)}
-          {count(list, (r) => !get(r)) > 0 && <tr><td style={{ color: "var(--muted)" }}>답 없음 (옛 양식)</td><td className="num tnum">{count(list, (r) => !get(r))}</td></tr>}
+          {count(list, (r) => !get(r)) > 0 && <tr><td className="adm-muted">답 없음 (옛 양식)</td><td className="num tnum">{count(list, (r) => !get(r))}</td></tr>}
         </tbody>
       </table>
     </div>
@@ -59,12 +62,10 @@ export default async function AdminEarly() {
         </div>
       </div>
       {rows.length === 0 ? (
-        <div className="empty"><b>아직 예약이 없습니다</b><p>danchu.kr/early 에서 예약하면 여기에 쌓입니다.</p></div>
+        <EmptyState title="아직 예약이 없습니다">danchu.kr/early 에서 예약하면 여기에 쌓입니다.</EmptyState>
       ) : (
         <>
-          <p style={{ margin: "0 0 16px", color: "var(--muted)", fontSize: 14 }}>
-            의뢰자가 답한 연간 의뢰 건수를 구간의 아래 값으로 더하면 <b className="tnum" style={{ color: "var(--ink)" }}>{yearlyLow.toLocaleString("ko-KR")}건</b>입니다. 기관에 설명할 때는 &ldquo;최소 이 정도&rdquo;로만 씁니다.
-          </p>
+          <AdminSection id="kinds" title="분야별" sub={<>의뢰자가 답한 연간 의뢰 건수를 구간의 아래 값으로 더하면 <b className="tnum adm-ink">{yearlyLow.toLocaleString("ko-KR")}건</b>입니다. 기관에 설명할 때는 &ldquo;최소 이 정도&rdquo;로만 씁니다.</>}>
           <div className="card tbl-wrap">
             <table className="tbl">
               <thead><tr><th>분야</th><th className="num">의뢰자</th><th className="num">기관</th></tr></thead>
@@ -75,7 +76,9 @@ export default async function AdminEarly() {
               </tbody>
             </table>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+          </AdminSection>
+          <AdminSection id="survey" title="설문 답">
+          <div className="adm-grid">
             <Dist title="의뢰자 소속" list={req} opts={EARLY_ORG_TYPES} get={(r) => r.org_type} />
             <Dist title="첫 의뢰 시기" list={req} opts={EARLY_WHEN} get={(r) => r.timing} />
             <Dist title="1년 의뢰 건수" list={req} opts={EARLY_YEARLY} get={(r) => r.yearly} />
@@ -83,16 +86,18 @@ export default async function AdminEarly() {
             <Dist title="기관 GLP 인증" list={cro} opts={EARLY_GLP} get={(r) => r.glp[0] ?? null} />
             <Dist title="기관 월 견적서 수" list={cro} opts={EARLY_MONTHLY} get={(r) => r.monthly} />
           </div>
+          </AdminSection>
+          <AdminSection id="list" title="예약 목록" count={rows.length}>
           <div className="card tbl-wrap">
             <table className="tbl">
               <thead><tr><th>시각</th><th>갈래</th><th>이름</th><th>휴대폰</th><th>이메일</th><th>기관명·소속</th><th>분야</th><th>설문</th><th>광고</th><th>완료 문자</th><th>유입</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <td className="tnum" style={{ whiteSpace: "nowrap" }}>{mdhm(r.updated_at)}</td>
+                    <td className="tnum nowrap">{mdhm(r.updated_at)}</td>
                     <td>{ROLE_KO[r.role]}</td>
                     <td style={{ fontSize: 13 }}>{r.name ?? "-"}</td>
-                    <td className="tnum" style={{ fontSize: 13, whiteSpace: "nowrap" }}>{maskPhone(r.phone)}</td>
+                    <td className="tnum nowrap">{maskPhone(r.phone)}</td>
                     <td style={{ fontSize: 13 }}>{r.email}</td>
                     <td style={{ fontSize: 13 }}>{r.org ?? r.org_type ?? "-"}</td>
                     <td style={{ fontSize: 13 }}>{r.kinds.join(" · ")}</td>
@@ -105,6 +110,7 @@ export default async function AdminEarly() {
               </tbody>
             </table>
           </div>
+          </AdminSection>
         </>
       )}
     </>

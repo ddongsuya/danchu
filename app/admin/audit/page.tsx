@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listAudit } from "@/lib/data";
 import { mdhm } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function AdminAudit() {
         </div>
       </div>
       {rows.length === 0 ? (
-        <div className="empty"><b>기록이 없습니다</b></div>
+        <EmptyState title="기록이 없습니다">기관 승인, 기한 변경, 청구 제외 같은 운영 작업을 하면 여기에 남습니다.</EmptyState>
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl">
@@ -52,11 +53,11 @@ export default async function AdminAudit() {
                 const after = r.after && typeof r.after === "object" ? Object.entries(r.after as Record<string, unknown>) : [];
                 return (
                   <tr key={r.id}>
-                    <td className="tnum" style={{ whiteSpace: "nowrap" }}>{mdhm(r.created_at)}</td>
+                    <td className="tnum nowrap">{mdhm(r.created_at)}</td>
                     <td style={{ fontSize: 13 }}>{r.actor_email ?? "-"}</td>
                     <td>{ACTION_KO[r.action] ?? r.action}</td>
                     <td style={{ fontSize: 13 }}>{href ? <Link href={href}>{r.target_label ?? r.target_type}</Link> : (r.target_label ?? r.target_type)}</td>
-                    <td style={{ fontSize: 12, color: "var(--muted)" }}>
+                    <td className="adm-small adm-muted adm-wrap">
                       {after.length ? after.map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join(" · ") : r.note ?? "-"}
                     </td>
                   </tr>

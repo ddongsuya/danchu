@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, unreadCount } from "@/lib/data";
 import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
+import "@/components/admin/layout-admin.css";
 
 export const metadata: Metadata = { title: "단추 운영", robots: { index: false, follow: false } };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
@@ -25,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <AppState>
       <Shell session={session} nav={nav}>
-        {children}
+        <div className="adm">{children}</div>
       </Shell>
     </AppState>
   );

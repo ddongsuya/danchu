@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import type { BillingInvoiceRow } from "@/lib/db-types";
 import { comma, todaySeoul, ymd } from "@/lib/format";
 import { InvoiceIssue, InvoiceActions } from "@/components/admin/InvoiceActions";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -48,18 +49,18 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
             {overdue.length ? ` · 기한 지남 ${overdue.length}장` : ""}
           </p>
         </div>
-        <div className="ph__actions" style={{ gap: 6, flexWrap: "wrap" }}>
+        <div className="ph__actions">
           <Link href={`/admin/invoices?month=${r.prev}`} className="b2">이전 달</Link>
           <Link href={`/admin/invoices?month=${r.next}`} className="b2">다음 달</Link>
           <Link href={`/admin/billing?month=${r.from.slice(0, 7)}`} className="b2">청구 명세</Link>
         </div>
       </div>
 
-      {!bank && <div className="note note--warn" style={{ marginBottom: 12 }}>입금 계좌가 설정되지 않았습니다. Vercel 환경변수 BILLING_BANK_NAME, BILLING_BANK_ACCOUNT, BILLING_BANK_HOLDER 를 넣으면 청구서와 메일에 계좌가 나옵니다. 넣기 전에는 "운영자가 회신으로 안내"로 나갑니다.</div>}
-      {error && <div className="note note--warn" role="alert" style={{ marginBottom: 12 }}>청구서를 불러오지 못했습니다. `0032_billing_invoices.sql` 이 적용됐는지 확인해 주세요. ({error.message})</div>}
+      {!bank && <div className="note note--warn adm-note">입금 계좌가 설정되지 않았습니다. Vercel 환경변수 BILLING_BANK_NAME, BILLING_BANK_ACCOUNT, BILLING_BANK_HOLDER 를 넣으면 청구서와 메일에 계좌가 나옵니다. 넣기 전에는 "운영자가 회신으로 안내"로 나갑니다.</div>}
+      {error && <div className="note note--warn adm-note" role="alert">청구서를 불러오지 못했습니다. `0032_billing_invoices.sql` 이 적용됐는지 확인해 주세요. ({error.message})</div>}
 
       {!period ? (
-        <div className="empty"><b>아직 마감하지 않은 달입니다</b>청구 명세에서 이 달을 마감하면 청구서를 만들 수 있습니다.</div>
+        <EmptyState title="아직 마감하지 않은 달입니다" action={<Link href={`/admin/billing?month=${r.from.slice(0, 7)}`} className="b2 bsm">청구 명세 열기</Link>}>청구 명세에서 이 달을 마감하면 청구서를 만들 수 있습니다.</EmptyState>
       ) : (
         <>
           <div style={{ marginBottom: 16 }}>
@@ -74,8 +75,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                   <tr>
                     <th>기관</th>
                     <th>번호</th>
-                    <th className="tnum">공급가액</th>
-                    <th className="tnum">합계 (부가세 포함)</th>
+                    <th className="num">공급가액</th>
+                    <th className="num">합계 (부가세 포함)</th>
                     <th>기한</th>
                     <th>상태</th>
                     <th>보냄</th>
@@ -89,8 +90,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                       <tr key={x.id}>
                         <td data-label="기관">{x.org_name}</td>
                         <td data-label="번호" className="tnum"><Link href={`/cro/billing/${x.id}`}>{x.invoice_no}</Link></td>
-                        <td data-label="공급가액" className="tnum">{comma(x.supply_amount)}</td>
-                        <td data-label="합계" className="tnum">{comma(x.total)}</td>
+                        <td data-label="공급가액" className="num">{comma(x.supply_amount)}</td>
+                        <td data-label="합계" className="num">{comma(x.total)}</td>
                         <td data-label="기한" className="tnum">{ymd(x.due_date)}</td>
                         <td data-label="상태">
                           <span className={`pill ${PILL[v]}`}>{INVOICE_VIEW_LABEL[v]}</span>
