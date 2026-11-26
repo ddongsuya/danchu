@@ -6,6 +6,7 @@ import { buildQuoteFunnel, type PerfRow } from "@/lib/crm-analysis";
 import { qs } from "./opts";
 import type { CrmCtx } from "./ctx";
 import "./crm.css";
+import "./layout-crm.css";
 
 export const PERIODS = { m1: "이번 달", m3: "최근 3개월", m6: "최근 6개월", y: "올해" } as const;
 type Period = keyof typeof PERIODS;
@@ -54,14 +55,15 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
   const exportHref = qs(paths.exportXlsx, { from, to });
   const range = q.tab === "f" ? "진행 중인 안건" : from.slice(0, 7) === to.slice(0, 7) ? ym(from) : `${ym(from)} ~ ${from.slice(0, 4) === to.slice(0, 4) ? `${+to.slice(5, 7)}월` : ym(to)}`;
   const fc = q.tab === "f" ? buildForecast({ deals: data.deals, history: data.history, owner: q.owner || null, now }) : null;
-  const qf = q.tab === "q" ? buildQuoteFunnel({ deals: data.deals, history: data.history, quotes: data.quotes, danchu: c.danchu, from, to, owner: q.owner || null }) : null;
+  const sent = q.tab !== "f" ? buildQuoteFunnel({ deals: data.deals, history: data.history, quotes: data.quotes, danchu: c.danchu, from, to, owner: q.owner || null }) : null;
+  const qf = q.tab === "q" ? sent : null;
   const maxWon = Math.max(1, ...r.wonReasons.map((x) => x.count));
   const ct = new Map(data.contacts.map((x) => [x.id, personLabel(x.name, x.title)]));
   return (
     <div className="cx">
       <header className="cx-ph">
         <div>
-          <h1>보고서</h1>
+          <h1>분석</h1>
           <p className="cx-ph__sub">{range} · {ownerName ? `${ownerName} 담당` : "전체 담당자"}</p>
         </div>
         <div className="cx-ph__acts">
@@ -83,9 +85,18 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
           <a href={exportHref} className="b2 bsm"><DownloadSimple size={16} aria-hidden="true" />엑셀로 내보내기</a>
         </div>
       </header>
-      <nav className="cx-tabs2" aria-label="보고서">
+      <nav className="cx-tabs2 cx-cotabs" aria-label="분석">
         {(Object.keys(TABS) as Tab[]).map((t) => <Link key={t} href={link({ tab: t })} aria-current={q.tab === t ? "page" : undefined}>{TABS[t]}</Link>)}
       </nav>
+
+      {sent && (
+        <dl className="cx-stats" aria-label="기간 요약">
+          <div><dt>보낸 견적</dt><dd className="tnum">{sent.sent}건</dd></div>
+          <div><dt>선정</dt><dd className="tnum">{sent.selected}건{sent.selectRate != null && <small>{sent.selectRate}%</small>}</dd></div>
+          <div><dt>수주 · 실패</dt><dd className="tnum">{r.won} · {r.lost}건{r.winRate != null && <small>수주율 {r.winRate}%</small>}</dd></div>
+          <div><dt>수주 금액</dt><dd className="tnum">{r.wonSum ? wonKo(r.wonSum) : "0원"}</dd></div>
+        </dl>
+      )}
 
       {q.tab === "p" && (
         <div className="cx-rep">
@@ -122,7 +133,6 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
             </section>
           </div>
           <div className="cx-rep__col">
-            <WinLine r={r} />
             <SourcePanel r={r} />
           </div>
         </div>
@@ -168,7 +178,6 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
       {q.tab === "w" && (
         <div className="cx-rep">
           <div className="cx-rep__col">
-            <WinLine r={r} />
             <section className="cx-panel" aria-labelledby="r-closed">
               <div><h2 id="r-closed">끝난 안건</h2><p className="cx-cap">기간 안에 수주 또는 실패로 바뀐 {r.closed.length}건</p></div>
               {r.closed.length ? (
@@ -273,19 +282,6 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
 function bucketLabel(b: ForecastBucket): string {
   if (b.kind === "ym") return ym(`${b.key}-01`);
   return b.kind === "late" ? "예상일 지남" : b.kind === "later" ? "그 뒤" : "예상일 없음";
-}
-
-function WinLine({ r }: { r: ReturnType<typeof buildReport> }) {
-  return (
-    <section className="cx-panel" aria-label="수주 요약">
-      <dl className="cx-wonline">
-        <div><dt>수주율</dt><dd className="tnum">{r.winRate != null ? `${r.winRate}%` : "-"}</dd></div>
-        <div><dt>수주 금액</dt><dd className="tnum">{r.wonSum ? wonKo(r.wonSum) : "0원"}</dd></div>
-        <div><dt>수주 · 실패</dt><dd className="tnum">{r.won} · {r.lost}건</dd></div>
-      </dl>
-      <p className="cx-cap">수주율은 기간 안에 끝난 안건 중 수주한 비율이에요.</p>
-    </section>
-  );
 }
 
 /** 고객사별·담당자별 견적 성과 표 */

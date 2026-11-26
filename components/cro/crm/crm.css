@@ -212,7 +212,7 @@
 .cx-stagebar button:disabled { cursor: default; }
 .cx-stagebar button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--cx-hl); }
 @media (hover: hover) and (pointer: fine) { .cx-stagebar li[data-state="next"] button:not(:disabled):hover { background: var(--cx-f2); color: var(--ink); } }
-.cx-dealcols { display: grid; grid-template-columns: 240px minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.cx-dealcols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
 .cx-facts { display: grid; gap: 12px; align-content: start; }
 .cx-facts > div { display: grid; gap: 1px; }
 .cx-facts dt { font-size: 12px; color: var(--muted); }
@@ -451,8 +451,7 @@
 @media (max-width: 1279px) {
   .cx-today { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .cx-side { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
-  .cx-dealcols { grid-template-columns: 220px minmax(0, 1fr); }
-  .cx-dealcols > .cx-rail { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+  .cx-dealcols { grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; }
   .cx-rep { grid-template-columns: minmax(0, 1fr) 320px; }
 }
 /* 기록 첨부 (0051): 파일 한 줄 = 아이콘 · 이름 · 녹음 표시 · 크기 · 빼기 */
@@ -492,9 +491,6 @@
   .cx { gap: 16px; }
   .cx-ph h1, .cx-dh h1, .cx-coh h1 { font-size: 22px; }
   .cx-today, .cx-dealcols, .cx-cocols, .cx-impcols, .cx-rep { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .cx-dealcols > .cx-rail { grid-template-columns: minmax(0, 1fr); }
-  .cx-dealcols > .cx-facts { order: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
-  .cx-dealcols > .cx-rail { order: 3; }
   .cx-sum { position: static; }
   .pt__main:has(.cx-mfab) { padding-bottom: calc(160px + var(--bot, 0px)); }
   /* 오늘: 한 화면에 할 일과 손이 필요한 안건만 */
@@ -561,16 +557,15 @@
   .cx-search input { width: 100%; }
   .cx-preview { margin-bottom: 10px; }
   /* 표: 휴대폰에서는 꼭 필요한 칸만 */
-  .cx-table--co th:nth-child(3), .cx-table--co td:nth-child(3), .cx-table--co th:nth-child(5), .cx-table--co td:nth-child(5), .cx-table--co th:nth-child(6), .cx-table--co td:nth-child(6) { display: none; }
+  .cx-table--co th:nth-child(2), .cx-table--co td:nth-child(2), .cx-table--co th:nth-child(5), .cx-table--co td:nth-child(5), .cx-table--co th:nth-child(6), .cx-table--co td:nth-child(6) { display: none; }
   .cx-table--cd th:nth-child(3), .cx-table--cd td:nth-child(3), .cx-table--cd th:nth-child(4), .cx-table--cd td:nth-child(4) { display: none; }
   .cx-table td, .cx-table th { padding-left: 10px; padding-right: 10px; }
   .cx-table--co, .cx-table--cd { min-width: 0; }
   /* 안건 화면: 휴대폰에서는 기록 · 안건 정보 · 담당자 세 장으로 나눈다. 기록은 아래 버튼으로 따로 남긴다 */
   .cx-deal .cx-center .cx-compose { display: none; }
-  .cx-deal[data-m="log"] .cx-facts, .cx-deal[data-m="log"] .cx-rail,
-  .cx-deal[data-m="info"] .cx-center, .cx-deal[data-m="info"] .cx-rail,
-  .cx-deal[data-m="people"] .cx-center, .cx-deal[data-m="people"] .cx-facts { display: none; }
-  .cx-deal .cx-dealcols > .cx-facts, .cx-deal .cx-dealcols > .cx-rail { order: 0; }
+  .cx-deal[data-m="log"] .cx-rail,
+  .cx-deal[data-m="info"] .cx-center, .cx-deal[data-m="info"] .cx-rail > :not(.cx-rail__info),
+  .cx-deal[data-m="people"] .cx-center, .cx-deal[data-m="people"] .cx-rail__info { display: none; }
   .cx-cocols > *, .cx-dealcols > * { min-width: 0; }
   .cx .cx-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 }

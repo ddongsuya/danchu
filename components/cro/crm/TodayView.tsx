@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { CalendarBlank, CaretRight, EnvelopeSimple, Handshake, Phone, Plus, VideoCamera } from "@phosphor-icons/react/dist/ssr";
-import { STAGE_LABEL, amountLabel, todayList, weekStrip, type Stage } from "@/lib/crm-deals";
-import { hmKst, todayKst, weekdayKo, ymdKst } from "@/lib/crm-shape";
+import { CalendarBlank, CaretRight, Handshake, NotePencil, Phone, Plus, VideoCamera } from "@phosphor-icons/react/dist/ssr";
+import { STAGE_LABEL, amountLabel, monthClosed, todayList, weekStrip, type Stage } from "@/lib/crm-deals";
+import { hmKst, todayKst, weekdayKo, wonKo } from "@/lib/crm-shape";
 import { SheetButton, TaskCheck } from "./forms";
 import { DealForm } from "./deal-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
+import "./layout-crm.css";
 
 const MODE_ICON = { video: VideoCamera, phone: Phone, in_person: Handshake } as const;
 
@@ -33,15 +34,17 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
     return x.time <= nowHm && nowHm < end;
   };
   const noDeals = data.ready && !data.deals.length;
+  const open = rows.filter((r) => r.deal.status === "open");
+  const month = monthClosed(data.deals, now);
   return (
     <div className="cx cx-t">
       <header className="cx-ph">
         <div>
-          <h1>{d.getUTCMonth() + 1}월 {d.getUTCDate()}일 {weekdayKo(today)}요일</h1>
-          <p className="cx-ph__sub">일정 <b className="tnum">{events}</b> · 할 일 <b className="tnum">{tasks}</b> · 손이 필요한 안건 <b className="tnum">{need.length}</b></p>
+          <h1>오늘</h1>
+          <p className="cx-ph__sub">{d.getUTCMonth() + 1}월 {d.getUTCDate()}일 {weekdayKo(today)}요일 · 일정 <b className="tnum">{events}</b> · 할 일 <b className="tnum">{tasks}</b> · 손이 필요한 안건 <b className="tnum">{need.length}</b></p>
         </div>
         <div className="cx-ph__acts">
-          <Link href={`${paths.calendar}?w=${week.from}`} className="b2 bsm"><CalendarBlank size={16} aria-hidden="true" />주간 캘린더</Link>
+          <Link href={paths.log} className="b2 bsm"><NotePencil size={16} aria-hidden="true" />기록 남기기</Link>
           <SheetButton className="b1 bsm" title="안건 만들기" label={<><Plus size={16} aria-hidden="true" />안건 만들기</>}><DealForm opts={opts} base={paths.deals} /></SheetButton>
         </div>
       </header>
@@ -53,9 +56,10 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
           <div className="cx-ph__acts"><Link className="b2" href={paths.import}>엑셀 가져오기</Link></div>
         </section>
       )}
-      <div className="cx-today">
-        <section className="cx-sec" aria-labelledby="t-todo">
-          <div className="cx-sec__h"><h2 id="t-todo">오늘 할 일</h2><span className="cx-muted">일정과 할 일을 시간순으로</span></div>
+      <div className="cx-2col">
+        <div className="cx-main">
+        <section className="cx-grp" aria-labelledby="t-todo">
+          <div className="cx-grp__h"><h2 id="t-todo">오늘 할 일</h2><span className="cx-grp__end tnum">{list.length}건</span></div>
           {list.length ? (
             <ul className="cx-todo">
               {list.map((x) => {
@@ -73,11 +77,11 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
                 );
               })}
             </ul>
-          ) : <p className="cx-none">오늘 잡힌 일정과 할 일이 없어요. 오른쪽 안건부터 다음 할 일을 잡아 보세요.</p>}
+          ) : <p className="cx-none">오늘 잡힌 일정과 할 일이 없어요. 아래 안건에서 다음 할 일을 잡아 보세요.</p>}
         </section>
 
-        <section className="cx-sec" aria-labelledby="t-need">
-          <div className="cx-sec__h"><h2 id="t-need">손이 필요한 안건</h2><Link href={`${paths.deals}?f=need`} className="cx-lk">보드에서 보기</Link></div>
+        <section className="cx-grp" aria-labelledby="t-need">
+          <div className="cx-grp__h"><h2 id="t-need">손이 필요한 안건</h2><span className="cx-grp__end"><span className="tnum">{need.length}건</span><Link href={`${paths.deals}?f=need`} className="cx-lk">보드에서 보기</Link></span></div>
           {need.length ? (
             <ul className="cx-need">
               {need.slice(0, 8).map((r) => (
@@ -93,10 +97,11 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
             </ul>
           ) : <p className="cx-none">모든 진행 안건에 다음 할 일이 잡혀 있어요.</p>}
         </section>
+        </div>
 
-        <aside className="cx-side" aria-label="이번 주 일정">
-          <section className="cx-box">
-            <div className="cx-sec__h"><h2>{week.next ? "다음 주" : "이번 주"}</h2><span className="cx-muted tnum">{+week.from.slice(5, 7)}.{+week.from.slice(8)} ~ {+week.to.slice(5, 7)}.{+week.to.slice(8)}</span></div>
+        <aside className="cx-aside" aria-label="이번 주 일정과 이번 달">
+          <section className="cx-grp" aria-labelledby="t-week">
+            <div className="cx-grp__h"><h2 id="t-week">{week.next ? "다음 주" : "이번 주"} <span className="cx-muted tnum cx-small">{+week.from.slice(5, 7)}.{+week.from.slice(8)} ~ {+week.to.slice(5, 7)}.{+week.to.slice(8)}</span></h2><span className="cx-grp__end"><Link href={`${paths.calendar}?w=${week.from}`} className="cx-lk"><CalendarBlank size={13} aria-hidden="true" />캘린더</Link></span></div>
             <ol className="cx-week">
               {week.days.map((w) => (
                 <li key={w.date} data-today={w.date === today ? "1" : "0"}>
@@ -109,6 +114,14 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
                 {week.items.slice(0, 6).map((x, i) => <li key={i}><span className="tnum">{weekdayKo(x.date)}{x.time ? ` ${x.time}` : ""}</span>{x.title}</li>)}
               </ul>
             ) : <p className="cx-muted">{week.next ? "다음 주" : "이번 주"} 일정이 없어요.</p>}
+          </section>
+          <section className="cx-grp" aria-labelledby="t-month">
+            <div className="cx-grp__h"><h2 id="t-month">안건 현황</h2><span className="cx-grp__end"><Link href={paths.reports} className="cx-lk">분석</Link></span></div>
+            <dl className="cx-props">
+              <div><dt>진행 중</dt><dd className="tnum">{open.length}건 · {wonKo(open.reduce((s, r) => s + (r.deal.amount ?? 0), 0))}</dd></div>
+              <div><dt>이번 달 수주</dt><dd className="tnum">{month.won}건 · {wonKo(month.wonSum)}</dd></div>
+              <div><dt>이번 달 실패</dt><dd className="tnum">{month.lost}건</dd></div>
+            </dl>
           </section>
         </aside>
       </div>

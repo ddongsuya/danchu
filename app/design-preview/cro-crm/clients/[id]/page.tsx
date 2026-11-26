@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "고객사 화면 검토 · 단추", robots: { index: false, follow: false } };
 
 /** 예: /design-preview/cro-crm/clients/00000000-0000-4000-8000-000000000001 (가람바이오) */
-export default async function CrmClientPreview({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string; p?: string }> }) {
+export default async function CrmClientPreview({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ t?: string; p?: string; tab?: string }> }) {
   if (!previewEnabled()) notFound();
-  return <Frame><CompanyView c={previewCtx()} id={(await params).id} t={(await searchParams).t} p={(await searchParams).p} /></Frame>;
+  return <Frame><CompanyView c={previewCtx()} id={(await params).id} t={(await searchParams).t} p={(await searchParams).p} v={(await searchParams).tab} /></Frame>;
 }

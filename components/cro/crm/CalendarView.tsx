@@ -6,6 +6,7 @@ import {
 } from "@/lib/crm-shape";
 import { EventForm, SheetButton, type CrmOpts } from "./forms";
 import { qs, type CrmPaths } from "./opts";
+import "./layout-crm.css";
 
 export type CalView = "week" | "month";
 const H0 = 8;
@@ -74,8 +75,8 @@ export function CalendarView({ view, anchor, day, items, sel, mine, paths, opts,
     <div className={`cal${sel ? " cal--sel" : ""}`} data-view={view}>
       <header className="cal__h">
         <div>
-          <h1>{title}</h1>
-          <p className="tnum">{summary}{mine ? " · 내 일정만" : ""}</p>
+          <h1>캘린더</h1>
+          <p className="tnum"><b>{title}</b> · {summary}{mine ? " · 내 일정만" : ""}</p>
         </div>
         <div className="cal__ctl">
           <Link href={qs(paths.calendar, { v: view === "week" ? null : view, mine: mine ? "1" : null })} className="b2 bsm">오늘</Link>

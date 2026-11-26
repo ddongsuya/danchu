@@ -192,10 +192,10 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
             {mode === "won" ? (
               <>
                 <ReasonPicker label="수주 이유" list={WON_REASONS} value={reason} onChange={setReason} />
-                <Field label="자세히 (선택)" htmlFor={`${hid}-wn`} help="보고서에서 수주 이유별로 모아 봐요.">
+                <Field label="자세히 (선택)" htmlFor={`${hid}-wn`} help="분석 화면에서 수주 이유별로 모아 봐요.">
                   <textarea id={`${hid}-wn`} className="ta" rows={2} value={note} maxLength={2000} placeholder="예: 회복군 제외안으로 일정을 2주 당길 수 있어서 선택" onChange={(e) => setNote(e.target.value)} />
                 </Field>
-                <Field label="계약 금액" htmlFor={`${hid}-a`} help="보고서의 수주 금액이 돼요. 단추 요청은 계약 결과 보고 금액이 따로 남아요.">
+                <Field label="계약 금액" htmlFor={`${hid}-a`} help="분석 화면의 수주 금액이 돼요. 단추 요청은 계약 결과 보고 금액이 따로 남아요.">
                   <input id={`${hid}-a`} className="inp tnum" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
                 </Field>
               </>
@@ -258,7 +258,7 @@ export function WonReasonButton({ dealId, reason: cur, note: curNote }: { dealId
           <form onSubmit={save} className="cx-dialog__in">
             <header>
               <h2 id={hid}>수주 이유</h2>
-              <p>남긴 이유는 보고서에서 이유별로 모여요.</p>
+              <p>남긴 이유는 분석 화면에서 이유별로 모여요.</p>
               <button type="button" className="crm-x" aria-label="닫기" onClick={() => ref.current?.close()}><X size={20} aria-hidden="true" /></button>
             </header>
             <ReasonPicker label="수주 이유" list={WON_REASONS} value={reason} onChange={setReason} />
