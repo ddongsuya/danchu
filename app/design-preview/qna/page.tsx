@@ -37,12 +37,13 @@ const SENT: QnaRow[] = [
 
 /**
  * 질의응답 화면 검토용 (로그인 없이). Vercel 미리보기 배포에서만 열린다. 보내기는 막혀 있다.
- * ?role=req 의뢰자(회신 중) · ?role=req&stage=compared 의뢰자(비교표 뒤, 기관에 질의) · ?role=cro 기관
+ * ?role=req 의뢰자(회신 중) · ?role=req&stage=compared 의뢰자(비교표 뒤, 기관에 질의) · ?role=cro 기관 · &empty=1 질의 없음
  */
-export default async function QnaPreview({ searchParams }: { searchParams: Promise<{ role?: string; stage?: string }> }) {
+export default async function QnaPreview({ searchParams }: { searchParams: Promise<{ role?: string; stage?: string; empty?: string }> }) {
   const enabled = process.env.VERCEL_ENV === "preview" || (process.env.VERCEL_ENV !== "production" && process.env.DANCHU_DESIGN_PREVIEW === "1");
   if (!enabled) notFound();
-  const { role, stage } = await searchParams;
+  const { role, stage, empty } = await searchParams;
+  const none = empty === "1";
   const tests = new Map(TESTS.map((t) => [t.seq, t.name]));
   const cro = role === "cro";
   const session: Session = {
@@ -52,12 +53,12 @@ export default async function QnaPreview({ searchParams }: { searchParams: Promi
 
   let board;
   if (cro) {
-    const { mine, shared } = croItems([...SENT, ...ROWS], { inviteId: "inv-b", selectedInviteId: null, tests });
+    const { mine, shared } = croItems(none ? [] : [...SENT, ...ROWS], { inviteId: "inv-b", selectedInviteId: null, tests });
     board = <QnaBoard side="cro" endpoint="" no="DC-2026-0000" substance="DC-101" backHref="/design-preview/qna?role=cro" mine={mine} shared={shared} canAsk canAnswer askBy="2026-11-20" tests={TESTS} />;
   } else {
     const compared = stage === "compared";
     const labels = partyLabels(INV, compared);
-    const rows = compared ? [...SENT, ...ROWS] : ROWS;
+    const rows = none ? [] : compared ? [...SENT, ...ROWS] : ROWS;
     const items = sponsorItems(rows, { labels, selectedInviteId: null, tests });
     board = (
       <QnaBoard
