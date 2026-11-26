@@ -8,7 +8,7 @@
 
 /* 머리: 제목 칸과 버튼 칸을 같은 줄 가운데로 */
 .cx-ph, .cx-dh { align-items: center; }
-.cx-crumb { margin-bottom: -14px; font-size: 13px; }
+.cx .cx-crumb { margin-bottom: -12px; }
 
 /* 묶음 카드 */
 .cx-grp { background: var(--white); border: 1px solid var(--card-line); border-radius: var(--r-lg); padding: 14px 16px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
@@ -89,3 +89,12 @@
 @media (max-width: 959px) {
   .cx-ds .cx-count { display: none; }
 }
+
+/* ── 안건 화면: 본문 + 오른쪽 요약 칸(안건 정보 · 담당자 · 견적서) ── */
+.cx-deal .cx-rail { gap: 16px; }
+.cx-deal .cx-center { gap: 14px; }
+.cx-deal .cx-next { border: 1px solid color-mix(in srgb, var(--ink) 14%, var(--cx-mark)); }
+.cx-deal .cx-next--none { border-color: var(--card-line); }
+.cx-deal .cx-stagebar button { box-shadow: none; }
+.cx-deal .cx-stagebar li[data-state="next"] button { background: var(--band); }
+.cx-tl__day { border-bottom: 1px solid var(--card-line); padding-bottom: 6px; margin-bottom: 2px; }

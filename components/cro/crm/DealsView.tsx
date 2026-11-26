@@ -125,7 +125,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
           <label className="sr-only" htmlFor="deal-q">안건·고객사·담당자 찾기</label>
           <input id="deal-q" name="q" defaultValue={q.q} placeholder="안건, 고객사, 담당자 찾기" maxLength={60} />
         </form>
-        <span className="cx-count tnum">{q.v === "board" ? `진행 중 ${rows.filter((r) => r.deal.status === "open").length}건` : `${listRows.length}건`}</span>
+        {q.v === "board" && <span className="cx-count tnum">진행 중 {rows.filter((r) => r.deal.status === "open").length}건</span>}
       </div>
 
       {q.v === "board" ? (

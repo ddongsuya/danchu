@@ -9,6 +9,7 @@ import { ActivityFiles } from "./files-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
+import "./layout-crm.css";
 
 const KIND_ICON = { meeting: Handshake, call: Phone, email: EnvelopeSimple, memo: NotePencil, stage: ArrowRight, quote: FileText, task: Check } as const;
 
@@ -122,30 +123,6 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
       </nav>
 
       <div className="cx-dealcols">
-        <dl className="cx-facts">
-          <div><dt>{d.status === "won" ? "계약 금액" : "금액"}</dt><dd className="cx-facts__big tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</dd></div>
-          {d.status === "won" && d.won_amount != null && d.amount != null && d.won_amount !== d.amount && <div><dt>견적 금액</dt><dd className="tnum">{wonKo(d.amount)}</dd></div>}
-          {d.status === "won" && (
-            <div>
-              <dt>수주 이유</dt>
-              <dd>{d.won_reason || <span className="cx-muted">적지 않음</span>}<WonReasonButton dealId={d.id} reason={d.won_reason} note={d.won_note} />{d.won_note && <small className="cx-muted cx-facts__note">{d.won_note}</small>}</dd>
-            </div>
-          )}
-          {d.status === "lost" && <div><dt>실패 사유</dt><dd>{d.lost_reason || "기타"}{d.lost_note && <small className="cx-muted cx-facts__note">{d.lost_note}</small>}</dd></div>}
-          <div><dt>예상 계약</dt><dd className="tnum">{d.expected_on ? `${d.expected_on.slice(0, 4)}년 ${+d.expected_on.slice(5, 7)}월` : <span className="cx-muted">정하지 않음</span>}</dd></div>
-          <div><dt>시험 갈래</dt><dd>{d.kind ? DEAL_KIND[d.kind] : <span className="cx-muted">-</span>}{src?.cats.length ? <span className="cx-muted"> · {src.cats.slice(0, 2).join(", ")}</span> : null}</dd></div>
-          {d.substance && <div><dt>대상 물질</dt><dd>{d.substance}</dd></div>}
-          {d.submit_to && <div><dt>제출처</dt><dd>{d.submit_to}</dd></div>}
-          {d.report_lang && <div><dt>보고서 언어</dt><dd>{d.report_lang}</dd></div>}
-          <div><dt>담당 영업</dt><dd>{d.owner ? mem.get(d.owner) ?? "-" : <span className="cx-muted">정하지 않음</span>}</dd></div>
-          <div><dt>출처</dt><dd>{danchu ? <>단추 요청 {r.danchuNo}<Lock /></> : d.source === "import" ? "엑셀에서 가져옴" : "직접 받은 문의"}</dd></div>
-          {src?.award && <div><dt>선정일</dt><dd className="tnum">{ymdKst(src.award.awardedAt).replaceAll("-", ".")}<Lock /></dd></div>}
-          {src?.replyBy && !src.award && d.status === "open" && <div><dt>회신 기한</dt><dd className="tnum">{mdW(src.replyBy.slice(0, 10))}<Lock /></dd></div>}
-          {company?.first_deal_on && <div><dt>첫 거래</dt><dd className="tnum">{company.first_deal_on.slice(0, 4)}년 {+company.first_deal_on.slice(5, 7)}월</dd></div>}
-          {d.memo && <div><dt>메모</dt><dd className="cx-pre">{d.memo}</dd></div>}
-          {danchu && <div><dt>단추 요청</dt><dd><Link href={`/cro/r/${d.invite_id}`} className="cx-lk">요청서 보기</Link></dd></div>}
-        </dl>
-
         <div className="cx-center">
           {d.status === "open" && (
             next ? (
@@ -177,11 +154,38 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
           ) : <p className="cx-none">아직 기록이 없어요. 통화나 미팅을 마치면 위에 한 줄 남겨요.</p>}
         </div>
 
-        <aside className="cx-rail" aria-label="담당자와 견적서">
-          <section className="cx-rail__s">
-            <h2 className="cx-rail__h">담당자
-              {company && <SheetButton className="cx-lk cx-rail__add" title="담당자 추가" label={<><Plus size={13} aria-hidden="true" />추가</>}><ContactForm companyId={company.id} dealId={d.id} /></SheetButton>}
-            </h2>
+        <aside className="cx-rail" aria-label="안건 정보와 담당자, 견적서">
+          <section className="cx-grp cx-rail__info" aria-labelledby="d-info">
+            <div className="cx-grp__h"><h2 id="d-info">안건 정보</h2></div>
+            <dl className="cx-props">
+              <div><dt>{d.status === "won" ? "계약 금액" : "금액"}</dt><dd className="cx-facts__big tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</dd></div>
+              {d.status === "won" && d.won_amount != null && d.amount != null && d.won_amount !== d.amount && <div><dt>견적 금액</dt><dd className="tnum">{wonKo(d.amount)}</dd></div>}
+              {d.status === "won" && (
+                <div>
+                  <dt>수주 이유</dt>
+                  <dd>{d.won_reason || <span className="cx-muted">적지 않음</span>}<WonReasonButton dealId={d.id} reason={d.won_reason} note={d.won_note} />{d.won_note && <small className="cx-muted cx-facts__note">{d.won_note}</small>}</dd>
+                </div>
+              )}
+              {d.status === "lost" && <div><dt>실패 사유</dt><dd>{d.lost_reason || "기타"}{d.lost_note && <small className="cx-muted cx-facts__note">{d.lost_note}</small>}</dd></div>}
+              <div><dt>예상 계약</dt><dd className="tnum">{d.expected_on ? `${d.expected_on.slice(0, 4)}년 ${+d.expected_on.slice(5, 7)}월` : <span className="cx-muted">정하지 않음</span>}</dd></div>
+              <div><dt>시험 갈래</dt><dd>{d.kind ? DEAL_KIND[d.kind] : <span className="cx-muted">-</span>}{src?.cats.length ? <span className="cx-muted"> · {src.cats.slice(0, 2).join(", ")}</span> : null}</dd></div>
+              {d.substance && <div><dt>대상 물질</dt><dd>{d.substance}</dd></div>}
+              {d.submit_to && <div><dt>제출처</dt><dd>{d.submit_to}</dd></div>}
+              {d.report_lang && <div><dt>보고서 언어</dt><dd>{d.report_lang}</dd></div>}
+              <div><dt>담당 영업</dt><dd>{d.owner ? mem.get(d.owner) ?? "-" : <span className="cx-muted">정하지 않음</span>}</dd></div>
+              <div><dt>출처</dt><dd>{danchu ? <>단추 요청 {r.danchuNo}<Lock /></> : d.source === "import" ? "엑셀에서 가져옴" : "직접 받은 문의"}</dd></div>
+              {src?.award && <div><dt>선정일</dt><dd className="tnum">{ymdKst(src.award.awardedAt).replaceAll("-", ".")}<Lock /></dd></div>}
+              {src?.replyBy && !src.award && d.status === "open" && <div><dt>회신 기한</dt><dd className="tnum">{mdW(src.replyBy.slice(0, 10))}<Lock /></dd></div>}
+              {company?.first_deal_on && <div><dt>첫 거래</dt><dd className="tnum">{company.first_deal_on.slice(0, 4)}년 {+company.first_deal_on.slice(5, 7)}월</dd></div>}
+              {d.memo && <div><dt>메모</dt><dd className="cx-pre">{d.memo}</dd></div>}
+              {danchu && <div><dt>단추 요청</dt><dd><Link href={`/cro/r/${d.invite_id}`} className="cx-lk">요청서 보기</Link></dd></div>}
+            </dl>
+          </section>
+
+          <section className="cx-grp" aria-labelledby="d-ppl">
+            <div className="cx-grp__h"><h2 id="d-ppl">담당자</h2>
+              {company && <span className="cx-grp__end"><SheetButton className="cx-lk cx-rail__add" title="담당자 추가" label={<><Plus size={13} aria-hidden="true" />추가</>}><ContactForm companyId={company.id} dealId={d.id} /></SheetButton></span>}
+            </div>
             {dealContacts.length ? (
               <ul className="cx-ppl">
                 {dealContacts.map((p, i) => {
@@ -204,8 +208,8 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
             ) : <p className="cx-muted cx-small">{danchu && !company ? "의뢰자가 우리 견적을 고르면 고객사와 담당자가 저절로 들어와요." : company ? "이 안건의 담당자를 추가해요." : "고객사를 정하면 담당자를 붙일 수 있어요."}</p>}
           </section>
 
-          <section className="cx-rail__s">
-            <h2 className="cx-rail__h">견적서</h2>
+          <section className="cx-grp" aria-labelledby="d-qv">
+            <div className="cx-grp__h"><h2 id="d-qv">견적서</h2>{quotes.length > 0 && <span className="cx-grp__end tnum">{quotes.length}장</span>}</div>
             {quotes.length || src?.quote ? (
               <ul className="cx-qv">
                 {[...quotes].reverse().map((q, i) => (
