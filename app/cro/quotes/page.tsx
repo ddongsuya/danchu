@@ -20,7 +20,7 @@ export default async function CroQuotes() {
       <div className="ph">
         <div>
           <h1>제출한 견적</h1>
-          <p>비교표가 열리기 전까지 고칠 수 있어요. 열리면 의뢰자에게 보이고, 기관을 고르면 결과를 알려요.</p>
+          <p>비교표가 열리기 전까지 고칠 수 있어요. 열린 뒤에는 고치거나 다시 제출할 수 없어요.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/awards" className="b2 bsm">수주·계약 보고</Link>
