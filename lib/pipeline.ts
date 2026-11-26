@@ -8,6 +8,8 @@ import type { InviteWithQuote, listAwardsForOrg } from "./data";
 import { identityVisible, maskedClientLabel } from "./request-policy";
 import { inviteStage, type InviteStage } from "./status";
 import { needsAction } from "./cro-story";
+import { quoteRowsFromPayload, summaryFacetsOf } from "./quote-items";
+import type { Values } from "./rfq-schema";
 
 type Award = Awaited<ReturnType<typeof listAwardsForOrg>>[number];
 
@@ -42,7 +44,24 @@ export type PipeItem = {
   note: string;
   action: { label: string; href: string } | null;
   awardId: string | null;
+  /** 받은 요청 표 (시안 v7 c-req). 분할 탭: new 참여 결정 전 · draft 참여·작성 중 · sent 제출(미선정 포함) · won 선정 · other 그 밖(전체에만) */
+  tab: PipeTab;
+  /** 요청 받은 날 (YYYY-MM-DD, 서울) */
+  sentAt: string;
+  replyBy: string;
+  /** 시험 항목 이름 (참여 전 요약에 보이는 범위) */
+  tests: string;
+  /** 동물종 · 회복 · GLP (참여 전 요약 범위) */
+  cond: string;
+  species: string[];
+  glp: string[];
+  total: number | null;
+  weeks: number | null;
+  submittedOn: string;
 };
+
+export type PipeTab = "new" | "draft" | "sent" | "won" | "other";
+export const TAB_LABEL: Record<Exclude<PipeTab, "other">, string> = { new: "새 요청", draft: "작성 중", sent: "제출", won: "선정" };
 
 const DAY = 864e5;
 const ymdKst = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : "");
@@ -80,7 +99,23 @@ export function buildPipeline(invites: InviteWithQuote[], awards: Award[], now =
     // 참여 전에는 시험물질명을 보이지 않는다 (요약에 없는 정보, 0023)
     const title = joined && i.rfq?.substance ? i.rfq.substance : `${cats || "시험"} 요청`;
     const client = identityVisible({ awarded }) ? i.rfq?.company ?? null : null;
+    const payload = (i.rfq?.payload ?? {}) as Values;
+    const rows = quoteRowsFromPayload(payload, { summary: true });
+    const names = [...new Set(rows.map((r) => r.name))];
+    const facets = summaryFacetsOf(payload);
+    const subOn = i.quote?.submitted_at ?? i.quote?.first_submitted_at ?? null;
     const base = {
+      tab: (awarded ? "won" : stage === "submitted" ? "sent" : "other") as PipeTab,
+      sentAt: ymdKst(i.sent_at),
+      replyBy: i.reply_by ?? "",
+      tests: names.length > 2 ? `${names.slice(0, 2).join(" · ")} 외 ${names.length - 2}` : names.join(" · ") || cats,
+      // 행마다 같은 조건이 겹치므로 낱말로 모아 한 줄로 (GLP 여부는 맨 뒤)
+      cond: [...new Set(rows.flatMap((r) => r.cond.split(" · ")).filter(Boolean))].sort((a, b) => Number(/GLP$/.test(a)) - Number(/GLP$/.test(b))).join(" · "),
+      species: facets.species,
+      glp: facets.glp,
+      total: i.quote?.total_amount ?? null,
+      weeks: i.quote?.total_weeks ?? null,
+      submittedOn: ymdKst(subOn),
       id: i.id,
       no: i.rfq_no,
       title,
@@ -119,7 +154,7 @@ export function buildPipeline(invites: InviteWithQuote[], awards: Award[], now =
           ...(pct != null && reported ? ([["차이", `${pct > 0 ? "+" : ""}${pct}%`]] as [string, string][]) : []),
         ],
         note: reported ? "계약 확정 뒤에는 시험물질 정보를 받아 필요량을 적어요." : "계약 금액이 선정 금액과 10% 넘게 다르면 보고할 때 사유를 골라요.",
-        action: !reported ? { label: "계약 결과 보고", href: "/cro/awards" } : !subst ? { label: "필요량 적기", href: "/cro/awards" } : null,
+        action: !reported ? { label: "계약 결과 보고", href: `/cro/requests?tab=won&sel=${award.id}` } : !subst ? { label: "필요량 적기", href: `/cro/requests?tab=won&sel=${award.id}` } : null,
       });
       continue;
     }
@@ -168,6 +203,7 @@ export function buildPipeline(invites: InviteWithQuote[], awards: Award[], now =
     const soon = due ? new Date(`${due.slice(0, 10)}T23:59:59+09:00`).getTime() - now <= 7 * DAY : false;
     out.push({
       ...base,
+      tab: undecided ? "new" : "draft",
       group: soon ? "todo" : undecided ? "decide" : "work",
       stageLabel: undecided ? "참여 결정 전" : stage === "draft" ? "작성 중" : "참여",
       next: undecided ? "참여할지 정하기" : stage === "draft" ? "견적 이어 쓰기" : "견적 쓰기",

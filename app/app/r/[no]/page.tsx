@@ -1,6 +1,5 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
-import { NextStep } from "@/components/app/NextStep";
 import { ContractConfirm, ReopenRequest, SponsorContractResult, StartNow } from "@/components/app/RequestActions";
 import { GAP_REASON_LABEL, gapLabel, gapOf, isGapReason, SPONSOR_STATUS_LABEL } from "@/lib/contract-gap";
 import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
@@ -19,12 +18,15 @@ import { funnel } from "@/lib/request-story";
 import { RequestStory } from "@/components/app/RequestStory";
 import { qnaCounts } from "@/lib/qna-data";
 import { draftSentAt } from "@/lib/contract-draft-db";
+import { quoteRowsFromPayload, summaryFacetsOf } from "@/lib/quote-items";
+import type { Values } from "@/lib/rfq-schema";
 
 export const dynamic = "force-dynamic";
 
-export default async function RequestDetail({ params }: { params: Promise<{ no: string }> }) {
+export default async function RequestDetail({ params, searchParams }: { params: Promise<{ no: string }>; searchParams: Promise<{ end?: string }> }) {
   const s = await requireSession("requester");
   const { no } = await params;
+  const { end: endAsk } = await searchParams;
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
@@ -83,12 +85,12 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const todayKst = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   const noJoinPastDue = ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !!rfq.reply_by && rfq.reply_by < todayKst && joinedCount === 0;
   const contractOpen = !!d.award && !reported && ["selected", "contracting"].includes(rfq.status);
-  const chips = [
-    ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
-    rfq.cro_count ? (rfq.cro_count === "전체" ? "참여 자리 제한 없음" : `참여 자리 ${rfq.cro_count}`) : "",
-    rfq.nominees_only ? "지명 기관에만 안내" : "",
-    needsCda(rfq.confidentiality) ? "CDA 필요" : "",
-  ].filter(Boolean);
+  // 제목 아래 (시안 v7 "11-26 접수 · 랫드 · 경구 · GLP"): 시험 조건, 그다음 안내 범위·CDA처럼 기관 쪽이 달라지는 것만
+  const fx = summaryFacetsOf(p as Values);
+  const route = typeof p.route === "string" ? p.route : "";
+  const facets = [...fx.species, route, ...fx.glp].filter(Boolean);
+  const chips = [rfq.nominees_only ? "지명 기관에만 안내" : "", needsCda(rfq.confidentiality) ? "CDA 필요" : ""].filter(Boolean);
+  const canEnd = !d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status);
 
   // 질의응답 (0045): 참여한 기관이 있으면 요청 화면에서 바로 간다
   const qc = story.sent > 0 ? await qnaCounts(rfq.id) : null;
@@ -97,9 +99,30 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   // 요청이 기관에 전달된 시각 (예전 요청은 기록에만 남아 있다)
   const distributedAt = rfq.distributed_at ?? d.events.filter((e) => e.kind === "distributed").at(-1)?.created_at ?? null;
 
+  // 요청 내용 카드의 핵심 항목 (시안 v7: 시험 · 동물종 · 투여 경로 · 군 구성 · GLP · 회신 기한). 나머지는 "전체 보기"
+  const testNames = [...new Set(quoteRowsFromPayload(p as Values).map((r) => r.name))].join(", ");
+  const groups = (rfq.categories ?? []).map((c) => p[`${c}.groups`]).find((v) => typeof v === "string" && v) as string | undefined;
+  const glpLine = fx.glp.length === 1 ? (fx.glp[0] === "GLP" ? "적용" : "비적용") : fx.glp.length ? "시험마다 다름" : "";
+  const keyRows = [
+    ["시험", testNames || rfq.categories.join(", ")],
+    ["시험물질", testNames ? "" : rfq.substance],
+    ["동물종", fx.species.join(", ")],
+    ["투여 경로", route],
+    ["군 구성", groups ?? ""],
+    ["GLP", glpLine],
+    ["지명 기관", Array.isArray(p.nominees) && p.nominees.length ? (p.nominees as string[]).join(", ") : ""],
+    ["회신 기한", rfq.reply_by ?? ""],
+  ].filter(([, v]) => v);
+  const fullRows = Object.entries(labels).filter(([id]) => {
+    const v = p[id];
+    return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v;
+  });
+
+  // 숫자 칸 아래: 보내기 전이면 보내기 버튼, 그 밖에는 기관 이름(지명 기관·공개 뒤 참여 기관)이 있을 때만
+  const asideOn = (!rfq.started_at && rfq.status === "received") || (d.invites.length > 0 && (!named ? nominees.length > 0 || (!ended && seats.reserved > 0 && !!joinBy) : shown.length > 0));
   return (
     <>
-      <Crumb href="/app" label="내 요청" />
+      <div className="only-narrow"><Crumb href="/app" label="내 요청" /></div>
       <RequestStory
         no={rfq.rfq_no}
         substance={rfq.substance}
@@ -107,44 +130,134 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         status={rfq.status}
         outcome={rfq.outcome}
         started={!!rfq.started_at || rfq.status !== "received"}
+        createdAt={rfq.created_at}
         replyBy={rfq.reply_by}
         distributedAt={distributedAt}
         comparedAt={rfq.compared_at}
         award={d.award ? { name: d.award.cro_name, at: d.award.awarded_at, reportedAt: d.award.contract_reported_at ?? null } : null}
+        contractDone={!!(confirmedAt && reported)}
         f={story}
         canCompare={canCompare}
         confirm={needsConfirm}
         qna={qna}
-        next={
-          (noJoinPastDue || contractOpen) && (
-            <div className="rs-next">
-              {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
-              {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
-              {contractOpen && draftAt && (
-                <Link href={`/app/r/${rfq.rfq_no}/contract`} className="b2">
-                  계약서(안) 보기
-                </Link>
+        conditions={chips}
+        facets={facets}
+        joinBy={joinBy}
+        canEnd={canEnd}
+        stuck={noJoinPastDue}
+        croMail={contractOpen && croContact?.email ? `mailto:${croContact.email}?subject=${encodeURIComponent(`[단추 ${rfq.rfq_no}] 계약 진행`)}` : undefined}
+        top={
+          (needsConfirm || (!d.award && rfq.outcome)) && (
+            <>
+              {!d.award && rfq.outcome && (
+                <div className="note" style={{ flexDirection: "column", gap: 4 }}>
+                  <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>
+                  {rfq.outcome_note && <span>{rfq.outcome_note}</span>}
+                  {reopenUntil && <ReopenRequest no={rfq.rfq_no} until={reopenUntil} />}
+                </div>
               )}
-            </div>
+              {needsConfirm && d.award && (
+                <ContractConfirm
+                  no={rfq.rfq_no}
+                  cro={d.award.cro_name}
+                  date={d.award.contract_date ? ymd(d.award.contract_date) : "-"}
+                  amount={won(d.award.contract_amount ?? 0)}
+                  autoOn={autoOn}
+                  gap={gapLine}
+                />
+              )}
+            </>
           )
         }
+        side={
+          d.award && (
+            <section className="card rq-card" aria-labelledby="contract-title">
+              <h2 id="contract-title" className="rq-card__h">계약</h2>
+              <div className="card--rows rq-card__rows">
+                <div className="kv"><span className="kv__k">선택한 기관</span><span className="kv__v">{d.award.cro_name}</span></div>
+                <div className="kv"><span className="kv__k">선택일</span><span className="kv__v tnum">{ymd(d.award.awarded_at)}</span></div>
+                <div className="kv">
+                  <span className="kv__k">상태</span>
+                  <span className="kv__v">
+                    {confirmedAt && reported
+                      ? `계약 확정${viaNote}`
+                      : disputeOpen
+                        ? "의견 확인 중"
+                        : reported && d.award.contract_status === "signed"
+                          ? "기관 체결 보고, 확인 필요"
+                          : "기관과 직접 진행"}
+                  </span>
+                </div>
+                {confirmedAt && reported && (
+                  <div className="kv"><span className="kv__k">계약</span><span className="kv__v tnum">{[d.award.contract_date ? ymd(d.award.contract_date) : "", won(d.award.contract_amount ?? 0)].filter(Boolean).join(" · ")}</span></div>
+                )}
+                {croContact && (
+                  <div className="kv"><span className="kv__k">기관 담당</span><span className="kv__v">{[croContact.name, croContact.email, croContact.phone].filter(Boolean).join(" · ")}</span></div>
+                )}
+                <div className="kv">
+                  <span className="kv__k">시험물질 필요량</span>
+                  <span className="kv__v">
+                    {d.award.substance_qty ? [d.award.substance_qty, d.award.substance_when && `보낼 시점 ${d.award.substance_when}`].filter(Boolean).join(" · ") : "기관이 적으면 보여요"}
+                  </span>
+                </div>
+                {d.award.substance_note && <p className="rq-card__p">{d.award.substance_note}</p>}
+              </div>
+              {disputeOpen && <p className="rq-card__p">계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있어요. 확인을 마칠 때까지 계약을 확정하지 않아요.</p>}
+              {contractOpen && draftAt && <div className="rq-card__acts"><Link href={`/app/r/${rfq.rfq_no}/contract`} className="b2">계약서(안) 보기</Link></div>}
+            </section>
+          )
+        }
+        main={
+          <>
+            <section className="card rq-card" aria-labelledby="detail-title">
+              <h2 id="detail-title" className="rq-card__h">요청 내용</h2>
+              <div className="card--rows rq-card__rows">
+                {keyRows.map(([k, v]) => (
+                  <div key={String(k)} className="kv">
+                    <span className="kv__k">{k}</span>
+                    <span className="kv__v">{String(v)}</span>
+                  </div>
+                ))}
+                {d.files.length > 0 && (
+                  <div className="kv" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+                    <span className="kv__k">첨부</span>
+                    {d.files.map((f) => (
+                      <a key={f.id} href={`/api/files/${f.id}`} style={{ fontSize: 14 }}>
+                        {f.file_name} <span style={{ color: "var(--muted)" }}>· {(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span>
+                        {!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <details className="rq-card__full">
+                  <summary>전체 보기 <span className="tnum">{fullRows.length}개 항목</span></summary>
+                  {/* 첨부는 기관을 고르기 전까지만 고친다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다 */}
+                  {!d.award && !ended && <div className="rq-card__more"><AttachmentRetry no={rfq.rfq_no} /></div>}
+                  <div className="card--rows rq-card__rows">
+                    {fullRows.map(([id, label]) => (
+                      <div key={id} className="kv" style={{ fontSize: 13 }}>
+                        <span className="kv__k">{label}</span>
+                        <span className="kv__v" style={{ fontWeight: 500 }}>{Array.isArray(p[id]) ? (p[id] as string[]).join(", ") : String(p[id])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+            </section>
+            {/* 요청 마무리는 바로 가기·기한 지남 띠에서 열 때만 (시안 v7 r-outcome) */}
+            {/* 의뢰자 계약 결과 알림 (0034). 시안에 없는 카드라 요청 내용 아래에 둔다 */}
+            {canTellResult && d.award && (
+              <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
+            )}
+            {canEnd && endAsk === "1" && <div id="end"><OutcomeForm no={rfq.rfq_no} compared={canCompare} initialOpen /></div>}
+          </>
+        }
       >
+        {asideOn && (
         <div className="rs-aside">
-          {chips.length > 0 && (
-            <div className="rs-tags">
-              {chips.map((c) => (
-                <span key={c} className="tag">{c}</span>
-              ))}
-            </div>
-          )}
           {!rfq.started_at && rfq.status === "received" ? (
-            <div className="rs-aside__p">
-              아직 기관에 참여 안내를 보내지 않았어요. 첨부를 다시 올린 뒤 보내거나, 지금 있는 첨부로 바로 보낼 수 있어요.
-              <StartNow no={rfq.rfq_no} />
-            </div>
-          ) : d.invites.length === 0 ? (
-            <p className="rs-aside__p">{rfq.started_at && !ended ? "운영자가 안내할 기관을 확인하면 여기에 숫자가 채워져요." : "참여 안내를 보낸 기관이 없어요."}</p>
-          ) : !named ? (
+            <StartNow no={rfq.rfq_no} />
+          ) : d.invites.length === 0 ? null : !named ? (
             <>
               {nominees.length > 0 && (
                 <div className="rs-names" aria-label="지명한 기관">
@@ -157,15 +270,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   ))}
                 </div>
               )}
-              <p className="rs-aside__p">
-                {ended
-                  ? "비교표가 열리기 전에 마무리한 요청이라 기관 이름과 견적은 공개되지 않아요."
-                  : `${rfq.reply_by ? `비교 보고서는 회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열려요. ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 내면 더 빨리 열려요. 그 전에는 숫자만 보이고, 기관 이름과 견적은 보고서에서 함께 공개돼요.${seats.reserved > 0 && joinBy ? ` 지명 기관 몫 ${seats.reserved}곳은 참여 결정 기한(${md(joinBy)})까지 비워 둬요.` : joinBy ? ` 참여 결정 기한은 ${md(joinBy)}이에요.` : ""}`}
-              </p>
+              {!ended && seats.reserved > 0 && joinBy && <p className="rs-aside__p">지명 기관 몫 {seats.reserved}곳 · {md(joinBy)}까지</p>}
             </>
-          ) : shown.length === 0 ? (
-            <p className="rs-aside__p">참여한 기관이 없어요.</p>
-          ) : (
+          ) : shown.length === 0 ? null : (
             <>
               <div className="rs-names" aria-label="참여한 기관">
                 <span className="rs-names__k">참여한 기관 · {seatLine}</span>
@@ -176,133 +283,14 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   </span>
                 ))}
               </div>
-              {opened && !d.award && !ended && (
-                <p className="rs-aside__p">{submitted > 0 ? "비교 보고서가 열렸어요. 도착한 견적은 더 바뀌지 않아요. 보고서에서 진행할 기관을 선택해 주세요." : "비교 보고서가 열렸지만 도착한 견적이 없어요."}</p>
-              )}
             </>
           )}
         </div>
+        )}
       </RequestStory>
 
-      {(rfq.outcome || d.award) && <div className="stack rs-status">
-
-          {!d.award && rfq.outcome && (
-            <div className="note" style={{ flexDirection: "column", gap: 4 }}>
-              <b>선정 없이 마무리 · {rfq.outcome}{rfq.outcome_at ? ` · ${ymd(rfq.outcome_at)}` : ""}</b>
-              {rfq.outcome_note && <span>{rfq.outcome_note}</span>}
-              {reopenUntil && <ReopenRequest no={rfq.rfq_no} until={reopenUntil} />}
-            </div>
-          )}
-          {d.award && (
-            <div className="note note--ok" style={{ flexDirection: "column", gap: 4 }}>
-              <b>{d.award.cro_name} 선정 · {ymd(d.award.awarded_at)}</b>
-              <span>
-                {confirmedAt && reported
-                  ? `계약 확정 · ${d.award.contract_date ? ymd(d.award.contract_date) : ""} · ${won(d.award.contract_amount ?? 0)}${viaNote}`
-                  : disputeOpen
-                    ? "계약 보고에 남기신 의견을 운영자가 기관과 확인하고 있어요. 확인을 마칠 때까지 계약을 확정하지 않아요."
-                    : reported && d.award.contract_status === "signed"
-                      ? "기관이 계약 체결을 보고했어요. 아래에서 내용을 확인해 주세요."
-                      : "서로 연락처를 주고받았어요. 계약은 기관과 직접 진행해요."}
-              </span>
-              {croContact && (
-                <span>
-                  기관 담당 {[croContact.name, croContact.email, croContact.phone].filter(Boolean).join(" · ")}
-                </span>
-              )}
-            </div>
-          )}
-          {d.award && (
-            <div className="note note--tint" style={{ flexDirection: "column", gap: 4 }}>
-              <b>시험물질 필요량</b>
-              {d.award.substance_qty ? (
-                <span>
-                  {[d.award.substance_qty, d.award.substance_when && `보낼 시점 ${d.award.substance_when}`].filter(Boolean).join(" · ")}
-                  {d.award.substance_note ? <span style={{ display: "block" }}>{d.award.substance_note}</span> : null}
-                </span>
-              ) : (
-                <span>{d.award.cro_name}에 시험물질 정보를 보내면 기관이 필요량과 보낼 시점을 여기에 적어요.</span>
-              )}
-            </div>
-          )}
-          {needsConfirm && d.award && (
-            <ContractConfirm
-              no={rfq.rfq_no}
-              cro={d.award.cro_name}
-              date={d.award.contract_date ? ymd(d.award.contract_date) : "-"}
-              amount={won(d.award.contract_amount ?? 0)}
-              autoOn={autoOn}
-              gap={gapLine}
-            />
-          )}
-          {canTellResult && d.award && (
-            <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
-          )}
-      </div>}
-
-      <section className="rs-block" aria-labelledby="detail-title">
-        <p className="rs-bk">요청 내용</p>
-        <h2 id="detail-title" className="rs-h2">보낸 요청서</h2>
-        <div className="stack">
-          <div className="card card--rows">
-            <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--muted)" }}>요청 내용</div>
-            {[
-              ["의뢰 목적", rfq.purpose],
-              ["요청 성격", rfq.intent],
-              ["개발 분야", p.devField],
-              ["희망 착수", p.start],
-              ["예산", rfq.budget],
-              ["지명 기관", Array.isArray(p.nominees) && p.nominees.length ? (p.nominees as string[]).join(", ") : ""],
-              ["안내 범위", rfq.nominees_only ? "지명 기관에만 안내" : ""],
-              ["기밀 등급", rfq.confidentiality],
-              ["접수일", ymd(rfq.created_at)],
-              ["상세 입력", rfq.submitted_step === 2 ? "완료" : "기본 정보만"],
-            ]
-              .filter(([, v]) => v)
-              .map(([k, v]) => (
-                <div key={String(k)} className="kv">
-                  <span className="kv__k">{k}</span>
-                  <span className="kv__v">{String(v)}</span>
-                </div>
-              ))}
-            {d.files.length > 0 && (
-              <div className="kv" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-                <span className="kv__k">첨부</span>
-                {d.files.map((f) => (
-                  <a key={f.id} href={`/api/files/${f.id}`} style={{ fontSize: 14 }}>
-                    {f.file_name} <span style={{ color: "var(--muted)" }}>· {(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span>
-                    {!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 첨부는 기관을 고르기 전까지만 고친다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다 */}
-          {!d.award && !["closed", "cancelled"].includes(rfq.status) && <div className="card card--pad"><AttachmentRetry no={rfq.rfq_no} /></div>}
-          <details className="card" style={{ padding: "0 18px" }}>
-            <summary style={{ padding: "14px 0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>입력한 전체 항목 보기</summary>
-            <div className="card--rows" style={{ padding: "0 0 8px" }}>
-              {Object.entries(labels)
-                .filter(([id]) => {
-                  const v = p[id];
-                  return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v;
-                })
-                .map(([id, label]) => (
-                  <div key={id} className="kv" style={{ fontSize: 13 }}>
-                    <span className="kv__k">{label}</span>
-                    <span className="kv__v" style={{ fontWeight: 500 }}>{Array.isArray(p[id]) ? (p[id] as string[]).join(", ") : String(p[id])}</span>
-                  </div>
-                ))}
-            </div>
-          </details>
-        </div>
-      </section>
-
-      {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <div id="end" style={{ marginTop: 24 }}><OutcomeForm no={rfq.rfq_no} compared={canCompare} /></div>}
-
       {canCompare && !d.award && (
-        <DockAfter>
+        <DockAfter watch=".rq-banner__a">
           <Link href={`/app/r/${rfq.rfq_no}/compare`} className="b1 blg bfull">비교 보고서 받아보기</Link>
         </DockAfter>
       )}

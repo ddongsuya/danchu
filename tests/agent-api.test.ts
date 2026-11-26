@@ -93,7 +93,7 @@ describe("역할 경계", () => {
 
 describe("공개 규칙", () => {
   it("기관 목록 한 줄에는 의뢰자 계정 id·선정 id 가 없다", () => {
-    const out = croItem({ id: "i", no: "DC-2026-0001", title: "물질", cats: "독성", client: null, clientKey: "user-uuid", clientHint: "바이오텍 · 이름은 선정 뒤 공개", group: "decide", stageLabel: "참여 결정 전", next: "참여 결정", due: null, steps: [], money: [], note: "", action: null, awardId: "aw-1" });
+    const out = croItem({ id: "i", no: "DC-2026-0001", title: "물질", cats: "독성", client: null, clientKey: "user-uuid", clientHint: "바이오텍 · 이름은 선정 뒤 공개", group: "decide", stageLabel: "참여 결정 전", next: "참여 결정", due: null, steps: [], money: [], note: "", action: null, awardId: "aw-1", tab: "new", sentAt: "", replyBy: "", tests: "", cond: "", species: [], glp: [], total: null, weeks: null, submittedOn: "" });
     expect(out).not.toHaveProperty("clientKey");
     expect(out).not.toHaveProperty("awardId");
     expect(JSON.stringify(out)).not.toContain("user-uuid");

@@ -5,11 +5,14 @@ import { todaySeoul } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
   const s = await requireSession("requester", "/app");
+  // 사이드바 "요청 검색" (/app?q=): 검색 칸을 열고 커서를 둔다
+  const { q } = await searchParams;
+  const query = typeof q === "string" ? q.slice(0, 100) : undefined;
   const list = dbReady() ? await listRequestsForUser(s.userId) : [];
   // Only the fields needed by the list cross the server/client boundary.
   const summaries = list.map(({ id, rfq_no, status, outcome, substance, categories, joined, cap, submitted, sent, opened, reply_by, created_at, compared_at, selected_quote_id, started_at }) => ({ id, rfq_no, status, outcome, substance, categories, joined, cap, submitted, sent, opened, reply_by, created_at, compared_at, selected_quote_id, started_at }));
   // 오늘 날짜는 서버에서 정해 넘긴다 (서버·브라우저 시간대가 달라도 같은 줄이 보이게)
-  return <RequestOverview name={s.profile.name || "의뢰자"} list={summaries} today={todaySeoul()} />;
+  return <RequestOverview name={s.profile.name || "의뢰자"} list={summaries} today={todaySeoul()} query={query} />;
 }

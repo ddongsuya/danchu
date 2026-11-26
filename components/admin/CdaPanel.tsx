@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { LONG_ACTION_TIMEOUT_MS, failureText } from "@/components/ui/toast-queue";
 export function CdaPanel({
   no,
   invites,
@@ -13,17 +16,16 @@ export function CdaPanel({
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const confirm = useConfirm();
   const selected = invites.find((i) => i.id === picked);
   const save = async () => {
     if (!selected || !reference.trim() || busy) return;
-    if (
-      !window.confirm(
-        selected.cda_signed_at
-          ? "첨부를 다시 비공개로 전환할까요? 이미 내려받은 파일은 회수되지 않습니다."
-          : "양측의 CDA 체결을 확인했습니까? 이 기관에 첨부파일을 공개합니다. 단추 화면의 회사명과 연락처는 선정 전까지 계속 가려지지만, CDA 문서에 적힌 당사자 정보는 가려지지 않습니다.",
-      )
-    )
-      return;
+    const ok = await confirm(
+      selected.cda_signed_at
+        ? { title: "첨부를 다시 비공개로 전환하시겠습니까?", body: "이미 내려받은 파일은 회수되지 않습니다.", confirmLabel: "비공개로 전환", danger: true }
+        : { title: "양측의 CDA 체결을 확인하셨습니까?", body: "이 기관에 첨부파일을 공개합니다. 단추 화면의 회사명과 연락처는 선정 전까지 계속 가려지지만, CDA 문서에 적힌 당사자 정보는 가려지지 않습니다.", confirmLabel: "공개" },
+    );
+    if (!ok) return;
     setBusy(true);
     try {
       const r = await fetch(`/api/admin/rfqs/${no}/cda`, {
@@ -34,6 +36,7 @@ export function CdaPanel({
           reference,
           signed: !selected.cda_signed_at,
         }),
+        signal: AbortSignal.timeout(LONG_ACTION_TIMEOUT_MS),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
@@ -41,7 +44,7 @@ export function CdaPanel({
       setReference("");
       router.refresh();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "저장하지 못했습니다.");
+      setMessage(failureText(e, "저장하지 못했습니다. 다시 시도하세요."));
     } finally {
       setBusy(false);
     }
@@ -80,17 +83,14 @@ export function CdaPanel({
           maxLength={500}
         />
       </label>
-      <button
+      <Button
         className="b2"
-        disabled={!selected || !reference.trim() || busy}
+        pending={busy}
+        disabled={!selected || !reference.trim()}
         onClick={save}
       >
-        {busy
-          ? "저장 중…"
-          : selected?.cda_signed_at
-            ? "비공개로 전환"
-            : "체결 확인하고 공개"}
-      </button>
+        {selected?.cda_signed_at ? "비공개로 전환" : "체결 확인하고 공개"}
+      </Button>
       {message && <p role="status">{message}</p>}
     </section>
   );

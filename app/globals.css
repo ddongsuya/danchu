@@ -64,6 +64,13 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* 움직임 길이 (시안 v7 상호작용 규칙 4절). 누름·올림 0.16초, 펼침 0.18초, 창 0.24초(닫힘 0.16초), 휴대폰 시트 0.28초, 토스트 0.2초 */
+  --d-press: 160ms;
+  --d-pop: 180ms;
+  --d-modal: 240ms;
+  --d-close: 160ms;
+  --d-sheet: 280ms;
+  --d-toast: 200ms;
 
   /* z-index 스케일 */
   --z-nav: 30;

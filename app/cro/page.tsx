@@ -5,6 +5,8 @@ import { TodayView } from "@/components/cro/crm/TodayView";
 import { loadCtx } from "@/components/cro/crm/load";
 import { canUse } from "@/lib/plans";
 import { todaySeoul } from "@/lib/format";
+import { dbReady, listAwardsForOrg, listInvitesForOrg } from "@/lib/data";
+import { buildPipeline } from "@/lib/pipeline";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +22,8 @@ export default async function CroToday({ searchParams }: { searchParams: Promise
   if (s.org?.status === "approved" && !canUse(s.org, "crm", todaySeoul())) redirect("/cro/requests");
   const got = await loadCtx(s);
   if (!got) return <><div className="ph"><div><h1>오늘</h1></div></div><PendingOrg org={s.org} pendingOrg={s.pendingOrg} /></>;
-  return <TodayView c={got.c} undecided={[...got.bundle.danchu.values()]} />;
+  // 받은 요청의 다음 할 일 (시안 v7 c-today 할 일 표). 받은 요청 화면과 같은 계산
+  const orgId = s.org?.status === "approved" ? s.org.id : null;
+  const [invites, awards] = orgId && dbReady() ? await Promise.all([listInvitesForOrg(orgId), listAwardsForOrg(orgId)]) : [[], []];
+  return <TodayView c={got.c} undecided={[...got.bundle.danchu.values()]} reqs={buildPipeline(invites, awards)} />;
 }

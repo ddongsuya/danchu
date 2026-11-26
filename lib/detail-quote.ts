@@ -133,6 +133,15 @@ export function revisedTotal(firstTotal: number, firstItems: { seq: number; amou
   return Math.max(0, t);
 }
 
+/** 1차 줄에 2차 회신에서 고친 금액·기간을 덮는다 (계약서(안)이 2차 견적을 쓰도록, 2026-11-26) */
+export function applyDetailEdits<T extends { seq: number; amount: number | null; weeks: number | null }>(items: T[], edits: DetailReplyItem[]): T[] {
+  return items.map((i) => {
+    const e = edits.find((x) => x.seq === i.seq);
+    if (!e) return i;
+    return { ...i, amount: e.amount ?? i.amount, weeks: e.weeks ?? i.weeks };
+  });
+}
+
 /** 서울 날짜 기준 2차 회신 기한이 지났는지 (그날 끝까지 받는다) */
 export function detailExpired(replyBy: string, now = Date.now()): boolean {
   return now > new Date(`${replyBy.slice(0, 10)}T23:59:59+09:00`).getTime();

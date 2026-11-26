@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { dbReady, getInviteById } from "@/lib/data";
 import { loadCatalog } from "@/lib/catalog-db";
-import { createDocFromRequest, loadRates, loadStyle } from "@/lib/quote-doc-db";
+import { createDocFromRequest, loadQuoteRates, loadStyle } from "@/lib/quote-doc-db";
 import { rfqViewOf } from "@/lib/quote-load";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { PendingOrg } from "@/components/cro/PendingOrg";
@@ -35,7 +35,8 @@ export default async function NewDocPage({ searchParams }: { searchParams: Promi
     if (got.id) redirect(`/cro/docs/${got.id}/fill`);
     return <div className="note note--err">{got.error || "견적서를 만들지 못했어요."}</div>;
   }
-  const [catalog, rates, style] = dbReady() ? await Promise.all([loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name)]) : [[], new Map(), null];
+  const catalogP = dbReady() ? loadCatalog(org.id) : null;
+  const [catalog, rates, style] = catalogP ? await Promise.all([catalogP, loadQuoteRates(org.id, catalogP), loadStyle(org.id, org.name)]) : [[], new Map(), null];
   if (!style) notFound();
   // 고객사 화면의 "견적서 만들기" (0038)
   let crm: { companyId: string | null; contactId: string | null; client: string; dealId?: string | null } | null = null;

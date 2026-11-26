@@ -196,18 +196,29 @@ export type DocHead = {
 let uidSeq = 0;
 export const uid = (p = "x") => `${p}${Date.now().toString(36)}${(++uidSeq).toString(36)}`;
 
-/** 표준 군 구성 (대조군 + 시험군, 회복 동물은 대조군·최고용량군에. 0004 카탈로그 주석과 같은 규칙) */
-export function standardGroups(c: Pick<CatalogRow, "groups_ctrl" | "groups_test" | "per_sex" | "recovery_weeks" | "recovery_per_sex">): DocGroup[] {
+/** 군 수만으로 정한 기본 군 이름 (대조군 먼저) */
+export function defaultGroupNames(nc: number, nt: number): string[] {
+  const testNames = nt === 1 ? ["시험군"] : nt === 2 ? ["저용량군", "고용량군"] : nt === 3 ? ["저용량군", "중용량군", "고용량군"] : Array.from({ length: nt }, (_, i) => `시험군 ${i + 1}`);
+  return [...Array.from({ length: nc }, (_, i) => (nc === 1 ? "대조군" : `대조군 ${i + 1}`)), ...testNames];
+}
+
+/**
+ * 표준 군 구성 (대조군 + 시험군, 회복 동물은 대조군·최고용량군에. 0004 카탈로그 주석과 같은 규칙).
+ * 기관이 독성 표준 설계(kd.tox)에 군 이름·용량·회복 여부를 적었으면 같은 번째 군에 그 값을 쓴다
+ */
+export function standardGroups(c: Pick<CatalogRow, "groups_ctrl" | "groups_test" | "per_sex" | "recovery_weeks" | "recovery_per_sex" | "kd">): DocGroup[] {
   const nc = c.groups_ctrl ?? 0;
   const nt = c.groups_test ?? 0;
   if (nc + nt === 0) return [];
   const per = c.per_sex ?? 0;
   const rec = c.recovery_weeks ? c.recovery_per_sex ?? 0 : 0;
-  const testNames = nt === 1 ? ["시험군"] : nt === 2 ? ["저용량군", "고용량군"] : nt === 3 ? ["저용량군", "중용량군", "고용량군"] : Array.from({ length: nt }, (_, i) => `시험군 ${i + 1}`);
-  const names = [...Array.from({ length: nc }, (_, i) => (nc === 1 ? "대조군" : `대조군 ${i + 1}`)), ...testNames];
+  const names = defaultGroupNames(nc, nt);
+  const mine = c.kd?.tox?.groups ?? [];
   return names.map((name, i) => {
-    const withRec = rec > 0 && (i === 0 || i === names.length - 1);
-    return { id: `g${i + 1}`, label: `G${i + 1} ${name}`, dose: i < nc ? "0" : "", m: per, f: per, rm: withRec ? rec : 0, rf: withRec ? rec : 0 };
+    const g = mine[i];
+    const withRec = rec > 0 && (g?.rec ?? (i === 0 || i === names.length - 1));
+    const dose = g && (g.label || g.dose || g.rec != null) ? g.dose : i < nc ? "0" : "";
+    return { id: `g${i + 1}`, label: `G${i + 1} ${g?.label || name}`, dose, m: per, f: per, rm: withRec ? rec : 0, rf: withRec ? rec : 0 };
   });
 }
 

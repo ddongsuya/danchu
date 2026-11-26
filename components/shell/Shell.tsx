@@ -4,13 +4,15 @@ import { Lockup } from "@/components/Logo";
 import { NavLinks, TabLinks } from "./NavLinks";
 import { LogoutButton } from "./LogoutButton";
 import { ViewportHeight } from "@/components/site/ViewportHeight";
+import { UiProvider } from "@/components/ui/UiProvider";
 import "./portal.css";
-import { ArrowUpRight, BookOpenText } from "@phosphor-icons/react/dist/ssr";
+import "./tokens-openai.css";
+import { Bell, BookOpenText } from "@phosphor-icons/react/dist/ssr";
 
 /** soon: 아직 열리지 않은 메뉴 (사전예약 기간). 누를 수 없고 옆에 열리는 날을 적는다 */
 /** group: 넓은 화면 사이드바에서 이 항목 위에 작은 묶음 이름을 단다 (앞 항목과 묶음이 다를 때만) */
 export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean; soon?: string; group?: string };
-export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt" | "explore" | "book" | "quote" | "clients" | "calendar" | "today" | "deals" | "report" | "note" | "more" | "tag";
+export type IconName = "home" | "plus" | "bell" | "user" | "inbox" | "doc" | "award" | "org" | "list" | "cros" | "settings" | "receipt" | "explore" | "book" | "quote" | "clients" | "calendar" | "today" | "deals" | "report" | "note" | "more" | "tag" | "search";
 
 // 화면에서는 "기관"으로 통일한다 (의뢰자 화면의 "선택한 기관"과 같은 말)
 const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관", admin: "운영자" };
@@ -21,29 +23,55 @@ const ROLE_LABEL: Record<Role, string> = { requester: "의뢰자", cro: "기관"
  */
 /** tabs: 휴대폰 아래 탭을 따로 줄 때 (없으면 nav 앞 다섯 개) */
 /** plan: 기관 요금제 표시 (무료·Plus·Pro). usage: 위 바의 사용량 표시 (무료 요금제 이번 달 견적 수) */
-export function Shell({ session, nav, tabs, plan, usage, children }: { session: Session; nav: NavItem[]; tabs?: NavItem[]; plan?: string; usage?: React.ReactNode; children: React.ReactNode }) {
+/**
+ * chat: 의뢰자 화면의 ChatGPT 짜임 (2026-11-26 시안 v7). 넓은 화면에서 전체 폭 위 바 대신
+ * 왼쪽 사이드바 맨 위에 로고, 메뉴 아래에 side(요청 목록), 본문 위에 top(얇은 제목 줄)을 둔다.
+ * 이때 nav 는 사이드바 메뉴, tabs 는 휴대폰 아래 탭이다 (휴대폰 화면은 그대로).
+ */
+export function Shell({ session, nav, tabs, plan, usage, chat, children }: { session: Session; nav: NavItem[]; tabs?: NavItem[]; plan?: string; usage?: React.ReactNode; chat?: { side: React.ReactNode; top: React.ReactNode }; children: React.ReactNode }) {
   const role = session.profile.role;
   const who = session.profile.name || session.email;
   const org = role === "cro" ? session.org?.name : session.profile.company;
   // 이름을 누르면 프로필로 (운영자는 메뉴에 프로필이 없어 여기가 유일한 길이다)
   const profileHref = role === "admin" ? "/admin/profile" : role === "cro" ? "/cro/profile" : "/app/profile";
+  const homeHref = (tabs ?? nav)[0]?.href ?? "/";
+
+  // 2026-11-26 시안 v7: 알림은 위 바의 종으로. 사이드바에는 알림 항목을 빼고 나머지를 묶음대로 둔다 (chat 짜임은 위 바가 없어 사이드바에 둔다)
+  const bell = chat ? undefined : nav.find((i) => i.icon === "bell");
+  const sideNav = bell ? nav.filter((i) => i !== bell) : nav;
 
   return (
-    <div className="pt">
+    <div className={chat ? "pt pt--chat" : "pt"}>
+      {/* 토스트·확인 창을 셸에 한 번만 둔다 (components/ui). 아래 화면은 useToast()·useConfirm() 으로 부른다 */}
+      <UiProvider>
       {/* 첫 장면 높이 기준 (--vhpx). 인앱 브라우저가 svh 를 크게 잡는 문제를 랜딩과 같은 방법으로 피한다 */}
       <ViewportHeight />
       <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
+      {/* 넓은 화면: 전체 폭 위 바(브랜드 / 조직 · 요금제 … 사용량 · 자료실 · 알림 · 프로필). 좁은 화면에서는 아래 pt__top 이 대신한다 */}
+      {!chat && <header className="pt__bar">
+        <Link href={homeHref} className="pt__barbrand"><Lockup size={22} /></Link>
+        <span className="pt__barsep" aria-hidden="true">/</span>
+        <span className="pt__barorg">{org || who}</span>
+        <span className="pt__role">{ROLE_LABEL[role]}</span>
+        {plan && <span className="pt__role pt__plan">{plan}</span>}
+        <span className="pt__barsp" />
+        {usage && <Link href="/cro/billing" className="pt__usage">{usage}</Link>}
+        <a href="/guide/library" className="pt__baric" aria-label="가이드라인 자료실"><BookOpenText size={20} aria-hidden="true" /></a>
+        {bell && (
+          <Link href={bell.href} className="pt__baric" aria-label={bell.badge ? `알림 ${bell.badge}건` : "알림"}>
+            <Bell size={20} aria-hidden="true" />
+            {bell.badge ? <span className="pt__bardot" aria-hidden="true" /> : null}
+          </Link>
+        )}
+        <Link href={profileHref} className="pt__avatar pt__baravatar" aria-label={`프로필 · ${who}`}>{who.slice(0, 1)}</Link>
+      </header>}
+      <div className="pt__frame">
       <aside className="pt__side">
-        <Link href={nav[0]?.href ?? "/"} className="pt__sbrand">
-          <Lockup size={24} />
-          <span className="pt__role" style={{ marginLeft: "auto" }}>{ROLE_LABEL[role]}</span>
-          {plan && <span className="pt__role pt__plan">{plan}</span>}
-        </Link>
-        <div className="pt__nav-label">내 워크스페이스</div>
+        {chat && <Link href={homeHref} className="pt__sbrand"><Lockup size={22} /></Link>}
         <nav className="pt__nav" aria-label="주요 메뉴">
-          <NavLinks items={nav} variant="side" />
+          <NavLinks items={sideNav} variant="side" />
         </nav>
-        <a href="/guide/library" className="pt__guide"><BookOpenText size={20} aria-hidden="true" /><span>가이드라인 자료실</span><ArrowUpRight size={15} aria-hidden="true" /></a>
+        {chat?.side}
         <div className="pt__user">
           <Link href={profileHref} className="pt__identity" aria-label={`프로필 · ${who}`}><span className="pt__avatar" aria-hidden="true">{who.slice(0, 1)}</span><div>
             <b>{who}</b>
@@ -68,7 +96,7 @@ export function Shell({ session, nav, tabs, plan, usage, children }: { session: 
         )}
         <header className="pt__top">
           <div className="pt__topin">
-            <Link href={nav[0]?.href ?? "/"} className="pt__brand">
+            <Link href={homeHref} className="pt__brand">
               <Lockup size={20} />
               <span className="pt__role">{ROLE_LABEL[role]}</span>
               {plan && <span className="pt__role pt__plan">{plan}</span>}
@@ -82,11 +110,14 @@ export function Shell({ session, nav, tabs, plan, usage, children }: { session: 
             </div>
           </div>
         </header>
+        {chat?.top}
         <main className="pt__main" id="main-content">{children}</main>
         <nav className="pt__tabs" aria-label="주요 메뉴">
           <TabLinks items={tabs ?? nav} />
         </nav>
       </div>
+      </div>
+      </UiProvider>
     </div>
   );
 }

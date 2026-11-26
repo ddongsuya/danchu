@@ -43,5 +43,41 @@ begin
 
   perform pg_temp.t_assert(not has_table_privilege('authenticated', 'public.cro_crm_deals', 'select'), 'authenticated 는 안건을 못 읽음');
   perform pg_temp.t_assert(not has_table_privilege('anon', 'public.cro_crm_deal_history', 'insert'), 'anon 은 이력을 못 씀');
-  perform pg_temp.t_eq(public.danchu_schema_version(), 50, '판 50');
+  perform pg_temp.t_eq(public.danchu_schema_version(), 51, '판 51');
+end $$;
+
+-- 0051: 수주 이유(won_reason·won_note), 기록 첨부(files, 배열 10개까지), 비공개 버킷 crm-files
+do $$
+declare
+  o uuid := pg_temp.t_org('CRM 기관 0051');
+  d uuid;
+  a uuid;
+begin
+  insert into public.cro_crm_deals (org_id, title) values (o, '수주 이유 안건') returning id into d;
+  perform pg_temp.t_eq((select won_reason from public.cro_crm_deals where id = d), '', '수주 이유는 빈 값으로 시작');
+  -- 수주 이유는 비어 있어도 된다 (단추가 저절로 수주로 바꾼 안건)
+  update public.cro_crm_deals set status = 'won', closed_at = now(), stage = 'contract' where id = d;
+  update public.cro_crm_deals set won_reason = '시험 설계·전문성', won_note = '회복군 제외안' where id = d;
+  perform pg_temp.t_eq((select won_reason from public.cro_crm_deals where id = d), '시험 설계·전문성', '수주 이유 저장');
+  begin
+    update public.cro_crm_deals set won_reason = repeat('가', 41) where id = d;
+    raise exception 'ASSERT 실패: 41자 수주 이유';
+  exception when check_violation then null;
+  end;
+
+  insert into public.cro_crm_activities (org_id, deal_id, kind, body) values (o, d, 'meeting', '회의록') returning id into a;
+  perform pg_temp.t_eq((select jsonb_array_length(files) from public.cro_crm_activities where id = a), 0, '첨부는 빈 배열로 시작');
+  update public.cro_crm_activities set files = (select jsonb_agg(jsonb_build_object('path', 'p' || i, 'name', 'n' || i, 'size', 1, 'type', 'audio/mp4')) from generate_series(1, 10) i) where id = a;
+  perform pg_temp.t_eq((select jsonb_array_length(files) from public.cro_crm_activities where id = a), 10, '첨부 10개까지');
+  begin
+    update public.cro_crm_activities set files = files || '[{"path":"p11","name":"n11","size":1,"type":""}]'::jsonb where id = a;
+    raise exception 'ASSERT 실패: 첨부 11개';
+  exception when check_violation then null;
+  end;
+  begin
+    update public.cro_crm_activities set files = '{}'::jsonb where id = a;
+    raise exception 'ASSERT 실패: 배열이 아닌 첨부';
+  exception when check_violation then null;
+  end;
+  perform pg_temp.t_assert(exists (select 1 from storage.buckets where id = 'crm-files' and not public), '비공개 버킷 crm-files');
 end $$;

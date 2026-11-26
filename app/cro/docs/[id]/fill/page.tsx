@@ -4,6 +4,7 @@ import { dbReady } from "@/lib/data";
 import { loadCatalog } from "@/lib/catalog-db";
 import { loadDoc, loadRates, loadStyle } from "@/lib/quote-doc-db";
 import { loadPriceBook } from "@/lib/price-book-db";
+import { toxBookRates } from "@/lib/tox-price";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { featureError } from "@/lib/plan-usage";
 import { PendingOrg } from "@/components/cro/PendingOrg";
@@ -20,7 +21,9 @@ export default async function FillPage({ params, searchParams }: { params: Promi
   if (!dbReady()) notFound();
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const sb = getSupabaseAdmin();
-  const [got, catalog, rates, style, book] = await Promise.all([loadDoc(org.id, id), loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name), sb ? loadPriceBook(sb, org.id).catch(() => null) : null]);
+  const catalogP = loadCatalog(org.id);
+  const [got, catalog, rates0, style, book] = await Promise.all([loadDoc(org.id, id), catalogP, loadRates(org.id), loadStyle(org.id, org.name), sb ? loadPriceBook(sb, org.id).catch(() => null) : null]);
+  const rates = toxBookRates(rates0, catalog, book);
   if (!got) notFound();
   const lock = !!featureError(org, "branding");
   const replyHref = got.head.inviteId ? `/cro/r/${got.head.inviteId}/reply?doc=${got.head.id}` : null;

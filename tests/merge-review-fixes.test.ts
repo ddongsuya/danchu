@@ -38,7 +38,7 @@ describe("계약 확인", () => {
     expect(fn).toMatch(/if not v_owner then return jsonb_build_object\('ok', false, 'code', 'forbidden'\)/);
   });
   it("기관 수주 화면에는 이의 사유를 보이지 않는다", () => {
-    expect(src("app/cro/awards/page.tsx")).toMatch(/includeNote: false/);
+    expect(src("app/cro/requests/page.tsx")).toMatch(/includeNote: false/);
   });
 });
 

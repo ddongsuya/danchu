@@ -13,6 +13,7 @@ import type { QuoteLineDef } from "./quote-items";
 import { cleanKd, COST_KEYS, firstInt, newPdGroup, parseCount, parseGroups, parseTimeList, parseTimes, pkGroupsFromRequest, PK_MATRIX, PK_TYPES, type Kind, type Orig } from "./kind-design";
 import type { Values } from "./rfq-schema";
 import { loadPriceBook } from "./price-book-db";
+import { toxBookRates } from "./tox-price";
 import { snapFor } from "./pd-quote";
 import { featureError } from "./plan-usage";
 import { rfqViewOf } from "./quote-load";
@@ -29,6 +30,16 @@ export async function loadRates(orgId: string): Promise<Map<string, Rate[]>> {
   const { data } = await sb.from("cro_quote_rates").select("item_key, rates").eq("org_id", orgId);
   for (const r of data ?? []) m.set(r.item_key, cleanRates(r.rates));
   return m;
+}
+
+/**
+ * 견적서가 쓰는 단가: 시험 목록 단가 + 단가표를 독성 동물 단가에도 쓰는 기관이면 빈 동물·회복군 단가를 단가표로 (0051).
+ * 시험 목록 화면은 저장한 값만 보여야 하므로 loadRates 를 쓴다. rows 는 같이 읽는 시험 목록 (Promise 면 함께 기다린다)
+ */
+export async function loadQuoteRates(orgId: string, rows: CatalogRow[] | Promise<CatalogRow[]>): Promise<Map<string, Rate[]>> {
+  const sb = getSupabaseAdmin();
+  const [rates, list, book] = await Promise.all([loadRates(orgId), rows, sb ? loadPriceBook(sb, orgId).catch(() => null) : null]);
+  return toxBookRates(rates, list, book);
 }
 
 /**
@@ -191,7 +202,8 @@ function emptyData(style: QuoteStyle): DocData {
 
 /** 카탈로그 조합으로 새 견적서 */
 export async function createDocFromCatalog(orgId: string, orgName: string, userId: string | null, catalogIds: string[], client: string, substance: string, manual: string[] = [], kind: Kind = "tox"): Promise<{ id?: string; error?: string }> {
-  const [rows, rates, style] = await Promise.all([loadCatalog(orgId), loadRates(orgId), loadStyle(orgId, orgName)]);
+  const rowsP = loadCatalog(orgId);
+  const [rows, rates, style] = await Promise.all([rowsP, loadQuoteRates(orgId, rowsP), loadStyle(orgId, orgName)]);
   const byId = new Map(rows.map((r) => [r.id, r]));
   const data = emptyData(style);
   for (const id of catalogIds.slice(0, 30)) {
@@ -230,7 +242,8 @@ export async function docForInvite(orgId: string, inviteId: string): Promise<{ i
  * checks: 회신 초안과 같은 규칙으로 본, 요청 조건이 기관 표준과 다른 칸 (행 번호별)
  */
 async function requestData(orgId: string, orgName: string, a: RequestInput): Promise<{ data: DocData; checks: Map<number, string[]> }> {
-  const [rows, rates, style] = await Promise.all([loadCatalog(orgId), loadRates(orgId), loadStyle(orgId, orgName)]);
+  const rowsP = loadCatalog(orgId);
+  const [rows, rates, style] = await Promise.all([rowsP, loadQuoteRates(orgId, rowsP), loadStyle(orgId, orgName)]);
   const byKey = new Map<string, CatalogRow[]>();
   for (const r of rows) byKey.set(r.item_key, [...(byKey.get(r.item_key) ?? []), r]);
   const data = emptyData(style);
@@ -407,11 +420,27 @@ export async function deleteDoc(orgId: string, id: string): Promise<boolean> {
   return !error;
 }
 
-/** 견적서를 복제한다 (새 번호, 단추 요청 연결은 풀린다) */
-export async function copyDoc(orgId: string, userId: string | null, id: string): Promise<{ id?: string; error?: string }> {
+/**
+ * 견적서를 복제한다 (새 번호). 보통은 단추 요청·안건 연결이 풀린다.
+ * keepLinks: 2차 견적서처럼 같은 요청·안건·고객사·담당자에 이어 붙일 때 (2026-11-26 시안 v7)
+ */
+export async function copyDoc(orgId: string, userId: string | null, id: string, keepLinks = false): Promise<{ id?: string; error?: string }> {
   const got = await loadDoc(orgId, id);
   if (!got) return { error: "견적서를 찾지 못했어요." };
-  return insertDoc(orgId, userId, { client: got.head.client, substance: got.head.substance, data: got.data });
+  const sb = getSupabaseAdmin();
+  const { data: src } = keepLinks ? await sb!.from("cro_quote_docs").select("invite_id, rfq_no, deal_id, company_id, contact_id").eq("id", id).eq("org_id", orgId).maybeSingle() : { data: null };
+  // 2차 견적서는 요청마다 한 부: 이미 만든 것이 있으면 새로 만들지 않고 그것을 연다 (두 번 눌러 두 부가 생기지 않게)
+  if (src?.invite_id) {
+    const { data: had } = await sb!.from("cro_quote_docs").select("id").eq("org_id", orgId).eq("invite_id", src.invite_id).neq("id", id).order("created_at").limit(1);
+    if (had?.[0]) return { id: had[0].id };
+  }
+  const made = await insertDoc(orgId, userId, { client: got.head.client, substance: got.head.substance, data: got.data });
+  if (!keepLinks || !made.id) return made;
+  if (src) {
+    const { error } = await sb!.from("cro_quote_docs").update(src).eq("id", made.id).eq("org_id", orgId);
+    if (error) console.error("cro_quote_docs round2 link", error);
+  }
+  return made;
 }
 
 /* ── 양식 제작 요청 ── */

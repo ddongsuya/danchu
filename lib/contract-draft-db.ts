@@ -5,6 +5,7 @@
  */
 import { buildContractDraft, type ContractDraft } from "./contract-draft";
 import { loadStyle } from "./quote-doc-db";
+import { applyDetailEdits, replyItemsOf } from "./detail-quote";
 import { logEvent, notifyUsers } from "./notify";
 import { getSupabaseAdmin } from "./supabase";
 
@@ -17,14 +18,18 @@ type AwardLite = { id: string; rfq_id: string; quote_id: string; cro_org_id: str
 export async function draftForAward(award: AwardLite): Promise<ContractDraft | null> {
   const sb = getSupabaseAdmin();
   if (!sb) return null;
-  const [{ data: q }, { data: r }, { data: org }] = await Promise.all([
+  const [{ data: q }, { data: r }, { data: org }, { data: detail }] = await Promise.all([
     sb.from("cro_quotes").select("*, cro_quote_items(*)").eq("id", award.quote_id).maybeSingle(),
     sb.from("rfq_requests").select("rfq_no, company, contact_name, substance").eq("id", award.rfq_id).maybeSingle(),
     award.cro_org_id ? sb.from("cro_orgs").select("id, name, business_no, address, contact_name").eq("id", award.cro_org_id).maybeSingle() : Promise.resolve({ data: null }),
+    // 2차 견적을 냈으면 계약서는 2차 금액·기간으로 (선정 금액 fee_basis_amount 와 같은 기준, 0042)
+    sb.from("rfq_detail_targets").select("items, total_weeks").eq("quote_id", award.quote_id).eq("status", "submitted").maybeSingle(),
   ]);
   if (!q || !r) return null;
   const style = award.cro_org_id ? await loadStyle(award.cro_org_id, org?.name ?? award.cro_name).catch(() => null) : null;
-  const items = ((q.cro_quote_items ?? []) as { seq: number; name: string; avail: string | null; amount: number | null; weeks: number | null }[]).map((i) => ({ seq: i.seq, name: i.name, avail: i.avail, amount: i.amount, weeks: i.weeks }));
+  const firstItems = ((q.cro_quote_items ?? []) as { seq: number; name: string; avail: string | null; amount: number | null; weeks: number | null }[]).map((i) => ({ seq: i.seq, name: i.name, avail: i.avail, amount: i.amount, weeks: i.weeks }));
+  const items = detail ? applyDetailEdits(firstItems, replyItemsOf(detail.items)) : firstItems;
+  const finalWeeks = detail?.total_weeks ?? q.final_weeks;
   return buildContractDraft({
     rfqNo: r.rfq_no,
     substance: r.substance ?? "",
@@ -38,7 +43,7 @@ export async function draftForAward(award: AwardLite): Promise<ContractDraft | n
       address: style?.supplier.address || org?.address || null,
     },
     items,
-    quote: { pay_terms: q.pay_terms, start_date: q.start_date, report_lang: q.report_lang, includes: q.includes, final_weeks: q.final_weeks, revision: q.revision },
+    quote: { pay_terms: q.pay_terms, start_date: q.start_date, report_lang: q.report_lang, includes: q.includes, final_weeks: finalWeeks, revision: q.revision },
     terms: style?.terms ?? null,
   });
 }

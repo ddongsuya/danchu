@@ -10,6 +10,7 @@ import {
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
 import { PD_PAGES, PdCover, PdDetailPage, PdEvalPage, PdQuotePage, pdDocTest } from "./PdPages";
 import { COND_LABEL, Cover, DetailPage, GuidePage, Logo, brandVars, QuotePage, SchedulePage, condLine, guidePages, pageCount, pageKeys, type PageKey } from "./DocPages";
@@ -44,6 +45,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const router = useRouter();
   const [head, setHead] = useState<DocHead>(head0);
   const [data, setData] = useState<DocData>(initial);
+  const confirm = useConfirm();
   const [page, setPage] = useState<PageKey>(initial.tests[0] ? `detail:${initial.tests[0].uid}` : "cover");
   const [mode, setMode] = useState<Mode>("edit");
   const [pane, setPane] = useState<Pane>("desk");
@@ -89,8 +91,8 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const setH = (patch: Partial<DocHead>) => { const next = { ...head, ...patch }; setHead(next); queue(next, data); };
   const setTest = (u: string, patch: Partial<DocTest>) => setDoc({ tests: data.tests.map((t) => (t.uid === u ? { ...t, ...patch } : t)) });
   const addTest = (t: DocTest) => { setDoc({ tests: [...data.tests, t] }); setPage(`detail:${t.uid}`); setPicker(false); setPane("desk"); };
-  const removeTest = (t: DocTest) => {
-    if (!window.confirm(`"${t.title}" 시험을 견적서에서 뺄까요?`)) return;
+  const removeTest = async (t: DocTest) => {
+    if (!(await confirm({ title: `"${t.title}" 시험을 견적서에서 빼시겠습니까?`, body: "이 시험에 입력한 설계와 금액도 함께 빠집니다.", confirmLabel: "빼기", danger: true }))) return;
     const rest = data.tests.filter((x) => x.uid !== t.uid);
     setDoc({ tests: rest });
     setPage(rest[0] ? `detail:${rest[0].uid}` : "cover");
@@ -426,7 +428,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
 
       {kind !== "tox" && t.kd && <KindEdit t={t} set={set} readOnly={readOnly} />}
 
-      {(t.groups.length > 0 || t.std.groups.length > 0) && (
+      {(t.groups.length > 0 || t.std.groups.length > 0 || kind === "tox") && (
         <>
           <div className="qed__h2row"><h2 className="qd__h2">군 구성</h2><span className="tnum">총 {total0 !== total1 ? <>{total0} → <mark>{total1}</mark></> : total1}마리</span></div>
           <div className="qed__tblwrap">
@@ -475,6 +477,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   <input type="checkbox" checked={e.on} disabled={readOnly} onChange={(ev) => set({ evals: t.evals.map((x, j) => (j === k ? { ...x, on: ev.target.checked } : x)) })} />
                   <span className={!e.base && e.on ? "qed__mk" : undefined}>{e.name}</span>
                 </label>
+                {!readOnly && r && isOwnRule(r) && <button type="button" className="btxt qed__del" aria-label={`${e.name} 규칙 삭제`} onClick={() => set(dropRule(t, r.id))}>삭제</button>}
                 <small>{e.base ? (r && deductOf(r) ? (e.on ? `기본 · 빼면 - ${n(deductOf(r))}` : `제외 - ${n(deductOf(r))}`) : "기본") : e.on ? "추가" : r?.add ? `추가 시 + ${n(r.add)}` : "추가 시 금액 없음"}</small>
               </li>
             );
@@ -482,6 +485,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
         </ul>
       ) : <p className="qed__muted">시험 목록에 표준가에 든 항목을 적어 두면 여기에 채워져요.</p>}
       {!readOnly && <EvalAdder onAdd={(name) => set({ evals: [...t.evals, { name, on: true, base: true }] })} />}
+      {!readOnly && <RuleAdder onAdd={(r) => set(r.kind === "flat" ? { rates: [...t.rates, r], evals: [...t.evals, { name: r.label, on: true, base: false, rateId: r.id }] } : { rates: [...t.rates, r], qty: { ...t.qty, [r.id]: 1 } })} />}
 
       {qtyRates.length > 0 && (
         <>
@@ -495,6 +499,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   {r.unit}
                 </span>
                 <small className="tnum">{r.add ? `${n(r.add)} / ${r.unit}` : "단가 없음"}</small>
+                {!readOnly && isOwnRule(r) && <button type="button" className="btxt qed__del" aria-label={`${r.shown} 규칙 삭제`} onClick={() => set(dropRule(t, r.id))}>삭제</button>}
               </li>
             ))}
           </ul>
@@ -527,6 +532,57 @@ function KindEdit({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>)
         {tabs.map(([key, label]) => <button key={key} type="button" role="tab" className="chip" aria-selected={cur === key} aria-pressed={cur === key} onClick={() => setTab(key)}>{label}</button>)}
       </div>
       <div className="qed__kindbody"><KindTab tab={cur} t={t} readOnly={readOnly} set={setK} /></div>
+    </div>
+  );
+}
+
+/** 이 견적서에서 직접 더한 규칙 (시험 목록 단가와 구분, id 앞머리). 이것만 지울 수 있다 */
+const OWN_RULE = "own";
+const isOwnRule = (r: Rate) => r.id.startsWith(OWN_RULE);
+function dropRule(t: DocTest, id: string): Partial<DocTest> {
+  const qty = { ...t.qty };
+  delete qty[id];
+  return { rates: t.rates.filter((r) => r.id !== id), evals: t.evals.filter((e) => e.rateId !== id), qty };
+}
+
+/**
+ * 이 견적서에만 쓰는 단가 규칙 (2026-11-26 시안 v7 "규칙 추가"). 시험 목록의 가감 단가에 없는 변칙 조건을 금액과 함께 더한다.
+ * 정액: 평가항목처럼 켜면 1회 더함. 수량: 아래 수량 항목에 단가 × 수량으로 계산 (빼려면 수량 앞에 -)
+ */
+function RuleAdder({ onAdd }: { onAdd: (r: Rate) => void }) {
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"flat" | "qty">("flat");
+  const [unit, setUnit] = useState("");
+  const [add, setAdd] = useState("");
+  const won = Number(digits(add) || 0);
+  const ok = name.trim().length > 0 && won > 0;
+  const submit = () => {
+    if (!ok) return;
+    const label = name.trim().slice(0, 60);
+    onAdd({ id: uid(OWN_RULE), kind, label, unit: kind === "qty" ? unit.trim().slice(0, 12) || "회" : "시험", add: won, deduct: null, shown: label });
+    setName(""); setUnit(""); setAdd("");
+  };
+  return (
+    <div className="qed__ruleadd" role="group" aria-label="단가 규칙 추가">
+      <span className="qed__rulehd">단가 규칙 추가 <small>이 견적서에만</small></span>
+      <label className="qed__fl qed__fl--sel">종류
+        <select className="qed__in qed__sel" value={kind} onChange={(e) => setKind(e.target.value === "qty" ? "qty" : "flat")}>
+          <option value="flat">정액 (1회)</option>
+          <option value="qty">수량 × 단가</option>
+        </select>
+      </label>
+      <label className="qed__fl qed__fl--name">이름
+        <input className="qed__in" value={name} placeholder="안과 검사 추가" onChange={(e) => setName(e.target.value)} />
+      </label>
+      {kind === "qty" && (
+        <label className="qed__fl qed__fl--unit">단위
+          <input className="qed__in qed__unit" value={unit} placeholder="시점" onChange={(e) => setUnit(e.target.value)} />
+        </label>
+      )}
+      <label className="qed__fl qed__fl--amt">{kind === "qty" ? "단가 (원)" : "금액 (원)"}
+        <input className="qed__num" inputMode="numeric" value={add ? n(won) : ""} onChange={(e) => setAdd(e.target.value)} />
+      </label>
+      <button type="button" className="btxt" disabled={!ok} onClick={submit}>추가</button>
     </div>
   );
 }
@@ -651,8 +707,9 @@ function ClientView({ data, rfqNo }: { data: DocData; rfqNo: string }) {
 function DocMenu({ id, onDone }: { id: string; onDone: (href: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const confirm = useConfirm();
   const act = async (action: "copy" | "delete") => {
-    if (action === "delete" && !window.confirm("이 견적서를 삭제할까요? 되돌릴 수 없어요.")) return;
+    if (action === "delete" && !(await confirm({ title: "이 견적서를 삭제하시겠습니까?", body: "삭제하면 되돌릴 수 없습니다.", confirmLabel: "삭제", danger: true }))) return;
     setBusy(true); setErr("");
     const r = await fetch(`/api/cro/docs/${id}`, { method: action === "delete" ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: action === "copy" ? JSON.stringify({ action: "copy" }) : undefined }).catch(() => null);
     const d = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;

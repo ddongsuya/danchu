@@ -200,11 +200,20 @@ export async function loadCrmSynced(orgId: string, opts: { userId: string; demo?
   return { data: changed ? await loadCrm(orgId) : data, invites, awards, danchu };
 }
 
-/** 단계·상태를 바꾸고 이력 한 줄 (기관 담당자) */
+/**
+ * 단계·상태를 바꾸고 이력 한 줄 (기관 담당자).
+ * 수주면 reason·note 가 수주 이유(won_reason·won_note), 실패면 실패 사유(lost_reason·lost_note). 검사는 라우트가 한다.
+ * 이미 수주한 안건에 status "won" 과 이유를 다시 보내면 이유만 고친다 (단추가 저절로 수주로 바꾼 안건에 이유를 적을 때).
+ */
 export async function moveDeal(sb: Admin, orgId: string, deal: CrmDeal, to: { stage?: string; status?: string; reason?: string; note?: string; won_amount?: number | null }, by: string): Promise<string | null> {
   const stage = to.stage ?? deal.stage;
   const status = to.status ?? deal.status;
-  if (stage === deal.stage && status === deal.status) return null;
+  if (stage === deal.stage && status === deal.status) {
+    if (to.status !== "won" || deal.status !== "won" || !to.reason) return null;
+    const { error } = await sb.from("cro_crm_deals").update({ won_reason: to.reason, won_note: to.note ?? "" } as never).eq("id", deal.id).eq("org_id", orgId);
+    if (error) { console.error("crm won reason", error); return "수주 이유를 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요."; }
+    return null;
+  }
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = { stage, status };
   if (stage !== deal.stage) patch.stage_at = now;
@@ -212,12 +221,15 @@ export async function moveDeal(sb: Admin, orgId: string, deal: CrmDeal, to: { st
     patch.closed_at = status === "open" ? null : now;
     patch.lost_reason = status === "lost" ? to.reason ?? "기타" : "";
     patch.lost_note = status === "lost" ? to.note ?? "" : "";
+    patch.won_reason = status === "won" ? to.reason ?? "" : "";
+    patch.won_note = status === "won" ? to.note ?? "" : "";
     if (status === "won") patch.won_amount = to.won_amount ?? deal.won_amount ?? deal.amount;
     if (status === "open") patch.won_amount = null;
   }
   const { error } = await sb.from("cro_crm_deals").update(patch as never).eq("id", deal.id).eq("org_id", orgId);
   if (error) { console.error("crm move", error); return "단계를 바꾸지 못했어요. 잠시 뒤 다시 시도해 주세요."; }
-  await sb.from("cro_crm_deal_history").insert({ org_id: orgId, deal_id: deal.id, from_stage: deal.stage, to_stage: stage, from_status: deal.status, to_status: status, reason: status === "lost" ? to.reason ?? "기타" : "", actor: "member", created_by: by } as never);
+  const reason = status === deal.status ? "" : status === "lost" ? to.reason ?? "기타" : status === "won" ? to.reason ?? "" : "";
+  await sb.from("cro_crm_deal_history").insert({ org_id: orgId, deal_id: deal.id, from_stage: deal.stage, to_stage: stage, from_status: deal.status, to_status: status, reason, actor: "member", created_by: by } as never);
   return null;
 }
 

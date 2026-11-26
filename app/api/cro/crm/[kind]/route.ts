@@ -3,7 +3,8 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { checkRefs, mergeCompanies, moveDeal } from "@/lib/crm";
 import { isUuid, parseActivity, parseCompany, parseContact, parseEvent, parseTask, type CrmDeal, type Parsed } from "@/lib/crm-shape";
-import { LOST_REASONS, isStage, isStatus, parseDeal, parseWon } from "@/lib/crm-deals";
+import { isLostReason, isStage, isStatus, isWonReason, parseDeal, parseWon } from "@/lib/crm-deals";
+import { activityFilePaths, removeCrmFiles } from "@/lib/crm-files";
 import { featureError } from "@/lib/plan-usage";
 
 export const runtime = "nodejs";
@@ -12,7 +13,8 @@ export const dynamic = "force-dynamic";
 /**
  * 기관 CRM 쓰기 (0038). /api/cro/crm/<kind>
  *   companies · contacts · deals · activities · events · tasks : POST(만들기) · PATCH({id, ...바꿀 칸}) · DELETE({id})
- *   move          : POST({id, stage?, status?, reason?, note?, won_amount?}) 안건 단계·수주·실패 (이력 한 줄)
+ *   move          : POST({id, stage?, status?, reason?, note?, won_amount?}) 안건 단계·수주·실패 (이력 한 줄).
+ *                   수주는 수주 이유(WON_REASONS), 실패는 실패 사유(LOST_REASONS)가 있어야 한다. 이미 수주한 안건에 status won + reason 이면 이유만 고친다
  *   quotes        : PATCH({id, deal_id?, sent_on?}) 견적서를 안건에 묶고 보낸 날을 남긴다
  *   task-actions  : POST({task_id, body}) 할 일에 한 일 한 줄
  *   merge         : POST({keep, drop}) 고객사 둘을 하나로
@@ -109,7 +111,8 @@ export async function POST(req: Request, { params }: Ctx) {
     const status = b.status === undefined ? undefined : isStatus(b.status) ? b.status : null;
     if (stage === null || status === null) return bad("단계를 골라 주세요.");
     const reason = typeof b.reason === "string" ? b.reason.trim().slice(0, 40) : "";
-    if (status === "lost" && !(LOST_REASONS as readonly string[]).includes(reason)) return bad("실패 사유를 하나 골라 주세요.");
+    if (status === "lost" && !isLostReason(reason)) return bad("실패 사유를 하나 골라 주세요.");
+    if (status === "won" && !isWonReason(reason)) return bad("수주 이유를 하나 골라 주세요.");
     const wonAmount = b.won_amount === undefined || b.won_amount === null || b.won_amount === "" ? null : parseWon(b.won_amount);
     if (b.won_amount && wonAmount == null) return bad("계약 금액은 숫자로 적어 주세요.");
     const note = typeof b.note === "string" ? b.note.trim().slice(0, 2000) : "";
@@ -272,7 +275,12 @@ export async function DELETE(req: Request, { params }: Ctx) {
     const { data: dc } = await sb.from("cro_crm_contacts").select("id").eq("org_id", orgId).eq("company_id", b.id).not("danchu_key", "is", null).limit(1);
     if (dc?.length) return bad("단추에서 선정된 담당자가 있는 고객사는 지울 수 없어요. 같은 회사가 둘이면 합치기를 써 주세요.", 409);
   }
+  // 지워지는 기록의 첨부 (안건·고객사를 지우면 거기 붙은 기록도 함께 지워진다, 0038 on delete cascade)
+  const files = k === "activities" ? activityFilePaths([cur as { files?: unknown }])
+    : k === "deals" || k === "companies" ? activityFilePaths((await sb.from("cro_crm_activities").select("files").eq("org_id", orgId).eq(k === "deals" ? "deal_id" : "company_id", b.id).limit(5000)).data ?? [])
+    : [];
   const { error } = await sb.from(TABLE[k]).delete().eq("id", b.id).eq("org_id", orgId);
   if (error) return fail(NAME[k], error);
+  await removeCrmFiles(sb, files);
   return NextResponse.json({ ok: true });
 }
