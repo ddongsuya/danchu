@@ -43,6 +43,7 @@
 .cx-tablewrap { border: 1px solid var(--card-line); }
 .cx-tablewrap--flat { border: 0; }
 .cx-table thead th { border-bottom: 1px solid var(--card-line); padding-top: 10px; padding-bottom: 8px; }
+.cx-table td.r { white-space: nowrap; }
 .cx-banner { border: 1px solid var(--card-line); }
 .cx-search input { border-color: var(--card-line); }
 .cx-seg, .cx-dd summary, .cx-pill { box-shadow: inset 0 0 0 1px var(--card-line); }
