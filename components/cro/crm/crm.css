@@ -557,7 +557,7 @@
   .cx-search input { width: 100%; }
   .cx-preview { margin-bottom: 10px; }
   /* 표: 휴대폰에서는 꼭 필요한 칸만 */
-  .cx-table--co th:nth-child(3), .cx-table--co td:nth-child(3), .cx-table--co th:nth-child(5), .cx-table--co td:nth-child(5), .cx-table--co th:nth-child(6), .cx-table--co td:nth-child(6) { display: none; }
+  .cx-table--co th:nth-child(2), .cx-table--co td:nth-child(2), .cx-table--co th:nth-child(5), .cx-table--co td:nth-child(5), .cx-table--co th:nth-child(6), .cx-table--co td:nth-child(6) { display: none; }
   .cx-table--cd th:nth-child(3), .cx-table--cd td:nth-child(3), .cx-table--cd th:nth-child(4), .cx-table--cd td:nth-child(4) { display: none; }
   .cx-table td, .cx-table th { padding-left: 10px; padding-right: 10px; }
   .cx-table--co, .cx-table--cd { min-width: 0; }

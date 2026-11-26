@@ -98,3 +98,8 @@
 .cx-deal .cx-stagebar button { box-shadow: none; }
 .cx-deal .cx-stagebar li[data-state="next"] button { background: var(--band); }
 .cx-tl__day { border-bottom: 1px solid var(--card-line); padding-bottom: 6px; margin-bottom: 2px; }
+
+/* ── 고객사 화면: 탭(개요 · 담당자 · 기록) ── */
+.cx-cotabs { box-shadow: inset 0 -1px 0 var(--card-line); margin-top: -6px; }
+.cx-co .cx-grp .cx-filters { gap: 6px; }
+.cx-co .cx-grp .cx-tablewrap--flat .cx-table tbody tr:nth-child(odd) td { background: var(--surface); }
