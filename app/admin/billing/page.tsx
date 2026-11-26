@@ -101,7 +101,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         </div>
       )}
       {drifted && <div className="note note--warn" style={{ marginBottom: 12 }}>마감 뒤 바뀐 값이 있습니다(단가, 견적 금액, 체결 정정 등). 마감한 명세는 바꾸지 않습니다. 바로잡을 금액은 다음 달 명세에 조정 항목으로 넣습니다.</div>}
-      {error && <div className="note note--warn" style={{ marginBottom: 16 }}>집계 함수를 불러오지 못했습니다. `0020_billing_rules.sql` 마이그레이션이 적용됐는지 확인하세요. ({error.message})</div>}
+      {error && <div className="note note--warn" style={{ marginBottom: 16 }}>집계 함수를 불러오지 못했습니다. `0020_billing_rules.sql` 마이그레이션이 적용됐는지 확인해 주세요. ({error.message})</div>}
       {adjFailed && <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>조정 항목을 불러오지 못했습니다. 합계에는 조정 금액이 들어 있지만 조정 열과 목록은 비어 보입니다. `0024_billing_close_lock.sql` 이 적용됐는지 확인한 뒤 새로고침해 주세요. ({adjError.message})</div>}
 
       <AdminSection id="statement" title="기관별 명세" sub="미정은 0원으로 보이지 않고 미정으로 표시합니다.">

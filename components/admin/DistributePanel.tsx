@@ -50,7 +50,7 @@ export function DistributePanel({ no, categories, defaultReplyBy, replyByLocked 
   return (
     <div className="stack" style={{ gap: 12 }}>
       {nomineesOnly && <p className="note note--warn" style={{ fontSize: 13 }}>의뢰자가 <b>지명 기관에만 안내</b>를 고른 요청입니다. 의뢰자가 다른 기관에도 안내해 달라고 요청한 경우에만 보내고, 아래에 요청 내용을 남겨 주세요 (감사 기록).</p>}
-      {orgs.length === 0 && <p className="note note--warn">승인된 기관이 없습니다. 기관 탭에서 가입 신청을 승인하세요.</p>}
+      {orgs.length === 0 && <p className="note note--warn">승인된 기관이 없습니다. 기관 탭에서 가입 신청을 승인해 주세요.</p>}
       <div className="stack" style={{ gap: 6 }}>
         {shown.map((o) => {
           const on = picked.includes(o.id);
@@ -77,7 +77,7 @@ export function DistributePanel({ no, categories, defaultReplyBy, replyByLocked 
           {replyByLocked ? (
             <>
               <input id="replyBy" className="inp tnum" type="date" value={replyBy} readOnly aria-describedby="replyBy-help" />
-              <p id="replyBy-help" className="fld__help">모든 기관이 같은 회신 기한입니다. 바꾸려면 회신 현황의 "회신 기한 변경"을 쓰세요.</p>
+              <p id="replyBy-help" className="fld__help">모든 기관이 같은 회신 기한입니다. 바꾸려면 회신 현황의 "회신 기한 변경"을 써 주세요.</p>
             </>
           ) : (
             <input id="replyBy" className="inp" type="date" value={replyBy} onChange={(e) => setReplyBy(e.target.value)} />
@@ -98,7 +98,7 @@ export function DistributePanel({ no, categories, defaultReplyBy, replyByLocked 
           </div>
         </div>
       )}
-      {past && <p className="note note--warn" style={{ fontSize: 13 }}>회신 기한이 이미 지났습니다. 회신 현황의 "회신 기한 변경"으로 먼저 늘린 뒤 안내하세요.</p>}
+      {past && <p className="note note--warn" style={{ fontSize: 13 }}>회신 기한이 이미 지났습니다. 회신 현황의 "회신 기한 변경"으로 먼저 늘린 뒤 안내해 주세요.</p>}
       <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13 }}>
         <input type="checkbox" checked={keepManual} onChange={(e) => setKeepManual(e.target.checked)} style={{ marginTop: 2 }} />
         <span>고른 기관에만 보내기 <span style={{ display: "block", color: "var(--muted)" }}>켜 두면 나중에 승인되는 기관이나 매일 한 번 하는 빈자리 채우기가 이 요청에 기관을 더하지 않습니다. 운영자가 고른 기관만 안내를 받습니다.</span></span>

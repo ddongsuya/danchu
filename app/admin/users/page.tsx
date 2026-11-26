@@ -24,7 +24,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
       {users.length === 0 ? (
         q
           ? <EmptyState kind="filtered" title={`"${q}"에 맞는 사용자가 없습니다`} clearHref="/admin/users">이메일, 이름, 회사 중 하나로 다시 찾아 주세요.</EmptyState>
-          : <EmptyState title="사용자가 없습니다">가입한 계정이 여기에 나타납니다.</EmptyState>
+          : <EmptyState title="사용자 없음" />
       ) : (
       <div className="card tbl-wrap">
         <table className="tbl">

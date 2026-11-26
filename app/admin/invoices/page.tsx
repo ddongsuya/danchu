@@ -60,7 +60,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       {error && <div className="note note--warn adm-note" role="alert">청구서를 불러오지 못했습니다. `0032_billing_invoices.sql` 이 적용됐는지 확인해 주세요. ({error.message})</div>}
 
       {!period ? (
-        <EmptyState title="아직 마감하지 않은 달입니다" action={<Link href={`/admin/billing?month=${r.from.slice(0, 7)}`} className="b2 bsm">청구 명세 열기</Link>}>청구 명세에서 이 달을 마감하면 청구서를 만들 수 있습니다.</EmptyState>
+        <EmptyState title="마감 전인 달" action={<Link href={`/admin/billing?month=${r.from.slice(0, 7)}`} className="b2 bsm">청구 명세 열기</Link>}>마감한 뒤 청구서를 만들 수 있어요.</EmptyState>
       ) : (
         <>
           <div style={{ marginBottom: 16 }}>
@@ -68,7 +68,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
           </div>
           <div className="card tbl-wrap">
             {list.length === 0 ? (
-              <p className="empty">이 달 청구서가 없습니다. 합계가 0원보다 큰 기관이 있으면 위 버튼으로 만듭니다.</p>
+              <p className="empty">이 달 청구서 없음</p>
             ) : (
               <table className="tbl tbl--stack">
                 <thead>

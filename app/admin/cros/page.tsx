@@ -74,8 +74,8 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
       <AdminSection id="orgs" title={status ? ST[status]?.[0] ?? "기관" : "전체 기관"} count={rest.length}>
         {rest.length === 0
           ? (q || status
-            ? <EmptyState kind="filtered" title={q ? `"${q}"에 맞는 기관이 없습니다` : "이 상태의 기관이 없습니다"} clearHref="/admin/cros">검색어나 상태를 바꾸거나 필터를 지우세요.</EmptyState>
-            : <EmptyState title="기관이 없습니다">기관이 가입 신청하거나 운영자가 위에서 기관을 추가하면 여기에 나타납니다.</EmptyState>)
+            ? <EmptyState kind="filtered" title={q ? `"${q}"에 맞는 기관이 없습니다` : "이 상태의 기관이 없습니다"} clearHref="/admin/cros" />
+            : <EmptyState title="기관 없음" />)
           : <Table rows={rest} />}
       </AdminSection>
     </>

@@ -51,7 +51,7 @@ export default async function AdminAwards() {
       </div>
       <AdminSection id="signals" title="확인할 신호" count={signalRows.length + extRows.length} sub="기관 보고와 의뢰자 알림이 다르거나, 계약 금액이 선정 견적보다 20% 이상 낮거나, 외부 진행 메모에 참여 기관 이름이 있는 건입니다. 판단 전에 양쪽에 확인합니다.">
         {signalRows.length + extRows.length === 0 ? (
-          <EmptyState title="지금 확인할 신호가 없습니다" />
+          <EmptyState title="확인할 신호 없음" />
         ) : (
           <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
@@ -80,7 +80,7 @@ export default async function AdminAwards() {
       </AdminSection>
       <AdminSection id="awards" title="전체 수주" count={list.length}>
       {list.length === 0 ? (
-        <EmptyState title="수주가 없습니다">의뢰자가 비교표에서 CRO를 선택하면 여기에 쌓입니다.</EmptyState>
+        <EmptyState title="수주 없음" />
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl tbl--stack">

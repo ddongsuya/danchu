@@ -44,7 +44,7 @@ export function CdaPanel({
       setReference("");
       router.refresh();
     } catch (e) {
-      setMessage(failureText(e, "저장하지 못했습니다. 다시 시도하세요."));
+      setMessage(failureText(e, "저장하지 못했습니다. 다시 시도해 주세요."));
     } finally {
       setBusy(false);
     }
@@ -53,7 +53,7 @@ export function CdaPanel({
     <section className="card card--pad stack">
       <h2 style={{ fontSize: 16 }}>기관별 CDA 확인</h2>
       <p className="fld__help">
-        외부에서 체결한 계약을 확인한 뒤 첨부를 공개하세요. 체결 확인 전에는
+        외부에서 체결한 계약을 확인한 뒤 첨부를 공개해 주세요. 체결 확인 전에는
         첨부를 공개하지 않고, 회사명과 연락처는 체결 후에도 선정 전까지 공개하지
         않습니다.
       </p>

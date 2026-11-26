@@ -30,7 +30,7 @@ export function AdminActions({ no, status, submitted, pending, early, closed, no
       setMsg({ ok: true, text: d.message || "처리했습니다." });
       router.refresh();
     } catch (e) {
-      setMsg({ ok: false, text: failureText(e, "처리하지 못했습니다. 다시 시도하세요.") });
+      setMsg({ ok: false, text: failureText(e, "처리하지 못했습니다. 다시 시도해 주세요.") });
     } finally {
       setBusy("");
     }

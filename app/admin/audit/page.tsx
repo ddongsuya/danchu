@@ -42,7 +42,7 @@ export default async function AdminAudit() {
         </div>
       </div>
       {rows.length === 0 ? (
-        <EmptyState title="기록이 없습니다">기관 승인, 기한 변경, 청구 제외 같은 운영 작업을 하면 여기에 남습니다.</EmptyState>
+        <EmptyState title="기록 없음" />
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl">

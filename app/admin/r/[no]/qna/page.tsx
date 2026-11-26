@@ -41,7 +41,7 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
           </p>
         </div>
       </div>
-      {list.length === 0 ? <EmptyState title="질의가 없습니다">의뢰자나 기관이 질의를 남기면 여기에 시간순으로 쌓입니다.</EmptyState> : (
+      {list.length === 0 ? <EmptyState title="질의 없음" /> : (
       <div className="card tbl-wrap" tabIndex={0} role="region" aria-label="질의응답 기록">
         <table className="tbl" style={{ minWidth: 960 }}>
           <thead>
