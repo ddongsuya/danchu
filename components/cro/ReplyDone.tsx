@@ -1,26 +1,33 @@
 import Link from "next/link";
 import { CheckDisc } from "@/components/app/ui";
 import { won } from "@/lib/format";
+import "./layout-quote.css";
 
 /** 제출 완료 화면. closed 면(마지막 제출로 비교표가 열렸거나 회신이 닫혔다) 수정하기를 숨기고 수정할 수 없다고 안내한다 */
 export function ReplyDone({ no, replyBy, total, weeks, editHref, backHref, backLabel, closed = false }: { no: string; replyBy?: string; total: number; weeks?: string; editHref: string; backHref: string; backLabel: string; closed?: boolean }) {
+  const hasWeeks = !!weeks && weeks !== "0";
   return (
-    <div style={{ maxWidth: 560, margin: "0 auto", paddingTop: 16 }}>
-      <div className="card" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10 }}>
+    <div className="lq-done">
+      <div className="lq-done__hero">
         <CheckDisc size={52} />
-        <h1 style={{ marginTop: 6, fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>견적을 제출했어요</h1>
-        <p className="tnum" style={{ fontSize: 14, color: "var(--body)" }}>
-          {no}{total ? ` · 총 ${won(total)}` : ""}{weeks && weeks !== "0" ? ` · 최종보고서 ${weeks}주차` : ""}
-        </p>
-        <p style={{ fontSize: 13, color: "var(--muted)" }}>
-          {closed ? "회신이 닫혀 더 고칠 수 없어요." : "비교표가 열리기 전까지 고칠 수 있어요. 열린 뒤에는 고치거나 다시 제출할 수 없어요."} 다른 기관은 볼 수 없어요.
-        </p>
-        <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap", justifyContent: "center" }}>
-          {!closed && <Link href={editHref} className="b2 bsm">수정하기</Link>}
-          <Link href={backHref} className="b2 bsm">{backLabel}</Link>
-        </div>
+        <h1>견적을 제출했어요</h1>
+        <p className="tnum">{no}</p>
       </div>
-      <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "var(--muted)" }}>문의 support@danchu.kr</p>
+      {(total > 0 || hasWeeks || replyBy) && (
+        <dl className="lq-done__kv">
+          {total > 0 && <div><dt>총액</dt><dd className="tnum">{won(total)}</dd></div>}
+          {hasWeeks && <div><dt>최종보고서</dt><dd className="tnum">{weeks}주차</dd></div>}
+          {replyBy && <div><dt>회신 기한</dt><dd className="tnum">{replyBy}</dd></div>}
+        </dl>
+      )}
+      <p className="lq-done__note">
+        {closed ? "회신이 닫혀 더 고칠 수 없어요." : "비교표가 열리기 전까지 고칠 수 있어요. 열린 뒤에는 고치거나 다시 제출할 수 없어요."} 다른 기관은 볼 수 없어요.
+      </p>
+      <div className="lq-done__acts">
+        {!closed && <Link href={editHref} className="b2">수정하기</Link>}
+        <Link href={backHref} className="b1">{backLabel}</Link>
+      </div>
+      <p className="lq-done__foot">문의 support@danchu.kr</p>
     </div>
   );
 }
