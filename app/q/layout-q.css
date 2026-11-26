@@ -5,6 +5,11 @@
 .pt--q .pt__main { max-width: 1080px; padding-bottom: calc(48px + var(--bot)); }
 .pt--q .pt__tokenhint { text-align: right; line-height: 1.4; }
 @media (max-width: 639px) { .pt--q .pt__tokenhint-lead { display: none; } }
+/* 넓은 화면: 공통 껍데기(portal.css, 사이드바 + 흰 패널)는 /q 에 없으므로 위 바를 다시 보이고 패널 테두리를 걷는다 */
+@media (min-width: 960px) {
+  .pt.pt--q .pt__top { display: block; }
+  .pt.pt--q .pt__body { background: transparent; border: 0; border-radius: 0; margin: 0; min-height: 100dvh; }
+}
 
 /* 가운데 한 열: 제출 완료, 열 수 없는 링크, 불참 · 철회 확인 */
 .q-center { max-width: 440px; margin: 0 auto; padding-top: 24px; display: flex; flex-direction: column; gap: 16px; }

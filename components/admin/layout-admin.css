@@ -55,7 +55,7 @@
 .adm-row b { font-weight: 600; }
 .adm-row__cat { color: var(--brand); }
 .adm-row .sub { display: block; color: var(--muted); }
-.adm-more { padding: 0 18px; }
+.pt .adm-more { padding: 0 18px; }
 .adm-more summary { padding: 14px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
 .adm-more__rows { padding: 0 0 8px; }
 
@@ -74,7 +74,7 @@
 .adm-sec__sub { font-size: 13px; color: var(--muted); line-height: 1.6; margin: -4px 0 12px; max-width: 75ch; }
 
 /* 카드 안 제목 (카드 안에 카드를 두지 않는다) */
-.adm-box { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pt .adm-box { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .adm-box__h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 700; }
 .adm-box__h small { font-size: 13px; font-weight: 500; color: var(--muted); }
 .adm-box__p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
