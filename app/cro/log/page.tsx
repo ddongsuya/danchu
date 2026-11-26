@@ -6,6 +6,7 @@ import { LogView } from "@/components/cro/crm/LogView";
 import { loadCtx } from "@/components/cro/crm/load";
 import { rowsOf } from "@/components/cro/crm/ctx";
 import "@/components/cro/crm/crm.css";
+import "@/components/cro/crm/layout-crm.css";
 
 export const dynamic = "force-dynamic";
 

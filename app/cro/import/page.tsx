@@ -4,6 +4,7 @@ import { PendingOrg } from "@/components/cro/PendingOrg";
 import { ImportFlow } from "@/components/cro/crm/ImportFlow";
 import { loadCtx } from "@/components/cro/crm/load";
 import "@/components/cro/crm/crm.css";
+import "@/components/cro/crm/layout-crm.css";
 
 export const dynamic = "force-dynamic";
 

@@ -4,6 +4,7 @@ import { ImportFlow } from "@/components/cro/crm/ImportFlow";
 import { Frame } from "../frame";
 import { CPATHS, ME, previewCtx, previewEnabled } from "../fixtures";
 import "@/components/cro/crm/crm.css";
+import "@/components/cro/crm/layout-crm.css";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "엑셀 가져오기 검토 · 단추", robots: { index: false, follow: false } };

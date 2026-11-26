@@ -126,3 +126,15 @@
 }
 .cal .cal__h h1 { font-size: 27px; font-weight: 600; line-height: 1.3; }
 @media (max-width: 959px) { .cal .cal__h h1 { font-size: 22px; } }
+
+/* ── 기록 남기기: 넓은 화면에서는 가운데 한 장 ── */
+.cx-log .cx-pick, .cx-log .cx-compose--m .cx-tabs, .cx-log .cx-compose--m .cx-compose__ta { border: 1px solid var(--card-line); }
+.cx-log .cx-compose--m { border: 0; }
+@media (min-width: 960px) {
+  .cx-log { max-width: 640px; margin-top: 8px; background: var(--white); border: 1px solid var(--card-line); border-radius: var(--r-lg); padding: 16px 24px 24px; }
+  .cx-log__top { padding-bottom: 12px; border-bottom: 1px solid var(--card-line); }
+  .cx-log .cx-compose--m .cx-compose__foot .b1 { height: 44px; }
+}
+
+/* ── 엑셀 가져오기 ── */
+.cx-imp .cx-steps { padding-bottom: 14px; border-bottom: 1px solid var(--card-line); }
