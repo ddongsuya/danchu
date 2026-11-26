@@ -10,7 +10,57 @@ import { FileText, Microphone, Paperclip, X } from "@phosphor-icons/react";
 import { CRM_FILES_PER_ACTIVITY, CRM_FILE_ACCEPT, crmFileError, displayName, isAudioFile, sizeLabel } from "@/lib/crm-files";
 import type { CrmFile } from "@/lib/crm-shape";
 import { uploadToSigned } from "@/lib/upload";
-import { Err } from "./forms";
+import { Err, useSend } from "./forms";
+
+/** 녹음 듣기 주소 (서명 URL 로 보낸다, /api/cro/crm/files ?play=1) */
+export const playHref = (activityId: string, path: string) => `/api/cro/crm/files?a=${activityId}&p=${encodeURIComponent(path)}&play=1`;
+
+/**
+ * 미팅 기록의 녹음 + 회의록 (와이어프레임 v7 c-voice). 녹음은 듣기만 하고, 회의록은 기록 본문(body)을 그대로 쓴다.
+ * 녹음을 글로 옮기는 기능(전사)은 없다. 회의록은 사람이 적는다.
+ */
+export function VoiceNote({ activityId, files, body, readOnly = false }: { activityId: string; files: CrmFile[]; body: string; readOnly?: boolean }) {
+  const audios = files.filter(isAudioFile);
+  const { busy, err, setErr, send } = useSend();
+  const [edit, setEdit] = useState(false);
+  const [text, setText] = useState(body);
+  const tid = useId();
+  if (!audios.length) return null;
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return setErr("회의록을 적어 주세요.");
+    if (await send("activities", "PATCH", { id: activityId, body: text })) setEdit(false);
+  }
+  return (
+    <div className="cx-voice">
+      <div className="cx-voice__rec">
+        <span className="cx-voice__lab"><Microphone size={14} aria-hidden="true" />녹음</span>
+        {audios.map((f) => (
+          <figure key={f.path}>
+            <audio controls preload="none" src={playHref(activityId, f.path)} aria-label={`${displayName(f.name)} 듣기`} />
+            <figcaption><span className="cx-files__n">{displayName(f.name)}</span><span className="cx-files__s tnum">{sizeLabel(f.size)}</span></figcaption>
+          </figure>
+        ))}
+      </div>
+      <div className="cx-voice__min">
+        <span className="cx-voice__lab">
+          <label htmlFor={tid}>회의록</label>
+          {!readOnly && !edit && <button type="button" className="crm-lk" onClick={() => { setText(body); setEdit(true); }}>{body ? "고치기" : "적기"}</button>}
+        </span>
+        {edit ? (
+          <form onSubmit={save} className="cx-voice__form">
+            <textarea id={tid} className="ta" rows={6} value={text} maxLength={20000} onChange={(e) => setText(e.target.value)} />
+            <Err msg={err} />
+            <span className="crm-acts">
+              <button type="button" className="b2 bsm" onClick={() => { setEdit(false); setErr(""); }}>취소</button>
+              <button type="submit" className="b1 bsm" disabled={busy}>{busy ? "저장 중" : "저장"}</button>
+            </span>
+          </form>
+        ) : body ? <p className="cx-voice__body">{body}</p> : <p className="cx-muted cx-small">회의록이 없어요. 녹음은 글로 옮겨지지 않아요.</p>}
+      </div>
+    </div>
+  );
+}
 
 async function post(body: Record<string, unknown>, method = "POST"): Promise<{ ok: boolean; error?: string; path?: string; signedUrl?: string; name?: string }> {
   try {
