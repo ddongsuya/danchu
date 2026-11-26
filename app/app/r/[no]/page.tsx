@@ -1,4 +1,4 @@
-import { AttachmentRetry } from "@/components/app/AttachmentRetry";
+import { AttachmentRetry, AttachmentRows } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
 import { ContractConfirm, ReopenRequest, SponsorContractResult, StartNow } from "@/components/app/RequestActions";
 import { GAP_REASON_LABEL, gapLabel, gapOf, isGapReason, SPONSOR_STATUS_LABEL } from "@/lib/contract-gap";
@@ -96,6 +96,18 @@ export default async function RequestDetail({ params, searchParams }: { params: 
   const qc = story.sent > 0 ? await qnaCounts(rfq.id) : null;
   const qna = qc && (story.joined > 0 || qc.total > 0) ? qc : null;
 
+  // 도착 순서 (비교표가 열리기 전, 시각만): 지금 제출 상태인 참여 기관의 첫 제출 시각
+  const liveSubmitted = new Set(d.invites.filter((i) => !i.revoked_at && i.status === "submitted" && occupiesSeat(i)).map((i) => i.id));
+  const arrivals = d.quotes
+    .filter((q) => liveSubmitted.has(q.invite_id))
+    .map((q) => q.first_submitted_at ?? q.submitted_at)
+    .filter((t): t is string => !!t)
+    .sort();
+  const joinedAt = d.invites.filter((i) => !i.revoked_at && occupiesSeat(i)).map((i) => i.joined_at).filter((t): t is string => !!t).sort().at(-1) ?? null;
+  // 첨부: 기관을 고르기 전까지만 다시 올리거나 더한다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다
+  const canEditFiles = !d.award && !ended;
+  const missingFiles = d.files.filter((f) => !f.uploaded_at).length;
+
   // 요청이 기관에 전달된 시각 (예전 요청은 기록에만 남아 있다)
   const distributedAt = rfq.distributed_at ?? d.events.filter((e) => e.kind === "distributed").at(-1)?.created_at ?? null;
 
@@ -144,6 +156,18 @@ export default async function RequestDetail({ params, searchParams }: { params: 
         facets={facets}
         joinBy={joinBy}
         canEnd={canEnd}
+        arrivals={arrivals}
+        joinedAt={joinedAt}
+        nomineesOnly={!!rfq.nominees_only}
+        manage={canEnd ? <OutcomeForm no={rfq.rfq_no} compared={canCompare} initialOpen={endAsk === "1"} /> : undefined}
+        next={
+          canEditFiles && missingFiles > 0 ? (
+            <div className="rq-alert" role="alert">
+              <span>첨부 {missingFiles}개를 올리지 못했어요.</span>
+              <a href="#files" className="b2 bsm">다시 올리기</a>
+            </div>
+          ) : undefined
+        }
         stuck={noJoinPastDue}
         croMail={contractOpen && croContact?.email ? `mailto:${croContact.email}?subject=${encodeURIComponent(`[단추 ${rfq.rfq_no}] 계약 진행`)}` : undefined}
         top={
@@ -218,22 +242,9 @@ export default async function RequestDetail({ params, searchParams }: { params: 
                     <span className="kv__v">{String(v)}</span>
                   </div>
                 ))}
-                {d.files.length > 0 && (
-                  <div className="kv" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-                    <span className="kv__k">첨부</span>
-                    {d.files.map((f) => (
-                      <a key={f.id} href={`/api/files/${f.id}`} style={{ fontSize: 14 }}>
-                        {f.file_name} <span style={{ color: "var(--muted)" }}>· {(f.size_bytes / 1024 / 1024).toFixed(1)}MB</span>
-                        {!f.uploaded_at && <span className="pill pill--warn" style={{ marginLeft: 6 }}>업로드 안 됨</span>}
-                      </a>
-                    ))}
-                  </div>
-                )}
               </div>
               <details className="rq-card__full">
                   <summary>전체 보기 <span className="tnum">{fullRows.length}개 항목</span></summary>
-                  {/* 첨부는 기관을 고르기 전까지만 고친다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다 */}
-                  {!d.award && !ended && <div className="rq-card__more"><AttachmentRetry no={rfq.rfq_no} /></div>}
                   <div className="card--rows rq-card__rows">
                     {fullRows.map(([id, label]) => (
                       <div key={id} className="kv" style={{ fontSize: 13 }}>
@@ -244,12 +255,17 @@ export default async function RequestDetail({ params, searchParams }: { params: 
                   </div>
                 </details>
             </section>
-            {/* 요청 마무리는 바로 가기·기한 지남 띠에서 열 때만 (시안 v7 r-outcome) */}
+            {(d.files.length > 0 || canEditFiles) && (
+              <section id="files" className="card rq-card" aria-labelledby="files-title">
+                <h2 id="files-title" className="rq-card__h">첨부</h2>
+                {d.files.length > 0 && <AttachmentRows no={rfq.rfq_no} canRetry={canEditFiles} files={d.files.map((f) => ({ id: f.id, name: f.file_name, size: f.size_bytes, uploaded: !!f.uploaded_at }))} />}
+                {canEditFiles && <div className={d.files.length ? "rq-card__more" : undefined}><AttachmentRetry no={rfq.rfq_no} /></div>}
+              </section>
+            )}
             {/* 의뢰자 계약 결과 알림 (0034). 시안에 없는 카드라 요청 내용 아래에 둔다 */}
             {canTellResult && d.award && (
               <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
             )}
-            {canEnd && endAsk === "1" && <div id="end"><OutcomeForm no={rfq.rfq_no} compared={canCompare} initialOpen /></div>}
           </>
         }
       >

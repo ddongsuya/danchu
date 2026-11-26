@@ -196,7 +196,8 @@ export function ReopenRequest({ no, until }: { no: string; until: string }) {
 }
 
 /** 접수는 됐지만 기관 전달이 시작되지 않은 요청 (첨부를 올리다 창을 닫은 경우). 빠진 첨부 없이 지금 보낸다 */
-export function StartNow({ no }: { no: string }) {
+/** 참여 안내 보내기 (/api/rfq/[no]/start). 접수 완료 화면에서는 실패 줄 옆 "다시 보내기"로 쓴다 */
+export function StartNow({ no, label = "지금 보내기" }: { no: string; label?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -208,6 +209,7 @@ export function StartNow({ no }: { no: string }) {
           type="button"
           className="b1"
           disabled={busy}
+          aria-busy={busy || undefined}
           onClick={async () => {
             setBusy(true);
             setErr("");
@@ -221,7 +223,7 @@ export function StartNow({ no }: { no: string }) {
             }
           }}
         >
-          {busy ? "보내는 중…" : "지금 보내기"}
+          {busy ? "보내는 중" : label}
         </button>
       </div>
     </div>

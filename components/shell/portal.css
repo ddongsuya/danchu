@@ -532,7 +532,7 @@
 
 /* ── 전체 일정 (경로형 간트, components/ScheduleGantt.tsx) ───────────────
  * 흑연 단색. 진한 막대 = 최종보고서 시점을 정하는 순서, 옅은 막대 = 함께 진행.
- * 형광 노랑은 가장 빠른 기관과의 차이에만. 모서리 2px, 숫자는 Plex Mono */
+ * 기관끼리 견주는 표시(차이 띠·배지)는 두지 않는다. 모서리 2px, 숫자는 Plex Mono */
 .sg { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .sg--empty p { margin: 0; font-size: 14px; color: var(--muted); }
 .sg-head { display: flex; flex-direction: column; gap: 6px; }
@@ -542,7 +542,6 @@
 .sg--compact .sg-num { font-size: 32px; }
 .sg-sub { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 14px; color: var(--body); }
 .sg-sub b { font-family: var(--font-mono); font-weight: 500; color: var(--ink); }
-.sg-late { background: var(--acc-fill); color: #1b1b19; font-weight: 600; font-size: 13px; padding: 1px 6px; border-radius: var(--r-sm); }
 .sg-chain { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; }
 .sg-chain li { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--on-brand); background: var(--brand); padding: 4px 9px; border-radius: var(--r-sm); }
 .sg-chain li + li { margin-left: 20px; position: relative; }
@@ -558,7 +557,6 @@
 .sg-row--crit .sg-range { color: var(--ink); }
 .sg-tick { position: absolute; top: 8px; padding-left: 4px; border-left: 1px solid var(--card-line); font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; line-height: 14px; }
 .sg-tick--year { border-left: 2px solid var(--ink); color: var(--ink); }
-.sg-band { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--acc-fill) 55%, transparent); }
 .sg-bar, .sg-rep, .sg-tr { position: absolute; top: 50%; height: 10px; margin-top: -5px; border-radius: var(--r-sm); }
 .sg-bar { background: var(--faint); }
 .sg-row--crit .sg-bar { background: var(--brand); }
@@ -566,12 +564,6 @@
 .sg-rep.is-crit { background: var(--track); box-shadow: inset 0 0 0 1.5px var(--brand); }
 .sg-tr { border: 1px dashed var(--faint); box-sizing: border-box; }
 .sg-tr.is-crit { border: 1.5px dashed var(--brand); background: var(--track); }
-.sg-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); }
-.sg-legend li { display: inline-flex; align-items: center; gap: 6px; }
-.sg-key { display: inline-block; width: 18px; height: 8px; border-radius: var(--r-sm); background: var(--faint); }
-.sg-key--crit { background: var(--brand); }
-.sg-key--rep { background: var(--track); box-shadow: inset 0 0 0 1.5px var(--brand); }
-.sg-key--late { background: color-mix(in srgb, var(--acc-fill) 55%, transparent); }
 .sg-note { margin: 0; font-size: 13px; color: var(--muted); }
 .sg--compact .sg-row { grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) 104px; }
 .sg--compact .sg-name { font-size: 12.5px; }
@@ -587,7 +579,6 @@
   .sg-row--axis { padding: 0; }
   .sg-row--axis .sg-name, .sg-row--axis .sg-range { display: none; }
   .sg-row--axis .sg-track { min-height: 26px; }
-  .sg-band { top: -2px; bottom: -2px; }
   .sg-tick--minor { color: transparent; }
 }
 
@@ -1831,3 +1822,35 @@
 }
 @keyframes ix-fade { from { opacity: 0; } }
 @keyframes ix-pulse { 50% { opacity: .35; } }
+
+/* ── 의뢰자 진행·접수·홈 (uxfix) ── */
+/* 접수 완료 */
+.rq-done { max-width: 640px; margin: 0 auto; gap: 24px; }
+.rq-done .rq-card__p { margin-top: 14px; }
+/* 일정 줄의 실패 (참여 안내를 보내지 못함) */
+.rq-tl__i--bad::before { background: var(--err); }
+.rq-tl__i--bad b { color: var(--err); }
+/* 도착 순서: 몇 번째 견적서 · 도착 시각. 기관 이름·금액은 넣지 않는다 */
+.rq-ord { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--track); font-size: 13px; }
+.rq-ord li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--track); }
+.rq-ord time { color: var(--muted); }
+/* 첨부 줄: 파일명 · 크기 · 행동. 실패한 줄만 붉은 바탕과 이유 한 줄 */
+.rq-files { border: 1px solid var(--cline); border-radius: var(--r-md); overflow: hidden; }
+.rq-file { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 12px; align-items: center; padding: 10px 12px; font-size: 13px; }
+.rq-file + .rq-file { border-top: 1px solid var(--track); }
+.pt .rq-file__n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); text-underline-offset: 3px; }
+.rq-file__s { color: var(--muted); font-size: 12px; }
+.rq-file--bad { background: color-mix(in srgb, var(--err) 5%, var(--wh)); }
+.rq-file__msg { grid-column: 1 / -1; color: var(--err); font-size: 12px; }
+/* 상태 줄 아래 첨부 실패 띠 */
+.rq-alert { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -8px 0 20px; padding: 10px 14px; border-radius: var(--r-md); background: color-mix(in srgb, var(--err) 7%, var(--wh)); color: var(--err); font-size: 13px; }
+.rq-alert .b2 { margin-left: auto; }
+/* 요청 마무리 사유 */
+.rq-end { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+.rq-end__o { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); background: var(--sf); cursor: pointer; }
+.rq-end__o[data-on] { background: var(--tint); }
+.rq-end__o input { margin-top: 3px; }
+.rq-end__o b { font-weight: 600; font-size: 14px; }
+.rq-end__o small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.rq-end__acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pt .rq-end__err { margin: 0; flex-basis: 100%; font-size: 13px; color: var(--err); }

@@ -23,6 +23,75 @@ export async function retryAttachment(
   const result = await confirmed.json();
   return confirmed.ok && result.complete === true;
 }
+/** 요청 첨부로 고를 수 있는 형식 (서버 검사는 lib/upload allowedRfqFile) */
+export const ACCEPT = ".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.hwp";
+
+export type AttachmentFile = { id: string; name: string; size: number; uploaded: boolean };
+const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1)}MB`;
+
+/**
+ * 첨부 목록 (시안 v7 r-req att). 올라간 파일은 내려받기, 올라가지 않은 파일만 오류 줄과 "다시 올리기"를 단다.
+ * 다시 올리기는 같은 이름과 크기의 파일을 고르면 그 줄을 채운다 (/api/rfq/[no]/files/retry).
+ */
+export function AttachmentRows({ no, files, canRetry }: { no: string; files: AttachmentFile[]; canRetry: boolean }) {
+  const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [target, setTarget] = useState<AttachmentFile | null>(null);
+  const [busy, setBusy] = useState("");
+  const [errs, setErrs] = useState<Record<string, string>>({});
+  const pick = (f: AttachmentFile) => {
+    if (busy) return;
+    setTarget(f);
+    fileRef.current?.click();
+  };
+  return (
+    <div className="rq-files">
+      {files.map((f) =>
+        f.uploaded ? (
+          <div key={f.id} className="rq-file">
+            <a className="rq-file__n" href={`/api/files/${f.id}`}>{f.name}</a>
+            <span className="rq-file__s tnum">{mb(f.size)} · 첨부함</span>
+          </div>
+        ) : (
+          <div key={f.id} className="rq-file rq-file--bad">
+            <span className="rq-file__n">{f.name}</span>
+            <span className="rq-file__s tnum">{mb(f.size)}</span>
+            {canRetry && (
+              <button type="button" className="btxt" disabled={!!busy} aria-busy={busy === f.id || undefined} onClick={() => pick(f)}>
+                {busy === f.id ? "올리는 중" : "다시 올리기"}
+              </button>
+            )}
+            <span className="rq-file__msg" role="alert">{errs[f.id] || `첨부를 올리지 못했어요: ${f.name}. 다시 골라 주세요.`}</span>
+          </div>
+        ),
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        hidden
+        aria-label="다시 올릴 파일 고르기"
+        accept={ACCEPT}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          const t = target;
+          if (!file || !t) return;
+          setBusy(t.id);
+          setErrs((m) => ({ ...m, [t.id]: "" }));
+          try {
+            if (!(await retryAttachment(no, file))) throw new Error(`첨부를 올리지 못했어요: ${file.name}. 다시 골라 주세요.`);
+            router.refresh();
+          } catch (error) {
+            setErrs((m) => ({ ...m, [t.id]: error instanceof Error ? error.message : `첨부를 올리지 못했어요: ${file.name}. 다시 골라 주세요.` }));
+          } finally {
+            setBusy("");
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 export function AttachmentRetry({ no }: { no: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -42,7 +111,7 @@ export function AttachmentRetry({ no }: { no: string }) {
           hidden
           aria-label="첨부파일 고르기"
           disabled={busy}
-          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.hwp"
+          accept={ACCEPT}
           onChange={async (e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
