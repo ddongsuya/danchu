@@ -285,7 +285,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
             <h2 id="co-tl">{person ? `${personLabel(person.name, person.title)} 기록` : "회사 전체 기록"}</h2>
             <nav className="cx-inline-tabs cx-grp__end" aria-label="기록 종류">
               {(Object.keys(TL_FILTERS) as TlFilter[]).map((k) => <Link key={k} href={tlHref(k)} scroll={false} aria-current={tf === k ? "true" : undefined}>{TL_FILTERS[k]}</Link>)}
-              {person && <Link href={tlHref(tf, null)} scroll={false}>회사 전체로</Link>}
+              {person && contacts.length <= 1 && <Link href={tlHref(tf, null)} scroll={false}>회사 전체로</Link>}
             </nav>
           </div>
           {contacts.length > 1 && (
