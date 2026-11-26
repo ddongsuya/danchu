@@ -33,6 +33,9 @@
 .lr-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 8px; }
 .lr-main, .lr-side { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
 .lr-side { gap: 12px; }
+/* 상태 줄의 "참여 결정"(#join-title)으로 내려올 때 위 바에 가리지 않게 */
+.lr-side .join { scroll-margin-top: 88px; }
+.lr-side #join-title { scroll-margin-top: 112px; }
 @media (min-width: 1100px) { .lr-split { grid-template-columns: minmax(0, 1fr) 340px; } }
 
 /* 묶음: 제목 한 줄 + 내용 */

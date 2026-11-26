@@ -85,7 +85,7 @@ function croStoryJoined(now: number) {
 }
 
 /** 견적 회신 화면 미리보기 (/design-preview?view=reply). 요청 화면 예시와 같은 요청, 일부 항목은 작성 중 */
-export function replyFixture(now: number) {
+export function replyFixture(now = Date.now()) {
   const base = croStoryJoined(now);
   const rows = base.rfq.rows.map((r) => ({ cond: "", ...r }));
   const items = base.draft.items.map((it) => ({
