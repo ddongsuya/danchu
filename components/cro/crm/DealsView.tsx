@@ -7,6 +7,7 @@ import { Board, DealForm, type BoardColumn } from "./deal-ui";
 import { buildOpts, qs } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
+import "./layout-crm.css";
 
 export type DealsQuery = { v: "board" | "list"; f: "" | "mine" | "need" | "nonext"; kind: string; src: "" | "danchu" | "direct"; s: "open" | "won" | "lost" | "all"; q: string; st: Stage | "" };
 
@@ -79,13 +80,23 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
       <header className="cx-ph">
         <div>
           <h1>안건</h1>
-          <p className="cx-ph__sub">진행 중 <b className="tnum">{open.length}건</b> · <b className="tnum">{wonKo(open.reduce((s, r) => s + (r.deal.amount ?? 0), 0))}</b></p>
         </div>
         <div className="cx-ph__acts">
+          <nav className="cx-seg cx-seg--r" aria-label="보기">
+            <Link href={link({ v: "board" })} aria-current={q.v === "board" ? "true" : undefined}><Kanban size={15} aria-hidden="true" />보드</Link>
+            <Link href={link({ v: "list" })} aria-current={q.v === "list" ? "true" : undefined}><ListBullets size={15} aria-hidden="true" />목록</Link>
+          </nav>
           <Link href={paths.import} className="b2 bsm"><UploadSimple size={16} aria-hidden="true" />엑셀 가져오기</Link>
           <SheetButton className="b1 bsm" title="안건 만들기" label={<><Plus size={16} aria-hidden="true" />안건 만들기</>}><DealForm opts={opts} base={paths.deals} /></SheetButton>
         </div>
       </header>
+
+      <dl className="cx-stats">
+        <div><dt>진행 중</dt><dd className="tnum">{open.length}건</dd></div>
+        <div><dt>진행 중 금액</dt><dd className="tnum">{wonKo(open.reduce((s, r) => s + (r.deal.amount ?? 0), 0))}</dd></div>
+        <div><dt>이번 달 수주</dt><dd className="tnum">{month.won}건<small>{wonKo(month.wonSum)}</small></dd></div>
+        <div><dt>이번 달 실패</dt><dd className="tnum">{month.lost}건</dd></div>
+      </dl>
 
       <div className="cx-filters">
         <nav className="cx-seg" aria-label="누구 안건">
@@ -114,10 +125,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
           <label className="sr-only" htmlFor="deal-q">안건·고객사·담당자 찾기</label>
           <input id="deal-q" name="q" defaultValue={q.q} placeholder="안건, 고객사, 담당자 찾기" maxLength={60} />
         </form>
-        <nav className="cx-seg cx-seg--r" aria-label="보기">
-          <Link href={link({ v: "board" })} aria-current={q.v === "board" ? "true" : undefined}><Kanban size={15} aria-hidden="true" />보드</Link>
-          <Link href={link({ v: "list" })} aria-current={q.v === "list" ? "true" : undefined}><ListBullets size={15} aria-hidden="true" />목록</Link>
-        </nav>
+        <span className="cx-count tnum">{q.v === "board" ? `진행 중 ${rows.filter((r) => r.deal.status === "open").length}건` : `${listRows.length}건`}</span>
       </div>
 
       {q.v === "board" ? (
@@ -125,9 +133,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
           <Board cols={cols} />
           <MobileBoard cols={cols} cur={q.st || (cols.find((x) => x.count)?.stage ?? "inquiry")} link={(st) => link({ st })} />
           <p className="cx-foot">
-            <span>이번 달 수주 <b className="tnum">{month.won}건 · {wonKo(month.wonSum)}</b></span>
-            <span>이번 달 실패 <b className="tnum">{month.lost}건</b></span>
-            <span className="cx-muted">수주·실패는 보드에서 빠지고 <Link href={link({ v: "list", s: "all" })} className="cx-lk">목록 보기</Link>와 보고서에 남아요.</span>
+            <span className="cx-muted">수주·실패는 보드에서 빠지고 <Link href={link({ v: "list", s: "all" })} className="cx-lk">목록 보기</Link>와 분석에 남아요.</span>
           </p>
         </>
       ) : (
