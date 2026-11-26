@@ -7,6 +7,7 @@ import { SearchBox } from "@/components/admin/SearchBox";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 import { ManagedOrgForm } from "@/components/admin/ManagedOrgForm";
+import { AdminSection, FilterChips } from "@/components/admin/Blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -23,21 +24,21 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
     <div className="card tbl-wrap">
       <table className="tbl tbl--stack">
         <thead>
-          <tr><th>기관</th><th>상태</th><th>GLP</th><th>수행 분야</th><th>담당자</th><th>신청일</th><th>처리</th></tr>
+          <tr><th>기관</th><th>상태</th><th>GLP</th><th>수행 분야</th><th className="num">담당자</th><th className="num">신청일</th><th><span className="sr-only">처리</span></th></tr>
         </thead>
         <tbody>
           {rows.map((o) => (
             <tr key={o.id}>
               <td>
-                <Link href={`/admin/cros/${o.id}`} style={{ fontWeight: 700 }}>{o.name}</Link>{o.managed && <ManagedBadge />}
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.contact_name} · {o.contact_email}</div>
+                <Link href={`/admin/cros/${o.id}`} className="strong">{o.name}</Link>{o.managed && <ManagedBadge />}
+                <span className="sub">{o.contact_name} · {o.contact_email}</span>
               </td>
               <td data-label="상태"><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
-              <td data-label="GLP" style={{ fontSize: 12 }}>{o.glp_certs.join(" · ") || "-"}</td>
-              <td data-label="수행 분야" style={{ fontSize: 12 }}>{o.categories.join(" · ") || "-"}</td>
-              <td className="tnum" data-label="담당자">{o.members}</td>
-              <td className="tnum" data-label="신청일">{ymd(o.created_at)}</td>
-              <td className="tbl__act" style={{ whiteSpace: "nowrap" }}>
+              <td data-label="GLP" className="adm-small">{o.glp_certs.join(" · ") || "-"}</td>
+              <td data-label="수행 분야" className="adm-small">{o.categories.join(" · ") || "-"}</td>
+              <td className="num" data-label="담당자">{o.members}</td>
+              <td className="num" data-label="신청일">{ymd(o.created_at)}</td>
+              <td className="tbl__act nowrap">
                 <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                   {o.status === "pending" && <QuickApprove id={o.id} name={o.name} />}
                   <Link href={`/admin/cros/${o.id}`} className="b2 bsm">상세</Link>
@@ -50,33 +51,33 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
     </div>
   );
 
+  const chips = [["", "전체"], ["pending", "승인 대기"], ["approved", "참여 중"]].map(([k, label]) => ({ href: `/admin/cros?${new URLSearchParams({ ...(k ? { status: k } : {}), ...(q ? { q } : {}) })}`, label, on: status === k }));
+
   return (
     <>
       <div className="ph">
         <div>
           <h1>기관</h1>
-          <p>가입 신청을 검토하고 승인합니다. 아직 가입하지 않은 기관은 운영자 관리 기관으로 직접 추가합니다. 승인된 기관에만 참여 안내가 갑니다.</p>
-        </div>
-        <div className="ph__actions">
-          <Link href="/admin/cros" className={`b2 bsm`} aria-pressed={!status}>전체</Link>
-          <Link href="/admin/cros?status=pending" className="b2 bsm" aria-pressed={status === "pending"}>승인 대기</Link>
-          <Link href="/admin/cros?status=approved" className="b2 bsm" aria-pressed={status === "approved"}>참여 중</Link>
-          <SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} />
+          <p>가입 신청을 검토하고 승인합니다. 승인된 기관에만 참여 안내가 갑니다. 가입 전 기관은 운영자 관리 기관으로 직접 추가합니다.</p>
         </div>
       </div>
       <ManagedOrgForm />
+      <div className="adm-bar">
+        <FilterChips label="기관 상태" items={chips} />
+        <div className="adm-bar__end"><SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} /></div>
+      </div>
       {!status && pending.length > 0 && (
-        <>
-          <div className="sec-title" style={{ marginTop: 0 }}><h2>승인 대기 {pending.length}</h2></div>
+        <AdminSection id="pending" title="승인 대기" count={pending.length}>
           <Table rows={pending} />
-        </>
+        </AdminSection>
       )}
-      <div className="sec-title"><h2>{status ? ST[status]?.[0] ?? "기관" : "전체 기관"} {rest.length}</h2></div>
-      {rest.length === 0
-        ? (q || status
-          ? <EmptyState kind="filtered" title={q ? `"${q}"에 맞는 기관이 없습니다` : "이 상태의 기관이 없습니다"} clearHref="/admin/cros">검색어나 상태를 바꾸거나 필터를 지우세요.</EmptyState>
-          : <EmptyState title="기관이 없습니다">기관이 가입 신청하거나 운영자가 위에서 기관을 추가하면 여기에 나타납니다.</EmptyState>)
-        : <Table rows={rest} />}
+      <AdminSection id="orgs" title={status ? ST[status]?.[0] ?? "기관" : "전체 기관"} count={rest.length}>
+        {rest.length === 0
+          ? (q || status
+            ? <EmptyState kind="filtered" title={q ? `"${q}"에 맞는 기관이 없습니다` : "이 상태의 기관이 없습니다"} clearHref="/admin/cros">검색어나 상태를 바꾸거나 필터를 지우세요.</EmptyState>
+            : <EmptyState title="기관이 없습니다">기관이 가입 신청하거나 운영자가 위에서 기관을 추가하면 여기에 나타납니다.</EmptyState>)
+          : <Table rows={rest} />}
+      </AdminSection>
     </>
   );
 }

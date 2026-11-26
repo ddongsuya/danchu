@@ -8,6 +8,8 @@ import { successFeeView, wonOrPending } from "@/lib/billing";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/concierge";
 import { DisputeResolve } from "@/components/admin/DisputeResolve";
+import { AdminSection } from "@/components/admin/Blocks";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { contractSignals, externalWithInvited, GAP_REASON_LABEL, isGapReason, SPONSOR_STATUS_LABEL } from "@/lib/contract-gap";
 
 export const dynamic = "force-dynamic";
@@ -47,14 +49,11 @@ export default async function AdminAwards() {
           <p>선정 {list.length}건 · 체결 {count("signed")}건 · 협의 중 {count("negotiating")}건 · 미체결 {count("not_signed")}건 · 보고된 계약금액 합계 {won(total)}</p>
         </div>
       </div>
-      <section className="card tbl-wrap" aria-labelledby="signals-title" style={{ marginBottom: 16 }}>
-        <div style={{ padding: "14px 16px 6px" }}>
-          <h2 id="signals-title" style={{ fontSize: 16, fontWeight: 700 }}>확인할 신호 {signalRows.length + extRows.length}건</h2>
-          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>기관 보고와 의뢰자 알림이 다르거나, 계약 금액이 선정 견적보다 20% 이상 낮거나, 외부 진행 메모에 참여 기관 이름이 있는 건입니다. 판단 전에 양쪽에 확인합니다.</p>
-        </div>
+      <AdminSection id="signals" title="확인할 신호" count={signalRows.length + extRows.length} sub="기관 보고와 의뢰자 알림이 다르거나, 계약 금액이 선정 견적보다 20% 이상 낮거나, 외부 진행 메모에 참여 기관 이름이 있는 건입니다. 판단 전에 양쪽에 확인합니다.">
         {signalRows.length + extRows.length === 0 ? (
-          <p className="empty" style={{ margin: 0 }}>지금 확인할 신호가 없습니다.</p>
+          <EmptyState title="지금 확인할 신호가 없습니다" />
         ) : (
+          <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
             <thead><tr><th>요청</th><th>기관</th><th>신호</th><th>의뢰자 알림</th></tr></thead>
             <tbody>
@@ -76,15 +75,17 @@ export default async function AdminAwards() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
-      </section>
+      </AdminSection>
+      <AdminSection id="awards" title="전체 수주" count={list.length}>
       {list.length === 0 ? (
-        <div className="empty"><b>수주가 없습니다</b>의뢰자가 비교표에서 CRO를 선택하면 여기에 쌓입니다.</div>
+        <EmptyState title="수주가 없습니다">의뢰자가 비교표에서 CRO를 선택하면 여기에 쌓입니다.</EmptyState>
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
             <thead>
-              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th>선정일</th><th>계약 상태</th><th>계약 보고</th><th className="tnum">성사 수수료</th><th>요청 상태</th></tr>
+              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th className="num">선정일</th><th>계약 상태</th><th>계약 보고</th><th className="num">성사 수수료</th><th>요청 상태</th></tr>
             </thead>
             <tbody>
               {list.map((a) => (
@@ -92,7 +93,7 @@ export default async function AdminAwards() {
                   <td><Link href={`/admin/r/${a.rfq?.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{a.rfq?.rfq_no}</Link><div style={{ fontSize: 12, color: "var(--muted)" }}>{a.rfq?.substance}</div></td>
                   <td data-label="의뢰자">{a.rfq?.company}</td>
                   <td data-label="선정 CRO" style={{ fontWeight: 600 }}>{a.cro_name}</td>
-                  <td className="tnum" data-label="선정일">{ymd(a.awarded_at)}</td>
+                  <td className="num" data-label="선정일">{ymd(a.awarded_at)}</td>
                   <td data-label="계약 상태"><span className={`pill ${CONTRACT_STATUS_TONE[a.contract_status] ?? "pill--sf"}`}>{CONTRACT_STATUS_LABEL[a.contract_status] ?? a.contract_status}</span></td>
                   <td className="tnum" data-label="계약 보고">{a.contract_reported_at ? (
                     <>
@@ -103,7 +104,7 @@ export default async function AdminAwards() {
                       {a.requester_disputed_at && !a.dispute_resolved_at && !a.contract_confirmed_at ? <DisputeResolve awardId={a.id} /> : null}
                     </>
                   ) : <span style={{ color: "var(--muted)" }}>-</span>}</td>
-                  <td className="tnum" data-label="성사 수수료">{(() => {
+                  <td className="num" data-label="성사 수수료">{(() => {
                     const confirmed = !!a.contract_confirmed_at;
                     const f = successFeeView({ quoteAmount: a.fee_basis_amount, contractAmount: a.contract_amount, contractStatus: a.contract_status, feeRate: a.cro_org_id ? rateOf.get(a.cro_org_id) : null, confirmed });
                     if (!f.eligible) return <span style={{ fontSize: 12, color: "var(--muted)" }}>{f.signed ? "대상 아님 (계약 금액 5,000만 원 미만)" : "대상 아님 (선정 견적 5,000만 원 미만)"}</span>;
@@ -128,6 +129,7 @@ export default async function AdminAwards() {
           </table>
         </div>
       )}
+      </AdminSection>
     </>
   );
 }

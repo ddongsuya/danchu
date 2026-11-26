@@ -7,6 +7,7 @@ import { mdhm } from "@/lib/format";
 import { audit } from "@/lib/audit";
 import { QNA_TOPIC_LABEL, type QnaRow } from "@/lib/qna";
 import { testNames } from "@/lib/qna-data";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,8 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
           </p>
         </div>
       </div>
-      <div className="card card--rows tbl-wrap" tabIndex={0} role="region" aria-label="질의응답 기록">
+      {list.length === 0 ? <EmptyState title="질의가 없습니다">의뢰자나 기관이 질의를 남기면 여기에 시간순으로 쌓입니다.</EmptyState> : (
+      <div className="card tbl-wrap" tabIndex={0} role="region" aria-label="질의응답 기록">
         <table className="tbl" style={{ minWidth: 960 }}>
           <thead>
             <tr>
@@ -54,11 +56,6 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
             </tr>
           </thead>
           <tbody>
-            {list.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ color: "var(--muted)" }}>질의 없음</td>
-              </tr>
-            )}
             {list.map((r) => (
               <tr key={r.id}>
                 <td className="tnum" style={{ whiteSpace: "nowrap" }}>{mdhm(r.created_at)}</td>
@@ -83,6 +80,7 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
           </tbody>
         </table>
       </div>
+      )}
     </>
   );
 }

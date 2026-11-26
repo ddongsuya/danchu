@@ -12,7 +12,11 @@
 .adm .tbl td.nowrap, .adm .tbl th.nowrap { white-space: nowrap; }
 .adm .tbl .sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
 .adm .tbl .strong { font-weight: 600; }
+.adm .tbl .adm-wrap { overflow-wrap: anywhere; max-width: 48ch; }
 @media (max-width: 639px) { .adm .tbl--stack td.num { text-align: left; } }
+.adm .adm-ink { color: var(--ink); }
+/* 카드 안의 "없음" 한 줄은 점선 상자 없이 (카드 안 상자 겹침 방지) */
+.adm .card .empty { border: 0; border-radius: 0; padding: 20px 16px 24px; }
 
 /* 목록 위 한 줄: 필터는 왼쪽, 개수와 검색은 오른쪽 */
 .adm-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 12px; }
@@ -75,6 +79,11 @@
 .adm-box__h small { font-size: 13px; font-weight: 500; color: var(--muted); }
 .adm-box__p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
 .adm-cap { padding: 14px 0 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.adm-cap-empty { padding: 4px 0 14px; font-size: 13px; color: var(--muted); }
+.adm .adm-sub { display: block; font-size: 12px; color: var(--muted); }
+.adm .adm-muted { color: var(--muted); }
+.adm .adm-kv-col { flex-direction: column; gap: 4px; }
+.adm-pre { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .adm-line { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 
 /* 이력 줄 */
