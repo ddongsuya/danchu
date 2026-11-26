@@ -1558,8 +1558,8 @@
   .pt__baravatar { width: 30px; height: 30px; font-size: 13px; margin-left: 4px; }
   .pt__frame { flex-direction: row; }
   .pt .pt__side { position: sticky; top: 56px; height: calc(100dvh - 56px); border-right: 0; background: var(--sf); padding: 2px 12px 16px; }
-  .pt .pt__top { display: none; }
-  .pt .pt__body { background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-lg); margin: 0 8px 8px 0; min-height: calc(100dvh - 64px); }
+  .pt__frame .pt__top { display: none; }
+  .pt__frame > .pt__body { background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-lg); margin: 0 8px 8px 0; min-height: calc(100dvh - 64px); }
   .pt .pt__grp:first-child { padding-top: 6px; }
 }
 @media (min-width: 960px) and (hover: hover) and (pointer: fine) { .pt__baric:hover { background: var(--band); color: var(--ink); } }
