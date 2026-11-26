@@ -1,6 +1,5 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
-import { NextStep } from "@/components/app/NextStep";
 import { ContractConfirm, ReopenRequest, SponsorContractResult, StartNow } from "@/components/app/RequestActions";
 import { GAP_REASON_LABEL, gapLabel, gapOf, isGapReason, SPONSOR_STATUS_LABEL } from "@/lib/contract-gap";
 import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
@@ -146,15 +145,9 @@ export default async function RequestDetail({ params, searchParams }: { params: 
         joinBy={joinBy}
         canEnd={canEnd}
         stuck={noJoinPastDue}
-        next={
-          contractOpen && (
-            <div className="rs-next">
-              {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
-            </div>
-          )
-        }
+        croMail={contractOpen && croContact?.email ? `mailto:${croContact.email}?subject=${encodeURIComponent(`[단추 ${rfq.rfq_no}] 계약 진행`)}` : undefined}
         top={
-          (needsConfirm || canTellResult || (!d.award && rfq.outcome)) && (
+          (needsConfirm || (!d.award && rfq.outcome)) && (
             <>
               {!d.award && rfq.outcome && (
                 <div className="note" style={{ flexDirection: "column", gap: 4 }}>
@@ -172,9 +165,6 @@ export default async function RequestDetail({ params, searchParams }: { params: 
                   autoOn={autoOn}
                   gap={gapLine}
                 />
-              )}
-              {canTellResult && d.award && (
-                <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
               )}
             </>
           )
@@ -255,6 +245,10 @@ export default async function RequestDetail({ params, searchParams }: { params: 
                 </details>
             </section>
             {/* 요청 마무리는 바로 가기·기한 지남 띠에서 열 때만 (시안 v7 r-outcome) */}
+            {/* 의뢰자 계약 결과 알림 (0034). 시안에 없는 카드라 요청 내용 아래에 둔다 */}
+            {canTellResult && d.award && (
+              <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
+            )}
             {canEnd && endAsk === "1" && <div id="end"><OutcomeForm no={rfq.rfq_no} compared={canCompare} initialOpen /></div>}
           </>
         }

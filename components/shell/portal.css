@@ -1653,9 +1653,17 @@
 .rq-card__full[open] summary { padding-bottom: 6px; }
 
 .rq-tl { list-style: none; margin: 0; padding: 0; }
-.rq-tl__i { position: relative; display: flex; flex-direction: column; padding: 0 0 14px 22px; font-size: 14px; }
-.rq-tl__i::before { content: ""; position: absolute; left: 4px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
-.rq-tl__i:not(:last-child)::after { content: ""; position: absolute; left: 7.5px; top: 18px; bottom: 2px; width: 1px; background: var(--cline); }
+/* 활동 줄 (시안 v7): 왼쪽 날짜 칸 88px · 점 · 글 */
+.rq-tl__i { position: relative; display: grid; grid-template-columns: 88px minmax(0, 1fr); column-gap: 22px; padding: 0 0 14px; font-size: 14px; }
+.rq-tl__d { grid-row: 1 / span 2; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.rq-tl__i b, .rq-tl__i > span { grid-column: 2; }
+.rq-tl__i::before { content: ""; position: absolute; left: 92px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+.rq-tl__i:not(:last-child)::after { content: ""; position: absolute; left: 95.5px; top: 18px; bottom: 2px; width: 1px; background: var(--cline); }
+@media (max-width: 959px) {
+  .rq-tl__i { grid-template-columns: 64px minmax(0, 1fr); }
+  .rq-tl__i::before { left: 68px; }
+  .rq-tl__i:not(:last-child)::after { left: 71.5px; }
+}
 .rq-tl__i:last-child { padding-bottom: 0; }
 .rq-tl__i b { font-weight: 500; color: var(--ink); }
 .rq-tl__i span { font-size: 13px; color: var(--muted); }

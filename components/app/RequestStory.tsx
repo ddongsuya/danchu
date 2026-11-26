@@ -34,6 +34,8 @@ export type StoryProps = {
   joinBy?: string | null;
   /** 선정 전 마무리를 할 수 있다 (바로 가기에 "요청 마무리") */
   canEnd?: boolean;
+  /** 선택한 기관 담당자에게 메일 (계약 진행 중, 바로 가기) */
+  croMail?: string;
   /** 회신 기한이 지났는데 참여한 기관이 없다 (시안 v7 r-req-stuck: 띠에 요청 마무리 · 기한 연장 요청) */
   stuck?: boolean;
   /** 상태 줄 아래 (다음 할 일 띠) */
@@ -48,7 +50,11 @@ export type StoryProps = {
   children?: ReactNode;
 };
 
-type Step = { t: string; s: string; state: "done" | "now" | "next" };
+/** at: 활동 줄 왼쪽 날짜 칸 (시안 v7 "11-26"). 날짜가 없는 줄(합계 숫자)은 비운다 */
+type Step = { t: string; s: string; at?: string; state: "done" | "now" | "next" };
+
+/** 2026-11-26 또는 ISO 시각 → 11-26 (서울) */
+const mmdd = (v: string | null | undefined) => (v ? (v.length <= 10 ? v : new Date(v).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })).slice(5, 10) : undefined);
 type Track = { t: string; s: string; state: "done" | "now" | "next" | "stop" };
 
 const TRACK = ["접수", "참여 안내", "견적 도착", "비교표", "선택", "계약"] as const;
@@ -78,21 +84,26 @@ function trackOf(p: StoryProps, ended: boolean): Track[] {
 function stepsOf(p: StoryProps, ended: boolean): Step[] {
   const { f } = p;
   const pending = Math.max(0, f.joined - f.submitted);
-  const steps: Step[] = [{ t: "요청 접수", s: md(p.createdAt), state: "done" }];
+  const steps: Step[] = [{ t: "요청 접수", s: "", at: mmdd(p.createdAt), state: "done" }];
   if (f.sent > 0) {
-    steps.push({ t: `기관 ${f.sent}곳에 요청 전달`, s: `${p.distributedAt ? `${md(p.distributedAt)} · ` : ""}분야가 맞는 기관`, state: "done" });
+    steps.push({ t: `기관 ${f.sent}곳에 요청 전달`, s: "분야가 맞는 기관", at: mmdd(p.distributedAt), state: "done" });
     steps.push({ t: f.opened ? `${f.opened}곳이 요청 요약 확인` : "요약을 연 기관 없음", s: f.sent > f.opened ? `${f.sent - f.opened}곳 아직 열지 않음` : "보낸 곳 모두 확인", state: "done" });
     steps.push({ t: f.joined ? `${f.joined}곳 참여` : "참여한 기관 없음", s: f.rest ? `${f.rest}곳 불참 또는 결정 전` : "보낸 곳 모두 참여", state: "done" });
     steps.push({
       t: f.submitted ? `견적 ${f.submitted}건 도착` : "도착한 견적 없음",
-      s: p.comparedAt ? "회신 마감. 도착한 견적은 더 바뀌지 않아요" : pending ? `${pending}곳 작성 중${p.replyBy ? ` · 회신 기한 ${md(p.replyBy)}` : ""}` : p.replyBy ? `회신 기한 ${md(p.replyBy)}` : "",
+      s: p.comparedAt ? "회신 마감. 도착한 견적은 더 바뀌지 않아요" : pending ? `${pending}곳 작성 중` : "",
       state: "done",
     });
-    if (p.comparedAt) steps.push({ t: f.submitted ? "비교 보고서 열림" : "견적 없이 회신 마감", s: md(p.comparedAt), state: "done" });
-    else if (!ended) steps.push({ t: "비교 보고서 열림 예정", s: p.replyBy ? `참여한 곳이 모두 내거나 회신 기한 ${md(p.replyBy)}이 지나면` : "참여한 곳이 모두 내면", state: "next" });
+    if (p.comparedAt) steps.push({ t: f.submitted ? "비교 보고서 열림" : "견적 없이 회신 마감", s: "", at: mmdd(p.comparedAt), state: "done" });
+    else if (!ended && !p.stuck) {
+      // 앞으로 올 날짜 (시안 v7): 회신 기한, 그다음 날 09:00 비교 보고서
+      if (p.replyBy) steps.push({ t: "회신 기한", s: "", at: mmdd(p.replyBy), state: "next" });
+      const open = p.replyBy ? new Date(new Date(`${p.replyBy}T00:00:00+09:00`).getTime() + 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }) : null;
+      steps.push({ t: "비교 보고서 공개", s: "참여한 곳이 모두 내면 더 빨리", at: open ? `${mmdd(open)} 09:00` : undefined, state: "next" });
+    }
     if (p.award) {
-      steps.push({ t: `${p.award.name} 선택`, s: md(p.award.at), state: "done" });
-      steps.push({ t: p.award.reportedAt ? "기관이 계약 체결 보고" : "계약 소식 기다리는 중", s: p.award.reportedAt ? md(p.award.reportedAt) : "계약은 기관과 직접 진행해요", state: p.award.reportedAt ? "done" : "next" });
+      steps.push({ t: `${p.award.name} 선택`, s: "", at: mmdd(p.award.at), state: "done" });
+      steps.push({ t: p.award.reportedAt ? "기관이 계약 체결 보고" : "기관의 계약 보고", s: "", at: mmdd(p.award.reportedAt), state: p.award.reportedAt ? "done" : "next" });
     } else if (p.status === "closed") steps.push({ t: "선택 없이 마무리", s: p.outcome ?? "", state: "done" });
   }
   // 지금 단계: 끝나지 않은 첫 단계 바로 앞. 모두 끝났으면 마지막
@@ -107,7 +118,7 @@ function statusOf(p: StoryProps): { title: string; lead: string } {
   const { f } = p;
   if (p.status === "cancelled") return { title: "취소한 요청", lead: "이 요청은 더 진행하지 않아요." };
   if (p.award && p.confirm) return { title: "계약 내용 확인", lead: `${p.award.name}에서 계약 체결을 보고했어요. 체결일과 금액이 맞는지 봐 주세요.` };
-  if (p.award) return { title: `${p.award.name} 선택`, lead: "서로 연락처를 주고받았고, 계약은 기관과 직접 진행해요." };
+  if (p.award) return { title: p.contractDone ? `${p.award.name} · 계약 확정` : `${p.award.name} 선택 · 기관의 계약 보고 기다림`, lead: "" };
   if (p.status === "closed") return { title: "선택 없이 마무리", lead: p.outcome ?? "" };
   if (!p.started) return { title: "아직 기관에 보내지 않음", lead: "첨부를 확인한 뒤 참여 안내를 보낼 수 있어요." };
   if (f.sent === 0) return { title: "보낼 기관 확인 중", lead: "분야에 바로 맞는 기관이 없어 운영자가 안내할 기관을 확인하고 있어요. 보통 영업일 1~2일 걸려요." };
@@ -139,8 +150,8 @@ export function RequestStory(p: StoryProps) {
     </>
   ) : p.confirm ? (
     <a href="#contract-confirm" className="b1">계약 내용 확인</a>
-  ) : p.canCompare ? (
-    <Link href={`/app/r/${p.no}/compare`} className={p.award ? "b2" : "b1"}>비교 보고서 받아보기</Link>
+  ) : p.canCompare && !p.award ? (
+    <Link href={`/app/r/${p.no}/compare`} className="b1">비교 보고서 받아보기</Link>
   ) : p.qna?.pending ? (
     <Link href={`/app/r/${p.no}/qna`} className="b1">질의응답 <span className="tnum">답변 대기 {p.qna.pending}</span></Link>
   ) : null;
@@ -182,6 +193,7 @@ export function RequestStory(p: StoryProps) {
             <ol className="rq-tl">
               {steps.map((s, i) => (
                 <li key={i} className={`rq-tl__i rq-tl__i--${s.state}`} aria-current={s.state === "now" ? "step" : undefined}>
+                  <time className="rq-tl__d tnum">{s.at ?? ""}</time>
                   <b>{s.t}</b>
                   {s.s && <span>{s.s}</span>}
                 </li>
@@ -212,6 +224,7 @@ export function RequestStory(p: StoryProps) {
                   <span className="tnum">{p.qna.pending ? `답변 대기 ${p.qna.pending}` : p.qna.total ? `${p.qna.total}건` : ""}</span>
                 </li>
               )}
+              {p.croMail && <li><a href={p.croMail}>기관 담당자에게 메일</a></li>}
               <li><Link href={`/app/support?rfq=${p.no}`}>문의</Link></li>
               {p.canEnd && !p.stuck && <li><Link href={`/app/r/${p.no}?end=1#end`} scroll={false}>요청 마무리</Link></li>}
             </ul>
