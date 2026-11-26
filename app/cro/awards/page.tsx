@@ -1,35 +1,6 @@
-import Link from "next/link";
-import { requireSession } from "@/lib/auth";
-import { dbReady, listAwardsForOrg } from "@/lib/data";
-import { PendingOrg } from "@/components/cro/PendingOrg";
-import { AwardCard } from "@/components/cro/AwardCard";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function CroAwards() {
-  const s = await requireSession("cro");
-  const org = s.org;
-  if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
-  const list = dbReady() ? await listAwardsForOrg(org.id) : [];
-
-  return (
-    <>
-      <div className="ph">
-        <div>
-          <h1>수주</h1>
-          <p>의뢰자가 우리 기관을 고른 요청이에요. 의뢰자 연락처가 열려 있어요.</p>
-        </div>
-      </div>
-      {list.length === 0 ? (
-        <EmptyState title="아직 수주가 없어요" action={<Link href="/cro/requests" className="b2 bsm">받은 요청 보기</Link>}>
-          의뢰자가 우리 기관을 고르면 알림으로 알려요.
-        </EmptyState>
-      ) : (
-        <div className="lq-aws">
-          {list.map((a) => <AwardCard key={a.id} a={a} />)}
-        </div>
-      )}
-    </>
-  );
+/** 수주(계약 결과 보고·시험물질 필요량)는 받은 요청의 "선정" 탭으로 옮겼다 (2026-11-26 시안 v7 c-req-won). 알림·메일의 예전 링크를 살린다 */
+export default function CroAwards() {
+  redirect("/cro/requests?tab=won");
 }

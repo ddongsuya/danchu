@@ -4,6 +4,7 @@ import { Lockup } from "@/components/Logo";
 import { UiProvider } from "@/components/ui/UiProvider";
 import "@/components/shell/portal.css";
 import "../layout-q.css";
+import "@/components/shell/tokens-openai.css";
 
 export const metadata: Metadata = { title: "단추 · 견적 회신", robots: { index: false, follow: false } };
 

@@ -16,9 +16,9 @@ const HELP: Record<Outcome, string> = {
  * 선정 버튼을 누르지 않은 이유를 한 번 묻는다. 선정이 아니면 어떤 경로였는지 단추가 알아야
  * 기관별 청구 명세와 선정률을 바르게 볼 수 있다.
  */
-export function OutcomeForm({ no, compared }: { no: string; compared: boolean }) {
+export function OutcomeForm({ no, compared, initialOpen = false }: { no: string; compared: boolean; initialOpen?: boolean }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [outcome, setOutcome] = useState<Outcome | "">("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);

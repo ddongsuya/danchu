@@ -1,6 +1,5 @@
 import { AttachmentRetry } from "@/components/app/AttachmentRetry";
 import { OutcomeForm } from "@/components/app/OutcomeForm";
-import { NextStep } from "@/components/app/NextStep";
 import { ContractConfirm, ReopenRequest, SponsorContractResult, StartNow } from "@/components/app/RequestActions";
 import { GAP_REASON_LABEL, gapLabel, gapOf, isGapReason, SPONSOR_STATUS_LABEL } from "@/lib/contract-gap";
 import { needsCda, occupiesSeat, participation, participationLabel, seatState, REOPEN_DAYS } from "@/lib/request-policy";
@@ -19,12 +18,15 @@ import { funnel } from "@/lib/request-story";
 import { RequestStory } from "@/components/app/RequestStory";
 import { qnaCounts } from "@/lib/qna-data";
 import { draftSentAt } from "@/lib/contract-draft-db";
+import { quoteRowsFromPayload, summaryFacetsOf } from "@/lib/quote-items";
+import type { Values } from "@/lib/rfq-schema";
 
 export const dynamic = "force-dynamic";
 
-export default async function RequestDetail({ params }: { params: Promise<{ no: string }> }) {
+export default async function RequestDetail({ params, searchParams }: { params: Promise<{ no: string }>; searchParams: Promise<{ end?: string }> }) {
   const s = await requireSession("requester");
   const { no } = await params;
+  const { end: endAsk } = await searchParams;
   const rfq = await getRfqByNo(no);
   if (!rfq || !(ownsRfq(rfq, s.userId) || s.profile.role === "admin")) notFound();
   const d = await getRfqDetail(rfq);
@@ -83,12 +85,12 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   const todayKst = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   const noJoinPastDue = ["distributed", "quoted"].includes(rfq.status) && !rfq.compared_at && !!rfq.reply_by && rfq.reply_by < todayKst && joinedCount === 0;
   const contractOpen = !!d.award && !reported && ["selected", "contracting"].includes(rfq.status);
-  const chips = [
-    ...(Array.isArray(p.authority) ? (p.authority as string[]) : []),
-    rfq.cro_count ? (rfq.cro_count === "전체" ? "참여 자리 제한 없음" : `참여 자리 ${rfq.cro_count}`) : "",
-    rfq.nominees_only ? "지명 기관에만 안내" : "",
-    needsCda(rfq.confidentiality) ? "CDA 필요" : "",
-  ].filter(Boolean);
+  // 제목 아래 (시안 v7 "11-26 접수 · 랫드 · 경구 · GLP"): 시험 조건, 그다음 안내 범위·CDA처럼 기관 쪽이 달라지는 것만
+  const fx = summaryFacetsOf(p as Values);
+  const route = typeof p.route === "string" ? p.route : "";
+  const facets = [...fx.species, route, ...fx.glp].filter(Boolean);
+  const chips = [rfq.nominees_only ? "지명 기관에만 안내" : "", needsCda(rfq.confidentiality) ? "CDA 필요" : ""].filter(Boolean);
+  const canEnd = !d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status);
 
   // 질의응답 (0045): 참여한 기관이 있으면 요청 화면에서 바로 간다
   const qc = story.sent > 0 ? await qnaCounts(rfq.id) : null;
@@ -97,24 +99,27 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
   // 요청이 기관에 전달된 시각 (예전 요청은 기록에만 남아 있다)
   const distributedAt = rfq.distributed_at ?? d.events.filter((e) => e.kind === "distributed").at(-1)?.created_at ?? null;
 
-  // 요청 내용 카드의 핵심 항목 (전체 항목은 "전체 보기")
+  // 요청 내용 카드의 핵심 항목 (시안 v7: 시험 · 동물종 · 투여 경로 · 군 구성 · GLP · 회신 기한). 나머지는 "전체 보기"
+  const testNames = [...new Set(quoteRowsFromPayload(p as Values).map((r) => r.name))].join(", ");
+  const groups = (rfq.categories ?? []).map((c) => p[`${c}.groups`]).find((v) => typeof v === "string" && v) as string | undefined;
+  const glpLine = fx.glp.length === 1 ? (fx.glp[0] === "GLP" ? "적용" : "비적용") : fx.glp.length ? "시험마다 다름" : "";
   const keyRows = [
-    ["의뢰 목적", rfq.purpose],
-    ["요청 성격", rfq.intent],
-    ["개발 분야", p.devField],
-    ["희망 착수", p.start],
-    ["예산", rfq.budget],
+    ["시험", testNames || rfq.categories.join(", ")],
+    ["시험물질", testNames ? "" : rfq.substance],
+    ["동물종", fx.species.join(", ")],
+    ["투여 경로", route],
+    ["군 구성", groups ?? ""],
+    ["GLP", glpLine],
     ["지명 기관", Array.isArray(p.nominees) && p.nominees.length ? (p.nominees as string[]).join(", ") : ""],
-    ["안내 범위", rfq.nominees_only ? "지명 기관에만 안내" : ""],
-    ["기밀 등급", rfq.confidentiality],
-    ["접수일", ymd(rfq.created_at)],
-    ["상세 입력", rfq.submitted_step === 2 ? "완료" : "기본 정보만"],
+    ["회신 기한", rfq.reply_by ?? ""],
   ].filter(([, v]) => v);
   const fullRows = Object.entries(labels).filter(([id]) => {
     const v = p[id];
     return Array.isArray(v) ? v.length > 0 : typeof v === "string" && v;
   });
 
+  // 숫자 칸 아래: 보내기 전이면 보내기 버튼, 그 밖에는 기관 이름(지명 기관·공개 뒤 참여 기관)이 있을 때만
+  const asideOn = (!rfq.started_at && rfq.status === "received") || (d.invites.length > 0 && (!named ? nominees.length > 0 || (!ended && seats.reserved > 0 && !!joinBy) : shown.length > 0));
   return (
     <>
       <div className="only-narrow"><Crumb href="/app" label="내 요청" /></div>
@@ -136,16 +141,13 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
         confirm={needsConfirm}
         qna={qna}
         conditions={chips}
-        next={
-          (noJoinPastDue || contractOpen) && (
-            <div className="rs-next">
-              {noJoinPastDue && <NextStep no={rfq.rfq_no} kind="no_join" />}
-              {contractOpen && d.award && <NextStep no={rfq.rfq_no} kind="contract" cro={d.award.cro_name} croEmail={croContact?.email || undefined} />}
-            </div>
-          )
-        }
+        facets={facets}
+        joinBy={joinBy}
+        canEnd={canEnd}
+        stuck={noJoinPastDue}
+        croMail={contractOpen && croContact?.email ? `mailto:${croContact.email}?subject=${encodeURIComponent(`[단추 ${rfq.rfq_no}] 계약 진행`)}` : undefined}
         top={
-          (needsConfirm || canTellResult || (!d.award && rfq.outcome)) && (
+          (needsConfirm || (!d.award && rfq.outcome)) && (
             <>
               {!d.award && rfq.outcome && (
                 <div className="note" style={{ flexDirection: "column", gap: 4 }}>
@@ -163,9 +165,6 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   autoOn={autoOn}
                   gap={gapLine}
                 />
-              )}
-              {canTellResult && d.award && (
-                <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
               )}
             </>
           )
@@ -231,11 +230,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   </div>
                 )}
               </div>
-              {/* 첨부는 기관을 고르기 전까지만 고친다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다 */}
-              {!d.award && !ended && <div className="rq-card__more"><AttachmentRetry no={rfq.rfq_no} /></div>}
-              {fullRows.length > 0 && (
-                <details className="rq-card__full">
+              <details className="rq-card__full">
                   <summary>전체 보기 <span className="tnum">{fullRows.length}개 항목</span></summary>
+                  {/* 첨부는 기관을 고르기 전까지만 고친다. 선정 뒤 자료는 선택한 기관과 직접 주고받는다 */}
+                  {!d.award && !ended && <div className="rq-card__more"><AttachmentRetry no={rfq.rfq_no} /></div>}
                   <div className="card--rows rq-card__rows">
                     {fullRows.map(([id, label]) => (
                       <div key={id} className="kv" style={{ fontSize: 13 }}>
@@ -245,21 +243,21 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                     ))}
                   </div>
                 </details>
-              )}
             </section>
-            {!d.award && !rfq.selected_quote_id && ["received", "distributed", "quoted", "compared"].includes(rfq.status) && <div id="end"><OutcomeForm no={rfq.rfq_no} compared={canCompare} /></div>}
+            {/* 요청 마무리는 바로 가기·기한 지남 띠에서 열 때만 (시안 v7 r-outcome) */}
+            {/* 의뢰자 계약 결과 알림 (0034). 시안에 없는 카드라 요청 내용 아래에 둔다 */}
+            {canTellResult && d.award && (
+              <SponsorContractResult no={rfq.rfq_no} cro={d.award.cro_name} minDate={new Date(d.award.awarded_at).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })} today={todayKst} current={sponsorNow} />
+            )}
+            {canEnd && endAsk === "1" && <div id="end"><OutcomeForm no={rfq.rfq_no} compared={canCompare} initialOpen /></div>}
           </>
         }
       >
+        {asideOn && (
         <div className="rs-aside">
           {!rfq.started_at && rfq.status === "received" ? (
-            <div className="rs-aside__p">
-              아직 기관에 참여 안내를 보내지 않았어요. 첨부를 다시 올린 뒤 보내거나, 지금 있는 첨부로 바로 보낼 수 있어요.
-              <StartNow no={rfq.rfq_no} />
-            </div>
-          ) : d.invites.length === 0 ? (
-            <p className="rs-aside__p">{rfq.started_at && !ended ? "운영자가 안내할 기관을 확인하면 여기에 숫자가 채워져요." : "참여 안내를 보낸 기관이 없어요."}</p>
-          ) : !named ? (
+            <StartNow no={rfq.rfq_no} />
+          ) : d.invites.length === 0 ? null : !named ? (
             <>
               {nominees.length > 0 && (
                 <div className="rs-names" aria-label="지명한 기관">
@@ -272,15 +270,9 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   ))}
                 </div>
               )}
-              <p className="rs-aside__p">
-                {ended
-                  ? "비교표가 열리기 전에 마무리한 요청이라 기관 이름과 견적은 공개되지 않아요."
-                  : `${rfq.reply_by ? `비교 보고서는 회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열려요. ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 내면 더 빨리 열려요. 그 전에는 숫자만 보이고, 기관 이름과 견적은 보고서에서 함께 공개돼요.${seats.reserved > 0 && joinBy ? ` 지명 기관 몫 ${seats.reserved}곳은 참여 결정 기한(${md(joinBy)})까지 비워 둬요.` : joinBy ? ` 참여 결정 기한은 ${md(joinBy)}이에요.` : ""}`}
-              </p>
+              {!ended && seats.reserved > 0 && joinBy && <p className="rs-aside__p">지명 기관 몫 {seats.reserved}곳 · {md(joinBy)}까지</p>}
             </>
-          ) : shown.length === 0 ? (
-            <p className="rs-aside__p">참여한 기관이 없어요.</p>
-          ) : (
+          ) : shown.length === 0 ? null : (
             <>
               <div className="rs-names" aria-label="참여한 기관">
                 <span className="rs-names__k">참여한 기관 · {seatLine}</span>
@@ -291,12 +283,10 @@ export default async function RequestDetail({ params }: { params: Promise<{ no: 
                   </span>
                 ))}
               </div>
-              {opened && !d.award && !ended && (
-                <p className="rs-aside__p">{submitted > 0 ? "비교 보고서가 열렸어요. 도착한 견적은 더 바뀌지 않아요. 보고서에서 진행할 기관을 선택해 주세요." : "비교 보고서가 열렸지만 도착한 견적이 없어요."}</p>
-              )}
             </>
           )}
         </div>
+        )}
       </RequestStory>
 
       {canCompare && !d.award && (

@@ -6,7 +6,7 @@ export function NextStep({ no, kind, cro, croEmail }: { no: string; kind: "no_jo
     return (
       <div className="next-step" role="status">
         <p><b>회신 기한까지 참여한 기관이 없었어요.</b> 기한을 늘려 다시 안내받거나 요청을 마무리할 수 있어요.</p>
-        <div className="next-step__actions"><Link href={`/app/support?rfq=${no}`} className="b1">기한 연장 요청</Link><a href="#end" className="b2">요청 마무리</a></div>
+        <div className="next-step__actions"><Link href={`/app/support?rfq=${no}`} className="b1">기한 연장 요청</Link><Link href={`/app/r/${no}?end=1#end`} scroll={false} className="b2">요청 마무리</Link></div>
       </div>
     );
   return (
