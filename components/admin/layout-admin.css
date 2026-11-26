@@ -1,0 +1,113 @@
+/*
+ * 운영자 화면 배치 (시안 v7, 2026-11-26). 색·글꼴·모서리는 portal.css 토큰을 그대로 쓰고 여기서는 배치만 정한다.
+ * 모두 .adm(app/admin/layout.tsx 가 본문을 감싼다) 아래에만 적용한다.
+ */
+
+/* 제목 줄: 설명은 한 줄 길이로, 행동은 오른쪽 */
+.adm .ph p { max-width: 75ch; }
+.adm .ph__actions .b2, .adm .ph__actions .b1 { white-space: nowrap; }
+
+/* 표 숫자는 오른쪽 정렬. 휴대폰에서 행을 세우면(tbl--stack) 다시 왼쪽 */
+.adm .tbl th.num, .adm .tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.adm .tbl td.nowrap, .adm .tbl th.nowrap { white-space: nowrap; }
+.adm .tbl .sub { display: block; font-size: 12px; color: var(--muted); font-weight: 400; }
+.adm .tbl .strong { font-weight: 600; }
+@media (max-width: 639px) { .adm .tbl--stack td.num { text-align: left; } }
+
+/* 목록 위 한 줄: 필터는 왼쪽, 개수와 검색은 오른쪽 */
+.adm-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 12px; }
+.adm-bar > * { min-width: 0; }
+.adm-bar__end { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
+.adm-count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+/* 필터 칩 */
+.adm-chips { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; padding: 2px; margin: -2px; }
+.adm-chips::-webkit-scrollbar { display: none; }
+.adm-chips a { height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--cline); border-radius: var(--r-pill); font-size: 13px; color: var(--ink); background: var(--wh); white-space: nowrap; flex: none; transition: background-color 160ms ease, border-color 160ms ease; }
+.adm-chips a span { color: var(--muted); }
+.adm-chips a[aria-current="true"] { background: var(--ink); border-color: var(--ink); color: var(--wh); font-weight: 600; }
+.adm-chips a[aria-current="true"] span { color: inherit; opacity: .72; }
+@media (hover: hover) and (pointer: fine) { .adm-chips a:not([aria-current]):hover { border-color: var(--muted); } }
+
+/* 상세 화면 밑줄 탭 */
+.adm-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--cline); margin: 4px 0 20px; overflow-x: auto; scrollbar-width: none; }
+.adm-tabs::-webkit-scrollbar { display: none; }
+.adm-tabs a { flex: none; padding: 10px 12px 11px; font-size: 14px; color: var(--muted); white-space: nowrap; box-shadow: inset 0 -2px 0 transparent; transition: color 160ms ease, box-shadow 160ms ease; }
+.adm-tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 var(--ink); }
+@media (hover: hover) and (pointer: fine) { .adm-tabs a:not([aria-current]):hover { color: var(--ink); } }
+
+.adm-chips a:focus-visible, .adm-tabs a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* 알림 띠: 제목과 줄을 세로로 */
+.adm .adm-note { flex-direction: column; gap: 4px; margin: 0 0 16px; }
+.adm .tbl .adm-late { color: var(--err); }
+.adm-foot { margin-top: 12px; font-size: 12px; color: var(--muted); }
+
+/* 상태 태그 줄, 멈춘 이유 띠 */
+.adm-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: -8px 0 16px; }
+.adm .adm-tags--cell { margin: 0; gap: 4px; }
+.adm .adm-small { font-size: 12px; }
+.adm-row { padding: 10px 0; font-size: 13px; }
+.adm-row b { font-weight: 600; }
+.adm-row__cat { color: var(--brand); }
+.adm-row .sub { display: block; color: var(--muted); }
+.adm-more { padding: 0 18px; }
+.adm-more summary { padding: 14px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
+.adm-more__rows { padding: 0 0 8px; }
+
+/* 본문 + 오른쪽 열 (넓은 화면). 좁으면 한 열 */
+.adm-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.adm-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (min-width: 1200px) { .adm-split { grid-template-columns: minmax(0, 1fr) 340px; } }
+
+/* 묶음: 제목 한 줄 + 설명 + 내용. 묶음 사이는 넓게 */
+.adm-sec { margin: 0 0 28px; min-width: 0; }
+.adm-sec:last-child { margin-bottom: 0; }
+.adm-sec__head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin: 0 0 10px; min-height: 34px; }
+.adm-sec__head h2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.adm-sec__n { margin-left: 6px; font-size: 14px; font-weight: 500; color: var(--muted); }
+.adm-sec__acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.adm-sec__sub { font-size: 13px; color: var(--muted); line-height: 1.6; margin: -4px 0 12px; max-width: 75ch; }
+
+/* 카드 안 제목 (카드 안에 카드를 두지 않는다) */
+.adm-box { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.adm-box__h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 700; }
+.adm-box__h small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.adm-box__p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0; }
+.adm-cap { padding: 14px 0 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.adm-line { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+
+/* 이력 줄 */
+.adm-events { display: flex; flex-direction: column; }
+.adm-events > div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: 4px 16px; padding: 12px 0; font-size: 14px; border-top: 1px solid var(--track); }
+.adm-events > div:first-child { border-top: 0; }
+.adm-events time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.adm-events span span { color: var(--muted); }
+@media (max-width: 639px) { .adm-events > div { grid-template-columns: minmax(0, 1fr); } }
+
+/* 분포 표 여러 개 */
+.adm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+
+/* 흐름 숫자 한 줄 (접수 첫 화면) */
+.adm-flow { list-style: none; margin: 0 0 24px; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--wh); border: 1px solid var(--cline); border-radius: var(--r-lg); }
+.adm-flow li { padding: 14px 18px; min-width: 0; }
+.adm-flow li + li { border-left: 1px solid var(--track); }
+.adm-flow b { display: block; font-size: 24px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.adm-flow b small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+.adm-flow span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+@media (max-width: 759px) {
+  .adm-flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .adm-flow li:nth-child(4) { border-left: 0; }
+  .adm-flow li:nth-child(n + 4) { border-top: 1px solid var(--track); }
+}
+
+/* 홈의 멈춘 요청 · 확인할 것: 보고서 흐름(rs-*)의 큰 제목 대신 업무 화면 크기로 */
+.pt .adm .stuck { margin-bottom: 28px; }
+.pt .adm .stuck h2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; line-height: 1.4; margin: 0 0 10px; }
+.pt .adm .stuck__row { border: 1px solid var(--cline); padding: 12px 16px; font-size: 14px; }
+.stuck__empty { font-size: 14px; color: var(--muted); }
+.pt .adm .rs-row { padding: 14px 18px; gap: 16px; border: 1px solid var(--cline); }
+.pt .adm .rs-row--ops { grid-template-columns: 56px minmax(0, 1fr) 72px; }
+.pt .adm .rs-row__main b { font-size: 15px; }
+.pt .adm .rs-row__n { font-size: 24px; }
+@media (max-width: 767px) { .pt .adm .rs-row--ops { grid-template-columns: 44px minmax(0, 1fr); } }
