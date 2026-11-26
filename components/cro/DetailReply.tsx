@@ -6,6 +6,7 @@ import { CaretRight, PencilSimple } from "@phosphor-icons/react";
 import { DETAIL_STATUS_LABEL, revisedTotal, type DetailLine, type DetailReplyItem, type DetailStatus } from "@/lib/detail-quote";
 import { md, won } from "@/lib/format";
 import { ChatShell, Composer, Opt, type Said } from "@/components/ChatShell";
+import "./layout-request.css";
 
 /**
  * 기관의 2차 회신 (0042). 의뢰자가 보낸 상세 조건을 보고 1차 견적에서 달라지는 줄만 고쳐 한 번 보낸다.
@@ -328,7 +329,7 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
   }
 
   const doc = (
-    <article className="cr-doc" aria-label="2차 견적">
+    <article className="cr-doc cr-doc--reply" aria-label="2차 견적">
       <header className="cr-doc__hd">
         <h2>2차 견적</h2>
         <span className="cr-mono">{view.no}</span>
@@ -366,16 +367,16 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
               <span>{it.name}</span>
               <b className="cr-mono">
                 {e && e.amount !== it.amount ? <><s className="cr-was">{it.amount == null ? "-" : won(it.amount)}</s><mark className="cr-now">{e.amount == null ? "-" : won(e.amount)}</mark></> : it.amount == null ? "-" : won(it.amount)}
-                {e?.mode === "assumed" && e.reason ? <small style={{ display: "block", fontWeight: 400 }}>{e.reason}</small> : null}
+                {e?.mode === "assumed" && e.reason ? <small className="cr-doc__why">{e.reason}</small> : null}
               </b>
             </li>
           );
         })}
-        <li><span>전체 기간</span><b>{shownWeeks ? `${shownWeeks}주` : "-"}</b></li>
+        <li className="cr-doc__total"><span>전체 기간</span><b>{shownWeeks ? `${shownWeeks}주` : "-"}</b></li>
       </ul>
       {firstDocId && (
         <div className="cr-doc__tool">
-          <button type="button" className="cr-lk" disabled={docBusy || preview} onClick={makeRound2}>{docBusy ? "견적서를 만드는 중이에요" : "견적서 툴에서 2차 견적서 만들기"}</button>
+          <button type="button" className="cr-doc__toolbtn" disabled={docBusy || preview} onClick={makeRound2}>{docBusy ? "견적서를 만드는 중이에요" : "견적서 툴에서 2차 견적서 만들기"}</button>
           <p>1차 견적서를 복사해 열어요. 군 구성과 단가 규칙으로 고친 뒤 PDF로 받아 둘 수 있어요.</p>
           {docErr && <p className="cr-err" role="alert">{docErr}</p>}
         </div>

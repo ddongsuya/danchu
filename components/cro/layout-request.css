@@ -176,3 +176,21 @@
   .lr-ban { padding: 12px 14px; }
   .lr-ban > .b1, .lr-ban > .b2 { width: 100%; }
 }
+
+/* ── 2차 회신 (DetailReply, 채팅 짜임 유지): 문서 칸 정렬만 ── */
+.cr-doc--reply .cr-doc__hd { align-items: baseline; }
+.cr-doc--reply .cr-doc__list li { align-items: baseline; }
+.cr-doc--reply .cr-doc__list span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.cr-doc--reply .cr-doc__list b { flex: none; font-variant-numeric: tabular-nums; }
+.cr-doc--reply .cr-doc__list .cr-doc__total { border-top: 1px solid var(--ink); border-bottom: 0; margin-top: -1px; }
+.cr-doc--reply .cr-doc__list .cr-doc__total span { color: var(--ink); font-weight: 600; }
+.cr-doc__why { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--muted); text-align: right; }
+.cr-doc--reply .cr-doc__tool { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.cr-doc--reply .cr-doc__tool p { flex: 1 1 260px; }
+.cr-doc--reply .cr-doc__tool .cr-err { flex-basis: 100%; order: 3; }
+.cr-doc__toolbtn { order: 2; flex: none; min-height: 40px; padding: 0 14px; border: 1px solid var(--input-line); border-radius: var(--r-md); background: var(--white); color: var(--ink); font-size: 14px; font-weight: 600; transition: transform 160ms var(--ease-out), border-color 160ms ease; }
+.cr-doc__toolbtn:disabled { opacity: .5; cursor: not-allowed; }
+.cr-doc__toolbtn:active:not(:disabled) { transform: scale(0.97); }
+.cr-doc__toolbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .cr-doc__toolbtn:hover:not(:disabled) { border-color: var(--ink); } }
+@media (prefers-reduced-motion: reduce) { .cr-doc__toolbtn { transition: none; } }
