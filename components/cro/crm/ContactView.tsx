@@ -62,7 +62,7 @@ export function ContactView({ c, companyId, contactId }: { c: CrmCtx; companyId:
       </header>
 
       <dl className="cx-stats">
-        <div><dt>보낸 견적</dt><dd className="tnum">{s.quotes}건</dd></div>
+        <div><dt>받은 견적</dt><dd className="tnum">{qRows.filter((r) => r.sentAt).length}건</dd></div>
         <div><dt>진행 중</dt><dd className="tnum">{s.open}건</dd></div>
         <div><dt>수주 · 실패</dt><dd className="tnum">{s.won} · {s.lost}</dd></div>
         <div><dt>계약 금액</dt><dd className="tnum">{s.wonSum ? wonKo(s.wonSum) : "-"}{s.contracted ? <small>{s.contracted}건 계약</small> : null}</dd></div>
@@ -72,7 +72,7 @@ export function ContactView({ c, companyId, contactId }: { c: CrmCtx; companyId:
         <div className="cx-main">
           <section className="cx-grp" aria-labelledby="ct-qt">
             <div className="cx-grp__h"><h2 id="ct-qt">받은 견적</h2><span className="cx-grp__end tnum">{qRows.length}건</span></div>
-            <QuoteTable rows={qRows} people={new Map([[person.id, name]])} deals={new Map(coDeals.map((d) => [d.id, [d.title, `${paths.deals}/${d.id}`]]))}
+            <QuoteTable rows={qRows} people={new Map()} noPerson deals={new Map(coDeals.map((d) => [d.id, [d.title, `${paths.deals}/${d.id}`]]))}
               empty={<>{person.name}님 앞으로 보낸 견적서가 없어요.</>} />
           </section>
 

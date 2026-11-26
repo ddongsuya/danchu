@@ -65,7 +65,7 @@ export function buildFeed(a: {
     if (!r) continue;
     push({
       // 종류 · 고객사 · 사람은 줄의 다른 칸에 있으니 제목은 기록 제목과 걸린 시간만
-      key: `a${r.id}`, at: x.at, allDay: false, kind: r.kind as FeedKind, title: [r.title, r.duration_min ? `${r.duration_min}분` : ""].filter(Boolean).join(" · "), sub: x.sub, body: r.body, dealId: r.deal_id, companyId: where(r.company_id, r.deal_id),
+      key: `a${r.id}`, at: x.at, allDay: false, kind: r.kind as FeedKind, title: [r.title, r.duration_min ? `${r.duration_min}분` : ""].filter(Boolean).join(" · "), sub: r.deal_id ? dealBy.get(r.deal_id)?.title ?? "" : "", body: r.body, dealId: r.deal_id, companyId: where(r.company_id, r.deal_id),
       contactIds: uniq([r.contact_id, ...r.attendee_contacts]), owner: r.created_by ?? r.attendee_members[0] ?? null, files: r.files?.length ?? 0, audio: (r.files ?? []).some(isAudioFile), done: false,
     });
   }

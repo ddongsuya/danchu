@@ -9,20 +9,22 @@ import { mdW, wonKo, ymdKst, type CrmDeal, type DealHistory } from "@/lib/crm-sh
 
 const ymdDot = (iso: string) => ymdKst(iso).replaceAll("-", ".");
 
-export function QuoteTable({ rows, people, personHref, deals, empty }: {
+export function QuoteTable({ rows, people, personHref, deals, empty, noPerson = false }: {
   rows: QuoteRow[];
   people: Map<string, string>;
   personHref?: (contactId: string) => string;
   /** 안건 칸을 보일 때: 안건 id → [이름, 주소] */
   deals?: Map<string, [string, string]>;
   empty: React.ReactNode;
+  /** 담당자 화면: 받은 사람 칸을 뺀다 */
+  noPerson?: boolean;
 }) {
   if (!rows.length) return <p className="cx-none">{empty}</p>;
   return (
     <div className="cx-tablewrap cx-tablewrap--flat">
       <table className="cx-table cx-table--qt">
         <thead>
-          <tr><th>견적서</th>{deals && <th>안건</th>}<th>받은 사람</th><th>보낸 날</th><th className="r">금액</th><th>결과</th><th className="r">계약</th></tr>
+          <tr><th>견적서</th>{deals && <th>안건</th>}{!noPerson && <th>받은 사람</th>}<th>보낸 날</th><th className="r">금액</th><th>결과</th><th className="r">계약</th></tr>
         </thead>
         <tbody>
           {rows.map((r) => {
@@ -32,7 +34,7 @@ export function QuoteTable({ rows, people, personHref, deals, empty }: {
               <tr key={r.key} data-past={r.result.tone === "old" ? "1" : "0"}>
                 <td><Link href={r.href} className="cx-tlink tnum">{r.docNo}</Link>{r.version && <small className="cx-muted"> · {r.version}</small>}</td>
                 {deals && <td>{dl ? <Link href={dl[1]} className="cx-lk">{dl[0]}</Link> : <span className="cx-muted">안건 없음</span>}</td>}
-                <td>{who ? personHref && r.contactId ? <Link href={personHref(r.contactId)} className="cx-lk">{who}</Link> : who : <span className="cx-muted">-</span>}</td>
+                {!noPerson && <td>{who ? personHref && r.contactId ? <Link href={personHref(r.contactId)} className="cx-lk">{who}</Link> : who : <span className="cx-muted">-</span>}</td>}
                 <td className="tnum">{r.sentAt ? ymdDot(r.sentAt) : <span className="cx-muted">보내기 전</span>}</td>
                 <td className="r tnum">{amountLabel(r.amount)}</td>
                 <td><Result r={r} /></td>

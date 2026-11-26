@@ -157,18 +157,20 @@
 .cx-feed__end { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; padding-top: 4px; }
 .cx-feed__end .cx-ev__tm { padding-top: 0; }
 .cx-feed__row[data-done="1"] .cx-feed__t { color: var(--muted); }
-.cx-feed .cx-ev__dot { background: var(--surface); }
+.cx-feed .cx-ev__dot:not(.cx-ev__dot--d) { background: var(--surface); }
 .cx-feed__row[data-k="task"] .cx-ev__dot, .cx-feed__row[data-k="event"] .cx-ev__dot { background: transparent; box-shadow: inset 0 0 0 1px var(--card-line); }
 @media (max-width: 959px) {
-  .cx-act .cx-ph__acts .b2 { display: none; }
   .cx-feed__a { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; }
+  .cx-feed__a { row-gap: 4px; }
   .cx-feed__end { grid-column: 2; justify-content: flex-start; padding-top: 0; }
+  .cx-feed__end:empty { display: none; }
+  .cx-feed .cx-ev__tm { display: inline; }
+  .cx-act .cx-ph__acts { display: none; }
   .cx-act { padding-bottom: 64px; }
 }
 
 /* ── 안건 가운데 칸 탭 · 견적·계약 표 ── */
 .cx-panetabs { box-shadow: inset 0 -1px 0 var(--card-line); }
-.cx-table--qt { min-width: 720px; }
 .cx-qt__res { display: inline-flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
 .cx-table--qt td:first-child { white-space: nowrap; }
 
