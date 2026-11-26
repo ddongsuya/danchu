@@ -10,7 +10,7 @@
  * 3) 담당자 한 명의 기록: 고객사 화면에서 담당자를 고르면 그 사람과 주고받은 기록·견적·안건 일만 모은다.
  * 숫자는 기관 안에서만 본다. 단추의 요청 배포·비교표·청구에는 쓰지 않는다.
  */
-import type { DanchuSrc } from "./crm-deals";
+import { STAGE_LABEL, type DanchuSrc, type Stage } from "./crm-deals";
 import { ymdKst, type CrmActivity, type CrmContact, type CrmDeal, type CrmQuote, type DealHistory } from "./crm-shape";
 
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : null);
@@ -153,4 +153,82 @@ export function forContact<A extends Pick<CrmActivity, "contact_id" | "attendee_
     deals,
     dealIds,
   };
+}
+
+// ─── 견적·계약 표 (안건·고객사·담당자 화면) ───
+export type QuoteRow = {
+  key: string;
+  /** 견적서 id (단추에 낸 견적이면 null) */
+  docId: string | null;
+  docNo: string;
+  href: string;
+  /** 안건 안에서 만든 순서: 1차, 2차 (안건에 묶지 않았으면 "") */
+  version: string;
+  dealId: string | null;
+  companyId: string | null;
+  contactId: string | null;
+  sentAt: string | null;
+  amount: number | null;
+  /** 결과: 안건의 가장 최근 차수에만. 앞 차수는 "old" */
+  result: { tone: "open" | "won" | "lost" | "old" | "none"; label: string; reason: string };
+  /** 계약: 가장 최근 차수에만 */
+  contract: { label: string; amount: number | null } | null;
+};
+
+type QDeal = Deal & Pick<CrmDeal, "won_reason" | "lost_reason">;
+type QDoc = Pick<CrmQuote, "id" | "doc_no" | "deal_id" | "company_id" | "contact_id" | "sent_at" | "supply" | "created_at">;
+
+/** 안건 상태로 정하는 결과와 계약 (rfq_awards 의 계약 보고 또는 계약 단계까지 간 수주) */
+function quoteOutcome(d: QDeal, src: DanchuSrc | null, hist: Pick<DealHistory, "deal_id" | "to_stage">[]): Pick<QuoteRow, "result" | "contract"> {
+  const o = dealOutcome(d, src, hist);
+  const result: QuoteRow["result"] = d.status === "lost" ? { tone: "lost", label: "실패", reason: d.lost_reason }
+    : o.selected ? { tone: "won", label: "선정", reason: d.status === "won" ? d.won_reason : "" }
+    : { tone: "open", label: `진행 중 · ${STAGE_LABEL[d.stage as Stage] ?? ""}`, reason: "" };
+  const contract = o.contracted ? { label: "계약", amount: src?.award?.contractAmount ?? d.won_amount ?? d.amount }
+    : src?.award?.contractStatus === "not_signed" ? { label: "계약 안 함", amount: null }
+    : o.selected && d.status !== "lost" ? { label: "계약 전", amount: null }
+    : null;
+  return { result, contract };
+}
+
+/**
+ * 견적서를 안건별 차수로. 차수는 만든 순서 (안건 화면의 견적서 목록과 같다). 단추 요청에 낸 견적은 그 안건에 견적서가 없을 때만 한 줄.
+ * 결과·계약은 안건의 가장 최근 차수에만 붙인다. 최근 것부터.
+ */
+export function quoteRows(a: { quotes: QDoc[]; deals: QDeal[]; history: Pick<DealHistory, "deal_id" | "to_stage">[]; danchu: Map<string, DanchuSrc>; docs: string }): QuoteRow[] {
+  const dealBy = new Map(a.deals.map((d) => [d.id, d]));
+  const byDeal = new Map<string, QDoc[]>();
+  for (const q of [...a.quotes].sort((x, y) => x.created_at.localeCompare(y.created_at))) {
+    if (q.deal_id && dealBy.has(q.deal_id)) byDeal.set(q.deal_id, [...(byDeal.get(q.deal_id) ?? []), q]);
+  }
+  const srcOf = (d: QDeal) => (d.invite_id ? a.danchu.get(d.invite_id) ?? null : null);
+  const out: { at: string; row: QuoteRow }[] = [];
+  for (const q of a.quotes) {
+    const d = q.deal_id ? dealBy.get(q.deal_id) : undefined;
+    const list = d ? byDeal.get(d.id)! : [];
+    const i = list.findIndex((x) => x.id === q.id);
+    const o: Pick<QuoteRow, "result" | "contract"> = !d ? { result: { tone: "none", label: q.sent_at ? "보냄" : "보내기 전", reason: "" }, contract: null }
+      : i === list.length - 1 ? quoteOutcome(d, srcOf(d), a.history)
+      : { result: { tone: "old", label: "다음 차수로 바뀜", reason: "" }, contract: null };
+    out.push({
+      at: q.created_at,
+      row: {
+        key: q.id, docId: q.id, docNo: q.doc_no, href: `${a.docs}/${q.id}`, version: d ? `${i + 1}차` : "", dealId: d?.id ?? null, companyId: q.company_id ?? d?.company_id ?? null,
+        contactId: q.contact_id ?? d?.contact_ids[0] ?? null, sentAt: q.sent_at, amount: q.supply, ...o,
+      },
+    });
+  }
+  for (const d of a.deals) {
+    const s = srcOf(d);
+    const sent = s?.quote?.submittedAt ?? s?.quote?.firstSubmittedAt ?? null;
+    if (byDeal.has(d.id) || !s?.quote || !sent) continue;
+    out.push({
+      at: sent,
+      row: {
+        key: `d:${d.id}`, docId: null, docNo: `단추 ${s.rfqNo}`, href: `/cro/r/${s.inviteId}/reply`, version: `${s.quote.revision}차`, dealId: d.id, companyId: d.company_id,
+        contactId: d.contact_ids[0] ?? null, sentAt: sent, amount: s.quote.total, ...quoteOutcome(d, s, a.history),
+      },
+    });
+  }
+  return out.sort((x, y) => y.at.localeCompare(x.at)).map((x) => x.row);
 }

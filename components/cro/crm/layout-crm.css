@@ -139,3 +139,62 @@
 
 /* ── 엑셀 가져오기 ── */
 .cx-imp .cx-steps { padding-bottom: 14px; border-bottom: 1px solid var(--card-line); }
+
+/* ── 활동 목록 (c-activity) ── */
+.cx-act .cx-kinds { gap: 6px; margin-top: -8px; }
+.cx-dd__scroll { max-height: 320px; overflow-y: auto; }
+.cx-feedwrap { gap: 4px; padding-top: 10px; }
+.cx-feed { list-style: none; margin: 0; padding: 0; display: grid; }
+.cx-feed__row + .cx-feed__row { border-top: 1px solid var(--card-line); }
+.cx-feed__a { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; padding: 10px 8px; margin: 0 -8px; border-radius: var(--r-sm); align-items: start; color: inherit; transition: background-color 160ms ease; }
+@media (hover: hover) and (pointer: fine) { a.cx-feed__a:hover { background: var(--surface); } }
+.cx-feed__bd { display: grid; gap: 2px; min-width: 0; }
+.cx-feed__h { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; font-size: 13.5px; color: var(--ink); line-height: 1.55; overflow-wrap: anywhere; }
+.cx-feed__h b { font-weight: 600; }
+.cx-feed__k { font-size: 12px; color: var(--muted); }
+.cx-feed__s { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.cx-feed__b { font-size: 13px; color: var(--body); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+.cx-feed__end { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; padding-top: 4px; }
+.cx-feed__end .cx-ev__tm { padding-top: 0; }
+.cx-feed__row[data-done="1"] .cx-feed__t { color: var(--muted); }
+.cx-feed .cx-ev__dot:not(.cx-ev__dot--d) { background: var(--surface); }
+.cx-feed__row[data-k="task"] .cx-ev__dot, .cx-feed__row[data-k="event"] .cx-ev__dot { background: transparent; box-shadow: inset 0 0 0 1px var(--card-line); }
+@media (max-width: 959px) {
+  .cx-feed__a { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; }
+  .cx-feed__a { row-gap: 4px; }
+  .cx-feed__end { grid-column: 2; justify-content: flex-start; padding-top: 0; }
+  .cx-feed__end:empty { display: none; }
+  .cx-feed .cx-ev__tm { display: inline; }
+  .cx-act .cx-ph__acts { display: none; }
+  .cx-act { padding-bottom: 64px; }
+}
+
+/* ── 안건 가운데 칸 탭 · 견적·계약 표 ── */
+.cx-panetabs { box-shadow: inset 0 -1px 0 var(--card-line); }
+.cx-qt__res { display: inline-flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.cx-table--qt td:first-child { white-space: nowrap; }
+
+/* ── 담당자 화면 (c-contact) ── */
+.cx-ctdeals { list-style: none; margin: 0; padding: 0; display: grid; }
+.cx-ctdeals li { display: grid; gap: 4px; padding: 9px 0; }
+.cx-ctdeals li + li { border-top: 1px solid var(--card-line); }
+.cx-ctdeals__m { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.cx-ct .cx-ph__acts { flex-wrap: wrap; }
+
+/* ── 녹음 + 회의록 (c-voice). 전사는 없다 ── */
+.cx-voice { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0; border: 1px solid var(--card-line); border-radius: var(--r-sm); background: var(--white); }
+.cx-voice > div { display: grid; gap: 8px; align-content: start; padding: 10px 12px; min-width: 0; }
+.cx-voice > div + div { border-left: 1px solid var(--card-line); }
+.cx-voice__lab { display: flex; gap: 6px; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.cx-voice__lab:first-child svg { flex: none; }
+.cx-voice__rec .cx-voice__lab { justify-content: flex-start; }
+.cx-voice figure { margin: 0; display: grid; gap: 4px; }
+.cx-voice audio { width: 100%; height: 36px; }
+.cx-voice figcaption { display: flex; gap: 8px; font-size: 12px; color: var(--muted); min-width: 0; }
+.cx-voice__body { font-size: 13.5px; line-height: 1.65; color: var(--body); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16em; overflow-y: auto; }
+.cx-voice__form { display: grid; gap: 8px; }
+.cx-voice__form .crm-acts { margin-top: 0; }
+@media (max-width: 959px) {
+  .cx-voice { grid-template-columns: minmax(0, 1fr); }
+  .cx-voice > div + div { border-left: 0; border-top: 1px solid var(--card-line); }
+}

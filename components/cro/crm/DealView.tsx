@@ -2,10 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CaretRight, Check, EnvelopeSimple, FileText, Handshake, LockSimple, NotePencil, PencilSimple, Phone, Plus } from "@phosphor-icons/react/dist/ssr";
 import { DEAL_KIND, STAGE_LABEL, STATUS_LABEL, amountLabel, buildTimeline, byDay, stageSpans, type Stage, type Status, type TimelineItem, closedLabel } from "@/lib/crm-deals";
-import { CONTACT_ROLE, EVENT_MODE, hmKst, mdW, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
+import { CONTACT_ROLE, EVENT_MODE, hmKst, mdW, personLabel, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
 import { ActivityDelete, ContactForm, SheetButton } from "./forms";
 import { CloseButtons, Composer, CopyText, DealDelete, DealForm, DoneButton, StageBar, WonReasonButton } from "./deal-ui";
-import { ActivityFiles } from "./files-ui";
+import { ActivityFiles, VoiceNote } from "./files-ui";
+import { isAudioFile } from "@/lib/crm-files";
+import { quoteRows } from "@/lib/crm-analysis";
+import { QuoteTable, ContractBox } from "./quotes-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
@@ -16,9 +19,14 @@ const KIND_ICON = { meeting: Handshake, call: Phone, email: EnvelopeSimple, memo
 /** 날짜 머리: "오늘 11.9", "11.6 금" */
 export const dayHead = (ymd: string, now: number) => (ymd === todayKst(now) ? `오늘 ${+ymd.slice(5, 7)}.${+ymd.slice(8, 10)}` : mdW(ymd));
 
-/** 타임라인 한 줄 (안건·고객사 화면이 함께 쓴다) */
-export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: string | null }) {
+/**
+ * 타임라인 한 줄 (안건·고객사·담당자 화면이 함께 쓴다). clip 이 있으면 본문을 그 글자 수로 줄인다.
+ * 녹음 파일이 붙은 미팅은 본문 대신 녹음 + 회의록 칸 (회의록은 줄이지 않은 본문으로 고친다).
+ */
+export function TimelineRow({ x, dealHref, clip }: { x: TimelineItem; dealHref?: string | null; clip?: number }) {
   const I = x.kind === "danchu" ? null : KIND_ICON[x.kind as keyof typeof KIND_ICON] ?? NotePencil;
+  const voice = x.ref?.type === "activity" && x.kind === "meeting" && (x.files ?? []).some(isAudioFile);
+  const body = x.body && clip && x.body.length > clip ? `${x.body.slice(0, clip)}…` : x.body;
   return (
     <li className="cx-ev" data-k={x.kind}>
       <span className={`cx-ev__dot${x.kind === "danchu" ? " cx-ev__dot--d" : ""}`} aria-hidden="true">{I ? <I size={15} /> : "단"}</span>
@@ -28,9 +36,9 @@ export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: strin
           {x.amount != null && <> · <span className="tnum">{wonKo(x.amount)}</span></>}
           {x.diffNote && <> <span className="cx-diff">{x.diffNote}</span></>}
         </p>
-        {x.body && (
+        {voice && x.ref ? <VoiceNote activityId={x.ref.id} files={x.files ?? []} body={x.body ?? ""} /> : body && (
           <div className="cx-ev__q">
-            <p>{x.body}</p>
+            <p>{body}</p>
           </div>
         )}
         {(x.sub || dealHref) && (
@@ -55,7 +63,11 @@ export type DealTab = "log" | "info" | "people";
 export const dealTab = (v?: string): DealTab => (v === "info" || v === "people" ? v : "log");
 const DEAL_TABS: [DealTab, string][] = [["log", "기록"], ["info", "안건 정보"], ["people", "담당자·견적서"]];
 
-export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: DealTab }) {
+/** 가운데 칸: 활동(기본) · 견적·계약 (?v=quotes, 와이어프레임 v7 c-deal-quotes) */
+export type DealPane = "acts" | "quotes";
+export const dealPane = (v?: string): DealPane => (v === "quotes" ? "quotes" : "acts");
+
+export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: string; m?: DealTab; v?: DealPane }) {
   const { data, paths, now, me } = c;
   const rows = rowsOf(c);
   const r = rows.find((x) => x.deal.id === id);
@@ -82,6 +94,8 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
   const next = r.next;
   const nextEvent = next?.kind === "event" ? data.events.find((e) => e.id === next.id) : null;
   const nextTask = next?.kind === "task" ? data.tasks.find((t) => t.id === next.id) : null;
+  const qRows = quoteRows({ quotes, deals: [d], history: hist, danchu: c.danchu, docs: paths.docs });
+  const people = new Map(data.contacts.map((x) => [x.id, personLabel(x.name, x.title)]));
   return (
     <div className="cx cx-deal" data-m={m}>
       <nav className="crumb cx-crumb" aria-label="위치">
@@ -124,6 +138,20 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
 
       <div className="cx-dealcols">
         <div className="cx-center">
+          <nav className="cx-tabs2 cx-panetabs" aria-label="안건 내용">
+            <Link href="?" replace scroll={false} aria-current={v === "acts" ? "page" : undefined}>활동</Link>
+            <Link href="?v=quotes" replace scroll={false} aria-current={v === "quotes" ? "page" : undefined}>견적·계약<span className="tnum">{qRows.length}</span></Link>
+          </nav>
+          {v === "quotes" ? (
+            <>
+              <section className="cx-grp" aria-labelledby="d-qt">
+                <div className="cx-grp__h"><h2 id="d-qt">보낸 견적</h2><span className="cx-grp__end tnum">{qRows.length}건</span></div>
+                <QuoteTable rows={qRows} people={people} personHref={company ? (cid) => `${paths.clients}/${company.id}/contacts/${cid}` : undefined}
+                  empty={<>아직 보낸 견적이 없어요. 위 &quot;견적서 만들기&quot;로 시작하면 이 안건에 붙어요.</>} />
+              </section>
+              <ContractBox deal={d} src={src} history={hist} />
+            </>
+          ) : (<>
           {d.status === "open" && (
             next ? (
               <div className="cx-next" id="next-band">
@@ -152,6 +180,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
               ))}
             </div>
           ) : <p className="cx-none">아직 기록이 없어요. 통화나 미팅을 마치면 위에 한 줄 남겨요.</p>}
+          </>)}
         </div>
 
         <aside className="cx-rail" aria-label="안건 정보와 담당자, 견적서">
@@ -194,7 +223,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                     <li key={p.id}>
                       <span className="cx-av" aria-hidden="true">{p.name.slice(0, 1)}</span>
                       <span className="cx-ppl__x">
-                        <b>{p.name}{p.title && !p.name.includes(p.title) ? ` ${p.title}` : ""}{i === 0 && dealContacts.length > 1 && <span className="cx-chip">주 담당</span>}</b>
+                        <b><Link href={`${paths.clients}/${p.company_id}/contacts/${p.id}`} className="cx-tlink">{personLabel(p.name, p.title)}</Link>{i === 0 && dealContacts.length > 1 && <span className="cx-chip">주 담당</span>}</b>
                         <small>{[p.dept, p.role ? CONTACT_ROLE[p.role] : "", last ? `마지막 연락 ${ymdKst(last.occurred_at) === todayKst(now) ? "오늘" : mdW(ymdKst(last.occurred_at))}` : ""].filter(Boolean).join(" · ")}</small>
                       </span>
                       <span className="cx-ppl__ico">

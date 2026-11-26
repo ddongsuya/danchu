@@ -3,7 +3,7 @@ import { sessionOrNull } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { featureError } from "@/lib/plan-usage";
 import { isUuid } from "@/lib/crm-shape";
-import { CRM_BUCKET, CRM_FILES_PER_ACTIVITY, CRM_FILE_MAX, cleanFiles, crmFileError, crmFilePath, displayName, isCrmFilePath, removeCrmFiles, storedSize } from "@/lib/crm-files";
+import { CRM_BUCKET, CRM_FILES_PER_ACTIVITY, CRM_FILE_MAX, cleanFiles, crmFileError, crmFilePath, displayName, isAudioFile, isCrmFilePath, removeCrmFiles, storedSize } from "@/lib/crm-files";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
  *   POST {activity_id, name, size, type}                 서명 업로드 URL (본문은 브라우저가 Storage 로 바로 올린다, lib/upload.ts)
  *   POST {action: "attach", activity_id, path, name, size, type}  올린 파일을 기록에 붙인다 (Storage 에 있는지·크기를 다시 본다)
  *   GET  ?a=<activity_id>&p=<path>                         내려받기: 60초짜리 서명 URL 로 보낸다
+ *   GET  ?a=...&p=...&play=1                               녹음 듣기 (녹음 파일만): 내려받기 머리 없는 1시간짜리 서명 URL
  *   DELETE {activity_id, path}                             기록에서 빼고 파일도 지운다
  * 기관 담당자 모두 같이 쓴다 (고객 관리 요금제). 다른 기관의 기록·경로는 찾지 못한 것으로 답한다.
  */
@@ -20,6 +21,8 @@ type Admin = NonNullable<ReturnType<typeof getSupabaseAdmin>>;
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
 /** 기록 하나를 고쳐 쓰는 사이 다른 화면이 같이 고치면 다시 읽고 한 번 더 */
 const RETRIES = 3;
+/** 녹음 듣기 서명 URL 유효 시간. ponytail: 1시간 넘게 틀어 두면 넘겨 듣기가 끊긴다. 그때는 다시 연다 */
+const PLAY_SECONDS = 3600;
 
 async function ctx() {
   const s = await sessionOrNull("cro");
@@ -96,7 +99,9 @@ export async function GET(req: Request) {
   const a = await activity(sb, orgId, u.searchParams.get("a"));
   const f = a?.files.find((x) => x.path === u.searchParams.get("p"));
   if (!a || !f || !isCrmFilePath(f.path, orgId, a.id)) return new Response("파일을 찾지 못했어요.", { status: 404 });
-  const { data, error } = await sb.storage.from(CRM_BUCKET).createSignedUrl(f.path, 60, { download: f.name });
+  // ?play=1 녹음 듣기 (audio 태그): 내려받기 머리 없이, 긴 녹음을 넘겨 들을 수 있게 1시간
+  const play = u.searchParams.get("play") === "1" && isAudioFile(f);
+  const { data, error } = await sb.storage.from(CRM_BUCKET).createSignedUrl(f.path, play ? PLAY_SECONDS : 60, play ? undefined : { download: f.name });
   if (error || !data) { console.error("crm files signed url", error); return new Response("파일을 열지 못했어요. 잠시 뒤 다시 시도해 주세요.", { status: 500 }); }
   return NextResponse.redirect(data.signedUrl, { status: 303, headers: { "Cache-Control": "no-store" } });
 }

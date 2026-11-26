@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { CaretRight, EnvelopeSimple, MagnifyingGlass, PencilSimple, Phone, Plus, UploadSimple } from "@phosphor-icons/react/dist/ssr";
 import { COMPANY_FILTERS, STAGE_LABEL, amountLabel, buildTimeline, byDay, companyRows, filterCompanies, nextLabel, type CompanyFilter, type Stage, closedLabel } from "@/lib/crm-deals";
 import { CONTACT_ROLE, agoLabel, duplicatePairs, mdW, personLabel, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
-import { contactStats, forContact } from "@/lib/crm-analysis";
+import { contactStats, forContact, quoteRows } from "@/lib/crm-analysis";
+import { QuoteTable } from "./quotes-ui";
 import { CompanyDelete, CompanyForm, ContactForm, MergeButton, SheetButton } from "./forms";
 import { DealForm } from "./deal-ui";
 import { TimelineRow, dayHead } from "./DealView";
@@ -89,8 +90,8 @@ export function CompaniesView({ c, q }: { c: CrmCtx; q: CompaniesQuery }) {
 }
 
 const TL_FILTERS = { all: "전체", meeting: "미팅만", call: "통화만" } as const;
-type CoTab = "info" | "people" | "acts";
-const CO_TABS: [CoTab, string][] = [["info", "개요"], ["people", "담당자"], ["acts", "기록"]];
+type CoTab = "info" | "people" | "quotes" | "acts";
+const CO_TABS: [CoTab, string][] = [["info", "개요"], ["people", "담당자"], ["quotes", "견적·계약"], ["acts", "기록"]];
 type TlFilter = keyof typeof TL_FILTERS;
 
 /**
@@ -125,7 +126,10 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
   const members = data.members.map((m) => ({ id: m.id, name: m.name }));
   const lastWith = (cid: string) => data.activities.filter((a) => a.contact_id === cid || a.attendee_contacts.includes(cid)).sort((x, y) => y.occurred_at.localeCompare(x.occurred_at))[0];
   const SRC = { manual: "직접 추가", danchu: "단추 선정", import: "엑셀 가져오기" } as Record<string, string>;
-  const tab: CoTab = v === "people" || v === "acts" ? v : (t || p) && v !== "info" ? "acts" : "info";
+  const tab: CoTab = v === "people" || v === "acts" || v === "quotes" ? v : (t || p) && v !== "info" ? "acts" : "info";
+  const qRows = quoteRows({ quotes: coQuotes, deals: coDeals, history: data.history, danchu: c.danchu, docs: paths.docs });
+  const people = new Map(contacts.map((x) => [x.id, personLabel(x.name, x.title)]));
+  const contactHref = (cid: string) => `${paths.clients}/${co.id}/contacts/${cid}`;
   const tabHref = (k: CoTab) => qs(`${paths.clients}/${co.id}`, { tab: k === "info" ? null : k });
   const recent = tl.slice(0, 5);
   const sub = [co.industry, row.owner ? `담당 영업 ${row.owner}` : ""].filter(Boolean).join(" · ");
@@ -149,7 +153,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
       <nav className="cx-tabs2 cx-cotabs" aria-label="고객사 화면">
         {CO_TABS.map(([k, label]) => (
           <Link key={k} href={tabHref(k)} scroll={false} aria-current={tab === k ? "page" : undefined}>
-            {label}{k === "people" ? <span className="tnum">{contacts.length}</span> : k === "info" ? <span className="tnum">{rows.length}</span> : null}
+            {label}{k === "people" ? <span className="tnum">{contacts.length}</span> : k === "info" ? <span className="tnum">{rows.length}</span> : k === "quotes" ? <span className="tnum">{qRows.length}</span> : null}
           </Link>
         ))}
       </nav>
@@ -193,7 +197,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                     {byDay(recent).map((g) => (
                       <section key={g.day} aria-label={dayHead(g.day, now)}>
                         <h3 className="cx-tl__day">{dayHead(g.day, now)}</h3>
-                        <ol>{g.items.map((x, i) => <TimelineRow key={`${x.at}-${i}`} x={{ ...x, body: x.body && x.body.length > 120 ? `${x.body.slice(0, 120)}…` : x.body }} />)}</ol>
+                        <ol>{g.items.map((x, i) => <TimelineRow key={`${x.at}-${i}`} x={x} clip={120} />)}</ol>
                       </section>
                     ))}
                   </div>
@@ -214,7 +218,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                         <li key={x.id}>
                           <span className="cx-av" aria-hidden="true">{x.name.slice(0, 1)}</span>
                           <span className="cx-ppl__x">
-                            <SheetButton className="cx-ppl__n" title="담당자 고치기" label={<b>{x.name}{x.title && !x.name.includes(x.title) ? ` ${x.title}` : ""}</b>}><ContactForm companyId={co.id} contact={x} /></SheetButton>
+                            <b><Link href={contactHref(x.id)} className="cx-tlink">{personLabel(x.name, x.title)}</Link></b>
                             <small>{[x.dept, x.role ? CONTACT_ROLE[x.role] : "", x.danchu_key ? "단추에서 들어옴" : "", last ? (ymdKst(last.occurred_at) === todayKst(now) ? "오늘 연락" : `${mdW(ymdKst(last.occurred_at))} 연락`) : ""].filter(Boolean).join(" · ")}</small>
                           </span>
                           <span className="cx-ppl__ico">
@@ -256,7 +260,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                   const s = stats.get(x.id)!;
                   return (
                     <tr key={x.id}>
-                      <td><SheetButton className="cx-ppl__n" title="담당자 고치기" label={<b>{personLabel(x.name, x.title)}</b>}><ContactForm companyId={co.id} contact={x} /></SheetButton>{x.role && <small className="cx-muted"> · {CONTACT_ROLE[x.role]}</small>}{x.dept && <small className="cx-muted cx-cellsub">{x.dept}</small>}</td>
+                      <td><Link href={contactHref(x.id)} className="cx-tlink">{personLabel(x.name, x.title)}</Link>{x.role && <small className="cx-muted"> · {CONTACT_ROLE[x.role]}</small>}{x.dept && <small className="cx-muted cx-cellsub">{x.dept}</small>}</td>
                       <td className="r tnum">{s.quotes ? `${s.quotes}건` : <span className="cx-muted">0</span>}</td>
                       <td className="r tnum">{s.open ? `${s.open}건` : <span className="cx-muted">0</span>}</td>
                       <td className="r tnum">{s.won} · {s.lost}</td>
@@ -277,6 +281,17 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
             <div className="cx-ph__acts"><SheetButton className="b2 bsm" title="담당자 추가" label={<><Plus size={16} aria-hidden="true" />담당자 추가</>}><ContactForm companyId={co.id} /></SheetButton></div>
           </section>
         )
+      )}
+
+      {tab === "quotes" && (
+        <section className="cx-grp" aria-labelledby="co-qt">
+          <div className="cx-grp__h">
+            <h2 id="co-qt">보낸 견적과 결과</h2>
+            <span className="cx-grp__end tnum">{qRows.length}건 · 선정 {qRows.filter((r) => r.result.tone === "won").length} · 실패 {qRows.filter((r) => r.result.tone === "lost").length}</span>
+          </div>
+          <QuoteTable rows={qRows} people={people} personHref={contactHref} deals={new Map(coDeals.map((d) => [d.id, [d.title, `${paths.deals}/${d.id}`]]))}
+            empty={<>이 고객사에 보낸 견적서가 없어요. 안건 화면에서 견적서를 만들면 여기에 모여요.</>} />
+        </section>
       )}
 
       {tab === "acts" && (
@@ -300,7 +315,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
               {byDay(tl).map((g) => (
                 <section key={g.day} aria-label={dayHead(g.day, now)}>
                   <h3 className="cx-tl__day">{dayHead(g.day, now)}</h3>
-                  <ol>{g.items.map((x, i) => <TimelineRow key={`${x.at}-${i}`} x={{ ...x, body: x.body && x.body.length > 160 ? `${x.body.slice(0, 160)}…` : x.body }} />)}</ol>
+                  <ol>{g.items.map((x, i) => <TimelineRow key={`${x.at}-${i}`} x={x} clip={160} />)}</ol>
                 </section>
               ))}
             </div>

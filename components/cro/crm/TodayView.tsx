@@ -44,7 +44,7 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
           <p className="cx-ph__sub">{d.getUTCMonth() + 1}월 {d.getUTCDate()}일 {weekdayKo(today)}요일 · 일정 <b className="tnum">{events}</b> · 할 일 <b className="tnum">{tasks}</b> · 손이 필요한 안건 <b className="tnum">{need.length}</b></p>
         </div>
         <div className="cx-ph__acts">
-          <Link href={paths.log} className="b2 bsm"><NotePencil size={16} aria-hidden="true" />기록 남기기</Link>
+          <Link href={`${paths.log}?new=1`} className="b2 bsm"><NotePencil size={16} aria-hidden="true" />기록 남기기</Link>
           <SheetButton className="b1 bsm" title="안건 만들기" label={<><Plus size={16} aria-hidden="true" />안건 만들기</>}><DealForm opts={opts} base={paths.deals} /></SheetButton>
         </div>
       </header>
@@ -125,7 +125,7 @@ export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<t
           </section>
         </aside>
       </div>
-      <Link href={paths.log} className="b1 cx-mfab only-narrow">통화 기록 남기기</Link>
+      <Link href={`${paths.log}?new=1`} className="b1 cx-mfab only-narrow">통화 기록 남기기</Link>
     </div>
   );
 }
