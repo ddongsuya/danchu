@@ -20,7 +20,6 @@ export default function Page() {
 <section className="faqs" aria-labelledby="t">
 <div className="ph">
 <div><h1 id="t">자주 묻는 질문</h1></div>
-<div><p className="lead">메일로도 편하게 문의하세요.</p></div>
 </div>
 <div className="faq">
 <input type="radio" name="fc" id="f-all" defaultChecked /><input type="radio" name="fc" id="f-plan" /><input type="radio" name="fc" id="f-time" /><input type="radio" name="fc" id="f-conf" /><input type="radio" name="fc" id="f-cmp" /><input type="radio" name="fc" id="f-deal" /><input type="radio" name="fc" id="f-cro" />
@@ -34,8 +33,8 @@ export default function Page() {
 </div>
 </section>
 <section className="close" aria-labelledby="go">
-<h2 id="go">궁금증이 풀렸다면,<br /><span>이제 견적을 받아보세요.</span></h2>
-<div className="ctas"><a className="btn solid" href="/request">견적 요청하기</a><a className="btn ghost" href="mailto:support@danchu.kr">support@danchu.kr</a></div>
+<h2 id="go">견적 요청과<br /><span>문의</span></h2>
+<div className="ctas"><a className="btn solid" href="/request">견적 요청</a><a className="btn ghost" href="mailto:support@danchu.kr">support@danchu.kr</a></div>
 </section>
 {/* 구조화 데이터는 맨 끝에 둔다: main > :first-child 규칙(site.css)이 첫 장면에 걸려 있다 */}
 <JsonLd data={faqPageJsonLd()} />

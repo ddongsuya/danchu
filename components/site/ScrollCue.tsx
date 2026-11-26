@@ -31,7 +31,7 @@ export function ScrollCue() {
           화면 아래 가장자리(사파리 도구 막대 근처, 엄지가 닿는 자리)를 누르기만 해도 0.9화면 내려가 첫 제목이 사라졌다 (2026-10-27 운영 기록으로 확정) */}
       <div className={on ? "cue" : "cue off"} aria-hidden={!on}>
         <a href="#main" onClick={go} tabIndex={on ? 0 : -1}>
-          <span>아래로 내려 보세요</span><i aria-hidden="true"></i>
+          <span>아래로 스크롤</span><i aria-hidden="true"></i>
         </a>
       </div>
     </>

@@ -17,6 +17,8 @@
 .a .hero .micro a{color:var(--ink);text-decoration:underline;text-underline-offset:4px}
 .a .sub{font-size:18px;line-height:1.7;color:var(--muted);max-width:30em;margin:28px 0 36px;animation:lineIn 320ms var(--eo) 140ms both}
 .a .hero .ctas{animation:lineIn 320ms var(--eo) 210ms both}
+/* 서브 문장을 뺀 뒤 제목과 버튼 사이 간격 (예전 .sub 여백과 같은 값) */
+.a .hero h1 + .ctas{margin-top:36px}
 .a .hero .micro{margin:12px 0 0;font-size:13px;color:var(--muted);animation:lineIn 320ms var(--eo) 280ms both}
 @keyframes lineIn{from{transform:translateY(8px)}}
 .a .iso svg{width:100%;height:auto;display:block;overflow:visible}
@@ -192,6 +194,7 @@
  .a nav.top .links,.a nav.top .right .si{display:none}
  .a .hero{grid-template-columns:1fr;padding:48px 0 40px;gap:32px}
  .a .sub{font-size:16px;margin:20px 0 28px}
+ .a .hero h1 + .ctas{margin-top:28px}
  .a .mq{grid-template-columns:1fr}
  .a .mq .lbl{border-right:0;border-bottom:1px solid var(--line);padding:10px 0}
  .a section.scr{padding:64px 0}

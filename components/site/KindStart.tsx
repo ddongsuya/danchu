@@ -39,7 +39,7 @@ export function KindStart({ kind }: { kind: Kind }) {
           ))}
         </ul>
         <div className="txelse">
-          <p className="h">이런 요청은 다른 갈래로 가세요</p>
+          <p className="h">이런 요청은 다른 갈래로</p>
           <ul>
             {d.elsewhere.map(([what, k]) => (
               <li key={k}>

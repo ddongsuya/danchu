@@ -28,7 +28,7 @@ export default function Page() {
       <section className="libs" aria-labelledby="t">
         <div className="ph">
           <div><h1 id="t">가이드라인 자료실</h1></div>
-          <div><p className="lead">시험 구성에 참고할 공개 가이드라인을 시험 종류별로 모았어요. 원문은 발행 기관 사이트에서 열려요.</p></div>
+          <div><p className="lead">원문은 발행 기관 사이트에서 열려요.</p></div>
         </div>
         <div className="lib">
           <input type="radio" name="lp" id="p-all" defaultChecked />
@@ -68,7 +68,7 @@ export default function Page() {
                 </section>
               );
             })}
-            <p className="ldisc">가이드라인은 개정될 수 있어요. 제출 전에는 원문 사이트에서 최신 개정판을 확인하세요. 최종 설계는 규제기관, 담당 기관과 함께 논의하세요.</p>
+            <p className="ldisc">가이드라인은 개정될 수 있어요. 제출 전에 원문 사이트에서 최신 개정판을 확인해 주세요.</p>
           </div>
           <TocSpy />
         </div>

@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 export const SITE_URL = "https://danchu.kr";
 export const SITE_TITLE = "단추 · 비임상시험 비교 견적표, 비임상 CRO 견적 비교";
 export const SITE_DESC =
-  "비임상시험 견적을 한 번 요청으로 여러 비임상 CRO·시험기관에서 같은 양식으로 받아 비교해요. 독성·효력·약동학 시험과 GLP 비임상시험의 항목별 금액·기간·조건을 나란히 보고 기관을 직접 고르세요.";
+  "비임상시험 견적을 한 번 요청으로 여러 비임상 CRO·시험기관에서 같은 양식으로 받아 비교해요. 독성·효력·약동학 시험과 GLP 비임상시험의 항목별 금액·기간·조건을 나란히 보고 기관을 직접 골라요.";
 export const SHARE_IMAGE = {
   url: "/og-share.png",
   width: 1200,

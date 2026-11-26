@@ -96,6 +96,6 @@ export function earlyDoneSms(role: EarlyRole): string {
 /** 시범 운영 시작 문자 (2027-06-01 예약 작업이 보낸다) */
 export function earlyOpenSms(role: EarlyRole): string {
   return role === "req"
-    ? "시범 운영 시작\n오늘부터 비임상 시험 견적을 단추에 요청하세요.\ndanchu.kr"
-    : "시범 운영 시작\n오늘부터 들어오는 요청에 견적을 보내보세요.\ndanchu.kr";
+    ? "시범 운영 시작\n오늘부터 비임상 시험 견적 요청이 열려요.\ndanchu.kr"
+    : "시범 운영 시작\n오늘부터 기관 요청함이 열려요.\ndanchu.kr";
 }
