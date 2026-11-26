@@ -4,6 +4,8 @@ import { dbReady, listInvitesForOrg } from "@/lib/data";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { dday, won, ymd } from "@/lib/format";
 import { statusLabel } from "@/lib/status";
+import { EmptyState } from "@/components/ui/EmptyState";
+import "@/components/cro/layout-quote.css";
 
 export const dynamic = "force-dynamic";
 
@@ -18,25 +20,24 @@ export default async function CroQuotes() {
       <div className="ph">
         <div>
           <h1>제출한 견적</h1>
-          <p>제출한 견적은 비교표가 열릴 때 의뢰자에게 보여요. 비교표가 열리기 전까지는 고칠 수 있고, 열린 뒤에는 고치거나 다시 제출할 수 없어요. 결과는 의뢰자가 기관을 고르면 알려요.</p>
+          <p>비교표가 열리기 전까지 고칠 수 있어요. 열린 뒤에는 고치거나 다시 제출할 수 없어요.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/awards" className="b2 bsm">수주·계약 보고</Link>
         </div>
       </div>
       {list.length === 0 ? (
-        <div className="empty">
-          <b>제출한 견적이 없어요</b>
+        <EmptyState title="제출한 견적이 없어요" action={<Link href="/cro/requests" className="b2 bsm">받은 요청 보기</Link>}>
           받은 요청에서 회신을 작성하면 여기에 쌓여요.
-        </div>
+        </EmptyState>
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
             <thead>
               <tr>
                 <th>요청</th>
-                <th>총액</th>
-                <th>기간</th>
+                <th className="lq-num">총액</th>
+                <th className="lq-num">기간</th>
                 <th>제출일</th>
                 <th>회신 기한</th>
                 <th>진행</th>
@@ -57,8 +58,8 @@ export default async function CroQuotes() {
                       <div style={{ fontWeight: 600 }}>{i.rfq?.substance}</div>
                       <div className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{i.rfq_no} · {(i.rfq?.categories ?? []).join(" · ")}</div>
                     </td>
-                    <td className="tnum" data-label="총액" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
-                    <td className="tnum" data-label="기간">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
+                    <td className="lq-num" data-label="총액" style={{ fontWeight: 600 }}>{won(q.total_amount ?? 0)}</td>
+                    <td className="lq-num" data-label="기간">{q.total_weeks ? `${q.total_weeks}주` : "-"}</td>
                     <td className="tnum tbl__opt" data-label="제출일">{ymd(q.submitted_at)}</td>
                     <td className="tnum" data-label="회신 기한">{i.reply_by}<span className="pill pill--sf" style={{ marginLeft: 6 }}>{open ? dd.label : "마감"}</span></td>
                     <td data-label="진행"><span className="pill pill--tint">{result}</span></td>

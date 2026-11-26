@@ -8,6 +8,9 @@ import { autoReplyEnabled } from "@/lib/env";
 import Link from "next/link";
 import { canUse } from "@/lib/plans";
 import { todaySeoul } from "@/lib/format";
+import { CaretRight } from "@phosphor-icons/react/dist/ssr";
+import { EmptyState } from "@/components/ui/EmptyState";
+import "@/components/cro/layout-quote.css";
 
 export const dynamic = "force-dynamic";
 
@@ -35,60 +38,46 @@ export default async function CroOrgPage() {
         <span className={`pill ${st[1]}`}>{st[0]}</span>
       </div>
 
-      {org?.status === "pending" && <div className="note note--warn" style={{ marginBottom: 16 }}>운영자가 기관 정보를 확인하는 중이에요. 승인되면 메일로 알려요. 그동안 아래 정보를 보완해 두면 심사가 빨라져요.</div>}
+      {org?.status === "pending" && <div className="note note--warn lq-set__note">운영자가 기관 정보를 확인하는 중이에요. 승인되면 메일로 알려요. 그동안 아래 정보를 보완해 두면 심사가 빨라져요.</div>}
 
-      <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="stack">
-          {org ? (
-            <div className="card card--pad">
-              <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>기관 정보</h2>
-              <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>GLP 인증과 수행 분야는 회신에 자동으로 채워지고, 배포 대상 선정과 비교표의 제출처 대응 판정에 쓰여요.</p>
-              {isOwner ? (
-                <OrgForm org={org} autoReplyAvailable={autoReplyEnabled()} />
-              ) : (
-                <div className="card--rows">
-                  {[["사업자등록번호", org.business_no], ["웹사이트", org.website], ["소재지", org.address], ["대표 담당자", org.contact_name], ["대표 이메일", org.contact_email], ["대표 연락처", org.contact_phone], ["GLP 인증", org.glp_certs.join(" · ")], ["수행 분야", org.categories.join(" · ")]].map(([k, v]) => (
-                    <div key={String(k)} className="kv"><span className="kv__k">{k}</span><span className="kv__v" style={{ fontWeight: 500 }}>{v || "-"}</span></div>
-                  ))}
-                  <p style={{ padding: "10px 0 4px", fontSize: 13, color: "var(--muted)" }}>기관 정보 수정은 대표 담당자가 해요.</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="empty">소속 기관이 없어요. support@danchu.kr로 알려주세요.</div>
-          )}
-        </div>
-        <div className="stack">
-          <OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} />
-          <ThemeSettings />
-          <div className="card card--rows">
-            {canUse(s.org, "tests", todaySeoul()) && (
-              <Link href="/cro/catalog" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-                <span>시험 목록 <span style={{ fontSize: 12, color: "var(--muted)" }}>자주 하는 조건, 소요 기간, 표준가</span></span>
-                <span style={{ color: "var(--dash)" }}>›</span>
-              </Link>
+      <div className="lq-set">
+        {org ? (
+          <section className="card card--pad lq-set__sec" aria-labelledby="org-info">
+            <header className="lq-set__hd">
+              <h2 id="org-info">기관 정보</h2>
+              <p>GLP 인증과 수행 분야는 회신에 자동으로 채워지고, 배포 대상 선정과 비교표의 제출처 대응 판정에 쓰여요.</p>
+            </header>
+            {isOwner ? (
+              <OrgForm org={org} autoReplyAvailable={autoReplyEnabled()} />
+            ) : (
+              <div className="card--rows lq-set__rows">
+                {[["사업자등록번호", org.business_no], ["웹사이트", org.website], ["소재지", org.address], ["대표 담당자", org.contact_name], ["대표 이메일", org.contact_email], ["대표 연락처", org.contact_phone], ["GLP 인증", org.glp_certs.join(" · ")], ["수행 분야", org.categories.join(" · ")]].map(([k, v]) => (
+                  <div key={String(k)} className="kv"><span className="kv__k">{k}</span><span className="kv__v">{v || "-"}</span></div>
+                ))}
+                <p className="lq-set__hint">기관 정보 수정은 대표 담당자가 해요.</p>
+              </div>
             )}
-            <Link href="/cro/awards" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>수주·계약 보고</span>
-              <span style={{ color: "var(--dash)" }}>›</span>
+          </section>
+        ) : (
+          <EmptyState title="소속 기관이 없어요">support@danchu.kr로 알려주세요.</EmptyState>
+        )}
+        <OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} />
+        <ThemeSettings />
+        <nav className="card card--rows lq-set__links" aria-label="바로가기">
+          {canUse(s.org, "tests", todaySeoul()) && (
+            <Link href="/cro/catalog" className="kv">
+              <span>시험 목록 <small>자주 하는 조건, 소요 기간, 표준가</small></span>
+              <CaretRight size={16} aria-hidden="true" />
             </Link>
-            <Link href="/cro/profile" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>내 계정 정보</span>
-              <span style={{ color: "var(--dash)" }}>›</span>
-            </Link>
-            <a href="/terms/cro" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>기관 이용약관</span>
-              <span style={{ color: "var(--dash)" }}>›</span>
-            </a>
-            <a href="/terms" className="kv" style={{ alignItems: "center", color: "var(--ink)" }}>
-              <span>이용약관 · 개인정보처리방침</span>
-              <span style={{ color: "var(--dash)" }}>›</span>
-            </a>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0" }}>
-            <LogoutButton className="b2" style={{ alignSelf: "center", padding: "0 24px" }} />
-            <span style={{ fontSize: 12, color: "var(--ph)" }}>단추 · support@danchu.kr</span>
-          </div>
+          )}
+          <Link href="/cro/awards" className="kv"><span>수주·계약 보고</span><CaretRight size={16} aria-hidden="true" /></Link>
+          <Link href="/cro/profile" className="kv"><span>내 계정 정보</span><CaretRight size={16} aria-hidden="true" /></Link>
+          <a href="/terms/cro" className="kv"><span>기관 이용약관</span><CaretRight size={16} aria-hidden="true" /></a>
+          <a href="/terms" className="kv"><span>이용약관 · 개인정보처리방침</span><CaretRight size={16} aria-hidden="true" /></a>
+        </nav>
+        <div className="lq-set__out">
+          <LogoutButton className="b2" style={{ alignSelf: "center", padding: "0 24px" }} />
+          <span>단추 · support@danchu.kr</span>
         </div>
       </div>
     </>
