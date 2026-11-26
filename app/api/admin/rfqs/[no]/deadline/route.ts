@@ -62,9 +62,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const joined = (open ?? []).filter((i) => occupiesSeat(i));
   // 취소(revoked)·철회 초대는 위 조회와 undecidedOffer 에서 빠진다 (닫힌 링크로 "참여를 결정해 주세요"를 보내지 않는다)
   const undecided = (open ?? []).filter((i) => !occupiesSeat(i) && undecidedOffer(i));
-  await notifyInvitedOrgs(joined, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${rfq.substance} · 새 기한까지 회신할 수 있고, 제출한 견적도 비교표가 열리기 전까지 고칠 수 있습니다. 비교표가 열리면 수정과 다시 제출은 닫힙니다. 회신 링크는 새 기한 +7일까지 열립니다.`, portalHref: "/cro" });
-  await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 안내 링크는 새 기한 +7일까지 열립니다.` });
-  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었습니다`, body: "새 기한까지 견적이 더 도착할 수 있습니다. 비교표는 새 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열립니다. 한 번 열린 비교표는 다시 닫지 않습니다.", href: `/app/r/${rfq.rfq_no}` });
+  await notifyInvitedOrgs(joined, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었어요`, body: `${rfq.substance} · 새 기한까지 회신할 수 있고, 제출한 견적도 비교표가 열리기 전까지 고칠 수 있어요. 비교표가 열리면 수정과 다시 제출은 닫혀요. 회신 링크는 새 기한 +7일까지 열려요.`, portalHref: "/cro" });
+  await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었어요`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 안내 링크는 새 기한 +7일까지 열려요.` });
+  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 회신 기한이 ${replyBy}로 바뀌었어요`, body: "비교표는 새 기한이 지나거나, 참여 결정이 끝난 뒤 참여한 기관이 모두 제출하면 열려요. 한 번 열린 비교표는 다시 닫지 않아요.", href: `/app/r/${rfq.rfq_no}` });
   return NextResponse.json({ ok: true, invites: ids.length, message: `기한을 ${replyBy}로 바꿨습니다.${ids.length ? ` 초대 ${ids.length}건에 안내했습니다.` : ""}` });
 }
 
@@ -106,8 +106,8 @@ async function extendJoinBy(rfq: NonNullable<Awaited<ReturnType<typeof getRfqByN
 
   const { data: offers } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email, status, joined_at, withdrawn_at, revoked_at, expires_at").eq("rfq_id", rfq.id).eq("status", "sent");
   const undecided = (offers ?? []).filter((i) => undecidedOffer(i));
-  await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 참여 결정 기한이 ${joinBy}로 늘었습니다`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 회신 기한${rfq.reply_by ? ` ${rfq.reply_by}` : ""}은 그대로입니다.` });
-  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 기관의 참여 결정 기한을 ${joinBy}로 늘렸습니다`, body: "더 많은 기관이 참여를 결정할 수 있도록 참여 결정 기한을 늘렸습니다. 지명한 기관 몫의 자리는 새 기한까지 비워 둡니다. 회신 기한은 그대로입니다.", href: `/app/r/${rfq.rfq_no}` });
+  await notifyInvitedOrgs(undecided, { kind: "배포", title: `${rfq.rfq_no} 참여 결정 기한이 ${joinBy}로 늘었어요`, body: `${offerLabel(rfq.categories)} · 요약을 보고 참여를 결정해 주세요. 회신 기한${rfq.reply_by ? ` ${rfq.reply_by}` : ""}은 그대로예요.` });
+  if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "배포", title: `${rfq.rfq_no} 기관의 참여 결정 기한을 ${joinBy}로 늘렸어요`, body: "지명한 기관 몫의 자리는 새 기한까지 비워 둬요. 회신 기한은 그대로예요.", href: `/app/r/${rfq.rfq_no}` });
   return NextResponse.json({ ok: true, joinBy: iso, invites: undecided.length, message: `참여 결정 기한을 ${joinBy}로 늘렸습니다.${undecided.length ? ` 참여 결정 전 기관 ${undecided.length}곳에 안내했습니다.` : ""}` });
 }
 

@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   if (re) captureError(re, "org-members:rotated-count", { org: orgId });
   const rotated = n ?? 0;
 
-  await notifyUsers([userId], { kind: "기관", title: `${orgName} 담당자에서 제외됐어요`, body: "더 이상 이 기관의 요청서를 볼 수 없어요. 잘못된 처리라면 기관 대표 담당자에게 확인해 주세요.", href: "/cro" }, { to: [target.email] });
+  await notifyUsers([userId], { kind: "기관", title: `${orgName} 담당자에서 제외됐어요`, body: "이 기관의 요청서는 볼 수 없어요. 잘못된 처리라면 기관 대표 담당자에게 확인해 주세요.", href: "/cro" }, { to: [target.email] });
   const { data: rest } = await sb.from("profiles").select("id").eq("cro_org_id", orgId);
   if (rotated) {
     await notifyUsers((rest ?? []).map((m) => m.id), { kind: "시스템", title: `회신 링크가 새로 발급됐어요 · ${rotated}건`, body: `${target.name || target.email} 담당자를 내보내면서 이전 메일의 회신 링크를 무효화했어요. 제출한 견적과 진행 중인 요청은 받은 요청 화면에서 그대로 보고 이어서 작성할 수 있어요.`, href: "/cro" });

@@ -26,7 +26,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   if (status === "closed") {
     await sb.from("rfq_requests").update({ status: "closed", closed_at: new Date().toISOString() }).eq("id", rfq.id);
     await logEvent(rfq.id, "closed", "종료", undefined, s.userId);
-    if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 요청이 종료되었습니다`, body: "이용해 주셔서 감사합니다. 다음 시험도 단추에서 요청해 주세요.", href: `/app/r/${rfq.rfq_no}` });
+    if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "계약", title: `${rfq.rfq_no} 요청이 종료됐어요`, href: `/app/r/${rfq.rfq_no}` });
     return NextResponse.json({ ok: true, message: "종료 처리했습니다." });
   }
   if (status === "cancelled") {
@@ -35,8 +35,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
     await logEvent(rfq.id, "cancelled", "취소", undefined, s.userId);
     // 기관마다 따로 보낸다. 계정이 없거나 운영자 관리 기관은 로그인이 필요한 /cro 대신 회신 링크(/q)로
     const { data: inv } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email").eq("rfq_id", rfq.id);
-    await notifyInvitedOrgs(inv ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소되었습니다`, body: "의뢰자 사정으로 요청이 취소되어 회신이 닫혔습니다.", portalHref: "/cro" });
-    if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소되었습니다`, href: `/app/r/${rfq.rfq_no}` });
+    await notifyInvitedOrgs(inv ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소됐어요`, body: "의뢰자 사정으로 요청이 취소되어 회신이 닫혔어요.", portalHref: "/cro" });
+    if (rfq.user_id) await notifyUsers([rfq.user_id], { kind: "시스템", title: `${rfq.rfq_no} 요청이 취소됐어요`, href: `/app/r/${rfq.rfq_no}` });
     return NextResponse.json({ ok: true, message: "취소 처리했습니다." });
   }
   if (status === "reopen") {

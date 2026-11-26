@@ -14,8 +14,8 @@ export const runtime = "nodejs";
 function relinkMail(rfqNo: string, replyBy: string, token: string) {
   const link = `${siteUrl()}/q/${token}`;
   return {
-    subject: `[단추] ${rfqNo} 회신 링크가 새로 발급되었습니다`,
-    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크가 새로 발급되었습니다 · ${esc(rfqNo)}</h2><p>기관 담당자 변경으로 이 요청의 회신 링크를 새로 만들었습니다. 이전 메일의 링크는 더 쓸 수 없습니다.<br>제출한 견적은 그대로 남아 있고, 비교표가 열리기 전이면 회신 기한(${esc(replyBy)}) 안에서 아래 링크로 보고 고칠 수 있습니다. 비교표가 열린 뒤에는 보기만 할 수 있습니다.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
+    subject: `[단추] ${rfqNo} 회신 링크가 새로 발급됐어요`,
+    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크 새로 발급 · ${esc(rfqNo)}</h2><p>기관 담당자가 바뀌어 이 요청의 회신 링크를 새로 만들었어요. 이전 메일의 링크는 쓸 수 없어요.<br>제출한 견적은 그대로 남아 있고, 비교표가 열리기 전이면 회신 기한(${esc(replyBy)}) 안에서 아래 링크로 고칠 수 있어요. 비교표가 열린 뒤에는 보기만 할 수 있어요.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
   };
 }
 
@@ -23,8 +23,8 @@ function relinkMail(rfqNo: string, replyBy: string, token: string) {
 function joinedLinkMail(rfqNo: string, replyBy: string, token: string) {
   const link = `${siteUrl()}/q/${token}`;
   return {
-    subject: `[단추] ${rfqNo} 참여하신 요청의 회신 링크를 다시 보내 드립니다`,
-    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크를 다시 보내 드립니다 · ${esc(rfqNo)}</h2><p>이 요청에는 이미 참여하셨습니다. 아래 링크에서 요청서 전체를 보고 견적을 작성하거나 이어서 작성할 수 있습니다.<br>회신 기한은 ${esc(replyBy)}입니다. 제출 전에는 언제든 참여를 철회할 수 있고, 철회하면 청구하지 않습니다.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
+    subject: `[단추] ${rfqNo} 참여하신 요청의 회신 링크`,
+    html: mailWrap(`<h2 style="margin:0 0 12px;font-size:20px">회신 링크 · ${esc(rfqNo)}</h2><p>이미 참여한 요청이에요. 아래 링크에서 요청서 전체를 보고 견적을 쓰거나 이어서 쓸 수 있어요.<br>회신 기한은 ${esc(replyBy)}예요. 제출 전에는 언제든 참여를 철회할 수 있고, 철회하면 청구하지 않아요.</p><p><a href="${esc(link)}">${esc(link)}</a></p>`),
   };
 }
 

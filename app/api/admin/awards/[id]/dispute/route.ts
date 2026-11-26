@@ -41,12 +41,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   };
   if (resolution === "confirm") {
     await logEvent(r.rfq_id, "closed", `계약 이의 정리 · 운영자 확정 · 종료`, `${won(r.contract_amount ?? 0)} · ${note}`, s.userId, { resolution });
-    if (r.user_id) await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용 확인을 마쳤습니다`, body: `단추가 기관과 확인해 계약을 확정했습니다. ${note}`, href: `/app/r/${r.rfq_no}` });
-    await notifyUsers(await members(), { kind: "계약", title: `${r.rfq_no} 계약이 확정되었습니다`, body: "의뢰자 이의를 단추가 확인해 정리했습니다. 요청을 마쳤습니다.", href: "/cro/awards" });
+    if (r.user_id) await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 내용 확인 완료`, body: `단추가 기관과 확인해 계약을 확정했어요. ${note}`, href: `/app/r/${r.rfq_no}` });
+    await notifyUsers(await members(), { kind: "계약", title: `${r.rfq_no} 계약이 확정됐어요`, body: "의뢰자 이의를 단추가 확인해 정리하고 요청을 마쳤어요.", href: "/cro/awards" });
     return NextResponse.json({ ok: true, message: "보고 내용대로 확정하고 요청을 마쳤습니다." });
   }
   await logEvent(r.rfq_id, "contract", `계약 이의 정리 · 보고 취소`, note, s.userId, { resolution });
-  if (r.user_id) await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 보고를 다시 받습니다`, body: `알려 주신 내용을 기관과 확인했습니다. 기관이 계약 내용을 다시 보고하면 그때 확인해 주세요. ${note}`, href: `/app/r/${r.rfq_no}` });
-  await notifyUsers(await members(), { kind: "계약", title: `${r.rfq_no} 계약 내용을 다시 보고해 주세요`, body: `의뢰자 이의를 확인한 결과 보고 내용을 취소했습니다. 실제 체결일과 계약금액으로 다시 보고해 주세요. ${note}`, href: "/cro/awards" });
+  if (r.user_id) await notifyUsers([r.user_id], { kind: "계약", title: `${r.rfq_no} 계약 보고를 다시 받아요`, body: `알려 주신 내용을 기관과 확인했어요. 기관이 계약 내용을 다시 보고하면 그때 확인해 주세요. ${note}`, href: `/app/r/${r.rfq_no}` });
+  await notifyUsers(await members(), { kind: "계약", title: `${r.rfq_no} 계약 내용을 다시 보고해 주세요`, body: `의뢰자 이의를 확인해 보고 내용을 취소했어요. 실제 체결일과 계약금액으로 다시 보고해 주세요. ${note}`, href: "/cro/awards" });
   return NextResponse.json({ ok: true, message: "보고를 취소했습니다. 기관이 다시 보고합니다." });
 }

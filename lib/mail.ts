@@ -51,9 +51,9 @@ const BTN = (href: string, label: string) =>
 /** 인증 메일 - 가입 확인·로그인 링크·비밀번호 재설정 */
 export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: string, link: string): Promise<boolean> {
   const t = {
-    signup: { subject: "[단추] 이메일 확인으로 가입을 완료하세요", h: "가입을 완료하세요", p: "아래 버튼을 누르면 이메일이 확인되고 바로 로그인돼요. 링크는 1시간 동안 유효해요.", b: "이메일 확인하고 시작" },
-    magic: { subject: "[단추] 로그인 링크", h: "로그인 링크예요", p: "아래 버튼을 누르면 비밀번호 없이 로그인돼요. 링크는 1시간 동안 유효하며 한 번만 쓸 수 있어요.", b: "단추 로그인" },
-    recovery: { subject: "[단추] 비밀번호 재설정", h: "비밀번호를 재설정하세요", p: "아래 버튼을 누르면 새 비밀번호를 정할 수 있어요. 요청하지 않았다면 이 메일은 무시하세요.", b: "새 비밀번호 정하기" },
+    signup: { subject: "[단추] 이메일 주소 확인", h: "이메일 주소 확인", p: "아래 버튼을 누르면 이메일이 확인되고 바로 로그인돼요. 링크는 1시간 동안 유효해요.", b: "이메일 확인" },
+    magic: { subject: "[단추] 로그인 링크", h: "로그인 링크", p: "아래 버튼을 누르면 비밀번호 없이 로그인돼요. 링크는 1시간 동안 유효하며 한 번만 쓸 수 있어요.", b: "단추 로그인" },
+    recovery: { subject: "[단추] 비밀번호 재설정", h: "비밀번호 재설정", p: "아래 버튼을 누르면 새 비밀번호를 정할 수 있어요. 요청하지 않았다면 이 메일은 무시해 주세요.", b: "새 비밀번호 정하기" },
   }[kind];
   return sendMail({
     to,
@@ -62,7 +62,7 @@ export async function sendAuthMail(kind: "signup" | "magic" | "recovery", to: st
       <h2 style="margin:0 0 12px;font-size:20px">${t.h}</h2>
       <p>${t.p}</p>
       <p style="margin:24px 0">${BTN(link, t.b)}</p>
-      <p style="font-size:13px;color:#61615c">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣으세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`),
+      <p style="font-size:13px;color:#61615c">버튼이 열리지 않으면 이 주소를 복사해 브라우저에 붙여 넣어 주세요.<br><span style="word-break:break-all">${esc(link)}</span></p>`),
   });
 }
 
@@ -76,12 +76,12 @@ export async function sendCodeMail(to: string, code: string, link: string): Prom
     to,
     subject: `[단추] 인증번호 ${code}`,
     html: mailWrap(`
-      <h2 style="margin:0 0 12px;font-size:20px">요청서를 보내기 전에 이메일을 확인해요</h2>
+      <h2 style="margin:0 0 12px;font-size:20px">요청서 보내기 전 이메일 확인</h2>
       <p>요청서 화면에 아래 번호를 입력해 주세요. 확인이 끝나면 쓰신 요청서가 바로 접수돼요.</p>
       <div style="display:inline-block;background:#f4f4f0;border-radius:4px;padding:14px 26px;margin:8px 0 20px;font-size:30px;font-weight:700;letter-spacing:.18em">${esc(code)}</div>
       <p>화면을 닫았다면 아래 버튼을 눌러 쓰신 요청서를 확인하고 보낼 수 있어요.</p>
-      <p style="margin:24px 0">${BTN(link, "인증하고 요청서 확인하기")}</p>
-      <p style="font-size:13px;color:#61615c">번호와 버튼은 1시간 동안 유효하고, 한 번만 쓸 수 있어요. 요청하지 않았다면 이 메일은 무시하세요. 확인하지 않으면 요청서는 접수되지 않고, 입력한 내용은 7일 뒤 지워져요.</p>`),
+      <p style="margin:24px 0">${BTN(link, "요청서 확인")}</p>
+      <p style="font-size:13px;color:#61615c">번호와 버튼은 1시간 동안 유효하고, 한 번만 쓸 수 있어요. 요청하지 않았다면 이 메일은 무시해 주세요. 확인하지 않으면 요청서는 접수되지 않고, 입력한 내용은 7일 뒤 지워져요.</p>`),
   });
 }
 
@@ -167,9 +167,9 @@ export async function sendRfqMails({ rfqNo, values, fileNames, fileCount, sent, 
     </div>
     <h3 style="font-size:16px;margin:0 0 8px">다음 일정</h3>
     <ol style="padding-left:20px;margin:0 0 20px">${steps}</ol>
-    <p style="font-size:14px;color:#61615c">그 사이에 하실 일은 없어요. 비교표가 열리기 전에는 참여한 기관 수와 제출 수만 앱에서 볼 수 있고, 기관 이름과 금액은 비교표가 열릴 때 함께 보여요. 비교표가 열리면 메일로 알려요.</p>
+    <p style="font-size:14px;color:#61615c">비교표가 열리기 전에는 참여한 기관 수와 제출 수만 보이고, 기관 이름과 금액은 비교표가 열릴 때 함께 보여요. 비교표가 열리면 메일로 알려요.</p>
     <p style="font-size:14px;color:#61615c">시험 항목: ${esc(cats)}<br>시험물질: ${esc(String(values.substance || ""))}</p>
-    <p style="font-size:14px;color:#61615c">의뢰자는 비용이 들지 않아요. ${shareNote}</p>`);
+    <p style="font-size:14px;color:#61615c">${shareNote}</p>`);
 
   const adminHtml = wrap(`
     <h2 style="margin:0 0 12px;font-size:20px">[단추] 새 RFQ 접수 ${esc(rfqNo)}</h2>

@@ -45,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       await sb.from("cro_orgs").update({ managed: false }).eq("id", linkOrg);
       await audit({ userId: s.userId, email: s.email }, "org.terms", { type: "cro_org", id: linkOrg, label: org.name }, { before: { managed: true }, after: { managed: false }, note: `담당자 연결 · ${before?.email ?? id}` });
     }
-    await notifyUsers([id], { kind: "기관", title: `${org?.name ?? "기관"}에 담당자로 연결되었습니다`, body: "이제 기관에 배포된 요청서를 보고 회신할 수 있습니다.", href: "/cro" });
+    await notifyUsers([id], { kind: "기관", title: `${org?.name ?? "기관"}에 담당자로 연결됐어요`, body: "기관에 배포된 요청서를 보고 회신할 수 있어요.", href: "/cro" });
     // 기관 담당자로 연결하면 그 기관이 받을 요청을 바로 채운다
     try {
       await distributeOpenRfqs(linkOrg, s.userId);
@@ -53,7 +53,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       console.error("sync invites", e);
     }
   } else if (!linkOrg && before?.pending_org_id) {
-    await notifyUsers([id], { kind: "기관", title: "기관 합류 신청이 처리되지 않았습니다", body: "신청한 기관에 연결되지 않았습니다. 문의는 support@danchu.kr로 보내주세요.", href: "/cro" });
+    await notifyUsers([id], { kind: "기관", title: "기관 합류 신청이 처리되지 않았어요", body: "신청한 기관에 연결되지 않았어요. 문의는 support@danchu.kr로 보내 주세요.", href: "/cro" });
   }
   return NextResponse.json({ ok: true });
 }
