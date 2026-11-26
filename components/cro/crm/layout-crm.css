@@ -110,3 +110,19 @@
 .cx-panel { padding: 16px; }
 @media (max-width: 1279px) and (min-width: 960px) { .cx-rep { grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; } }
 @media (max-width: 959px) { .cx-rep { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+
+/* ── 캘린더 (기본 규칙은 portal.css) ── */
+.cal .cal__h { align-items: center; }
+.cal .cal__h p b { color: var(--ink); font-weight: 600; }
+.cal .cal-wk, .cal .cal-mo { border: 1px solid var(--card-line); }
+.cal .cal__seg { box-shadow: inset 0 0 0 1px var(--card-line); }
+@media (min-width: 960px) {
+  .cal .cal__body { grid-template-columns: minmax(0, 1fr) 320px; }
+  .cal .cal__side { border: 1px solid var(--card-line); padding: 14px 16px 16px; }
+  .cal .cal-side__h { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .cal .cal__side .cal-list { gap: 0; }
+  .cal .cal__side .cal-list a { background: transparent; border-radius: 0; padding: 10px 0; }
+  .cal .cal__side .cal-list li + li { border-top: 1px solid var(--card-line); }
+}
+.cal .cal__h h1 { font-size: 27px; font-weight: 600; line-height: 1.3; }
+@media (max-width: 959px) { .cal .cal__h h1 { font-size: 22px; } }
