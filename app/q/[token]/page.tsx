@@ -23,10 +23,10 @@ export default async function TokenRequest({ params, searchParams }: { params: P
     const withdraw = got.joined;
     const joinByLabel = got.joinBy ? md(new Date(got.joinBy).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })) : "";
     return (
-      <>
+      <div className="q-center q-center--form">
         <div className="ph">
           <div>
-            <span className="tnum" style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>{got.rfq.no}</span>
+            <span className="q-no">{got.rfq.no}</span>
             <h1>{withdraw ? "이 요청의 참여를 철회해요" : "이번 요청에 불참해요"}</h1>
             <p>
               {withdraw
@@ -36,7 +36,7 @@ export default async function TokenRequest({ params, searchParams }: { params: P
           </div>
         </div>
         <DeclineForm token={token} mode={withdraw ? "withdraw" : "decline"} backHref={`/q/${token}`} afterHref={`/q/${token}`} operator={got.operator} />
-      </>
+      </div>
     );
   }
   const detail = got.joined ? await detailCueOfInvite(got.inviteId, got.rfqId, `/q/${token}`) : null;

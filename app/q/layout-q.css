@@ -1,0 +1,19 @@
+/*
+ * 토큰 회신 링크 (/q, 시안 v7 q-*) 배치. 로그인 없이 위 바만 있는 골격(pt--guest)에 폭만 맞춘다.
+ * 색·글꼴·모서리는 portal.css 토큰 그대로.
+ */
+.pt--q .pt__main { max-width: 1080px; padding-bottom: calc(48px + var(--bot)); }
+.pt--q .pt__tokenhint { text-align: right; line-height: 1.4; }
+@media (max-width: 639px) { .pt--q .pt__tokenhint-lead { display: none; } }
+
+/* 가운데 한 열: 제출 완료, 열 수 없는 링크, 불참 · 철회 확인 */
+.q-center { max-width: 440px; margin: 0 auto; padding-top: 24px; display: flex; flex-direction: column; gap: 16px; }
+.q-center--form { max-width: 560px; }
+.pt .q-center .ph { margin: 0; }
+.q-state__foot { text-align: center; font-size: 13px; color: var(--muted); }
+.q-state__foot a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.q-no { font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* 운영자 대리 입력 안내 */
+.pt .q-note { flex-direction: column; gap: 2px; margin-bottom: 16px; }
+.q-note b { font-weight: 600; }
