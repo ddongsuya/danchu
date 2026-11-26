@@ -12,7 +12,7 @@ type Item = { href: string; label: string; sub: string; need?: PlanFeature };
 const GROUPS: { title: string; items: Item[] }[] = [
   { title: "영업", items: [
     { href: "/cro/clients", label: "고객사", sub: "회사·담당자·회사 전체 기록", need: "crm" },
-    { href: "/cro/reports", label: "보고서", sub: "단계별 전환 · 수주율 · 실패 사유", need: "crm" },
+    { href: "/cro/reports", label: "분석", sub: "단계별 전환 · 수주율 · 실패 사유", need: "crm" },
     { href: "/cro/calendar", label: "캘린더", sub: "이번 주 일정과 할 일", need: "tests" },
     { href: "/cro/import", label: "엑셀 가져오기", sub: "지금 쓰는 고객 엑셀 옮기기", need: "crm" },
   ] },
