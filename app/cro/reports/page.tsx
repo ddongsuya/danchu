@@ -9,6 +9,6 @@ export const dynamic = "force-dynamic";
 export default async function CroReports({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const s = await requireSession("cro");
   const got = await loadCtx(s);
-  if (!got) return <><div className="ph"><div><h1>보고서</h1></div></div><PendingOrg org={s.org} pendingOrg={s.pendingOrg} /></>;
+  if (!got) return <><div className="ph"><div><h1>분석</h1></div></div><PendingOrg org={s.org} pendingOrg={s.pendingOrg} /></>;
   return <ReportsView c={got.c} q={parseReportsQuery(await searchParams)} />;
 }

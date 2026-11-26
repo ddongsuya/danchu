@@ -103,3 +103,10 @@
 .cx-cotabs { box-shadow: inset 0 -1px 0 var(--card-line); margin-top: -6px; }
 .cx-co .cx-grp .cx-filters { gap: 6px; }
 .cx-co .cx-grp .cx-tablewrap--flat .cx-table tbody tr:nth-child(odd) td { background: var(--surface); }
+
+/* ── 분석 ── */
+.cx-rep { grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.cx-rep__col { gap: 16px; }
+.cx-panel { padding: 16px; }
+@media (max-width: 1279px) and (min-width: 960px) { .cx-rep { grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; } }
+@media (max-width: 959px) { .cx-rep { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
