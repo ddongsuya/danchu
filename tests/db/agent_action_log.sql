@@ -47,5 +47,5 @@ begin
   perform pg_temp.t_assert((select relrowsecurity from pg_class where oid = 'public.agent_action_log'::regclass), 'RLS 켜짐');
   perform pg_temp.t_assert(not has_table_privilege('anon', 'public.agent_action_log', 'select'), 'anon 읽기 막힘');
   perform pg_temp.t_assert(not has_table_privilege('authenticated', 'public.agent_action_log', 'insert'), 'authenticated 쓰기 막힘');
-  perform pg_temp.t_eq(public.danchu_schema_version(), 50, '스키마 판 50');
+  perform pg_temp.t_eq(public.danchu_schema_version(), 51, '스키마 판 51');
 end $$;
