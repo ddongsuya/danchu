@@ -51,7 +51,7 @@ const COUNTS = [
   { v: "전체", label: "분야가 맞는 모든 기관" },
 ];
 const CONFID: [string, string][] = [
-  ["일반", "회사명은 선정 뒤"],
+  ["일반", "CDA 없이"],
   ["CDA 필요 (단추 표준 CDA)", "단추 표준 CDA"],
   ["자체 CDA 사용", "자체 CDA"],
 ];
@@ -68,10 +68,13 @@ const eul = (w: string) => {
   return (c - 0xac00) % 28 ? "을" : "를";
 };
 const ymd = (d: Date) => d.toLocaleDateString("sv-SE");
+/** "7월 16일 (금)" */
 const short = (s: string) => {
   const d = new Date(`${s}T00:00:00`);
-  return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, "0")} (${WEEK[d.getDay()]})`;
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEK[d.getDay()]})`;
 };
+/** "7월 16일" */
+const dayOnly = (s: string) => short(s).replace(/ \(.\)$/, "");
 const itemsField = (cat: Cat) => DETAILS[cat].find((f) => f.id === "items" || f.id === "segment");
 const isEmpty = (v: Values[string]) => arr(v).length === 0;
 
@@ -125,7 +128,7 @@ export function ChatRequest({
   const replyBy = typeof values.replyBy === "string" && values.replyBy ? values.replyBy : ymd(addBusinessDays(nowSeoul(), 7));
   const croCount = String(values.croCount || "3곳");
   const confid = String(values.confid || "일반");
-  const sendLabel = croCount === "전체" ? "요청 보내기" : `${croCount}에 보내기`;
+  const sendLabel = "견적 요청 보내기";
 
   /** 다음 질문으로. 적던 글은 비운다 */
   const go = (s: Step) => {
@@ -178,14 +181,14 @@ export function ChatRequest({
 
   switch (step.k) {
     case "name": {
-      q = "시험물질을 뭐라고 부를까요?";
-      hint = "코드명 가능";
+      q = "시험물질명이나 코드명을 알려 주세요.";
+      hint = "";
       ans = composer("예: DC-101", (v) => { onChange("substance", v); answer(q, v, { k: "tests" }); }, true, "시험물질 이름");
       break;
     }
     case "tests": {
       q = `이 시험 ${total}개로 빠른 견적을 받을까요?`;
-      hint = fromSurvey.length ? "빈 조건은 기관이 회신에서 제안" : "빈 조건은 기관이 회신에서 제안";
+      hint = "정하지 않은 조건은 기관이 회신에 적어요";
       body = (
         <div className="cr-card">
           {cats.map((c) => {
@@ -335,7 +338,7 @@ export function ChatRequest({
     }
     case "count": {
       q = "몇 곳에서 견적을 받을까요?";
-      hint = "참여 순서대로 마감";
+      hint = "";
       body = changes.length ? (
         <div className="cr-card">
           <div className="cr-r">
@@ -356,7 +359,7 @@ export function ChatRequest({
             opt(c.label ?? c.v, () => { onChange("croCount", c.v); answer(q, c.label ?? c.v, { k: "deadline" }); }, { sm: c.sm, pri: croCount === c.v }),
           )}
           <button type="button" className="cr-lk" onClick={() => go({ k: "nominees" })}>
-            {arr(values.nominees).length ? `꼭 받을 기관 ${arr(values.nominees).length}곳 고름` : "꼭 받고 싶은 기관이 있으면 골라 주세요"}
+            {arr(values.nominees).length ? `지명 기관 ${arr(values.nominees).length}곳` : "지명 기관 고르기"}
           </button>
         </>
       );
@@ -377,11 +380,11 @@ export function ChatRequest({
     }
     case "deadline": {
       q = "언제까지 회신을 받을까요?";
-      hint = "평일 기준";
+      hint = "";
       const opts = [5, 7, 10].map((n) => ({ n, d: ymd(addBusinessDays(nowSeoul(), n)) }));
       ans = (
         <div className="cr-g2">
-          {opts.map(({ n, d }) => opt(`평일 ${n}일`, () => { onChange("replyBy", d); answer(q, `평일 ${n}일`, { k: "review" }); }, { sm: short(d).slice(0, 5), pri: replyBy === d }))}
+          {opts.map(({ n, d }) => opt(`평일 ${n}일`, () => { onChange("replyBy", d); answer(q, `평일 ${n}일`, { k: "review" }); }, { sm: dayOnly(d), pri: replyBy === d }))}
           {opt("날짜 고르기", () => go({ k: "date" }))}
         </div>
       );
@@ -390,7 +393,7 @@ export function ChatRequest({
     case "date": {
       const min = ymd(addBusinessDays(nowSeoul(), 2));
       q = "회신 받을 날짜를 골라 주세요";
-      hint = "평일 2일 뒤부터 선택 가능";
+      hint = "평일 2일 뒤부터 고를 수 있어요";
       ans = (
         <form
           className="cr-comp"
@@ -408,8 +411,8 @@ export function ChatRequest({
       break;
     }
     case "confid": {
-      q = "회사 정보는 어떻게 공개할까요?";
-      hint = "회사명·연락처는 선정한 기관에만 공개. CDA 선택 시 첨부는 체결 확인 뒤 공개";
+      q = "CDA가 필요한가요?";
+      hint = "회사명과 연락처는 선정한 기관만 볼 수 있습니다. CDA를 고르면 첨부파일은 기관별 체결을 확인한 뒤 공개합니다.";
       ans = <>{CONFID.map(([v, l]) => opt(l, () => { onChange("confid", v); answer(q, l, { k: "review" }); }, { pri: confid === v }))}</>;
       break;
     }
@@ -425,11 +428,11 @@ export function ChatRequest({
       );
       body = (
         <div className="cr-card">
-          <p className="cr-hd">기관이 받을 내용</p>
-          {row(`시험 ${total}개`, changes.length ? <>조건 <mark className="cr-now">{changes.length}개</mark> 고침</> : "설문 조건 그대로", { k: "pick" })}
-          {row("받을 곳", croCount === "전체" ? "분야가 맞는 모든 기관" : croCount, { k: "count" })}
+          <p className="cr-hd">요청 내용</p>
+          {row(`시험 ${total}개`, changes.length ? <>조건 <mark className="cr-now">{changes.length}개</mark> 고침</> : "고친 조건 없음", { k: "pick" })}
+          {row("받을 견적", croCount === "전체" ? "분야가 맞는 모든 기관" : `최대 ${croCount}`, { k: "count" })}
           {row("회신 기한", <span className="cr-mono">{short(replyBy)}</span>, { k: "deadline" })}
-          {row("정보 공개", CONFID.find(([v]) => v === confid)?.[1] ?? confid, { k: "confid" })}
+          {row("공개 범위", CONFID.find(([v]) => v === confid)?.[1] ?? confid, { k: "confid" })}
         </div>
       );
       ans = (
@@ -449,7 +452,7 @@ export function ChatRequest({
             <button type="button" onClick={() => setTerms(true)}>보기</button>
           </div>
           {error && <p className="cr-err" role="alert">{error}</p>}
-          {opt(busy ? "보내는 중이에요" : sendLabel, onSubmit, { pri: true, arrow: !busy, disabled: !agree || busy || preview })}
+          {opt(busy ? "보내는 중" : sendLabel, onSubmit, { pri: true, arrow: !busy, disabled: !agree || busy || preview })}
         </>
       );
       break;
@@ -465,11 +468,11 @@ export function ChatRequest({
       </header>
       <dl className="cr-doc__meta">
         <div><dt>시험물질</dt><dd>{values.substance ? String(values.substance) : <i className="cr-sk" aria-label="아직 정하지 않음" />}</dd></div>
-        <div><dt>받는 곳</dt><dd>{croCount === "전체" ? "분야가 맞는 모든 기관" : `비임상 CRO ${croCount}`}</dd></div>
+        <div><dt>받을 견적</dt><dd>{croCount === "전체" ? "분야가 맞는 모든 기관" : `최대 ${croCount}`}</dd></div>
         <div><dt>회신 기한</dt><dd>{prog < 3 && !values.replyBy ? <i className="cr-sk" aria-label="아직 정하지 않음" /> : short(replyBy)}</dd></div>
         <div><dt>개발 분야</dt><dd>{values.devField ? String(values.devField) : <i className="cr-sk" aria-label="아직 정하지 않음" />}</dd></div>
         <div><dt>제출처</dt><dd>{arr(values.authority).join(", ") || <i className="cr-sk" aria-label="아직 정하지 않음" />}</dd></div>
-        <div><dt>정보 공개</dt><dd>{CONFID.find(([v]) => v === confid)?.[1]}</dd></div>
+        <div><dt>공개 범위</dt><dd>{CONFID.find(([v]) => v === confid)?.[1]}</dd></div>
       </dl>
       <table className="cr-doc__tb">
         <thead>
@@ -499,7 +502,7 @@ export function ChatRequest({
           <tr><td colSpan={2}>시험 {total}개{arr(values.authority).length ? ` · ${arr(values.authority)[0]} 제출` : ""}</td></tr>
         </tfoot>
       </table>
-      <p className="cr-doc__foot">빈 조건은 기관이 회신에서 제안. 회사명·연락처는 선정한 기관에만 공개</p>
+      <p className="cr-doc__foot">정하지 않은 조건은 기관이 회신에 적어요.</p>
     </article>
   );
 
@@ -509,7 +512,7 @@ export function ChatRequest({
         <Link href={closeHref} className="cr-x" aria-label="닫기">
           <X size={20} />
         </Link>
-        <b className="cr-title">빠른 견적 요청</b>
+        <b className="cr-title">새 견적 요청</b>
         <span className="cr-save" role="status">{saveState}</span>
         <button type="button" className="cr-docbtn" onClick={() => setSheet(true)}>
           <FileText size={18} aria-hidden />

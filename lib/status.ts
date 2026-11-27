@@ -8,8 +8,8 @@ export const STAGES: { key: RfqStatus; label: string; pct: number; desc: string 
   { key: "distributed", label: "참여 안내", pct: 25, desc: "분야가 맞는 기관에 참여 안내를 보냈어요. 참여한 기관이 견적을 준비해요" },
   { key: "quoted", label: "견적 도착", pct: 45, desc: "견적이 들어오고 있어요. 비교표가 열리면 기관 이름과 금액이 함께 보여요" },
   // compared: 비교표 공개 (compared_at, 2026-10-20 결정). 참여 결정이 끝난 뒤 참여한 기관이 모두 제출했거나 회신 기한이 지나면 열린다. 선택은 이때부터
-  { key: "compared", label: "비교표 공개", pct: 60, desc: "도착한 견적을 나란히 비교하고 기관을 선택할 수 있어요" },
-  { key: "selected", label: "기관 선택", pct: 75, desc: "선택한 기관과 서로 연락처를 주고받았어요" },
+  { key: "compared", label: "비교표 공개", pct: 60, desc: "도착한 견적을 나란히 비교하고 기관을 선정할 수 있어요" },
+  { key: "selected", label: "기관 선정", pct: 75, desc: "선정한 기관과 서로 연락처를 주고받았어요" },
   { key: "contracting", label: "계약 진행", pct: 88, desc: "기관이 계약 체결을 보고하면 내용을 확인해 주세요" },
   { key: "closed", label: "계약 완료", pct: 100, desc: "계약을 확인하고 요청을 마쳤어요" },
 ];

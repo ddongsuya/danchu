@@ -11,7 +11,7 @@ export function NextStep({ no, kind, cro, croEmail }: { no: string; kind: "no_jo
     );
   return (
     <div className="next-step" role="status">
-      <p><b>선택한 기관({cro})과 계약을 진행해 주세요.</b> 계약은 기관과 직접 맺고, 체결되면 기관이 결과를 보고해요.</p>
+      <p><b>선정한 기관({cro})과 계약을 진행해 주세요.</b> 계약은 기관과 직접 맺고, 체결되면 기관이 결과를 보고해요.</p>
       {croEmail && <div className="next-step__actions"><a href={`mailto:${croEmail}?subject=${encodeURIComponent(`[단추 ${no}] 계약 진행`)}`} className="b1">기관 담당자에게 메일</a></div>}
     </div>
   );

@@ -31,7 +31,7 @@ export default async function QuoteDocPage({ params }: { params: Promise<{ no: s
     <div className="qprint">
       <div className="ph noprint">
         <div>
-          <Crumb href={`/app/r/${rfq.rfq_no}/q/${q.id}`} label={q.cro_name ?? "견적"} />
+          <Crumb href={`/app/r/${rfq.rfq_no}/compare#q-${q.id}`} label={q.cro_name ?? "견적"} />
           <h1>{q.cro_name} 견적서</h1>
           <p>기관이 단추 견적서 툴로 만든 견적서예요. 비교표와 금액이 같아요.</p>
         </div>
