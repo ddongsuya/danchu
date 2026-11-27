@@ -73,7 +73,7 @@ export function ContactView({ c, companyId, contactId }: { c: CrmCtx; companyId:
           <section className="cx-grp" aria-labelledby="ct-qt">
             <div className="cx-grp__h"><h2 id="ct-qt">받은 견적</h2><span className="cx-grp__end tnum">{qRows.length}건</span></div>
             <QuoteTable rows={qRows} people={new Map()} noPerson deals={new Map(coDeals.map((d) => [d.id, [d.title, `${paths.deals}/${d.id}`]]))}
-              empty={<>{person.name}님 앞으로 보낸 견적서가 없어요.</>} />
+              empty={<>{person.name}님 앞으로 보낸 견적서가 없어요</>} />
           </section>
 
           <section className="cx-grp" aria-labelledby="ct-tl">

@@ -77,7 +77,7 @@ export function ContractBox({ deal: d, src, history }: { deal: CrmDeal; src: Dan
           {aw?.contractReportedAt && <div><dt>계약 보고</dt><dd className="tnum">{mdW(ymdKst(aw.contractReportedAt))} · 단추</dd></div>}
           {aw && !aw.contractReportedAt && d.status !== "lost" && <div><dt>계약 보고</dt><dd><Link href="/cro/awards" className="cx-lk">계약 결과 보고하기</Link></dd></div>}
         </dl>
-      ) : <p className="cx-none">아직 계약 전이에요.</p>}
+      ) : <p className="cx-none">아직 계약이 없어요</p>}
     </section>
   );
 }

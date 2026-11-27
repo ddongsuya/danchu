@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { saveStatus } from "@/lib/cro-due";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
@@ -50,6 +51,8 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const [mode, setMode] = useState<Mode>("edit");
   const [pane, setPane] = useState<Pane>("desk");
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "failed">("saved");
+  // 이 화면에서 마지막으로 저장한 시각 (제목 줄 "저장됨 14:02")
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [picker, setPicker] = useState(false);
   const timer = useRef<number>(0);
   const abort = useRef<AbortController | null>(null);
@@ -77,6 +80,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
       }).then((r) => r.ok).catch(() => (ac.signal.aborted ? null : false));
       if (ok === null || mine !== rev.current) return;
       setSaved(ok ? "saved" : "failed");
+      if (ok) setSavedAt(Date.now());
     }, 800);
   };
   useEffect(() => () => { window.clearTimeout(timer.current); abort.current?.abort(); }, []);
@@ -92,7 +96,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const setTest = (u: string, patch: Partial<DocTest>) => setDoc({ tests: data.tests.map((t) => (t.uid === u ? { ...t, ...patch } : t)) });
   const addTest = (t: DocTest) => { setDoc({ tests: [...data.tests, t] }); setPage(`detail:${t.uid}`); setPicker(false); setPane("desk"); };
   const removeTest = async (t: DocTest) => {
-    if (!(await confirm({ title: `"${t.title}" 시험을 견적서에서 빼시겠습니까?`, body: "이 시험에 입력한 설계와 금액도 함께 빠집니다.", confirmLabel: "빼기", danger: true }))) return;
+    if (!(await confirm({ title: `"${t.title}" 시험을 견적서에서 뺄까요?`, body: "이 시험에 입력한 설계와 금액도 함께 빠집니다.", confirmLabel: "빼기", danger: true }))) return;
     const rest = data.tests.filter((x) => x.uid !== t.uid);
     setDoc({ tests: rest });
     setPage(rest[0] ? `detail:${rest[0].uid}` : "cover");
@@ -117,7 +121,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const pdp = pdx && { head, data, t: pdx.t, q: pdx.q, style };
   const pdFix = pdx && !readOnly && <div className="qed__pdfix"><Link className="b2 bsm" href={`/cro/docs/${head.id}/fill?step=detail`}>요청 반영에서 고치기</Link></div>;
   const section = pdx ? (page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 평가항목" : "3부 · 시험 구성") : page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : gk >= 0 ? "5부 · 시험 안내" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
-  const savedLabel = readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
+  const savedLabel = readOnly ? "읽기 전용" : saveStatus(saved, savedAt);
 
   return (
     <div className="qed" data-pane={pane}>
@@ -131,7 +135,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
         </div>
         <div className="qed__actions">
           <span role="status" className="qed__saved" data-s={saved}>{savedLabel}</span>
-          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 연결</button>}
           {!readOnly && <Link className="b2 bsm" href={`/cro/docs/${head.id}/fill`}>질문으로 채우기</Link>}
           <a className="b2 bsm" href={`/api/cro/docs/${head.id}/xlsx`}>엑셀</a>
           <Link className="b2 bsm" href={`/cro/docs/${head.id}/print`}>PDF</Link>
@@ -709,7 +713,7 @@ function DocMenu({ id, onDone }: { id: string; onDone: (href: string) => void })
   const [err, setErr] = useState("");
   const confirm = useConfirm();
   const act = async (action: "copy" | "delete") => {
-    if (action === "delete" && !(await confirm({ title: "이 견적서를 삭제하시겠습니까?", body: "삭제하면 되돌릴 수 없습니다.", confirmLabel: "삭제", danger: true }))) return;
+    if (action === "delete" && !(await confirm({ title: "이 견적서를 삭제할까요?", body: "삭제하면 되돌릴 수 없습니다.", confirmLabel: "삭제", danger: true }))) return;
     setBusy(true); setErr("");
     const r = await fetch(`/api/cro/docs/${id}`, { method: action === "delete" ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: action === "copy" ? JSON.stringify({ action: "copy" }) : undefined }).catch(() => null);
     const d = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;

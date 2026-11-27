@@ -38,6 +38,7 @@
 .bd-menu a[aria-current="true"] { background: var(--band); color: var(--ink); font-weight: 500; }
 .bd-reset { font-size: 13px; color: var(--muted); text-underline-offset: 3px; }
 .bd-n { margin-left: auto; font-size: 13px; color: var(--muted); }
+.bd-due--today { font-weight: 700; color: var(--ink); }
 
 /* 표 + 오른쪽 칸 */
 .bd-split { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px; border-top: 1px solid var(--card-line); min-height: 0; }
@@ -155,3 +156,16 @@
   .bd-fn b { font-size: 18px; }
   .bd-split--adm > .bd-r { display: none; }
 }
+
+/* 불러오는 중 뼈대 (CroSkeleton). 최종 화면과 같은 자리 */
+.cs { display: grid; gap: 16px; padding-top: 8px; }
+.cs-head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.cs-title { height: 32px; width: min(220px, 60%); }
+.cs-seg { height: 36px; width: min(420px, 100%); }
+.cs-flt { height: 32px; width: min(360px, 100%); }
+.cs-split { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; }
+.cs-main, .cs-side { display: grid; gap: 10px; align-content: start; }
+.cs-row { height: 48px; }
+.cs-card { height: 280px; }
+.cs-btn { height: 40px; width: 50%; }
+@media (max-width: 899px) { .cs-split { grid-template-columns: 1fr; } .cs-side { display: none; } }

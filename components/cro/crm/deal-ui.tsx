@@ -12,6 +12,9 @@ import { DEAL_KIND, DEAL_KINDS, LOST_REASONS, STAGES, STAGE_LABEL, WON_REASONS, 
 import { ACT_BODY_MAX, addDaysYmd, todayKst, weekdayKo } from "@/lib/crm-shape";
 import { Err, Field, Select, useSend, useSheetClose, type CrmOpts, type Opt } from "./forms";
 import { FilePicker, uploadCrmFiles } from "./files-ui";
+import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { withRo } from "@/lib/cro-due";
 
 // ─── 새 안건 · 안건 고치기 ───
 type DealDraft = {
@@ -26,6 +29,7 @@ export function DealForm({ opts, deal, preset = {}, base, locked = false }: {
   const close = useSheetClose();
   const router = useRouter();
   const { busy, err, setErr, send } = useSend();
+  const toast = useToast();
   const hid = useId();
   const [v, setV] = useState<DealDraft>(() => ({
     title: deal?.title ?? "", company_id: deal?.company_id ?? preset.company_id ?? "", new_company: "", contact_ids: deal?.contact_ids ?? [], amount: deal?.amount != null ? deal.amount.toLocaleString("ko-KR") : "",
@@ -50,6 +54,7 @@ export function DealForm({ opts, deal, preset = {}, base, locked = false }: {
     const r = await send("deals", deal ? "PATCH" : "POST", deal ? { id: deal.id, ...body } : { ...body, stage: v.stage });
     if (!r) return;
     close();
+    if (!deal) toast("안건을 만들었어요");
     if (!deal && r.id) router.push(`${base}/${r.id}`);
   }
   return (
@@ -160,6 +165,7 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
   const ref = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<"won" | "lost" | null>(null);
   const { busy, err, setErr, send } = useSend();
+  const toast = useToast();
   const [reason, setReason] = useState<string>("");
   const [note, setNote] = useState("");
   const [follow, setFollow] = useState("");
@@ -170,7 +176,11 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
     e.preventDefault();
     if (!reason) return setErr(mode === "won" ? "수주 이유를 하나 골라 주세요." : "실패 사유를 하나 골라 주세요.");
     const r = await send("move", "POST", mode === "won" ? { id: deal.id, status: "won", stage: "contract", won_amount: amount, reason, note } : { id: deal.id, status: "lost", reason, note, follow_up_on: follow || undefined });
-    if (r) ref.current?.close();
+    // 실패는 창 안에서 알리고 상태는 그대로 (시안 검토판 c-deal-won~err · c-deal-lost~err)
+    if (!r) return setErr(mode === "won" ? "수주로 처리하지 못했어요. 안건 상태는 바뀌지 않았어요." : "실패로 처리하지 못했어요. 안건 상태는 바뀌지 않았어요.");
+    ref.current?.close();
+    // 실패 처리는 진행 중 목록에서 빠지므로 되돌리기를 준다 (시안 검토판 c-deals~lost)
+    if (mode === "lost") toast("안건을 실패로 옮겼어요", { action: { label: "되돌리기", onClick: () => { void send("move", "POST", { id: deal.id, status: "open" }); } } });
   }
   if (deal.status !== "open") {
     return (
@@ -179,20 +189,20 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
   }
   return (
     <>
-      <button type="button" className="cx-won" onClick={() => open("won")}>수주</button>
-      <button type="button" className="cx-lost" onClick={() => open("lost")}>실패</button>
+      <button type="button" className="cx-lost" onClick={() => open("lost")}>실패 처리</button>
+      <button type="button" className="cx-won" onClick={() => open("won")}>수주 처리</button>
       <dialog ref={ref} className="cx-dialog" aria-labelledby={hid} onClose={() => setMode(null)} onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}>
         {mode && (
           <form onSubmit={save} className="cx-dialog__in">
             <header>
-              <h2 id={hid}>{mode === "won" ? "수주로 바꿀까요?" : "실패로 바꿀까요?"}</h2>
-              <p>{deal.sub}</p>
+              <h2 id={hid}>{mode === "won" ? "수주로 처리할까요?" : "실패로 처리할까요?"}</h2>
+              <p>{mode === "won" ? "처리하면 안건이 수주로 바뀌고, 수주 이유는 분석의 수주 이유에 모입니다." : "처리하면 안건이 진행 중 목록에서 빠지고, 실패 사유는 분석에 모입니다."}</p>
               <button type="button" className="crm-x" aria-label="닫기" onClick={() => ref.current?.close()}><X size={20} aria-hidden="true" /></button>
             </header>
             {mode === "won" ? (
               <>
-                <ReasonPicker label="수주 이유" list={WON_REASONS} value={reason} onChange={setReason} />
-                <Field label="자세히 (선택)" htmlFor={`${hid}-wn`} help="분석 화면에서 수주 이유별로 모아 봐요.">
+                <ReasonPicker label="수주 이유 (하나)" list={WON_REASONS} value={reason} onChange={setReason} />
+                <Field label="메모 (선택)" htmlFor={`${hid}-wn`}>
                   <textarea id={`${hid}-wn`} className="ta" rows={2} value={note} maxLength={2000} placeholder="예: 회복군 제외안으로 일정을 2주 당길 수 있어서 선택" onChange={(e) => setNote(e.target.value)} />
                 </Field>
                 <Field label="계약 금액" htmlFor={`${hid}-a`} help="분석 화면의 수주 금액이 돼요. 단추 요청은 계약 결과 보고 금액이 따로 남아요.">
@@ -214,7 +224,7 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
             <Err msg={err} />
             <div className="crm-acts">
               <button type="button" className="b2" onClick={() => ref.current?.close()}>취소</button>
-              <button type="submit" className="b1" disabled={busy}>{busy ? "바꾸는 중" : mode === "won" ? "수주로 바꾸기" : "실패로 바꾸기"}</button>
+              <button type="submit" className={mode === "won" ? "b1" : "b1 b1--danger"} disabled={busy}>{busy ? "처리하는 중" : mode === "won" ? "수주 처리" : "실패 처리"}</button>
             </div>
           </form>
         )}
@@ -294,6 +304,7 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
   dealId: string | null; companyId: string | null; contacts: Opt[]; members: Opt[]; me: string; compact?: boolean; autoFocus?: boolean; startTab?: Tab; onDone?: () => void;
 }) {
   const { busy, err, setErr, send } = useSend();
+  const toast = useToast();
   const hid = useId();
   const [tab, setTab] = useState<Tab>(startTab);
   const [body, setBody] = useState("");
@@ -333,6 +344,7 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
       }
     }
     setBody(""); setNextOn(""); setNextTitle(""); setPickDate(false); setFiles([]);
+    toast(tab === "task" ? "할 일을 추가했어요" : "기록을 남겼어요");
     onDone?.();
   }
   return (
@@ -431,13 +443,16 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
   const [over, setOver] = useState<Stage | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
   const { err, send } = useSend();
+  const toast = useToast();
   async function move(id: string, to: Stage) {
     const from = cols.find((c) => c.cards.some((x) => x.id === id));
     if (!from || from.stage === to) return;
     const card = from.cards.find((x) => x.id === id)!;
     const before = cols;
     setCols(cols.map((c) => (c.stage === from.stage ? { ...c, count: c.count - 1, cards: c.cards.filter((x) => x.id !== id) } : c.stage === to ? { ...c, count: c.count + 1, cards: [{ ...card, days: 0 }, ...c.cards] } : c)));
-    if (!(await send("move", "POST", { id, stage: to }))) setCols(before);
+    if (!(await send("move", "POST", { id, stage: to }))) return setCols(before);
+    // 단계 옮김은 바로 처리하고 되돌리기를 준다 (시안 검토판 c-deals~move)
+    toast(`안건을 ${withRo(STAGE_LABEL[to])} 옮겼어요`, { action: { label: "되돌리기", onClick: () => { setCols(before); void send("move", "POST", { id, stage: from.stage }); } } });
   }
   return (
     <>
@@ -485,17 +500,26 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
   );
 }
 
-/** 안건 지우기 (단추에서 온 안건은 서버가 막는다) */
+/** 안건 지우기 (단추에서 온 안건은 서버가 막는다). 되돌릴 수 없어 확인 창에서 처리한다 */
 export function DealDelete({ id, back }: { id: string; back: string }) {
-  const { busy, err, send } = useSend();
-  const [ask, setAsk] = useState(false);
-  if (!ask) return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={() => setAsk(true)}>안건 지우기</button></div>;
-  return (
-    <div className="crm-confirm cx-del">
-      <span className="crm-hint">이 안건의 기록·할 일·일정이 함께 지워져요. 견적서는 안건 없이 남아요.</span>
-      <button type="button" className="b2 b2--danger bsm" disabled={busy} onClick={async () => { if (await send("deals", "DELETE", { id }, { refresh: false })) location.assign(back); }}>지우기</button>
-      <button type="button" className="btxt" onClick={() => setAsk(false)}>취소</button>
-      <Err msg={err} />
-    </div>
-  );
+  const confirm = useConfirm();
+  const ask = async () => {
+    const ok = await confirm({
+      title: "안건을 지울까요?",
+      body: "지우면 이 안건의 기록·할 일·일정이 함께 지워지고 되돌릴 수 없습니다.",
+      confirmLabel: "지우기",
+      pendingLabel: "지우는 중",
+      retryLabel: "다시 지우기",
+      danger: true,
+      action: async () => {
+        const r = await fetch("/api/cro/crm/deals", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
+        if (!r?.ok) {
+          const j = (await r?.json().catch(() => ({}))) as { error?: string } | undefined;
+          throw new Error(r && r.status < 500 && j?.error ? j.error : "안건을 지우지 못했어요. 안건은 그대로예요.");
+        }
+      },
+    });
+    if (ok) location.assign(back);
+  };
+  return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={ask}>안건 지우기</button></div>;
 }

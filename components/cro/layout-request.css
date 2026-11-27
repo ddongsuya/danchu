@@ -197,3 +197,36 @@
 .cr-doc__toolbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .cr-doc__toolbtn:hover:not(:disabled) { border-color: var(--ink); } }
 @media (prefers-reduced-motion: reduce) { .cr-doc__toolbtn { transition: none; } }
+
+/* 시안 검토판 (2026-11-27): 제목 뒤 시험 이름, 띠 실패 모양, 회색 안내 한 줄 */
+.lr-tail { font-weight: 500; color: var(--muted); }
+.lr-ban--bad { border-color: var(--err); border-left-color: var(--err); }
+.lr-ban--bad .lr-ban__t span { color: var(--err); }
+.lr-msg { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 75ch; }
+
+/* 회신 쓰기 (시안 검토판 c-reply): 공통 조건 + 지급 조건 두 칸, 항목 오류, 견적서 PDF 줄, 아래 줄 합계 */
+.lr-grid2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1280px) { .lr-grid2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.lr-grid2 #lr-pay { padding-top: 30px; }
+@media (max-width: 1279px) { .lr-grid2 #lr-pay { padding-top: 0; } }
+.lr-item__err { margin: 6px 0 0; }
+.lr-frow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 10px 12px; border: 1px solid var(--cline); border-radius: var(--r-md); font-size: 14px; }
+.lr-frow__n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.lr-frow__s { color: var(--muted); font-size: 13px; }
+.lr-frow__e { grid-column: 1 / -1; grid-row: 2; font-size: 13px; color: var(--err); }
+.lr-frow--bad { border-color: var(--err); }
+.lr-frow--bad .btxt { grid-row: 1; grid-column: 3; }
+.lr-bar__v--sm { font-size: 15px; font-weight: 600; white-space: normal; }
+.lr-head__state { margin: 0; }
+/* 오른쪽 칸이 생겨 본문이 좁아졌다: 시험 이름 한 줄, 그 아래 가능 여부 · 금액 · 기간 */
+@media (min-width: 1024px) {
+  .lr-reply .lr-items { --lr-cols: 22px minmax(0, 1.3fr) minmax(0, 1fr) 108px; }
+  .lr-reply .lr-items__head { display: none; }
+  .lr-reply .lr-item__row { grid-template-areas: "d n n n" "d a m w"; row-gap: 10px; }
+  .lr-reply .lr-item__done { grid-area: d; }
+  .lr-reply .lr-item__name { grid-area: n; }
+  .lr-reply .lr-item__avail { grid-area: a; }
+  .lr-reply .lr-item__amount { grid-area: m; }
+  .lr-reply .lr-item__weeks { grid-area: w; }
+}
+@media (max-width: 639px) { .lr-bar__v--sm { font-size: 13px; } }

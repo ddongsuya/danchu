@@ -101,7 +101,7 @@ export function TodayView({ c, undecided, reqs = [] }: { c: CrmCtx; undecided: P
                   ))}
                 </ul>
               </>
-            ) : <p className="cx-none">오늘 할 일이 없어요</p>}
+            ) : <div className="cx-t__empty"><span>오늘 할 일이 없어요</span><Link className="b2 bsm" href="/cro/requests">받은 요청 보기</Link></div>}
           </section>
 
           <section aria-labelledby="t-need" className="cx-t__need">

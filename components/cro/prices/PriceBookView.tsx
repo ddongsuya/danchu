@@ -11,6 +11,7 @@ import { CaretDown } from "@phosphor-icons/react";
 import { CAT_FIELDS, PRICE_CATS, PRICE_CAT_LABEL, PRICE_UNIT_LABEL, type PriceCat, type PriceItem, type PriceUnit } from "@/lib/price-book";
 import { PRICE_LISTS, type PickList } from "@/lib/price-lists";
 import type { PriceBook, PriceLog } from "@/lib/price-book-db";
+import { useToast } from "@/components/ui/Toast";
 
 const won = (n: number) => n.toLocaleString("ko-KR");
 
@@ -63,6 +64,7 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(loadError ? "단가표를 불러오지 못했어요. 새로고침해 주세요." : null);
   const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
   /** 휴대폰에서만: 추가·고치기 칸을 전체 화면으로 연다 (넓은 화면은 늘 펼쳐 둔다) */
   const [sheet, setSheet] = useState(false);
 
@@ -138,7 +140,8 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
       setItems((xs) => (form.id ? xs.map((x) => (x.id === it.id ? it : x)) : [...xs, it]));
       setForm(emptyForm(cat));
       setSheet(false);
-      setNote(form.id ? `${it.name} 저장했어요.` : `${it.name} 추가했어요.`);
+      setNote(null);
+      toast("단가표를 저장했어요.");
       void refreshLog();
     } catch (e) {
       setErr((e as Error).message);

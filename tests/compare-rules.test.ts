@@ -61,7 +61,9 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
       expect(s, f).not.toMatch(/회신 기한까지(는)? (수정|고칠)/);
       expect(s, f).not.toMatch(/운영자가 회신을 마감하면|기한을 늘려 다시 연|비교표를 닫고 회신을 다시 받아요/);
     }
-    for (const f of ["components/cro/RequestsBoard.tsx", "components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx"]) expect(src(f), f).toMatch(/열린 뒤에는 (수정하거나|고치거나) 다시 제출할 수 없(습니다|어요)/);
+    expect(src("components/cro/RequestsBoard.tsx")).toMatch(/열린 뒤에는 (수정하거나|고치거나) 다시 제출할 수 없(습니다|어요)/);
+    // 시안 검토판(2026-11-27): 회신 제출 확인 창과 제출 완료 화면은 "비교표가 열리기 전까지" 고칠 수 있다고 쓴다
+    for (const f of ["components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx"]) expect(src(f), f).toMatch(/비교표가 열리기 전까지(는)? 고칠 수 있/);
   });
   it("옮겨 적기 오류는 비교표가 열리기 전에만 바로잡고, 열린 뒤에는 고치지 않고 알린다 (약관 제8조·화면이 같은 말)", () => {
     for (const f of ["app/terms/page.tsx", "lib/faq-page.ts", "components/CompareBoard.tsx"]) {
@@ -74,8 +76,9 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
   });
   it("열린 요청의 만료 링크는 연장 안내 대신 닫힌 이유를, 완료 화면은 닫혔으면 수정하기를 숨긴다", () => {
     const form = visible(src("components/cro/ReplyForm.tsx"));
-    expect(form.indexOf("data.closed ? data.closedMessage")).toBeGreaterThan(-1);
-    expect(form.indexOf("data.closed ? data.closedMessage")).toBeLessThan(form.indexOf("연장이 필요하면"));
+    // 닫힌 이유를 만료 안내보다 먼저 본다 (시안 검토판: 만료 문구는 "볼 수만 있어요")
+    expect(form.indexOf("const roText = data.closed")).toBeGreaterThan(-1);
+    expect(form.indexOf("const roText = data.closed")).toBeLessThan(form.indexOf("만료된 링크예요"));
     expect(src("components/cro/ReplyDone.tsx")).toContain("{!closed && <Link href={editHref}");
     expect(src("app/q/[token]/reply/done/page.tsx")).toContain("closed={!!got?.closed}");
     expect(src("app/cro/r/[id]/reply/page.tsx")).toContain("closed={!!got?.closed}");

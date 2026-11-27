@@ -10,6 +10,7 @@ import { ArrowRight, Check, FileXls, UploadSimple } from "@phosphor-icons/react"
 import { IMPORT_FIELDS, LOST_REASONS, STAGES, STAGE_LABEL, guessField, guessStage, planImport, type ImportField, type ImportMode, type StageValue } from "@/lib/crm-deals";
 import { readCsv, readXlsx, type ReadSheet } from "@/lib/xlsx-read";
 import { Err } from "./forms";
+import "@/components/cro/layout-request.css";
 
 type Co = { id: string; name: string; aliases: string[]; biz_no: string };
 type Mem = { id: string; name: string };
@@ -37,6 +38,7 @@ export function ImportFlow({ companies, members, me, paths }: { companies: Co[];
   const [mode, setMode] = useState<ImportMode>("merge");
   const [owner, setOwner] = useState(me);
   const [err, setErr] = useState("");
+  const [bad, setBad] = useState<{ name: string; size: number; err: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ id: string; companies: number; merged: number; contacts: number; deals: number; skipped: number; undone?: boolean } | null>(null);
 
@@ -64,8 +66,11 @@ export function ImportFlow({ companies, members, me, paths }: { companies: Co[];
 
   async function pick(f: File | undefined) {
     setErr("");
+    setBad(null);
     if (!f) return;
-    if (f.size > 8 * 1024 * 1024) return setErr("8MB보다 큰 파일은 가져올 수 없어요. 필요한 시트만 남겨 저장해 주세요.");
+    // 실패한 파일은 그 줄에 이유와 다시 올리기 (시안 검토판 c-import~badfile)
+    if (!/\.(xlsx|csv|tsv)$/i.test(f.name)) return setBad({ name: f.name, size: f.size, err: "엑셀(xlsx)이나 CSV 파일만 올릴 수 있어요." });
+    if (f.size > 8 * 1024 * 1024) return setBad({ name: f.name, size: f.size, err: `${Math.ceil(f.size / 1024 / 1024)}MB예요. 8MB 이하로 줄여 다시 올려 주세요.` });
     try {
       const isCsv = /\.(csv|tsv|txt)$/i.test(f.name);
       const bytes = new Uint8Array(await f.arrayBuffer());
@@ -166,9 +171,17 @@ export function ImportFlow({ companies, members, me, paths }: { companies: Co[];
         <section className="cx-panel cx-drop">
           <FileXls size={36} aria-hidden="true" />
           <h2>지금 쓰는 고객 엑셀을 골라 주세요</h2>
-          <p className="cx-cap">.xlsx 나 .csv 파일, 첫 줄에 열 이름이 있는 시트. 한 번에 {MAX.toLocaleString("ko-KR")}줄까지 가져와요. 파일은 이 브라우저에서만 읽고 올리지 않아요.</p>
-          <label className="b1 cx-file" htmlFor={`${hid}-f`}><UploadSimple size={16} aria-hidden="true" />파일 고르기</label>
-          <input id={`${hid}-f`} type="file" className="sr-only" accept=".xlsx,.csv,.tsv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => pick(e.target.files?.[0])} />
+          <p className="cx-cap">엑셀(xlsx)이나 CSV, 8MB 이하</p>
+          {bad && (
+            <div className="lr-frow lr-frow--bad cx-badfile" role="alert">
+              <span className="lr-frow__n">{bad.name}</span>
+              <span className="lr-frow__s tnum">{(bad.size / 1024 / 1024).toFixed(1)}MB</span>
+              <span className="lr-frow__e">{bad.err}</span>
+              <label className="btxt" htmlFor={`${hid}-f`}>다시 올리기</label>
+            </div>
+          )}
+          {!bad && <label className="b1 cx-file" htmlFor={`${hid}-f`}><UploadSimple size={16} aria-hidden="true" />파일 고르기</label>}
+          <input id={`${hid}-f`} type="file" className="sr-only" accept=".xlsx,.csv,.tsv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
           <Err msg={err} />
         </section>
       )}

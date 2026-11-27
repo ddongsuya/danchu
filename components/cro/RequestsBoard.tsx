@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { LockSimple, MagnifyingGlass, CaretDown } from "@phosphor-icons/react/dist/ssr";
 import { TAB_LABEL, type PipeItem, type PipeTab } from "@/lib/pipeline";
-import { dday, won, ymd } from "@/lib/format";
+import { md as mdKo, won, ymd } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { contractReportDue } from "@/lib/contract-reminder";
+import { daysLeft, replyDueLabel, sortReceived } from "@/lib/cro-due";
+import type { listAwardsForOrg } from "@/lib/data";
+import { contractConfirmState } from "@/lib/status";
+import { GAP_REASON_LABEL, isGapReason } from "@/lib/contract-gap";
 import { ContractReport } from "./ContractReport";
 import { SubstanceForm } from "./SubstanceForm";
 import type { CroPaths } from "./Pipeline";
@@ -16,7 +21,7 @@ import "./board.css";
  * 거르기 값과 검색은 주소(?tab ?q ?cat ?due ?glp ?sp ?sel)에 두어 새로고침·뒤로 가기에도 남는다.
  */
 export type Tab = "all" | Exclude<PipeTab, "other">;
-export type BoardQuery = { tab: Tab; q: string; cat: string; due: string; glp: string; sp: string; sel: string | null };
+export type BoardQuery = { tab: Tab; q: string; cat: string; due: string; glp: string; sp: string; sel: string | null; sort?: "" | "due" };
 export type AwardLite = {
   id: string;
   inviteId: string | null;
@@ -35,8 +40,34 @@ export type AwardLite = {
   gapReason: string;
   contractNote: string;
   confirmLabel: string;
-  client: { company: string; name: string; email: string; phone: string };
+  client: { company: string; orgType: string; name: string; email: string; phone: string };
 };
+
+type AwardRow = Awaited<ReturnType<typeof listAwardsForOrg>>[number];
+
+/** 선정 탭 한 줄 (선정 뒤라 의뢰자 연락처가 열려 있다, identityVisible). 기관 화면에는 의뢰자 이의 사유를 보이지 않는다 */
+export function awardLiteOf(a: AwardRow): AwardLite {
+  return {
+    id: a.id,
+    inviteId: a.invite_id ?? null,
+    no: a.rfq?.rfq_no ?? "",
+    title: a.rfq?.substance ?? "",
+    awardedAt: a.awarded_at,
+    reportedAt: a.contract_reported_at ?? null,
+    contractAmount: a.contract_amount ?? null,
+    quoteAmount: a.quoteAmount,
+    substanceQty: a.substance_qty ?? "",
+    substanceWhen: a.substance_when ?? "",
+    substanceNote: a.substance_note ?? "",
+    substanceAt: a.substance_updated_at ?? null,
+    sponsorSigned: a.sponsor_contract_status === "signed",
+    contractDate: a.contract_date ?? null,
+    gapReason: a.contract_gap_reason && isGapReason(a.contract_gap_reason) ? GAP_REASON_LABEL[a.contract_gap_reason] : "",
+    contractNote: a.contract_note ?? "",
+    confirmLabel: contractConfirmState(a, { includeNote: false })?.label ?? "",
+    client: { company: a.rfq?.company ?? "", orgType: a.rfq?.org_type ?? "", name: a.rfq?.contact_name ?? "", email: a.rfq?.email ?? "", phone: a.rfq?.phone ?? "" },
+  };
+}
 
 const TABS: Tab[] = ["all", "new", "draft", "sent", "won"];
 const DUE_OPTS: [string, string][] = [["7", "7일 안"], ["14", "14일 안"], ["30", "30일 안"]];
@@ -50,6 +81,7 @@ export function href(base: string, q: BoardQuery, patch: Partial<BoardQuery>): s
   if (m.due) sp.set("due", m.due);
   if (m.glp) sp.set("glp", m.glp);
   if (m.sp) sp.set("sp", m.sp);
+  if (m.sort) sp.set("sort", m.sort);
   if (m.sel) sp.set("sel", m.sel);
   const s = sp.toString();
   return s ? `${base}?${s}` : base;
@@ -80,6 +112,22 @@ function Pill({ item }: { item: PipeItem }) {
   return <span className={`bd-pill ${kind}`}>{item.stageLabel}</span>;
 }
 
+const SORTS: ["" | "due", string][] = [["", "받은 날 최근 순"], ["due", "회신 기한 가까운 순"]];
+
+function SortMenu({ base, q }: { base: string; q: BoardQuery }) {
+  const cur = SORTS.find(([v]) => v === (q.sort ?? "")) ?? SORTS[0];
+  return (
+    <details className="bd-chip bd-chip--sort">
+      <summary>{cur[1]}<CaretDown size={12} aria-hidden="true" /></summary>
+      <div className="bd-menu" role="list">
+        {SORTS.map(([v, l]) => (
+          <Link role="listitem" key={l} href={href(base, q, { sort: v, sel: null })} scroll={false} aria-current={v === cur[0] ? "true" : undefined}>{l}</Link>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function Chip({ label, value, opts, base, q, k }: { label: string; value: string; opts: [string, string][]; base: string; q: BoardQuery; k: "cat" | "due" | "glp" | "sp" }) {
   if (!opts.length) return null;
   const cur = opts.find(([v]) => v === value);
@@ -103,11 +151,10 @@ export function RequestsBoard({ items, awards, query, paths, companyOf, today, b
   const counts: Record<Tab, number> = { all: items.length, new: 0, draft: 0, sent: 0, won: 0 };
   for (const x of items) if (x.tab !== "other") counts[x.tab]++;
   const tabs = TABS.filter((t) => t !== "won" || counts.won > 0 || query.tab === "won");
-  // 표는 받은 날 최근 순 (시안 c-req). 할 일 순서는 "오늘" 화면이 맡는다
-  const shown = filterItems(items, query, today).sort((a, b) => b.sentAt.localeCompare(a.sentAt) || b.no.localeCompare(a.no));
+  // 기본은 받은 날 최근 순 (시안 검토판 c-req). 정렬 고르기에서 회신 기한 가까운 순(지난 기한은 뒤로)
+  const shown = sortReceived(filterItems(items, query, today), query.sort ?? "", today);
   const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
   const catOpts = uniq(items.flatMap((x) => x.cats.split(" · "))).map((v) => [v, v] as [string, string]);
-  const glpOpts = uniq(items.flatMap((x) => x.glp)).map((v) => [v, v] as [string, string]);
   const spOpts = uniq(items.flatMap((x) => x.species)).map((v) => [v, v] as [string, string]);
   const filtered = !!(query.q || query.cat || query.due || query.glp || query.sp);
 
@@ -125,41 +172,46 @@ export function RequestsBoard({ items, awards, query, paths, companyOf, today, b
         </nav>
         <form className="bd-search" action={base} role="search">
           {query.tab !== "all" && <input type="hidden" name="tab" value={query.tab} />}
+          {query.sort && <input type="hidden" name="sort" value={query.sort} />}
           <MagnifyingGlass size={16} aria-hidden="true" />
           <input name="q" defaultValue={query.q} placeholder="요청 번호·시험 이름" aria-label="요청 번호·시험 이름 검색" />
         </form>
       </div>
 
       {query.tab === "won" ? (
-        <WonView awards={awards} query={query} base={base} />
+        <WonView awards={awards} query={query} base={base} today={today} />
       ) : (
         <>
           <div className="bd-flt">
             <Chip label="시험 종류" k="cat" value={query.cat} opts={catOpts} base={base} q={query} />
             <Chip label="회신 기한" k="due" value={query.due} opts={DUE_OPTS} base={base} q={query} />
-            <Chip label="GLP" k="glp" value={query.glp} opts={glpOpts} base={base} q={query} />
             <Chip label="동물종" k="sp" value={query.sp} opts={spOpts} base={base} q={query} />
-            {filtered && <Link href={href(base, query, { q: "", cat: "", due: "", glp: "", sp: "", sel: null })} className="bd-reset" scroll={false}>거르기 해제</Link>}
+            {filtered && <Link href={href(base, query, { q: "", cat: "", due: "", glp: "", sp: "", sel: null })} className="bd-reset" scroll={false}>필터 지우기</Link>}
+            <SortMenu base={base} q={query} />
             <span className="bd-n tnum">{shown.length}건</span>
           </div>
-          {query.tab === "sent" ? <SentView items={shown} /> : <MainView items={shown} query={query} base={base} paths={paths} companyOf={companyOf} filtered={filtered} />}
+          {query.tab === "sent" ? <SentView items={shown} query={query} base={base} /> : <MainView items={shown} query={query} base={base} paths={paths} companyOf={companyOf} today={today} />}
         </>
       )}
     </div>
   );
 }
 
-function Empty({ filtered, base, query }: { filtered: boolean; base: string; query: BoardQuery }) {
-  return (
-    <div className="bd-empty">
-      <b>{filtered ? "맞는 요청이 없어요" : "이 단계의 요청이 없어요"}</b>
-      {filtered && <Link href={href(base, query, { q: "", cat: "", due: "", glp: "", sp: "", sel: null })} className="b2 bsm">거르기 해제</Link>}
-    </div>
-  );
+/** 비어 있는 표: 검색 0건 · 필터 0건 · 이 단계에 없음을 나눈다 (시안 c-req~zero · ~fz) */
+function Empty({ base, query, none = "이 단계의 요청이 없어요", noun = "요청", back = false }: { base: string; query: BoardQuery; none?: string; noun?: string; back?: boolean }) {
+  const clear = href(base, query, { q: "", cat: "", due: "", glp: "", sp: "", sel: null });
+  if (query.q) return <EmptyState kind="filtered" title={`'${query.q}'와 맞는 ${noun}이 없어요`} action={<Link href={href(base, query, { q: "", sel: null })} className="b2 bsm">검색 지우기</Link>} />;
+  if (query.cat || query.due || query.glp || query.sp) return <EmptyState kind="filtered" title={`조건에 맞는 ${noun}이 없어요`} clearHref={clear} />;
+  return <EmptyState kind="first" title={none} action={back ? <Link href={base} className="b2 bsm">받은 요청 보기</Link> : undefined} />;
 }
 
-function MainView({ items, query, base, paths, companyOf, filtered }: { items: PipeItem[]; query: BoardQuery; base: string; paths: CroPaths; companyOf: Record<string, string>; filtered: boolean }) {
-  if (!items.length) return <Empty filtered={filtered} base={base} query={query} />;
+function DueCell({ item, today }: { item: PipeItem; today: string }) {
+  const d = replyDueLabel(item.replyBy, today);
+  return d.today ? <b className="bd-due--today">{d.text}</b> : <>{d.text}</>;
+}
+
+function MainView({ items, query, base, paths, companyOf, today }: { items: PipeItem[]; query: BoardQuery; base: string; paths: CroPaths; companyOf: Record<string, string>; today: string }) {
+  if (!items.length) return <Empty base={base} query={query} />;
   const active = items.find((x) => x.id === query.sel) ?? items[0];
   return (
     <div className="bd-split">
@@ -175,7 +227,7 @@ function MainView({ items, query, base, paths, companyOf, filtered }: { items: P
                 <td className="bd-tt">{x.tests}</td>
                 <td className="bd-mut">{x.cond || "-"}</td>
                 <td className="tnum">{md(x.sentAt)}</td>
-                <td className="tnum">{md(x.replyBy)}</td>
+                <td className="tnum"><DueCell item={x} today={today} /></td>
                 <td><Pill item={x} /></td>
               </tr>
             ))}
@@ -186,20 +238,21 @@ function MainView({ items, query, base, paths, companyOf, filtered }: { items: P
             <li key={x.id}>
               <Link href={`/cro/r/${x.id}`}>
                 <span className="bd-ls__t"><span className="bd-mo">{x.no}</span> · {x.tests}</span>
-                <span className="bd-ls__s tnum">{[x.cond, md(x.sentAt), md(x.replyBy)].filter((v) => v && v !== "-").join(" · ")}</span>
+                <span className="bd-ls__s tnum">{[x.cond, md(x.sentAt), replyDueLabel(x.replyBy, today).text].filter((v) => v && v !== "-").join(" · ")}</span>
                 <Pill item={x} />
               </Link>
             </li>
           ))}
         </ul>
       </div>
-      <Detail item={active} paths={paths} companyOf={companyOf} />
+      <Detail item={active} paths={paths} companyOf={companyOf} today={today} />
     </div>
   );
 }
 
-function Detail({ item, paths, companyOf }: { item: PipeItem; paths: CroPaths; companyOf: Record<string, string> }) {
-  const dd = item.replyBy ? dday(item.replyBy) : null;
+function Detail({ item, paths, companyOf, today }: { item: PipeItem; paths: CroPaths; companyOf: Record<string, string>; today: string }) {
+  const due = replyDueLabel(item.replyBy, today);
+  const dd = due.today ? "오늘 마감" : item.replyBy >= today ? due.text.split(" · ")[1] : "";
   const props: [string, React.ReactNode][] = [
     ["시험", item.tests],
     [
@@ -207,12 +260,12 @@ function Detail({ item, paths, companyOf }: { item: PipeItem; paths: CroPaths; c
       item.client ? (
         item.clientKey && paths.clients ? <Link href={companyOf[item.clientKey] ? `${paths.clients}/${companyOf[item.clientKey]}` : paths.clients}>{item.client}</Link> : item.client
       ) : (
-        <span className="bd-lock"><LockSimple size={13} aria-hidden="true" />{item.clientHint.replace(" · 이름은 선정 뒤 공개", "")} · 선정 뒤 공개</span>
+        <span className="bd-lock"><LockSimple size={13} aria-hidden="true" />{item.clientHint}</span>
       ),
     ],
     ["분야", item.cats || "-"],
     ...(item.cond ? ([["조건", item.cond]] as [string, string][]) : []),
-    ...(item.replyBy ? ([["회신 기한", `${md(item.replyBy)}${dd && item.tab !== "sent" && item.tab !== "other" ? ` (${dd.label})` : ""}`]] as [string, string][]) : []),
+    ...(item.replyBy ? ([["회신 기한", `${md(item.replyBy)}${dd && item.tab !== "sent" && item.tab !== "other" ? ` (${dd})` : ""}`]] as [string, string][]) : []),
     ...item.money.filter(([k]) => k !== "회신 기한"),
     ["다음 할 일", item.next],
   ];
@@ -241,8 +294,8 @@ function Detail({ item, paths, companyOf }: { item: PipeItem; paths: CroPaths; c
   );
 }
 
-function SentView({ items }: { items: PipeItem[] }) {
-  if (!items.length) return <div className="bd-empty"><b>제출한 견적이 없어요</b></div>;
+function SentView({ items, query, base }: { items: PipeItem[]; query: BoardQuery; base: string }) {
+  if (!items.length) return <Empty base={base} query={query} none="제출한 견적이 없어요" noun="견적" back />;
   return (
     <div className="bd-full">
       <p className="bd-cap">비교표가 열린 뒤에는 고치거나 다시 제출할 수 없어요.</p>
@@ -279,10 +332,17 @@ function SentView({ items }: { items: PipeItem[] }) {
   );
 }
 
-function WonView({ awards, query, base }: { awards: AwardLite[]; query: BoardQuery; base: string }) {
+/** "7월 26일 (D-12)". 계약 결과 보고 기한은 선정 뒤 14일 (lib/contract-reminder.ts) */
+function reportDue(awardedAt: string, today: string): string {
+  const due = new Date(contractReportDue(awardedAt)).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+  const n = daysLeft(due, today);
+  return `${mdKo(due)} (${n === 0 ? "오늘 마감" : n < 0 ? "기한 지남" : `D-${n}`})`;
+}
+
+function WonView({ awards, query, base, today }: { awards: AwardLite[]; query: BoardQuery; base: string; today: string }) {
   const needle = query.q.trim().toLowerCase();
   const list = needle ? awards.filter((a) => `${a.no} ${a.title}`.toLowerCase().includes(needle)) : awards;
-  if (!list.length) return <div className="bd-empty"><b>{needle ? "맞는 요청이 없어요" : "아직 선정된 요청이 없어요"}</b></div>;
+  if (!list.length) return <Empty base={base} query={query} none="아직 선정된 요청이 없어요" back />;
   const a = list.find((x) => x.id === query.sel) ?? list.find((x) => !x.reportedAt) ?? list[0];
   return (
     <div className="bd-split bd-split--won">
@@ -319,11 +379,11 @@ function WonView({ awards, query, base }: { awards: AwardLite[]; query: BoardQue
           <h2 id="bd-won-title"><span className="bd-mo">{a.no}</span> · {a.title}</h2>
         </div>
         <dl className="bd-pr">
-          <div><dt>의뢰자</dt><dd>{a.client.company}</dd></div>
+          <div><dt>의뢰자</dt><dd>{[a.client.company, a.client.orgType].filter(Boolean).join(" · ")}</dd></div>
           <div><dt>담당</dt><dd>{[a.client.name, a.client.email, a.client.phone].filter(Boolean).join(" · ")}</dd></div>
-          <div><dt>선정일</dt><dd className="tnum">{ymd(a.awardedAt)}</dd></div>
-          {!a.reportedAt && <div><dt>보고 기한</dt><dd className="tnum">{ymd(contractReportDue(a.awardedAt))}</dd></div>}
-          <div><dt>선정 금액</dt><dd className="tnum">{a.quoteAmount != null ? won(a.quoteAmount) : "-"}</dd></div>
+          <div><dt>선정일</dt><dd className="tnum">{mdKo(a.awardedAt)}</dd></div>
+          {!a.reportedAt && <div><dt>보고 기한</dt><dd className="tnum">{reportDue(a.awardedAt, today)}</dd></div>}
+          <div><dt>선정 금액</dt><dd className="tnum">{a.quoteAmount != null ? a.quoteAmount.toLocaleString("ko-KR") : "-"}</dd></div>
           {a.reportedAt && <div><dt>체결일</dt><dd className="tnum">{a.contractDate ?? "-"}</dd></div>}
           {a.reportedAt && <div><dt>계약 금액</dt><dd className="tnum">{won(a.contractAmount ?? 0)}</dd></div>}
           {a.reportedAt && a.gapReason && <div><dt>차이 사유</dt><dd>{a.gapReason}</dd></div>}

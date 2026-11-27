@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CroOrg } from "@/lib/auth";
 import { CATS } from "@/lib/rfq-schema";
+import { useToast } from "@/components/ui/Toast";
 
 const GLP_OPTS = ["식약처(KGLP)", "OECD GLP", "US FDA GLP", "US EPA GLP", "기후에너지환경부·국립환경과학원", "농촌진흥청", "농림축산검역본부"];
 
@@ -20,6 +21,7 @@ export function OrgForm({ org, autoReplyAvailable = false }: { org: CroOrg; auto
   const [autoReply, setAutoReply] = useState<boolean>(!!org.auto_reply);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const toast = useToast();
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const toggle = (list: string[], setList: (v: string[]) => void, v: string) => setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -32,7 +34,7 @@ export function OrgForm({ org, autoReplyAvailable = false }: { org: CroOrg; auto
       const res = await fetch("/api/cro/org", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, glpCerts: glp, categories: cats, aaalac, autoReply }) });
       const d = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(d.error || "저장하지 못했어요.");
-      setMsg({ ok: true, text: "저장했어요." });
+      toast("기본 정보를 저장했어요.");
       router.refresh();
     } catch (err) {
       setMsg({ ok: false, text: err instanceof Error ? err.message : "저장하지 못했어요." });

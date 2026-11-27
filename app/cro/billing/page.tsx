@@ -12,6 +12,7 @@ import { comma, todaySeoul, ymd } from "@/lib/format";
 import "@/components/cro/plan/plan.css";
 import "@/components/cro/layout-quote.css";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ async function Invoices({ orgId, today }: { orgId: string; today: string }) {
     ? await sb.from("billing_invoices").select("id, invoice_no, month, total, due_date, status, paid_on").eq("org_id", orgId).neq("status", "void").order("month", { ascending: false })
     : { data: [], error: null };
   const list = (data ?? []) as Pick<BillingInvoiceRow, "id" | "invoice_no" | "month" | "total" | "due_date" | "status" | "paid_on">[];
-  if (error) return <div className="note note--warn" role="alert">청구서를 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>;
+  if (error) return <ErrorState title="청구서를 불러오지 못했어요" />;
   if (!list.length) return <EmptyState title="아직 청구서가 없어요" />;
   return (
     <div className="card tbl-wrap">

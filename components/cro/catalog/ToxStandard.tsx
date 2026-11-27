@@ -15,6 +15,7 @@ import { defaultGroupNames, defaultRates, standardGroups, uid, type Rate } from 
 import type { ToxGroup } from "@/lib/kind-design";
 import type { PriceItem } from "@/lib/price-book";
 import { animalPriceFor } from "@/lib/tox-price";
+import { useToast } from "@/components/ui/Toast";
 import type { Cat, Values } from "@/lib/rfq-schema";
 import { CondPick, CondPrices, DesignFields, IncludesField, Int, MethodField, Money, OptionsField, RateRow, baseLabel, multi, postJson, priceOf } from "./TestList";
 import { TIn } from "./ModelStandard";
@@ -41,6 +42,7 @@ export function ToxStandard({ row: initial, siblings, rates, book, readOnly = fa
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
   const set = (p: Partial<CatalogRow>) => { setD((s) => ({ ...s, ...p })); setDirty(true); setNote(null); };
 
   const groups = standardGroups(d);
@@ -83,7 +85,8 @@ export function ToxStandard({ row: initial, siblings, rates, book, readOnly = fa
       if (local) {
         setD(next);
         setDirty(false);
-        setNote("표준으로 저장했어요.");
+        setNote(null);
+        toast("표준 시험을 저장했어요.");
         return;
       }
       const same = siblings.map((r) => (r.id === next.id ? next : r));
@@ -92,7 +95,8 @@ export function ToxStandard({ row: initial, siblings, rates, book, readOnly = fa
       const saved = res.rows?.find((r) => r.id === next.id);
       if (saved) setD({ ...saved, std_price: priceOf(saved) });
       setDirty(false);
-      setNote("표준으로 저장했어요.");
+      setNote(null);
+        toast("표준 시험을 저장했어요.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {
