@@ -1775,6 +1775,7 @@
 .pt .ix-dialog__title { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.4; text-wrap: balance; }
 .pt .ix-dialog__body { font-size: 14px; color: var(--body); line-height: 1.65; }
 .pt .ix-dialog__acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.pt .ix-dialog__err { margin: 10px 0 0; font-size: 13px; color: var(--err, #b42318); }
 /* 휴대폰: 아래에서 올라오는 시트 0.28초 */
 @media (max-width: 639px) {
   .pt .ix-dialog {
