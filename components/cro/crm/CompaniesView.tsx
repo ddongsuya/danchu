@@ -187,7 +187,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                       </tbody>
                     </table>
                   </div>
-                ) : <p className="cx-none">이 고객사의 안건이 없어요.</p>}
+                ) : <p className="cx-none">이 고객사의 안건이 없어요</p>}
               </section>
 
               <section className="cx-grp" aria-labelledby="co-recent">
@@ -201,7 +201,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                       </section>
                     ))}
                   </div>
-                ) : <p className="cx-none">아직 기록이 없어요.</p>}
+                ) : <p className="cx-none">아직 기록이 없어요</p>}
               </section>
             </div>
 
@@ -289,7 +289,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
             <span className="cx-grp__end tnum">{qRows.length}건 · 선정 {qRows.filter((r) => r.result.tone === "won").length} · 실패 {qRows.filter((r) => r.result.tone === "lost").length}</span>
           </div>
           <QuoteTable rows={qRows} people={people} personHref={contactHref} deals={new Map(coDeals.map((d) => [d.id, [d.title, `${paths.deals}/${d.id}`]]))}
-            empty={<>이 고객사에 보낸 견적서가 없어요.</>} />
+            empty={<>이 고객사에 보낸 견적서가 없어요</>} />
         </section>
       )}
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PlanPicker } from "./PlanPicker";
+import { PlanCompare } from "./PlanCompare";
 import { PAID_FROM } from "@/lib/billing";
 import { PLANS, PRICE_OPEN, inPilotPeriod, monthlyQuoteLimit, pendingPlan, planOn, seatLimit, type PlanId } from "@/lib/plans";
 
@@ -17,6 +18,8 @@ export function PlanView({ org, today, seats, sent, owner }: { org: OrgPlanState
   const full = quoteCap != null && sent >= quoteCap;
   /** 시범 운영 중이고 금액 공개 전: 요금제 고르기와 금액을 보이지 않는다 */
   const closed = pilot && !PRICE_OPEN;
+  // 시범 운영 마지막 날 (정식 청구 시작 전날)
+  const pilotEnd = (() => { const d = new Date(`${PAID_FROM}T12:00:00+09:00`); d.setUTCDate(d.getUTCDate() - 1); return `${d.getUTCFullYear()}년 ${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`; })();
 
   return (
     <>
@@ -27,8 +30,9 @@ export function PlanView({ org, today, seats, sent, owner }: { org: OrgPlanState
         <dl className="pln-cur__kv tnum">
           {closed ? (
             <>
-              <div><dt>이용 범위</dt><dd>전 기능</dd></div>
+              <div><dt>이용 범위</dt><dd>전 기능 · {pilotEnd}까지</dd></div>
               <div><dt>정식 요금</dt><dd>공개 전</dd></div>
+              <div><dt>결제 수단</dt><dd>등록 전</dd></div>
             </>
           ) : pilot ? (
             <div>
@@ -39,10 +43,17 @@ export function PlanView({ org, today, seats, sent, owner }: { org: OrgPlanState
             <div><dt>{day(pend.from)}부터</dt><dd>{PLANS[pend.plan].name}</dd></div>
           ) : null}
           {!closed && <div><dt>이번 달 5,000만 원 미만 견적</dt><dd>{quoteCap == null ? `${sent}건` : `${sent} / ${quoteCap}건`}</dd></div>}
-          <div><dt>담당자 계정</dt><dd>{seatCap == null ? `${seats}명` : `${seats} / ${seatCap}명`}</dd></div>
+          <div><dt>담당자 계정</dt><dd>{seatCap == null ? `${seats} / 제한 없음` : `${seats} / ${seatCap}명`}</dd></div>
           {!closed && <div><dt>결제 수단</dt><dd>등록 전</dd></div>}
         </dl>
       </section>
+      {/* 시안 검토판 c-set-plan: 시범 운영 중에는 안내 두 문장과 요금제 비교만 */}
+      {closed && (
+        <section className="pln-pick">
+          <p className="pln-fine">시범 운영 중 참여한 요청은 끝까지 청구하지 않아요. 시범 중 고른 요금제는 {py}년 {pm}월 1일부터 적용돼요.</p>
+          <PlanCompare />
+        </section>
+      )}
       {!closed && <section className="pln-pick" aria-labelledby="pln-pick-h">
         <h2 id="pln-pick-h">{pilot ? `${py}년 ${pm}월부터 쓸 요금제` : "요금제"}</h2>
         <PlanPicker org={org} today={today} canEdit={owner} />
