@@ -12,6 +12,7 @@ import type { CatalogRow } from "@/lib/catalog";
 import type { DayLane, PdDesign, PdEval, PdGroup, PdUse } from "@/lib/kind-design";
 import { PRICE_CATS, PRICE_CAT_LABEL, PRICE_UNIT_LABEL, type PriceItem, type PriceUnit } from "@/lib/price-book";
 import { pdPrice } from "@/lib/pd-price";
+import { useToast } from "@/components/ui/Toast";
 import type { PriceBook } from "@/lib/price-book-db";
 
 import { ReportField, SampleCell, ScaleEditor, newScale } from "@/components/cro/catalog/PdEvalParts";
@@ -36,6 +37,7 @@ export function ModelStandard({ row: initialRow, siblings, others, book, readOnl
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
   const [editSchema, setEditSchema] = useState(false);
   const [openUse, setOpenUse] = useState<number | null>(null);
 
@@ -60,7 +62,8 @@ export function ModelStandard({ row: initialRow, siblings, others, book, readOnl
       if (local) {
         setRow(next);
         setDirty(false);
-        setNote("표준으로 저장했어요.");
+        setNote(null);
+        toast("기관 표준 설계를 저장했어요.");
         return;
       }
       const send = siblings.map((r) => (r.id === row.id ? next : r));
@@ -70,7 +73,8 @@ export function ModelStandard({ row: initialRow, siblings, others, book, readOnl
       const saved = (j.rows as CatalogRow[] | undefined)?.find((r) => r.id === row.id);
       if (saved) setRow(saved);
       setDirty(false);
-      setNote("표준으로 저장했어요.");
+      setNote(null);
+        toast("기관 표준 설계를 저장했어요.");
     } catch (e) {
       setErr((e as Error).message);
     } finally {

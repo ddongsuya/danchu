@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { saveStatus } from "@/lib/cro-due";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Plus, X } from "@phosphor-icons/react";
@@ -71,6 +72,8 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const [at, setAt] = useState(0);
   const [saveToList, setSaveToList] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<"saved" | "saving" | "failed">("saved");
+  // 이 화면에서 마지막으로 저장한 시각 (제목 줄 "저장됨 14:02")
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [peek, setPeek] = useState(false);
@@ -102,6 +105,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
       }).then((r) => r.ok).catch(() => (ac.signal.aborted ? null : false));
       if (ok === null || mine !== rev.current) return;
       setSaved(ok ? "saved" : "failed");
+      if (ok) setSavedAt(Date.now());
     }, 800);
   };
   useEffect(() => () => { window.clearTimeout(timer.current); abort.current?.abort(); }, []);
@@ -171,8 +175,8 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
         <header className="qf__top">
           <Link className="qf__x" href="/cro/docs" aria-label="닫기"><X size={20} aria-hidden="true" /></Link>
           <span className="qf__t">{head.title}</span>
-          <span role="status" className="qf__sv" data-s={saved}>{readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨"}</span>
-          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          <span role="status" className="qf__sv" data-s={saved}>{readOnly ? "읽기 전용" : saveStatus(saved, savedAt)}</span>
+          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 연결</button>}
           <span className="qf__sp" />
           {head.id && <Link className="qf__lk qf__pc" href={`/cro/docs/${head.id}`}>문서에서 직접 고치기</Link>}
           <button type="button" className="b2 bsm" onClick={back}>이전</button>
@@ -365,7 +369,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
   const primary = step === "review"
     ? replyHref ? <Link className="b1" href={replyHref}>회신에 붙이기</Link> : <Link className="b1" href="/cro/docs">견적서 목록으로</Link>
     : <button type="button" className="b1" disabled={!canNext} onClick={next}>{nextLabel}</button>;
-  const savedLabel = readOnly ? "읽기 전용" : isNew ? "시험을 고르면 저장돼요" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
+  const savedLabel = readOnly ? "읽기 전용" : isNew ? "시험을 고르면 저장돼요" : saveStatus(saved, savedAt);
   const curIdx = cur ? data.tests.findIndex((t) => t.uid === cur.uid) : -1;
   const ds = docStyle(style, data);
   const preview = step === "client" || step === "kind" ? <Cover head={head} data={data} style={ds} i={1} total={pageCount(data)} />
@@ -378,7 +382,7 @@ export function QuoteFill({ head: head0, initial, style, catalog, rates, replyHr
         <Link className="qf__x" href="/cro/docs" aria-label="닫기"><X size={20} aria-hidden="true" /></Link>
         <span className="qf__t">{isNew ? "새 견적서" : head.title}</span>
         <span role="status" className="qf__sv" data-s={saved}>{savedLabel}</span>
-        {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+        {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 연결</button>}
         <span className="qf__sp" />
         {head.id && <Link className="qf__lk qf__pc" href={`/cro/docs/${head.id}`}>문서에서 직접 고치기</Link>}
         <button type="button" className="qf__lk qf__m" aria-pressed={peek} onClick={() => setPeek((v) => !v)}>{peek ? "질문으로" : "미리보기"}</button>

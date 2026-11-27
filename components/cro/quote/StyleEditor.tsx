@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { inkOn, LAYOUTS, type DocData, type DocHead, type QuoteStyle } from "@/lib/quote-doc";
 import { uploadToSigned } from "@/lib/upload";
+import { useToast } from "@/components/ui/Toast";
 import { Cover, QuotePage, pageCount } from "./DocPages";
 
 const SWATCHES = ["#1b1b19", "#23395b", "#1f4e46", "#5b2333", "#4a3f6b", "#6b4a1f"];
@@ -48,6 +49,7 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const toast = useToast();
   const [hex, setHex] = useState(initial.brandColor ?? "#1b1b19");
   const logoRef = useRef<HTMLInputElement>(null);
 
@@ -75,7 +77,7 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
     setBusy(false);
     if (!r?.ok) return setMsg({ ok: false, text: d?.error || "저장하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요." });
     setDirty(false);
-    setMsg({ ok: true, text: "저장했어요. 로고와 색은 모든 견적서에, 거래 조건 기본 문구는 새 견적서부터 들어가요." });
+    toast("견적서 양식을 저장했어요.");
     router.refresh();
   };
 
