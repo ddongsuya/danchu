@@ -21,7 +21,7 @@ export function homeChecks(list: CheckReq[], awards: CheckAward[], today: string
       const due = autoDue(a);
       out.push({ no: r.rfq_no, title, line: `${a.cro_name} 계약 보고 · ${md(due)} 자동 확정`, pill: "확인 대기", tone: "wait", href: `/app/r/${r.rfq_no}#contract-confirm`, action: "계약 내용 확인", due });
     } else if (noJoinPastDue(r, today)) {
-      out.push({ no: r.rfq_no, title, line: `회신 기한 ${md(r.reply_by!)} · 참여 ${r.joined}곳`, pill: "기한 지남", tone: "late", href: `/app/support?rfq=${r.rfq_no}`, action: "기한 연장 요청", due: r.reply_by! });
+      out.push({ no: r.rfq_no, title, line: `회신 기한 ${md(r.reply_by!)} · 참여 ${r.joined}곳`, pill: "기한 지남", tone: "late", href: `/app/support?rfq=${r.rfq_no}&type=${encodeURIComponent("일정")}`, action: "기한 연장 요청", due: r.reply_by! });
     }
   }
   return out.sort((x, y) => x.due.localeCompare(y.due));

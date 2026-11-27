@@ -171,7 +171,7 @@ export function RequestStory(p: StoryProps) {
   const action = p.stuck ? (
     <>
       {p.manage}
-      <Link href={`/app/support?rfq=${p.no}`} className="b1">기한 연장 요청</Link>
+      <Link href={`/app/support?rfq=${p.no}&type=${encodeURIComponent("일정")}`} className="b1">기한 연장 요청</Link>
     </>
   ) : p.confirm ? (
     <a href="#contract-confirm" className="b1">계약 내용 확인</a>

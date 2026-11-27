@@ -5,9 +5,9 @@ import { Caret, CheckDisc } from "@/components/app/ui";
 
 const TYPES = ["견적 문의", "일정", "CDA·기밀", "계약", "계정", "기타"];
 
-export function SupportForm({ email: initialEmail, requests, initialRfq }: { email: string; initialRfq?: string; requests: { no: string; substance: string }[] }) {
+export function SupportForm({ email: initialEmail, requests, initialRfq, initialType }: { email: string; initialRfq?: string; initialType?: string; requests: { no: string; substance: string }[] }) {
   const [rfq, setRfq] = useState(requests.some((r) => r.no === initialRfq) ? initialRfq! : "");
-  const [type, setType] = useState("견적 문의");
+  const [type, setType] = useState(initialType && TYPES.includes(initialType) ? initialType : "견적 문의");
   const [text, setText] = useState("");
   const [email, setEmail] = useState(initialEmail);
   const [busy, setBusy] = useState(false);
@@ -75,7 +75,7 @@ export function SupportForm({ email: initialEmail, requests, initialRfq }: { ema
       </div>
       {error && <p className="note note--err" role="alert">{error}</p>}
       <div>
-        <button type="button" className="b1" disabled={!text.trim() || busy} onClick={send}>{busy ? "보내는 중…" : "보내기"}</button>
+        <button type="button" className="b1" disabled={!text.trim() || busy} onClick={send}>{busy ? "보내는 중" : "보내기"}</button>
       </div>
     </div>
   );

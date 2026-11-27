@@ -11,7 +11,7 @@ describe("홈 확인 필요", () => {
     const out = homeChecks(list, [award("A")], "2027-07-14", md);
     expect(out.map((c) => c.no)).toEqual(["B", "A"]);
     expect(out[1]).toMatchObject({ pill: "확인 대기", action: "계약 내용 확인", line: "기관 B 계약 보고 · 07-16 자동 확정" });
-    expect(out[0]).toMatchObject({ pill: "기한 지남", action: "기한 연장 요청", href: "/app/support?rfq=B" });
+    expect(out[0]).toMatchObject({ pill: "기한 지남", action: "기한 연장 요청", href: "/app/support?rfq=B&type=%EC%9D%BC%EC%A0%95" });
   });
   it("확정했거나 이의 중인 계약, 참여가 있는 요청은 빠진다", () => {
     const list = [req("A", { status: "contracting" }), req("B", { reply_by: "2027-06-25", joined: 1 })];
