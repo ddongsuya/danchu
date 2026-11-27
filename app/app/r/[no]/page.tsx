@@ -198,8 +198,8 @@ export default async function RequestDetail({ params, searchParams }: { params: 
             <section className="card rq-card" aria-labelledby="contract-title">
               <h2 id="contract-title" className="rq-card__h">계약</h2>
               <div className="card--rows rq-card__rows">
-                <div className="kv"><span className="kv__k">선택한 기관</span><span className="kv__v">{d.award.cro_name}</span></div>
-                <div className="kv"><span className="kv__k">선택일</span><span className="kv__v tnum">{ymd(d.award.awarded_at)}</span></div>
+                <div className="kv"><span className="kv__k">선정한 기관</span><span className="kv__v">{d.award.cro_name}</span></div>
+                <div className="kv"><span className="kv__k">선정일</span><span className="kv__v tnum">{ymd(d.award.awarded_at)}</span></div>
                 <div className="kv">
                   <span className="kv__k">상태</span>
                   <span className="kv__v">

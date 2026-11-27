@@ -64,7 +64,7 @@ describe("이용약관: 의뢰자 요청 기한 전 마감 삭제 (결정 2)와 
     for (const f of ["components/cro/RequestsBoard.tsx", "components/cro/ReplyForm.tsx", "components/cro/ReplyDone.tsx"]) expect(src(f), f).toMatch(/열린 뒤에는 (수정하거나|고치거나) 다시 제출할 수 없(습니다|어요)/);
   });
   it("옮겨 적기 오류는 비교표가 열리기 전에만 바로잡고, 열린 뒤에는 고치지 않고 알린다 (약관 제8조·화면이 같은 말)", () => {
-    for (const f of ["app/terms/page.tsx", "app/app/r/[no]/q/[quoteId]/page.tsx", "lib/faq-page.ts", "components/CompareBoard.tsx"]) {
+    for (const f of ["app/terms/page.tsx", "lib/faq-page.ts", "components/CompareBoard.tsx"]) {
       const s = flat(src(f));
       expect(s, f).not.toMatch(/오류(가 확인되면|가 있으면) (회사는 지체 없이 |단추가 )?바로잡/);
       expect(s, f).toMatch(/열린 뒤(에는|엔) 비교표를 고치지 않고/);

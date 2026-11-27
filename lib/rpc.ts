@@ -31,7 +31,7 @@ export type SelectQuoteResult = { ok: true; award_id: string; invite_id: string;
 export function selectQuote(rfqId: string, quoteId: string, userId: string, revision: number) {
   return call<SelectQuoteResult, "select_quote">("select_quote", { p_rfq_id: rfqId, p_quote_id: quoteId, p_user: userId, p_revision: revision });
 }
-export const QUOTE_CHANGED_MESSAGE = "견적이 바뀌었어요. 바뀐 내용을 다시 확인한 뒤 선택해 주세요.";
+export const QUOTE_CHANGED_MESSAGE = "견적이 바뀌었어요. 바뀐 내용을 확인한 뒤 선정해 주세요.";
 export const SELECT_QUOTE_ERRORS: Record<string, { message: string; status: number }> = {
   not_found: { message: "요청을 찾을 수 없어요.", status: 404 },
   not_open: { message: "마무리된 요청이라 선택할 수 없어요.", status: 409 },

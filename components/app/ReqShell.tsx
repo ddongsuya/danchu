@@ -46,7 +46,7 @@ export function ReqThreads({ items, path }: { items: ReqThread[]; path?: string 
 }
 
 /** 하위 경로별 제목. 없는 경로는 요청 제목만 */
-const SUB: Record<string, string> = { compare: "비교 보고서", q: "견적", select: "선택", qna: "질의응답", contract: "계약", detail: "상세 조건" };
+const SUB: Record<string, string> = { compare: "비교 보고서", q: "견적", select: "선정", qna: "질의응답", contract: "계약", detail: "상세 조건" };
 const PAGE: Record<string, string> = { "/app": "내 견적 요청", "/app/new": "새 견적 요청", "/app/new/done": "요청 접수", "/app/notifications": "알림", "/app/profile": "프로필", "/app/profile/delete": "계정 삭제", "/app/support": "문의" };
 
 /** 넓게 보는 화면 (비교·상세). 나머지는 읽기 폭 */

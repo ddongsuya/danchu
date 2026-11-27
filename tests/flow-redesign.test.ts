@@ -46,7 +46,7 @@ describe("상태 문구", () => {
     expect(INVITE_LABEL.expired).toBe("종료");
     expect(INVITE_LABEL.declined).toBe("불참");
     // 참여 선택형이라 "기관 전달" 대신 "참여 안내"
-    expect(STAGES.map((s) => s.label)).toEqual(["접수", "참여 안내", "견적 도착", "비교표 공개", "기관 선택", "계약 진행", "계약 완료"]);
+    expect(STAGES.map((s) => s.label)).toEqual(["접수", "참여 안내", "견적 도착", "비교표 공개", "기관 선정", "계약 진행", "계약 완료"]);
     for (const s of STAGES) expect(`${s.label}${s.desc}`).not.toMatch(/[—–]/);
   });
 });
