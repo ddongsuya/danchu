@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
-import { adjustmentsByOrg, CLOSED_MONTH_NOTE, CONFIRM_VIA_LABEL, monthRangeOf, rateLabel, PAID_FROM, PILOT_FROM, REFERENCE_LABEL, REFERENCE_SOURCE_LABEL, referenceTotals, SUBSCRIPTION_FEE, signedWon, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
+import { adjustmentsByOrg, CLOSED_MONTH_NOTE, CONFIRM_VIA_LABEL, monthRangeOf, rateLabel, REFERENCE_LABEL, REFERENCE_SOURCE_LABEL, referenceTotals, SUBSCRIPTION_FEE, signedWon, statementDigest, statementTotals, TIER_LABEL, joinStatusNote, wonOrPending } from "@/lib/billing";
 import { BillingClose } from "@/components/admin/BillingClose";
 import { BillingAdjustmentForm } from "@/components/admin/BillingAdjustmentForm";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -11,6 +11,8 @@ import { BillableToggle } from "@/components/admin/BillableToggle";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 import { CONTRACT_STATUS_LABEL } from "@/lib/concierge";
 import { AdminSection } from "@/components/admin/Blocks";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadError } from "@/components/admin/LoadError";
 
 export const dynamic = "force-dynamic";
 
@@ -84,10 +86,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           <Link href={`/admin/billing?month=${r.prev}`} className="b2">이전 달</Link>
           <Link href={`/admin/billing?month=${r.next}`} className="b2">다음 달</Link>
           <a href={`/api/admin/billing/export?month=${r.from.slice(0, 7)}`} className="b2">CSV 내려받기</a>
-          <BillingClose month={r.from.slice(0, 7)} closed={closed} ended={ended} />
+          <BillingClose month={r.from.slice(0, 7)} label={r.label} closed={closed} ended={ended} orgs={rows.filter((x) => x.total_due > 0).length} zero={rows.filter((x) => x.total_due <= 0).length} total={t.total} />
         </div>
       </div>
-      <div className="note note--tint" style={{ marginBottom: 12 }}>{`청구는 ${PAID_FROM}부터 시작합니다. 그 전에 참여한 요청(시범 운영 ${PILOT_FROM} ~ 2027-12-31 포함)은 끝까지 청구하지 않으며, 아래 참고 수치로만 셉니다(이용약관 제5조3항).`}</div>
+      {/* 청구는 PAID_FROM 부터. 그 전(시범 운영 PILOT_FROM ~ 2027-12-31)에 참여한 요청은 끝까지 청구하지 않고 참고 수치로만 센다 (이용약관 제5조3항) */}
+      {!closed && <div className="note note--tint" style={{ marginBottom: 12 }}>시범 운영 중 참여한 요청은 0원이에요</div>}
       {/* 청구 규칙 전문은 접어 둔다 (2026-10-31, 휴대폰에서 첫 화면을 다 덮던 문단) */}
       <details className="cat-more" style={{ marginBottom: 16 }}>
       <summary>청구 규칙 보기</summary>
@@ -96,29 +99,29 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </p>
       </details>
       {closed && (
-        <div className="note note--ok" style={{ marginBottom: 12 }}>
-          {snap ? `이 달은 마감되었습니다. ${ymd(snap.taken_at)} 마감 때 저장한 명세를 보여 줍니다.` : "이 달은 마감되었습니다."} {CLOSED_MONTH_NOTE} <Link href={`/admin/invoices?month=${r.from.slice(0, 7)}`}>이 달 청구서 보기</Link>
+        <div className="note note--ok" style={{ marginBottom: 12 }} title={CLOSED_MONTH_NOTE}>
+          {r.label} 청구를 마감했어요. 고칠 내용은 다음 달 조정으로 넣어요. <Link href={`/admin/invoices?month=${r.from.slice(0, 7)}`}>청구서</Link>
         </div>
       )}
       {drifted && <div className="note note--warn" style={{ marginBottom: 12 }}>마감 뒤 바뀐 값이 있습니다(단가, 견적 금액, 체결 정정 등). 마감한 명세는 바꾸지 않습니다. 바로잡을 금액은 다음 달 명세에 조정 항목으로 넣습니다.</div>}
-      {error && <div className="note note--warn" style={{ marginBottom: 16 }}>집계 함수를 불러오지 못했습니다. `0020_billing_rules.sql` 마이그레이션이 적용됐는지 확인해 주세요. ({error.message})</div>}
       {adjFailed && <div className="note note--warn" role="alert" style={{ marginBottom: 16 }}>조정 항목을 불러오지 못했습니다. 합계에는 조정 금액이 들어 있지만 조정 열과 목록은 비어 보입니다. `0024_billing_close_lock.sql` 이 적용됐는지 확인한 뒤 새로고침해 주세요. ({adjError.message})</div>}
 
       <AdminSection id="statement" title="기관별 명세" sub="미정은 0원으로 보이지 않고 미정으로 표시합니다.">
       <div className="card tbl-wrap">
-        {rows.length === 0 ? (
-          <p className="empty">이 달에 제출된 견적, 확정된 계약, 구독 기관이 없습니다.</p>
+        {error && !snap ? (
+          <LoadError title="청구 명세를 불러오지 못했어요" />
+        ) : rows.length === 0 ? (
+          <EmptyState title="이 달 청구할 내용이 없어요" />
         ) : (
           <table className="tbl tbl--sticky">
             <thead>
               <tr>
                 <th>기관</th>
-                <th className="num">회신 견적 (청구 대상)</th>
-                <th className="num">5,000만 원 미만 (구독)</th>
-                <th className="num">송부 비용 대상</th>
-                <th className="num">송부 비용 합계</th>
-                <th className="num">성사 수수료 예상 (견적 기준)</th>
-                <th className="num">성사 수수료 정산 (계약 기준, 계약 확정분)</th>
+                <th className="num">회신 견적</th>
+                <th className="num">5,000만 미만</th>
+                <th className="num">송부 대상</th>
+                <th className="num">송부 비용</th>
+                <th className="num">성사 수수료 (계약 확정)</th>
                 <th className="num">월 구독료</th>
                 <th className="num">조정</th>
                 <th className="num">합계</th>
@@ -137,7 +140,6 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <td className="num">{x.subscription || "-"}</td>
                   <td className="num">{x.per_quote || "-"}{x.per_quote > 0 && x.per_request_fee != null ? <span style={{ ...muted, display: "block" }}>{comma(x.per_request_fee)} × {x.per_quote}</span> : null}</td>
                   <td className="num">{x.per_quote ? wonOrPending(x.per_quote_fee, comma, "단가 미정") : "-"}</td>
-                  <td className="num">{x.guidance_count ? <>{wonOrPending(x.guidance_fee, comma, "요율 미정")}<span style={{ ...muted, display: "block" }}>{x.guidance_count}건 · 합계 미포함</span></> : "-"}</td>
                   <td className="num">{x.settled_count ? <>{wonOrPending(x.settled_fee, comma, "요율 미정")}<span style={{ ...muted, display: "block" }}>{x.settled_count}건 · 계약 {won(x.settled_contract_amount)}</span></> : "-"}</td>
                   <td className="num">{x.monthly_fee != null ? comma(x.monthly_fee) : <span style={muted}>구독 없음</span>}</td>
                   <td className="num">{adjByOrg.has(x.org_id) ? signedWon(adjByOrg.get(x.org_id)!, comma) : "-"}</td>
@@ -152,7 +154,6 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 <td className="num">-</td>
                 <td className="num">{t.perQuote}</td>
                 <td className="num">{comma(t.perQuoteFee)}</td>
-                <td className="num" style={muted}>{comma(t.guidanceFee)}</td>
                 <td className="num">{comma(t.settledFee)}</td>
                 <td className="num">{comma(t.monthlyFee)}</td>
                 <td className="num">{adjustments.length ? signedWon(adjTotal, comma) : "-"}</td>
@@ -169,7 +170,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         {adjFailed ? (
           <p className="note note--warn" role="alert" style={{ margin: "0 16px 12px" }}>조정 항목을 불러오지 못했습니다. 새로고침해 주세요.</p>
         ) : adjustments.length === 0 ? (
-          <p className="empty">이 달에 넣은 조정 항목이 없습니다.</p>
+          <EmptyState title="조정 항목이 없어요" />
         ) : (
           <div className="tbl-wrap">
             <table className="tbl tbl--stack">
