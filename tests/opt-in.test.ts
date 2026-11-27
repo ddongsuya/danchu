@@ -424,7 +424,7 @@ describe("POST /api/quote/[token]/decline: 참여 전 불참, 참여 뒤 철회"
   });
   it("불참 안내 문구에 '다음 배포 대상 선정에 참고'가 없다", async () => {
     const fs = await import("node:fs");
-    const src = fs.readFileSync("components/cro/DeclineForm.tsx", "utf8") + fs.readFileSync("app/api/quote/[token]/decline/route.ts", "utf8");
+    const src = fs.readFileSync("components/cro/Participation.tsx", "utf8") + fs.readFileSync("app/api/quote/[token]/decline/route.ts", "utf8");
     expect(src).not.toContain("다음 배포 대상 선정에 참고");
   });
 });

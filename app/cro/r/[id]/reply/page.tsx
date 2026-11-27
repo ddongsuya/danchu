@@ -7,12 +7,14 @@ import { loadDoc } from "@/lib/quote-doc-db";
 import { replyExtra, testLines } from "@/lib/quote-doc";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { ReplyDone } from "@/components/cro/ReplyDone";
+import { testsLine } from "@/components/cro/CroStory";
+import { doneAt } from "@/lib/cro-due";
 import { canUse } from "@/lib/plans";
 import { todaySeoul } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function CroReply({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ done?: string; t?: string; w?: string; doc?: string }> }) {
+export default async function CroReply({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ done?: string; t?: string; w?: string; f?: string; at?: string; doc?: string }> }) {
   const s = await requireSession("cro");
   const { id } = await params;
   const sp = await searchParams;
@@ -23,7 +25,7 @@ export default async function CroReply({ params, searchParams }: { params: Promi
   if (sp.done === "1") {
     // 마지막 제출이 비교표를 열었으면 수정하기를 숨긴다 (2026-10-21 결정 3)
     const got = await loadQuote(inv.token, await viewerLoadOpts());
-    return <ReplyDone no={inv.rfq_no} replyBy={inv.reply_by} total={Number(sp.t || 0)} weeks={sp.w} editHref={`/cro/r/${id}/reply`} backHref="/cro/quotes" backLabel="제출한 견적" closed={!!got?.closed} />;
+    return <ReplyDone no={inv.rfq_no} title={got ? testsLine(got.rfq.rows.map((r) => r.name)) : ""} replyBy={inv.reply_by} total={Number(sp.t || 0)} weeks={sp.w} files={sp.f ? Number(sp.f) : undefined} submittedAt={doneAt(sp.at)} editHref={`/cro/r/${id}/reply`} backHref="/cro/requests" backLabel="받은 요청 보기" closed={!!got?.closed} />;
   }
   // 견적서 생성 툴(0036): ?doc= 로 오면 그 견적서의 시험별 금액·기간을 채운다. 아니면 이 요청으로 만든 견적서를 열거나 새로 만드는 링크
   let docFill: DocFill | undefined;

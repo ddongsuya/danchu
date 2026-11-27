@@ -96,3 +96,10 @@
   .lq-done { padding-top: 24px; }
   .lq-done__acts > * { flex: 1; }
 }
+
+/* 제출 완료 다음 일정 (시안 검토판 c-reply-done) */
+.lq-done__next { text-align: left; display: grid; gap: 8px; }
+.lq-done__next h2 { font-size: 14px; font-weight: 700; }
+.lq-done__next ol { margin: 0; padding: 0; list-style: none; display: grid; border-left: 1px solid var(--cline); }
+.lq-done__next li { display: grid; gap: 2px; padding: 6px 0 6px 14px; font-size: 14px; }
+.lq-done__next li span { color: var(--muted); font-size: 13px; }
