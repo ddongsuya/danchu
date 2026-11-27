@@ -148,7 +148,7 @@
 /* 포털 휴대폰은 아래 탭(70px) 위에 붙인다. 토큰 링크(/q, pt--guest)는 아래 탭이 없다 */
 @media (max-width: 959px) {
   .pt .card.lr-bar { bottom: var(--bot, 0px); }
-  .pt:not(.pt--guest) .card.lr-bar { bottom: calc(70px + var(--bot, 0px)); }
+  .pt:not(.pt--guest) .card.lr-bar { bottom: var(--bot, 0px); }
 }
 
 @media (max-width: 1023px) {

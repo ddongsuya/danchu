@@ -394,7 +394,7 @@ function NewDialog({ side, endpoint, targets, initialTo, onClose, onDone }: { si
           <div className="qa-radios">
             {QNA_TOPICS.map(([k, l]) => (
               <label key={k}>
-                <input type="radio" name="qa-topic" checked={topic === k} onChange={() => setTopic(k)} disabled={busy} aria-invalid={!!fieldErr.topic} />
+                <input type="radio" name="qa-topic" checked={topic === k} onChange={() => setTopic(k)} disabled={busy} />
                 {l}
               </label>
             ))}

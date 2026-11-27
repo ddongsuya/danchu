@@ -12,7 +12,7 @@ const TABS: NavItem[] = [
   { href: "/app", label: "내 견적 요청", icon: "home", exact: true }, { href: "/app/new", label: "새 견적 요청", icon: "plus" }, { href: "/app/notifications", label: "알림", icon: "bell" }, { href: "/app/profile", label: "프로필", icon: "user" },
 ];
 export const THREADS: ReqThread[] = [
-  { no: "DEMO-0021", substance: "예시 물질", categories: ["안전성약리"], done: false },
+  { no: "DEMO-0021", substance: "예시 물질", categories: ["안전성약리"], done: false, status: "참여 안내", at: "2026-11-26" },
   { no: "DEMO-0019", substance: "예시 물질", categories: ["유전독성"], done: false },
   { no: "DEMO-0012", substance: "예시 물질", categories: ["일반독성"], done: false },
   { no: "DEMO-0007", substance: "예시 물질", categories: ["효력시험(약효)"], done: false },

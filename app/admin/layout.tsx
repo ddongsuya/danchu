@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { requireSession } from "@/lib/auth";
-import { dbReady, unreadCount } from "@/lib/data";
+import { dbReady, listNotifications, unreadCount } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
@@ -11,7 +11,8 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession("admin", "/admin");
-  const unread = dbReady() ? await unreadCount(session.userId) : 0;
+  // 위 바의 종: 읽지 않은 수와 최근 알림 네 개 (시안 a-bell)
+  const [unread, recent] = dbReady() ? await Promise.all([unreadCount(session.userId), listNotifications(session.userId, 4).then((r) => r.list)]) : [0, []];
   // 시안 v7 a-intake 메뉴 묶음: 운영 · 거래 · 요청·기록 (2026-11-26). 기관 옆 숫자는 승인 대기
   const pendingOrgs = dbReady() ? await countPendingOrgs() : 0;
   const nav: NavItem[] = [
@@ -30,7 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const tabs = ["/admin", "/admin/cros", "/admin/awards", "/admin/billing", "/admin/invoices"].map((h) => nav.find((i) => i.href === h)!);
   return (
     <AppState>
-      <Shell session={session} nav={nav} tabs={tabs}>
+      <Shell session={session} nav={nav} tabs={tabs} recent={recent}>
         <div className="adm">{children}</div>
       </Shell>
     </AppState>

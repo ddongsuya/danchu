@@ -71,6 +71,10 @@ export function useApp(): Ctx {
   if (!c) throw new Error("useApp must be used inside AppState");
   return c;
 }
+/** AppState 밖(일부 검토 화면)에서도 부를 수 있는 판. 없으면 null */
+export function useAppMaybe(): Ctx | null {
+  return useContext(AppCtx);
+}
 
 /* Account-scoped local drafts. Files are deliberately metadata only. */
 export type Draft = {
