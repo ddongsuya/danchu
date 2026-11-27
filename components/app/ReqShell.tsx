@@ -136,7 +136,8 @@ const PAGE: Record<string, string> = { "/app": "새 견적 요청", "/app/new": 
 
 /** 넓게 보는 화면 (비교·상세). 나머지는 읽기 폭 */
 function isWide(pathname: string): boolean {
-  return pathname === "/app" || (pathname.startsWith("/app/r/") && !/\/(qna|select)$/.test(pathname));
+  // 질의응답은 목록 + 질의 하나 두 칸이라 넓게 (시안 r-qna wide)
+  return pathname === "/app" || (pathname.startsWith("/app/r/") && !/\/select$/.test(pathname));
 }
 
 export function ReqTop({ items, path }: { items: ReqThread[]; path?: string }) {

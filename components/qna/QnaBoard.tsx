@@ -231,12 +231,12 @@ function ItemPane({ item, side, endpoint, canAnswer, audience, onBack, onDone }:
     onDone();
   }
 
-  async function send() {
+  /** 전체 공개는 확인창이 보내기를 실행하고 실패도 창 안에서 알린다. 이때 이 버튼은 처리 중으로 바뀌지 않는다 (Promise 를 돌려주지 않음) */
+  function send(): Promise<void> | void {
     if (!text.trim()) return setErr("답변을 입력해 주세요.");
     setErr("");
     if (pickScope && scope === "all") {
-      // 확인창이 보내기를 실행하고, 실패하면 창 안에서 알린다. 결과는 보낸 뒤에만 true
-      await confirm({
+      void confirm({
         title: "답변을 참여 기관 전체에 공개할까요?",
         body: `보내면 참여한 기관${audience ? ` ${audience}곳` : ""}이 이 답변을 볼 수 있고, 질의한 기관 이름은 밝히지 않습니다.`,
         confirmLabel: "답변 보내기",
@@ -246,13 +246,13 @@ function ItemPane({ item, side, endpoint, canAnswer, audience, onBack, onDone }:
       });
       return;
     }
-    try {
-      await run();
-      setFailed(false);
-    } catch (e) {
-      setFailed(true);
-      setErr(e instanceof Error ? e.message : SEND_FAIL);
-    }
+    return run().then(
+      () => setFailed(false),
+      (e: unknown) => {
+        setFailed(true);
+        setErr(e instanceof Error ? e.message : SEND_FAIL);
+      },
+    );
   }
 
   return (
