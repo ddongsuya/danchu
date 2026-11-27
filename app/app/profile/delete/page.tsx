@@ -4,16 +4,19 @@ import { dbReady } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { CONTRACT_STATUSES, OPEN_STATUSES } from "@/lib/account";
 import { DeleteAccountForm } from "@/components/app/DeleteAccountForm";
+import "@/components/settings/settings.css";
 
 export const dynamic = "force-dynamic";
 
 /**
- * 회원 탈퇴. 지워지는 것과 남는 것을 먼저 보여 주고, 아래 폼에서 확인을 받는다.
+ * 회원 탈퇴 (시안 r-delete · c-set-security~del). 결과 한 문장, 지워지는 것과 남는 것, 확인 칸 순서.
+ * 시안의 "위 내용을 확인했습니다" 칸에 더해, 코드 규칙대로 계정 이메일을 적어야 탈퇴된다 (app/api/account/delete).
  * 운영자 계정과 계약 진행 중인 의뢰자는 여기서 막는다 (API 도 같은 규칙).
  */
 export default async function DeleteAccountPage() {
   const s = await requireSession();
-  const base = s.profile.role === "cro" ? "/cro" : "/app";
+  const cro = s.profile.role === "cro";
+  const back = cro ? "/cro/profile/security" : s.profile.role === "admin" ? "/admin/profile" : "/app/profile/account";
   const isAdmin = s.profile.role === "admin";
 
   let open = 0;
@@ -26,39 +29,28 @@ export default async function DeleteAccountPage() {
   }
 
   return (
-    <>
-      <div className="ph">
-        <div>
-          <h1>회원 탈퇴</h1>
-          <p>{s.email}</p>
-        </div>
-      </div>
-      <div className="grid2" style={{ alignItems: "start" }}>
-        <div className="card card--pad stack" style={{ gap: 14 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700 }}>탈퇴하면</h2>
-          <ul style={{ paddingLeft: 18, fontSize: 14, lineHeight: 1.7, color: "var(--muted)" }}>
-            <li>계정, 프로필, 알림이 바로 삭제돼요. 되돌릴 수 없어요.</li>
-            <li>보낸 요청서에서 담당자 이름·이메일·전화·접속 기록이 지워져요. 회사명과 시험 내용은 회신 기관의 기록 근거로 남아요.</li>
-            <li>기관을 선정하지 않은 요청의 첨부파일은 삭제돼요. 선정한 요청의 첨부는 계약 근거로 보관해요.</li>
-            {s.profile.role === "cro" ? <li>기관과 다른 담당자의 정보는 그대로예요. 기관이 제출한 견적은 기관 기록으로 남아요.</li> : null}
-          </ul>
-          {open > 0 && <p className="note note--warn" style={{ fontSize: 14 }}>진행 중인 요청 {open}건이 취소되고 회신 중인 기관에 안내돼요.</p>}
-          {contracting.length > 0 && (
-            <p className="note note--warn" style={{ fontSize: 14 }}>
-              {/* .note 는 가로 배치(flex)라 글과 링크를 한 덩어리로 묶지 않으면 두 열로 갈라진다 */}
-              <span>기관을 선정한 요청({contracting.join(", ")})이 진행 중이라 지금은 탈퇴할 수 없어요. 계약이 끝나거나 운영자가 종료 처리한 뒤 다시 시도해 주세요. 문의: <a href="mailto:support@danchu.kr">support@danchu.kr</a></span>
-            </p>
-          )}
-          {isAdmin && <p className="note note--warn" style={{ fontSize: 14 }}>운영자 계정은 탈퇴할 수 없어요. 먼저 다른 운영자에게 역할 변경을 요청해 주세요.</p>}
-        </div>
-        <div className="card card--pad">
-          {isAdmin || contracting.length > 0 ? (
-            <Link href={`${base}/profile`} className="b2">프로필로 돌아가기</Link>
-          ) : (
-            <DeleteAccountForm email={s.email} />
-          )}
-        </div>
-      </div>
-    </>
+    <div className="set" style={{ maxWidth: 640 }}>
+      <h1>회원 탈퇴할까요?</h1>
+      <p style={{ margin: 0 }}>{cro ? "탈퇴하면 이 기관의 요청과 견적서를 볼 수 없고, 복구할 수 없습니다." : "탈퇴하면 요청서와 비교 보고서를 다시 볼 수 없고, 복구할 수 없습니다."}</p>
+      <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.7, color: "var(--muted)" }}>
+        <li>계정, 프로필, 알림이 바로 삭제돼요.</li>
+        <li>보낸 요청서에서 담당자 이름·이메일·전화·접속 기록이 지워져요. 회사명과 시험 내용은 회신 기관의 기록 근거로 남아요.</li>
+        <li>기관을 선정하지 않은 요청의 첨부파일은 삭제돼요. 선정한 요청의 첨부는 계약 근거로 보관해요.</li>
+        {cro ? <li>기관과 다른 담당자의 정보는 그대로예요. 기관이 제출한 견적은 기관 기록으로 남아요.</li> : null}
+      </ul>
+      {open > 0 && <p className="note note--warn" style={{ fontSize: 14 }}>진행 중인 요청 {open}건이 취소되고 회신 중인 기관에 안내돼요.</p>}
+      {contracting.length > 0 && (
+        <p className="note note--warn" style={{ fontSize: 14 }}>
+          {/* .note 는 가로 배치(flex)라 글과 링크를 한 덩어리로 묶지 않으면 두 열로 갈라진다 */}
+          <span>기관을 선정한 요청({contracting.join(", ")})이 진행 중이라 지금은 탈퇴할 수 없어요. 계약이 끝나거나 운영자가 종료 처리한 뒤 다시 시도해 주세요. 문의: <a href="mailto:support@danchu.kr">support@danchu.kr</a></span>
+        </p>
+      )}
+      {isAdmin && <p className="note note--warn" style={{ fontSize: 14 }}>운영자 계정은 탈퇴할 수 없어요. 먼저 다른 운영자에게 역할 변경을 요청해 주세요.</p>}
+      {isAdmin || contracting.length > 0 ? (
+        <div><Link href={back} className="b2">돌아가기</Link></div>
+      ) : (
+        <DeleteAccountForm email={s.email} back={back} />
+      )}
+    </div>
   );
 }
