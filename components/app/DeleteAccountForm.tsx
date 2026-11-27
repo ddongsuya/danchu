@@ -22,11 +22,11 @@ export function DeleteAccountForm({ email }: { email: string }) {
     try {
       const r = await fetch("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm, password }) });
       const d = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) throw new Error(d.error || "탈퇴 처리에 실패했어요.");
+      if (!r.ok) throw new Error(d.error || "탈퇴하지 못했어요. 계정은 그대로예요.");
       router.replace("/login?notice=deleted");
       router.refresh();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "탈퇴 처리에 실패했어요.");
+      setErr(e instanceof Error ? e.message : "탈퇴하지 못했어요. 계정은 그대로예요.");
       setBusy(false);
     }
   };
@@ -43,7 +43,7 @@ export function DeleteAccountForm({ email }: { email: string }) {
       </label>
       {err && <p role="alert" style={{ fontSize: 13, color: "var(--err)" }}>{err}</p>}
       <div style={{ display: "flex", gap: 8 }}>
-        <button type="submit" className="b2 b2--danger" disabled={!ready || busy}>{busy ? "삭제 중" : "계정 삭제"}</button>
+        <button type="submit" className="b2 b2--danger" disabled={!ready || busy}>{busy ? "탈퇴하는 중" : "회원 탈퇴"}</button>
         <button type="button" className="b2" disabled={busy} onClick={() => router.back()}>돌아가기</button>
       </div>
     </form>
