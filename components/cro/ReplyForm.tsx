@@ -46,6 +46,18 @@ function DesignEditor({ value, category, disabled, onChange }: { value: Design; 
     dosing: dstr(value, "dosing") || null,
     method: dstr(value, "method") || null,
   });
+  // 읽기 전용(기한 지남·마감·불참): 설계 설명은 꺼진 칸이 아니라 글로 보인다
+  if (disabled) {
+    const rows = explain.map((f) => [f.label, typeof extra[f.id] === "string" ? (extra[f.id] as string).trim() : ""] as const).filter(([, v]) => v);
+    const note = dstr(value, "note").trim();
+    return (
+      <div style={{ borderTop: "1px dashed var(--cline)", paddingTop: 10, fontSize: 13, color: "var(--body)", display: "grid", gap: 6 }}>
+        <p style={{ margin: 0 }}>설계 · {summary || "입력하지 않음"}</p>
+        {rows.map(([k, v]) => <p key={k} style={{ margin: 0 }}><span style={{ color: "var(--muted)" }}>{k} · </span>{v}</p>)}
+        {note && <p style={{ margin: 0, whiteSpace: "pre-wrap" }}><span style={{ color: "var(--muted)" }}>그 밖의 설명 · </span>{note}</p>}
+      </div>
+    );
+  }
   const setNum = (k: string, v: string) => onChange({ ...value, [k]: v ? Number(v.replace(/[^\d]/g, "").slice(0, 4)) : null });
   const numIn = (k: string, label: string, unit: string) => (
     <div className="fld" style={{ gap: 4 }}>

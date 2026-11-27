@@ -11,7 +11,7 @@ import { Pager } from "./Pager";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DeadlineForm } from "./DeadlineForm";
 import { MopUpButton } from "./AdminActions";
-import { LoadError } from "./LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { particle } from "./act";
 import "@/components/cro/board.css";
 
@@ -71,7 +71,7 @@ export function IntakeBoard({ list, hasMore, query, counts, stuck, failed = fals
         ))}
       </nav>
       {failed ? (
-        <div className="bd-empty"><LoadError title="접수 목록을 불러오지 못했어요" /></div>
+        <div className="bd-empty"><ErrorState title="접수 목록을 불러오지 못했어요" /></div>
       ) : !active ? (
         <div className="bd-empty">
           {query.q

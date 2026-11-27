@@ -1,7 +1,7 @@
 import { requireSession } from "@/lib/auth";
 import { dbReady, listRequestsForUser } from "@/lib/data";
-import { Crumb } from "@/components/app/ui";
 import { SupportForm } from "@/components/SupportForm";
+import "@/components/settings/settings.css";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,6 @@ export default async function Support({ searchParams }: { searchParams: Promise<
   const reqs = dbReady() && s.profile.role === "requester" ? await listRequestsForUser(s.userId) : [];
   return (
     <>
-      <Crumb href={s.profile.role === "cro" ? "/cro/profile" : "/app/profile"} label="프로필" />
       <div className="ph">
         <div>
           <h1>문의하기</h1>

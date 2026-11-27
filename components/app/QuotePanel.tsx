@@ -140,7 +140,8 @@ export function QuotePanel({ no, col, rows, canSelect, onClose, onPrev, onNext, 
           {col.selected ? (
             <button type="button" className="b1 bsm" disabled>선정함</button>
           ) : canSelect ? (
-            <Button className="b1 bsm" disabled={!!col.blocked} onClick={select}>이 기관 선정</Button>
+            // 확인 창이 떠 있는 동안 이 버튼은 처리 중으로 보이지 않는다. 처리 중은 창 안의 "선정하는 중"
+            <Button className="b1 bsm" disabled={!!col.blocked} onClick={() => { void select(); }}>이 기관 선정</Button>
           ) : null}
         </footer>
       </aside>

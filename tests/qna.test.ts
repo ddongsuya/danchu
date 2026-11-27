@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanText, croItems, partyLabels, qnaWindow, sponsorItems, type QnaRow } from "@/lib/qna";
+import { cleanText, croItems, partyLabels, qnaBadge, qnaClosedNote, qnaWindow, sponsorItems, type QnaRow } from "@/lib/qna";
 import { CONTACT_MASK } from "@/lib/contact-guard";
 
 const row = (o: Partial<QnaRow> & Pick<QnaRow, "id" | "invite_id" | "direction">): QnaRow => ({
@@ -58,5 +58,21 @@ describe("질의응답 열람·가림 (0045)", () => {
     expect(cleanText("  ")).toBeNull();
     expect(cleanText("가".repeat(1001))).toBeNull();
     expect(cleanText(" 질의 ")).toBe("질의");
+  });
+});
+
+describe("질의응답 목록 표와 닫힘 띠 (시안 r-qna · c-qna)", () => {
+  it("답이 없으면 답변 대기, 내가 답할 차례면 진하게, 전체 공개 답은 공개 답변", () => {
+    expect(qnaBadge({ answer: null, toAnswer: true, scope: null, direction: "cro" })).toEqual({ label: "답변 대기", tone: "todo" });
+    expect(qnaBadge({ answer: null, toAnswer: false, scope: null, direction: "sponsor" })).toEqual({ label: "답변 대기", tone: "wait" });
+    expect(qnaBadge({ answer: "네", toAnswer: false, scope: "all", direction: "cro" })).toEqual({ label: "공개 답변", tone: "public" });
+    expect(qnaBadge({ answer: "네", toAnswer: false, scope: "private", direction: "cro" })).toEqual({ label: "답함", tone: "done" });
+    expect(qnaBadge({ answer: "네", toAnswer: false, scope: null, direction: "sponsor" })).toEqual({ label: "답함", tone: "done" });
+  });
+  it("선정 날짜를 서울 날짜로 적고, 마무리는 따로, 열려 있으면 null", () => {
+    expect(qnaClosedNote({ selected_quote_id: "q", status: "selected" }, "2027-07-11T16:00:00Z")).toBe("7월 12일 선정으로 질의응답이 닫혔어요");
+    expect(qnaClosedNote({ selected_quote_id: "q", status: "closed" }, null)).toBe("선정으로 질의응답이 닫혔어요");
+    expect(qnaClosedNote({ selected_quote_id: null, status: "cancelled" }, null)).toBe("요청이 마무리되어 질의응답이 닫혔어요");
+    expect(qnaClosedNote({ selected_quote_id: null, status: "compared" }, null)).toBeNull();
   });
 });

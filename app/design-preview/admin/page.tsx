@@ -16,7 +16,7 @@ import { DeadlineForm } from "@/components/admin/DeadlineForm";
 import { DistributePanel } from "@/components/admin/DistributePanel";
 import { ContractRecord } from "@/components/admin/ContractRecord";
 import { CdaPanel } from "@/components/admin/CdaPanel";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { AdminSkeleton } from "@/components/admin/AdminSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import "@/components/admin/layout-admin.css";
@@ -87,7 +87,7 @@ function CrosPreview({ state }: { state: string }) {
       </div>
       {state === "zero" ? <EmptyState kind="filtered" title="'예시 기관 Z'와 맞는 기관이 없어요" action={<Link href="/design-preview/admin?view=cros" className="b2 bsm">검색 지우기</Link>} />
         : state === "fz" ? <EmptyState kind="filtered" title="승인 대기 기관이 없어요" action={<Link href="/design-preview/admin?view=cros" className="b2 bsm">전체 보기</Link>} />
-        : state === "err" ? <LoadError title="기관 목록을 불러오지 못했어요" />
+        : state === "err" ? <ErrorState title="기관 목록을 불러오지 못했어요" />
         : (
           <div className="card tbl-wrap">
             <table className="tbl tbl--stack">
@@ -110,7 +110,7 @@ function RequestPreview({ tab, today, failed }: { tab: ReturnType<typeof request
   const invites = [["예시 기관 A", "작성 중", "11-11 10:02 · 링크", "11-10 14:20", "-", true], ["예시 기관 B", "제출", "11-11 09:40 · 기관 계정", "11-10 09:12", "34,000,000 · 8주", false], ["예시 기관 C", "작성 중", "11-12 16:00 · 링크", "11-11 11:05", "-", true]] as const;
   const manage: [string, string][] = [["상태", "견적 도착"], ["회신 기한", "11월 20일 (D-2)"], ["참여 결정 기한", "11월 12일"], ["보낸 기관", "3곳"], ["참여 자리", "자리 3곳 모두 찼어요"], ["기밀 등급", "CDA 필요"]];
   const deadline = <DeadlineForm no="DEMO-0019" current="2026-11-20" min="2026-11-21" invited={3} distributed />;
-  const body = failed ? <LoadError title="요청을 불러오지 못했어요" />
+  const body = failed ? <ErrorState title="요청을 불러오지 못했어요" />
     : tab === "dist" ? (
       <DistributePanel no="DEMO-0019" categories={["유전독성"]} defaultReplyBy="2026-11-20" replyByLocked orgs={[
         { id: "o1", name: "예시 기관 C", categories: ["일반독성", "유전독성"], glp: ["MFDS"], email: "preview@example.invalid", members: 2, invited: true, sentAt: "2026-11-10T01:00:00Z", openedAt: null },

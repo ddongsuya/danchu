@@ -4,7 +4,7 @@ import { dbReady, listAudit } from "@/lib/data";
 import { mdhm } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchBox } from "@/components/admin/SearchBox";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { particle } from "@/components/admin/act";
 import { captureError } from "@/lib/observe";
 
@@ -49,7 +49,7 @@ export default async function AdminAudit({ searchParams }: { searchParams: Promi
         <div className="ph__actions"><SearchBox q={q} placeholder="대상 · 동작" /></div>
       </div>
       {!all ? (
-        <LoadError title="운영 기록을 불러오지 못했어요" />
+        <ErrorState title="운영 기록을 불러오지 못했어요" />
       ) : rows.length === 0 ? (
         q
           ? <EmptyState kind="filtered" title={`'${q}'${particle(q, "과", "와")} 맞는 기록이 없어요`} action={<Link href="/admin/audit" className="b2 bsm">검색 지우기</Link>} />

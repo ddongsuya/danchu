@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { isPendingToken, pendingPreview } from "@/lib/rfq-pending";
 import { ClaimPendingButton } from "@/components/ClaimPendingButton";
@@ -9,20 +9,27 @@ export const dynamic = "force-dynamic";
 /**
  * 인증 메일의 버튼으로 들어온 경우. /auth/confirm 이 로그인을 마치고 여기로 보낸다.
  * 여는 것만으로는 접수하지 않는다: 맡긴 요청서 요약을 보여 주고, 의뢰자가 "이 요청서 보내기"를 눌러야 접수한다 (POST /api/rfq/pending/claim).
- * 이미 접수됐으면 같은 완료 화면으로 간다.
+ * 이미 접수됐으면 "이미 보낸 요청서예요"와 요청 진행 보기, 보관 기간이 지났으면 "만료된 링크예요" (시안 r-claim~done · ~exp).
  */
 export default async function ClaimPending({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!isPendingToken(token)) notFound();
   const s = await requireSession("requester", `/app/claim/${token}`);
   const r = await pendingPreview(token, s.email);
-  if ("claimedRfqNo" in r && r.claimedRfqNo) redirect(`/app/new/done?no=${encodeURIComponent(r.claimedRfqNo)}`);
+  if ("claimedRfqNo" in r && r.claimedRfqNo) {
+    return (
+      <div className="stack" style={{ maxWidth: 560, margin: "0 auto", gap: 16 }}>
+        <div className="ph"><div><h1>이미 보낸 요청서예요</h1></div></div>
+        <Link href={`/app/r/${encodeURIComponent(r.claimedRfqNo)}`} className="b1">요청 진행 보기</Link>
+      </div>
+    );
+  }
   if ("error" in r) {
     return (
       <div className="stack" style={{ maxWidth: 560, margin: "0 auto", gap: 16 }}>
         <div className="ph">
           <div>
-            <h1>요청서를 접수하지 못했어요</h1>
+            <h1>{r.status === 410 ? "만료된 링크예요" : "요청서를 접수하지 못했어요"}</h1>
             <p>{r.error}</p>
           </div>
         </div>

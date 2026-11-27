@@ -61,7 +61,8 @@ export default async function CroOrgPage() {
         ) : (
           <EmptyState title="소속 기관이 없어요">support@danchu.kr로 알려주세요.</EmptyState>
         )}
-        <OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} />
+        {/* 설정 사이드바 "구성원"(/cro/org#members) 이 여기로 온다 */}
+        <div id="members"><OrgMembers members={members} pending={pending} isOwner={isOwner} selfId={s.userId} /></div>
         <ThemeSettings />
         <nav className="card card--rows lq-set__links" aria-label="바로가기">
           {canUse(s.org, "tests", todaySeoul()) && (

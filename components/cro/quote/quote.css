@@ -555,7 +555,7 @@
 .qnew__row b { font-family: var(--font-mono); font-weight: 500; font-size: 13px; white-space: nowrap; }
 .qnew__row em { font-style: normal; font-family: var(--font-mono); font-size: 11px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: var(--r-pill); background: var(--ink); color: var(--wh); }
 .qnew__none { color: var(--muted); font-family: var(--font-sans); font-weight: 400; font-size: 12px; }
-.qnew__bar { position: sticky; bottom: calc(64px + var(--bot)); display: flex; justify-content: flex-end; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; background: var(--sf); border-top: 1px solid var(--cline); font-size: 13px; color: var(--muted); }
+.qnew__bar { position: sticky; bottom: var(--bot); display: flex; justify-content: flex-end; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 0; background: var(--sf); border-top: 1px solid var(--cline); font-size: 13px; color: var(--muted); }
 @media (min-width: 960px) { .qnew__bar { bottom: 0; } }
 .qnew__err { color: var(--err); }
 

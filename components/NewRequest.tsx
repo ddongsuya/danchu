@@ -32,6 +32,8 @@ import { PRESETS, presetItems } from "@/lib/presets";
 import { DesignHints } from "@/components/guide/DesignHints";
 import { requestChecks } from "@/lib/design-guide";
 import { needsCda } from "@/lib/request-policy";
+import { CONFID_LABEL } from "@/lib/confid-label";
+import { businessDayLabel } from "@/lib/dates";
 import { AttachmentNotice } from "@/components/AttachmentNotice";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { KINDS, isKind, type Kind } from "@/lib/study-kinds";
@@ -68,7 +70,7 @@ const FIELD_LABELS: Record<string, string> = {
   croCount: "받을 견적 수",
   nominees: "지명 기관",
   nomineesOnly: "지명 기관에만 안내",
-  confid: "정보 공개 방식",
+  confid: "CDA",
   categories: "시험 항목",
   notes: "추가 설명",
 };
@@ -326,6 +328,8 @@ export function NewRequest({
         const help = kind === "tox" ? f.help || wiz.sub : "다른 갈래의 시험은 첫 화면에서 따로 요청해요.";
         return field({ ...f, help, options: [...KINDS[kind].cats, ...keep] });
       }
+      // 공개 범위는 시안 질문 그대로 (r-new3). 안내 문장은 화면 위 한 줄에 있다
+      if (id === "confid") return field({ ...f, label: "CDA가 필요한가요?" });
       return field({ ...f, help: f.help || wiz.sub });
     });
   // 로그인 전에는 담당자 정보를 보내기 직전 확인 창에서 받는다
@@ -628,7 +632,7 @@ export function NewRequest({
         {step === 0
           ? "알고 있는 조건만 입력하세요."
           : step === 1
-            ? "회신 기한을 비워 두면 평일 7일 뒤로 정해져요."
+            ? `회신 기한을 비워 두면 평일 7일 뒤(${businessDayLabel(7)})로 정해져요.`
             : step === 2
               ? "회사명과 연락처는 선정한 기관만 볼 수 있습니다. CDA를 고르면 첨부파일은 기관별 체결을 확인한 뒤 공개합니다."
               : ""}
@@ -863,6 +867,7 @@ export function NewRequest({
                             ? (values[id] as string[]).join(", ") || "미선택"
                             : typeof values[id] === "boolean" || id === "nomineesOnly"
                               ? values[id] === true ? "예" : "아니요"
+                              : id === "confid" ? CONFID_LABEL[String(values[id])] ?? "입력하지 않음"
                               : String(values[id] || "입력하지 않음")}
                         </dd>
                       </div>

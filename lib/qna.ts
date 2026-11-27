@@ -9,6 +9,7 @@
  * 전체 공개 답변은 다른 기관에게 언제나 가린다.
  */
 import { maskContacts } from "./contact-guard";
+import { md } from "./format";
 import type { Tables } from "./db-types";
 
 export type QnaRow = Tables<"rfq_questions">;
@@ -176,4 +177,18 @@ export function cleanText(x: unknown): string | null {
 /** 원문에 연락처가 있는가 (DB 에 has_contact 로 남긴다) */
 export function hasContact(text: string): boolean {
   return maskContacts(text).masked;
+}
+
+/** 목록 줄의 상태 표 (시안 r-qna · c-qna): 답이 없으면 답변 대기(내가 답할 차례면 진하게), 전체 공개 답은 공개 답변, 나머지는 답함 */
+export function qnaBadge(i: Pick<QnaItem, "answer" | "toAnswer" | "scope" | "direction">): { label: string; tone: "todo" | "wait" | "public" | "done" } {
+  if (i.answer == null) return { label: "답변 대기", tone: i.toAnswer ? "todo" : "wait" };
+  if (i.direction === "cro" && i.scope === "all") return { label: "공개 답변", tone: "public" };
+  return { label: "답함", tone: "done" };
+}
+
+/** 선정·마무리로 닫힌 질의응답의 띠 문구. 열려 있으면 null */
+export function qnaClosedNote(rfq: { selected_quote_id: string | null; status: string }, awardedAt: string | null): string | null {
+  if (rfq.selected_quote_id || ["selected", "contracting"].includes(rfq.status)) return awardedAt ? `${md(awardedAt)} 선정으로 질의응답이 닫혔어요` : "선정으로 질의응답이 닫혔어요";
+  if (["closed", "cancelled"].includes(rfq.status)) return "요청이 마무리되어 질의응답이 닫혔어요";
+  return null;
 }

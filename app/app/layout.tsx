@@ -11,6 +11,7 @@ import { sessionInPrereg } from "@/lib/prereg-server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { summaryFacetsOf, testNamesOf } from "@/lib/quote-items";
 import type { Values } from "@/lib/rfq-schema";
+import { statusLabel } from "@/lib/status";
 
 export const metadata: Metadata = {
   title: "단추 · 내 견적 요청",
@@ -54,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     tabs.push(back);
     nav.push(back);
   }
-  const threads: ReqThread[] = list.map((r) => ({ no: r.rfq_no, substance: r.substance, title: threadTitle(r.payload as Values), categories: r.categories, done: ["closed", "cancelled"].includes(r.status) }));
+  const threads: ReqThread[] = list.map((r) => ({ no: r.rfq_no, substance: r.substance, title: threadTitle(r.payload as Values), categories: r.categories, done: ["closed", "cancelled"].includes(r.status), status: statusLabel(r.status, r.outcome), at: r.created_at }));
   return (
     <AppState>
       <script

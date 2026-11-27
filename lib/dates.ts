@@ -19,3 +19,9 @@ export function nowSeoul(): Date {
   const s = new Date().toLocaleString("en-US", { timeZone: "Asia/Seoul" });
   return new Date(s);
 }
+
+/** 평일 n일 뒤 "7월 14일" (서울 날짜, 시안 회신 기한 칩 "평일 7일 · 7월 14일") */
+export function businessDayLabel(n: number, from: Date = nowSeoul()): string {
+  const d = addBusinessDays(from, n);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
