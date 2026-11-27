@@ -93,12 +93,18 @@ export function ownsRfq(rfq: Pick<RfqRow, "user_id">, userId: string): boolean {
 
 /* ── 알림 ── */
 
-export async function listNotifications(userId: string, limit = 50, opts?: { kind?: string; page?: number }): Promise<{ list: NotificationRow[]; hasMore: boolean }> {
+/** unread: 읽지 않은 것만. failed: 읽지 못함 (화면은 불러오기 실패) */
+export async function listNotifications(userId: string, limit = 50, opts?: { kind?: string; page?: number; unread?: boolean }): Promise<{ list: NotificationRow[]; hasMore: boolean; failed?: boolean }> {
   const page = Math.max(1, opts?.page ?? 1);
   const from = (page - 1) * limit;
   let q = sb().from("notifications").select("id, kind, title, body, href, read_at, created_at").eq("user_id", userId).order("created_at", { ascending: false }).range(from, from + limit);
   if (opts?.kind) q = q.eq("kind", opts.kind);
-  const { data } = await q;
+  if (opts?.unread) q = q.is("read_at", null);
+  const { data, error } = await q;
+  if (error) {
+    console.error("notifications select", error.message);
+    return { list: [], hasMore: false, failed: true };
+  }
   const rows = data ?? [];
   return { list: rows.slice(0, limit), hasMore: rows.length > limit };
 }

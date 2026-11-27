@@ -1,0 +1,19 @@
+/* 알림 화면 (app/app/notifications/page.tsx, 시안 r-noti · c-noti) 과 종 팝오버 줄 (Shell 의 NotiBell) */
+.nt { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+.nt-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.nt-head h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.03em; }
+.nt-sp { flex: 1; }
+.nt-seg, .nt-kinds { display: inline-flex; padding: 3px; gap: 2px; background: var(--track); border-radius: var(--r-md); }
+.pt .nt-seg a, .pt .nt-kinds a { padding: 5px 12px; border-radius: calc(var(--r-md) - 2px); font-size: 14px; color: var(--muted); text-decoration: none; }
+.pt .nt-seg a[aria-current="page"], .pt .nt-kinds a[aria-current="page"] { background: var(--white); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(27, 27, 25, 0.12); }
+.nt-kinds { flex-wrap: wrap; align-self: flex-start; }
+.nt-list { list-style: none; margin: 0; padding: 0; }
+.nt-list > li + li { border-top: 1px solid var(--card-line); }
+.pt .nt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 12px 4px; color: var(--ink); text-decoration: none; border-radius: var(--r-md); }
+.nt-t { grid-column: 1; font-size: 15px; font-weight: 600; }
+.nt-sub { grid-column: 1; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nt-new { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; font-weight: 600; line-height: 22px; padding: 0 8px; border: 1px solid var(--ink); border-radius: 999px; white-space: nowrap; }
+.nt-pager { display: flex; gap: 8px; }
+@media (hover: hover) and (pointer: fine) {
+  .pt a.nt-row:hover { background: var(--track); }
+}
