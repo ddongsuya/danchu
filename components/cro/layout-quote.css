@@ -103,3 +103,4 @@
 .lq-done__next ol { margin: 0; padding: 0; list-style: none; display: grid; border-left: 1px solid var(--cline); }
 .lq-done__next li { display: grid; gap: 2px; padding: 6px 0 6px 14px; font-size: 14px; }
 .lq-done__next li span { color: var(--muted); font-size: 13px; }
+.qlist__search .inp { height: 36px; width: min(240px, 100%); font-size: 14px; }
