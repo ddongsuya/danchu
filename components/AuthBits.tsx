@@ -4,7 +4,7 @@ import { useState } from "react";
 
 /** 인증 화면 공통 조각 — 입력, 비밀번호(보기 토글), 오류, 완료 표시 */
 
-export function Field({ id, label, required, children, help }: { id: string; label: string; required?: boolean; help?: string; children: React.ReactNode }) {
+export function Field({ id, label, required, children, help, error }: { id: string; label: string; required?: boolean; help?: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="field">
       <label className="field__label" htmlFor={id}>
@@ -12,7 +12,7 @@ export function Field({ id, label, required, children, help }: { id: string; lab
         {required && <span className="field__req">*</span>}
       </label>
       {children}
-      {help && <p className="field__help">{help}</p>}
+      {error ? <p id={`${id}-err`} className="field__err" role="alert">{error}</p> : help && <p className="field__help">{help}</p>}
     </div>
   );
 }
@@ -73,6 +73,25 @@ export function Done({ title, children }: { title: string; children: React.React
 export async function postJson<T = Record<string, unknown>>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) throw new Error(data.error || "처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+  // 화면이 상태(409 이미 가입 · 429 잠김 · 401 틀림)로 갈라 보여 줄 수 있게 status 를 붙인다
+  if (!res.ok) throw Object.assign(new Error(data.error || "처리하지 못했어요. 잠시 후 다시 시도해 주세요."), { status: res.status });
   return data;
+}
+
+/** postJson 이 던진 오류의 HTTP 상태. 연결 끊김이면 0 */
+export function errStatus(e: unknown): number {
+  return e && typeof e === "object" && "status" in e && typeof (e as { status: unknown }).status === "number" ? (e as { status: number }).status : 0;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** 이메일 칸 검사 (시안 l-login · l-signup · l-forgot ferr) */
+export function emailError(v: string): string {
+  if (!v.trim()) return "이메일을 입력해 주세요.";
+  return EMAIL_RE.test(v.trim()) ? "" : "이메일 형식을 확인해 주세요.";
+}
+
+/** 남은 초 → "00:59" (다시 받기 대기) */
+export function mmss(s: number): string {
+  const v = Math.max(0, Math.floor(s));
+  return `${String(Math.floor(v / 60)).padStart(2, "0")}:${String(v % 60).padStart(2, "0")}`;
 }
