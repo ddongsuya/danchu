@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { countBy, dbReady, listAllRequests, listStuckRequests } from "@/lib/data";
 import { missingProdEnv } from "@/lib/env";
@@ -31,17 +30,19 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const tab: IntakeTab = status ? "all" : tabParam ?? (stuck.length ? "stuck" : "live");
   const query: IntakeQuery = { tab, q: (sp.q ?? "").slice(0, 60), status, sel: (sp.sel ?? "").slice(0, 40), page: Math.max(1, parseInt(sp.page ?? "1", 10) || 1) };
   const opts = tab === "stuck" ? { nos: stuck.map((r) => r.rfq_no) } : tab === "live" ? { statuses: LIVE_STATUSES } : tab === "won" ? { statuses: WON_STATUSES } : {};
-  const got = await listAllRequests(status || undefined, query.q || undefined, query.page, opts);
+  // 목록을 못 읽으면 탭·검색어는 그대로 두고 표 자리에만 알린다 (시안 a-intake~err)
+  const got = await listAllRequests(status || undefined, query.q || undefined, query.page, opts).catch((e: unknown) => { captureError(e, "admin:intake"); return null; });
+  const failed = !got;
   // 멈춤 탭은 오래 멈춘 순 (시안 a-intake "경과")
   const age = new Map(stuck.map((r) => [r.rfq_no, Math.max(...r.reasons.map((x) => x.days))]));
-  const list = tab === "stuck" ? [...got.list].sort((a, b) => (age.get(b.rfq_no) ?? 0) - (age.get(a.rfq_no) ?? 0)) : got.list;
-  const hasMore = got.hasMore;
+  const rows = got?.list ?? [];
+  const list = tab === "stuck" ? [...rows].sort((a, b) => (age.get(b.rfq_no) ?? 0) - (age.get(a.rfq_no) ?? 0)) : rows;
+  const hasMore = got?.hasMore ?? false;
   const transition = schema.ok ? await transitionRows() : [];
   const missingEnv = missingProdEnv();
   const noSentry = process.env.NODE_ENV === "production" && !sentryEnabled();
   const n = (ks: string[]) => ks.reduce((a, k) => a + (counts.rfq[k] ?? 0), 0);
   const tabCounts = { stuck: stuck.length, live: n(LIVE_STATUSES), won: n(WON_STATUSES), all: Object.values(counts.rfq).reduce((a, b) => a + b, 0), byStatus: counts.rfq };
-  const pendingOrg = counts.org.pending ?? 0;
 
   return (
     <>
@@ -54,12 +55,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </div>
       )}
       {transition.length > 0 && <div style={{ margin: "16px 24px 0" }}><OptInTransition rows={transition} /></div>}
-      {pendingOrg > 0 && (
-        <p className="note note--tint" style={{ margin: "16px 24px 0" }}>
-          기관 승인 대기 <b className="tnum">{pendingOrg}</b>곳 <Link href="/admin/cros?status=pending">기관에서 보기</Link>
-        </p>
-      )}
-      <IntakeBoard list={list} hasMore={hasMore} query={query} counts={tabCounts} stuck={new Map(stuck.map((r) => [r.rfq_no, r.reasons]))} />
+      <IntakeBoard list={list} hasMore={hasMore} query={query} counts={tabCounts} stuck={new Map(stuck.map((r) => [r.rfq_no, r.reasons]))} failed={failed} />
     </>
   );
 }

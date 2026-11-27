@@ -24,7 +24,7 @@ describe("멈춘 요청 이유", () => {
   });
   it("0006: 선택 후 30일 계약 보고 없음", () => {
     const r = stuckReasons({ ...base, rfq_no: "DC-2026-0006", status: "selected", reply_by: "2026-09-30", compared_at: "2026-09-29T00:14:00Z" }, [], { awarded_at: "2026-09-29T00:15:00Z", contract_reported_at: null, cro_name: "테스트기관1" }, today, now);
-    expect(r).toEqual([{ kind: "contract", label: "테스트기관1 선택 후 30일 · 계약 보고 없음", action: "기관에 확인", days: 30 }]);
+    expect(r).toEqual([{ kind: "contract", label: "테스트기관1 선정 후 30일 · 계약 보고 없음", action: "기관에 확인", days: 30 }]);
   });
   it("선택 후 14일 전에는 멈춘 것으로 보지 않는다", () => {
     expect(stuckReasons({ ...base, rfq_no: "X", status: "selected", reply_by: null }, [], { awarded_at: "2026-10-20T00:00:00Z", contract_reported_at: null, cro_name: "A" }, today, now)).toEqual([]);
