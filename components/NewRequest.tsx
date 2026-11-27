@@ -292,6 +292,9 @@ export function NewRequest({
       setPreset(key);
       applyPreset(key);
     }
+    // 홈 입력창에 적은 시험물질 이름 (시안 r-home)
+    const sub = sp.get("substance")?.trim();
+    if (sub) setValues((v) => ({ ...v, substance: sub.slice(0, 100) }));
   };
   const field = (f: Field, id = f.id) => (
     <RfqField
