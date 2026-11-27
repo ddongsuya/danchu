@@ -42,7 +42,7 @@ export default async function CroInvoice({ params }: { params: Promise<{ id: str
         <div>
           <h1>{label} 이용료 청구서</h1>
         </div>
-        <div className="ph__actions"><PrintButton /></div>
+        <div className="ph__actions"><PrintButton label="PDF 내려받기" /></div>
       </div>
 
       <article className="card invoice lq-doc">

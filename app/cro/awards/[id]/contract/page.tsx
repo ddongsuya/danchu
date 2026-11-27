@@ -32,7 +32,7 @@ export default async function ContractDraftPage({ params }: { params: Promise<{ 
           </p>
         </div>
         <div className="ph__actions">
-          <PrintButton />
+          <PrintButton label="PDF 내려받기" />
           {!done && <SendDraftButton awardId={award.id} sentAt={sentAt} />}
         </div>
       </div>
