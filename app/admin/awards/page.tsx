@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listAllAwards } from "@/lib/data";
-import { contractConfirmState, statusLabel, statusTone } from "@/lib/status";
-import { StatusPill } from "@/components/app/ui";
-import { comma, won, ymd } from "@/lib/format";
+import { contractConfirmState } from "@/lib/status";
+import { comma, md, mmdd, won } from "@/lib/format";
 import { successFeeView, wonOrPending } from "@/lib/billing";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/concierge";
@@ -17,12 +16,10 @@ export const dynamic = "force-dynamic";
 export default async function AdminAwards() {
   await requireSession("admin");
   const list = dbReady() ? await listAllAwards() : [];
-  const total = list.reduce((a, x) => a + (x.contract_amount ?? 0), 0);
   // 성사 수수료: 체결 뒤에는 계약 금액 5,000만 원 이상만, 체결 전 예상은 선정 견적 5,000만 원 이상만 (0041). 예상 = 선정 견적 금액으로 계산(안내), 정산 = 확정된 계약 금액으로 계산. 요금표는 구간 초과분 누진(0039) (의뢰자 확인 또는 7일 뒤 자동 확정, 0025)
   const orgIds = [...new Set(list.map((a) => a.cro_org_id).filter((x): x is string => !!x))];
   const { data: rates } = orgIds.length ? await getSupabaseAdmin()!.from("cro_orgs").select("id, fee_rate").in("id", orgIds) : { data: [] as { id: string; fee_rate: number | null }[] };
   const rateOf = new Map((rates ?? []).map((o) => [o.id, o.fee_rate]));
-  const count = (st: string) => list.filter((a) => a.contract_status === st).length;
   // 확인할 신호 (0034, 우회 계약 방지): 기관 보고와 의뢰자 알림이 다르거나, 계약 금액이 선정 견적보다 크게 낮은 수주
   const signalRows = list
     .map((a) => ({
@@ -33,6 +30,8 @@ export default async function AdminAwards() {
       ),
     }))
     .filter((x) => x.sig.length);
+  // 의뢰자 이의 (0025): 운영자가 확인하고 정리할 때까지 정산하지 않는다 (시안 a-dispute)
+  const disputed = list.filter((a) => a.requester_disputed_at && !a.dispute_resolved_at && !a.contract_confirmed_at && !signalRows.some((x) => x.a.id === a.id));
   // 선정 없이 "외부 진행"으로 마쳤는데, 메모에 참여 안내를 받은 기관 이름이 있는 요청 (최근 180일)
   const sb = dbReady() ? getSupabaseAdmin() : null;
   const since = new Date(Date.now() - 180 * 864e5).toISOString();
@@ -44,25 +43,32 @@ export default async function AdminAwards() {
   return (
     <>
       <div className="ph">
-        <div>
-          <h1>수주·계약</h1>
-          <p>선정 {list.length}건 · 체결 {count("signed")}건 · 협의 중 {count("negotiating")}건 · 미체결 {count("not_signed")}건 · 보고된 계약금액 합계 {won(total)}</p>
-        </div>
+        <div><h1>수주·계약</h1></div>
       </div>
-      <AdminSection id="signals" title="확인할 신호" count={signalRows.length + extRows.length} sub="기관 보고와 의뢰자 알림이 다르거나, 계약 금액이 선정 견적보다 20% 이상 낮거나, 외부 진행 메모에 참여 기관 이름이 있는 건입니다. 판단 전에 양쪽에 확인합니다.">
-        {signalRows.length + extRows.length === 0 ? (
-          <EmptyState title="확인할 신호 없음" />
+      <AdminSection id="signals" title="확인 필요" count={signalRows.length + extRows.length + disputed.length}>
+        {signalRows.length + extRows.length + disputed.length === 0 ? (
+          <EmptyState title="확인할 계약이 없어요" />
         ) : (
           <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
-            <thead><tr><th>요청</th><th>기관</th><th>신호</th><th>의뢰자 알림</th></tr></thead>
+            <thead><tr><th>요청</th><th>기관</th><th>신호</th><th>의뢰자 알림</th><th><span className="sr-only">처리</span></th></tr></thead>
             <tbody>
               {signalRows.map(({ a, sig }) => (
                 <tr key={a.id}>
                   <td><Link href={`/admin/r/${a.rfq?.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{a.rfq?.rfq_no}</Link><div style={{ fontSize: 12, color: "var(--muted)" }}>{a.rfq?.substance}</div></td>
                   <td data-label="기관">{a.cro_name}</td>
                   <td data-label="신호">{sig.map((x) => <div key={x.kind} style={{ fontSize: 13 }}>{x.label}</div>)}</td>
-                  <td data-label="의뢰자 알림" style={{ fontSize: 13 }}>{a.sponsor_contract_status ? `${SPONSOR_STATUS_LABEL[a.sponsor_contract_status]}${a.sponsor_reported_at ? ` · ${ymd(a.sponsor_reported_at)}` : ""}${a.sponsor_contract_note ? ` · ${a.sponsor_contract_note}` : ""}` : "-"}</td>
+                  <td data-label="의뢰자 알림" style={{ fontSize: 13 }}>{a.sponsor_contract_status ? `${SPONSOR_STATUS_LABEL[a.sponsor_contract_status]}${a.sponsor_reported_at ? ` · ${mmdd(a.sponsor_reported_at)}` : ""}${a.sponsor_contract_note ? ` · ${a.sponsor_contract_note}` : ""}` : "-"}</td>
+                  <td className="tbl__act">{disputeOf(a) ?? <Link href={`/admin/r/${a.rfq?.rfq_no}?tab=contract`} className="b2 bsm">기록 보기</Link>}</td>
+                </tr>
+              ))}
+              {disputed.map((a) => (
+                <tr key={a.id}>
+                  <td><Link href={`/admin/r/${a.rfq?.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{a.rfq?.rfq_no}</Link><div style={{ fontSize: 12, color: "var(--muted)" }}>{a.rfq?.substance}</div></td>
+                  <td data-label="기관">{a.cro_name}</td>
+                  <td data-label="신호"><span className="pill pill--warn">의뢰자 이의</span></td>
+                  <td data-label="의뢰자 알림" style={{ fontSize: 13 }}>{a.requester_dispute_note ?? "-"}</td>
+                  <td className="tbl__act">{disputeOf(a)}</td>
                 </tr>
               ))}
               {extRows.map(({ r, hit }) => (
@@ -70,7 +76,8 @@ export default async function AdminAwards() {
                   <td><Link href={`/admin/r/${r.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{r.rfq_no}</Link><div style={{ fontSize: 12, color: "var(--muted)" }}>{r.substance}</div></td>
                   <td data-label="기관">{hit.join(", ")}</td>
                   <td data-label="신호" style={{ fontSize: 13 }}>선정 없이 외부 진행 · 메모에 참여 안내를 받은 기관 이름이 있습니다</td>
-                  <td data-label="의뢰자 알림" style={{ fontSize: 13 }}>{r.outcome_note}{r.outcome_at ? ` · ${ymd(r.outcome_at)}` : ""}</td>
+                  <td data-label="의뢰자 알림" style={{ fontSize: 13 }}>{r.outcome_note}{r.outcome_at ? ` · ${mmdd(r.outcome_at)}` : ""}</td>
+                  <td className="tbl__act"><Link href={`/admin/r/${r.rfq_no}?tab=hist`} className="b2 bsm">기록 보기</Link></td>
                 </tr>
               ))}
             </tbody>
@@ -78,22 +85,22 @@ export default async function AdminAwards() {
           </div>
         )}
       </AdminSection>
-      <AdminSection id="awards" title="전체 수주" count={list.length}>
+      <AdminSection id="awards" title="전체" count={list.length}>
       {list.length === 0 ? (
-        <EmptyState title="수주 없음" />
+        <EmptyState title="선정한 요청이 없어요" />
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl tbl--stack">
             <thead>
-              <tr><th>요청</th><th>의뢰자</th><th>선정 CRO</th><th className="num">선정일</th><th>계약 상태</th><th>계약 보고</th><th className="num">성사 수수료</th><th>요청 상태</th></tr>
+              <tr><th>요청</th><th>의뢰자</th><th>선정 기관</th><th className="num">선정일</th><th>계약 상태</th><th>계약 보고</th><th className="num">성사 수수료</th></tr>
             </thead>
             <tbody>
               {list.map((a) => (
                 <tr key={a.id}>
                   <td><Link href={`/admin/r/${a.rfq?.rfq_no}`} className="tnum" style={{ fontWeight: 700 }}>{a.rfq?.rfq_no}</Link><div style={{ fontSize: 12, color: "var(--muted)" }}>{a.rfq?.substance}</div></td>
                   <td data-label="의뢰자">{a.rfq?.company}</td>
-                  <td data-label="선정 CRO" style={{ fontWeight: 600 }}>{a.cro_name}</td>
-                  <td className="num" data-label="선정일">{ymd(a.awarded_at)}</td>
+                  <td data-label="선정 기관" style={{ fontWeight: 600 }}>{a.cro_name}</td>
+                  <td className="num tnum" data-label="선정일">{mmdd(a.awarded_at)}</td>
                   <td data-label="계약 상태"><span className={`pill ${CONTRACT_STATUS_TONE[a.contract_status] ?? "pill--sf"}`}>{CONTRACT_STATUS_LABEL[a.contract_status] ?? a.contract_status}</span></td>
                   <td className="tnum" data-label="계약 보고">{a.contract_reported_at ? (
                     <>
@@ -101,7 +108,6 @@ export default async function AdminAwards() {
                       {a.contract_gap_reason && isGapReason(a.contract_gap_reason) ? <div style={{ fontSize: 12, color: "var(--muted)" }}>차이 사유 {GAP_REASON_LABEL[a.contract_gap_reason]}</div> : null}
                       {a.contract_note ? <div style={{ fontSize: 12, color: "var(--muted)" }}>{a.contract_note}</div> : null}
                       {(() => { const c = contractConfirmState(a); return c ? <div style={{ fontSize: 12, color: c.tone === "warn" ? "var(--warn)" : "var(--muted)", fontWeight: c.tone === "warn" ? 600 : 400 }}>{c.label}</div> : null; })()}
-                      {a.requester_disputed_at && !a.dispute_resolved_at && !a.contract_confirmed_at ? <DisputeResolve awardId={a.id} /> : null}
                     </>
                   ) : <span style={{ color: "var(--muted)" }}>-</span>}</td>
                   <td className="num" data-label="성사 수수료">{(() => {
@@ -122,7 +128,6 @@ export default async function AdminAwards() {
                       </>
                     );
                   })()}</td>
-                  <td data-label="요청 상태"><StatusPill tone={statusTone(a.rfq?.status)}>{statusLabel(a.rfq?.status)}</StatusPill></td>
                 </tr>
               ))}
             </tbody>
@@ -132,4 +137,13 @@ export default async function AdminAwards() {
       </AdminSection>
     </>
   );
+}
+
+type Award = Awaited<ReturnType<typeof listAllAwards>>[number];
+
+/** 의뢰자 이의가 남은 계약 보고면 "이의 처리" 확인창 (시안 a-dispute) */
+function disputeOf(a: Award) {
+  if (!a.requester_disputed_at || a.dispute_resolved_at || a.contract_confirmed_at) return null;
+  const report = a.contract_reported_at ? `${won(a.contract_amount ?? 0)} · 계약일 ${md(a.contract_date)} · ${md(a.contract_reported_at)} 보고` : "";
+  return <DisputeResolve awardId={a.id} rfqNo={a.rfq?.rfq_no} report={report} dispute={a.requester_dispute_note} />;
 }

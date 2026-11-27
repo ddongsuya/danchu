@@ -3,6 +3,10 @@ import { requireSession } from "@/lib/auth";
 import { dbReady, listAudit } from "@/lib/data";
 import { mdhm } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SearchBox } from "@/components/admin/SearchBox";
+import { LoadError } from "@/components/admin/LoadError";
+import { particle } from "@/components/admin/act";
+import { captureError } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
@@ -29,20 +33,27 @@ const TARGET_HREF: Record<string, (id: string, label: string | null) => string |
 };
 
 /** 운영자 행위 기록. 요청 단위 이력(각 요청의 "이력")에 없는 기관·사용자·청구 변경을 본다 */
-export default async function AdminAudit() {
+export default async function AdminAudit({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireSession("admin");
   if (!dbReady()) return <div className="empty">Supabase 환경변수가 없어 데이터를 읽을 수 없습니다.</div>;
-  const rows = await listAudit(200);
+  const q = ((await searchParams).q ?? "").trim().slice(0, 60);
+  const all = await listAudit(200).catch((e: unknown) => { captureError(e, "admin:audit"); return null; });
+  // 검색은 최근 200건 안에서 대상 이름과 동작 이름으로 거른다
+  const rows = (all ?? []).filter((r) => !q || [r.target_label ?? "", ACTION_KO[r.action] ?? r.action].some((t) => t.includes(q)));
   return (
     <>
       <div className="ph">
         <div>
           <h1>운영 기록</h1>
-          <p>기관 추가·승인·중지, 약정 변경, 역할·기관 연결, 계정 삭제, 청구 제외, 기한 변경, 대리 입력, 계약 기록 · 최근 200건</p>
         </div>
+        <div className="ph__actions"><SearchBox q={q} placeholder="대상 · 동작" /></div>
       </div>
-      {rows.length === 0 ? (
-        <EmptyState title="기록 없음" />
+      {!all ? (
+        <LoadError title="운영 기록을 불러오지 못했어요" />
+      ) : rows.length === 0 ? (
+        q
+          ? <EmptyState kind="filtered" title={`'${q}'${particle(q, "과", "와")} 맞는 기록이 없어요`} action={<Link href="/admin/audit" className="b2 bsm">검색 지우기</Link>} />
+          : <EmptyState title="기록이 없어요" />
       ) : (
         <div className="card tbl-wrap">
           <table className="tbl">
@@ -54,7 +65,7 @@ export default async function AdminAudit() {
                 return (
                   <tr key={r.id}>
                     <td className="tnum nowrap">{mdhm(r.created_at)}</td>
-                    <td style={{ fontSize: 13 }}>{r.actor_email ?? "-"}</td>
+                    <td style={{ fontSize: 13 }}>{r.actor_email ?? "운영자"}</td>
                     <td>{ACTION_KO[r.action] ?? r.action}</td>
                     <td style={{ fontSize: 13 }}>{href ? <Link href={href}>{r.target_label ?? r.target_type}</Link> : (r.target_label ?? r.target_type)}</td>
                     <td className="adm-small adm-muted adm-wrap">

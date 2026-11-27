@@ -7,7 +7,7 @@ import { OrgApproval } from "@/components/admin/OrgApproval";
 import { JoinRequests } from "@/components/admin/JoinRequests";
 import { OrgTerms } from "@/components/admin/OrgTerms";
 import { autoReplyEnabled } from "@/lib/env";
-import { ymd, won } from "@/lib/format";
+import { md, ymd, won } from "@/lib/format";
 import { inviteStageLabel } from "@/lib/status";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 
@@ -36,20 +36,20 @@ export default async function AdminCro({ params }: { params: Promise<{ id: strin
       <div className="ph">
         <div>
           <h1>{org.name}</h1>
-          <p className="tnum">신청 {ymd(org.created_at)}{org.approved_at ? ` · 승인 ${ymd(org.approved_at)}` : ""}</p>
+          <p className="tnum">{md(org.created_at)} 신청{org.approved_at ? ` · ${md(org.approved_at)} 승인` : ""}</p>
         </div>
         <div className="ph__actions"><span className={`pill ${st[1]}`}>{st[0]}</span>{org.managed && <ManagedBadge />}</div>
       </div>
-      {org.managed && <p className="note note--tint adm-note">운영자가 등록한 기관입니다. 담당자 계정이 없어 요청서·리마인더 메일은 로그인 없는 회신 링크로 가고, 기관이 보낸 견적서 PDF는 요청 화면의 회신 링크에서 대신 입력합니다. 기관 담당자가 가입해 이 기관에 연결되면 운영자 관리가 풀립니다.</p>}
+      {org.managed && <p className="note note--tint adm-note">운영자가 등록한 기관이에요. 안내 메일은 로그인 없는 회신 링크로 가요.</p>}
       <div className="adm-split">
         <div className="adm-col">
           <section className="card adm-box" aria-labelledby="approve-h">
             <h2 id="approve-h" className="adm-box__h">승인 처리</h2>
-            <OrgApproval id={org.id} status={org.status} managed={!!org.managed} />
+            <OrgApproval id={org.id} name={org.name} status={org.status} managed={!!org.managed} />
           </section>
           <section className="card adm-box" aria-labelledby="terms-h">
             <h2 id="terms-h" className="adm-box__h">약정 · 운영 설정</h2>
-            <p className="adm-box__p">2027년 12월 31일까지 참여한 견적은 청구하지 않습니다. 청구는 2028년 1월 1일부터입니다. 송부 비용과 성사 수수료율은 비우면 요금표를 쓰고, 서면으로 합의한 특별 조건이 있을 때만 적습니다.</p>
+            <p className="adm-box__p">특별 조건을 넣으면 요금표 대신 쓰고, 성사 수수료는 계약 금액 전체 × 요율이에요.</p>
             <OrgTerms org={org} autoReplyAvailable={autoReplyEnabled()} />
           </section>
         </div>

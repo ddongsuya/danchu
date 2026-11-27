@@ -4,12 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CATS } from "@/lib/rfq-schema";
 import { GLP_OPTIONS } from "@/lib/concierge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { LONG_ACTION_TIMEOUT_MS } from "@/components/ui/toast-queue";
 
 const EMPTY = { name: "", contactEmail: "", contactName: "", contactPhone: "", businessNo: "", website: "", otherCerts: "" };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** 추가 전 칸 검사 (시안 a-cro-new~ferr). 첫 오류 한 줄만 돌려준다 */
+export function managedOrgError(f: { name: string; contactEmail: string }, cats: string[]): string {
+  if (!f.name.trim()) return "기관명을 입력해 주세요.";
+  if (!EMAIL_RE.test(f.contactEmail.trim())) return "이메일 형식을 확인해 주세요.";
+  if (!cats.length) return "수행 분야를 하나 이상 골라 주세요.";
+  return "";
+}
 
 /**
- * 기관 추가 (운영자 관리). 아직 가입하지 않은 기관을 운영자가 등록해 요청을 전달하고, 기관이 보낸 견적서 PDF 를 대신 입력한다.
- * 승인 메일 없이 바로 참여 중이 된다. 같은 기관이 있으면 그 기관으로 안내한다.
+ * 기관 추가 (운영자 관리, 시안 검토판 a-cro-new). 아직 가입하지 않은 기관을 운영자가 등록해 참여 안내를 보내고, 기관이 참여한 뒤 보낸 견적서 PDF 를 대신 입력한다.
+ * 승인 메일 없이 바로 참여 중이 된다. 같은 기관(사업자번호·이름)이 있으면 서버가 만들지 않고(409) 그 기관을 알려 준다.
  */
 export function ManagedOrgForm() {
   const router = useRouter();
@@ -17,89 +28,75 @@ export function ManagedOrgForm() {
   const [f, setF] = useState(EMPTY);
   const [cats, setCats] = useState<string[]>([]);
   const [glp, setGlp] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string; existingId?: string } | null>(null);
+  const [dup, setDup] = useState<{ id: string } | null>(null);
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
   const toggle = (list: string[], setList: (v: string[]) => void, v: string) => setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const ready = !!f.name.trim() && !!f.contactEmail.trim() && cats.length > 0;
 
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ready || busy) return;
-    setBusy(true);
-    setMsg(null);
+  const save = async () => {
+    const bad = managedOrgError(f, cats);
+    if (bad) throw new Error(bad);
+    setDup(null);
+    const fallback = "기관을 추가하지 못했어요. 입력한 내용은 그대로 있어요.";
+    let r: Response;
     try {
-      const r = await fetch("/api/admin/cros", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, categories: cats, glpCerts: glp }) });
-      const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string; existingId?: string };
-      if (!r.ok) {
-        setMsg({ ok: false, text: d.error || "기관을 추가하지 못했습니다.", existingId: d.existingId });
-        return;
-      }
-      setMsg({ ok: true, text: d.message || "추가했습니다." });
-      setF(EMPTY);
-      setCats([]);
-      setGlp([]);
-      setOpen(false);
-      router.refresh();
+      r = await fetch("/api/admin/cros", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...f, categories: cats, glpCerts: glp }), signal: AbortSignal.timeout(LONG_ACTION_TIMEOUT_MS) });
     } catch {
-      setMsg({ ok: false, text: "기관을 추가하지 못했습니다. 연결을 확인하고 다시 시도해 주세요." });
-    } finally {
-      setBusy(false);
+      throw new Error(fallback);
     }
+    const d = (await r.json().catch(() => ({}))) as { error?: string; existingId?: string; id?: string };
+    if (r.status === 409 && d.existingId) {
+      setDup({ id: d.existingId });
+      throw new Error((d.error ?? "").replace(/^이미 등록된 기관입니다: /, "같은 사업자등록번호의 기관이 있어요: ") || fallback);
+    }
+    if (!r.ok) throw new Error(d.error || fallback);
+    setF(EMPTY);
+    setCats([]);
+    setGlp([]);
+    router.refresh();
   };
 
-  if (!open) {
-    return (
-      <div className="stack" style={{ gap: 8, marginBottom: 20 }}>
-        <div>
-          <button type="button" className="b2 bsm" onClick={() => { setOpen(true); setMsg(null); }}>기관 추가 (운영자 관리)</button>
-        </div>
-        {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status">{msg.text}</p>}
-      </div>
-    );
-  }
+  const fld = (id: string, label: string, k: keyof typeof EMPTY, extra?: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <div className="fld"><label className="fld__lab" htmlFor={id}>{label}</label><input id={id} className="inp" value={f[k]} onChange={set(k)} {...extra} /></div>
+  );
 
   return (
-    <form className="card card--pad stack" style={{ gap: 14, marginBottom: 20 }} onSubmit={save}>
-      <div>
-        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>기관 추가 (운영자 관리)</h2>
-        <p style={{ fontSize: 13, color: "var(--muted)", maxWidth: "70ch" }}>
-          아직 가입하지 않은 기관을 등록합니다. 승인 메일 없이 바로 참여 중이 되고, 요청서 메일은 로그인 없는 회신 링크로 갑니다.
-          기관이 보낸 견적서 PDF는 요청 화면의 회신 링크에서 대신 입력합니다. 자동 배포와 의뢰자 지명 목록에는 들어가지 않으니, 요청 화면의 배포 패널에서 골라 보내 주세요.
-        </p>
-      </div>
-      <div className="grid2">
-        <div className="fld"><label className="fld__lab" htmlFor="m-name">기관명<span className="req">*</span></label><input id="m-name" className="inp" value={f.name} onChange={set("name")} autoComplete="organization" /></div>
-        <div className="fld"><label className="fld__lab" htmlFor="m-mail">대표 이메일<span className="req">*</span></label><input id="m-mail" className="inp" type="email" value={f.contactEmail} onChange={set("contactEmail")} /><p className="fld__help">요청서와 회신 링크, 계약 진행 확인 메일을 받는 주소입니다. 기관이 공개한 대표 연락처를 넣어 주세요. 요청서 메일에 그렇게 안내됩니다.</p></div>
-        <div className="fld"><label className="fld__lab" htmlFor="m-person">담당자 성명</label><input id="m-person" className="inp" value={f.contactName} onChange={set("contactName")} /></div>
-        <div className="fld"><label className="fld__lab" htmlFor="m-phone">대표 연락처</label><input id="m-phone" className="inp" type="tel" value={f.contactPhone} onChange={set("contactPhone")} /></div>
-        <div className="fld"><label className="fld__lab" htmlFor="m-biz">사업자등록번호</label><input id="m-biz" className="inp tnum" inputMode="numeric" value={f.businessNo} onChange={set("businessNo")} /><p className="fld__help">같은 번호의 기관이 있으면 추가하지 않고 알려 드립니다.</p></div>
-        <div className="fld"><label className="fld__lab" htmlFor="m-web">웹사이트</label><input id="m-web" className="inp" value={f.website} onChange={set("website")} /></div>
-      </div>
-      <div className="fld">
-        <span className="fld__lab">수행 분야<span className="req">*</span></span>
-        <div className="chips">
-          {CATS.map((c) => <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, setCats, c)}>{c}</button>)}
-        </div>
-      </div>
-      <div className="fld">
-        <span className="fld__lab">GLP 인증</span>
-        <div className="chips">
-          {GLP_OPTIONS.map((g) => <button key={g} type="button" className="chip" aria-pressed={glp.includes(g)} onClick={() => toggle(glp, setGlp, g)}>{g}</button>)}
-        </div>
-        <p className="fld__help">비교표의 제출처 대응 판정에 쓰입니다. 비워 두면 "등록 정보 없음"으로 보입니다.</p>
-      </div>
-      <div className="fld"><label className="fld__lab" htmlFor="m-other">기타 인증</label><input id="m-other" className="inp" value={f.otherCerts} onChange={set("otherCerts")} /></div>
-      {msg && !msg.ok && (
-        <p className="note note--err" role="alert">
-          {msg.text}
-          {msg.existingId && <> <Link href={`/admin/cros/${msg.existingId}`}>기관 보기</Link></>}
-        </p>
-      )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="submit" className="b1 bsm" disabled={!ready || busy}>{busy ? "추가 중…" : "기관 추가"}</button>
-        <button type="button" className="b2 bsm" disabled={busy} onClick={() => setOpen(false)}>닫기</button>
-      </div>
-    </form>
+    <>
+      <button type="button" className="b1 bsm" onClick={() => { setDup(null); setOpen(true); }}>기관 추가</button>
+      <ConfirmDialog
+        open={open}
+        title="기관 추가 (운영자 관리)"
+        body={
+          <div className="stack" style={{ gap: 12 }}>
+            <div className="grid2">
+              {fld("m-name", "기관명", "name", { autoComplete: "organization" })}
+              {fld("m-mail", "대표 이메일", "contactEmail", { type: "email" })}
+              {fld("m-person", "담당자 성명", "contactName")}
+              {fld("m-phone", "대표 연락처", "contactPhone", { type: "tel" })}
+              {fld("m-biz", "사업자등록번호", "businessNo", { inputMode: "numeric" })}
+              {fld("m-web", "웹사이트", "website")}
+            </div>
+            <div className="fld">
+              <span className="fld__lab">수행 분야</span>
+              <div className="chips">
+                {CATS.map((c) => <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, setCats, c)}>{c}</button>)}
+              </div>
+            </div>
+            <div className="fld">
+              <span className="fld__lab">GLP 인증</span>
+              <div className="chips">
+                {GLP_OPTIONS.map((g) => <button key={g} type="button" className="chip" aria-pressed={glp.includes(g)} onClick={() => toggle(glp, setGlp, g)}>{g}</button>)}
+              </div>
+            </div>
+            {fld("m-other", "기타 인증", "otherCerts")}
+            {dup && <Link href={`/admin/cros/${dup.id}`} className="b2 bsm" style={{ alignSelf: "flex-start" }}>그 기관 열기</Link>}
+          </div>
+        }
+        confirmLabel="추가"
+        cancelLabel="닫기"
+        pendingLabel="추가하는 중"
+        action={save}
+        onResult={() => setOpen(false)}
+      />
+    </>
   );
 }

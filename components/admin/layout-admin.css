@@ -120,3 +120,19 @@
 .pt .adm .rs-row__main b { font-size: 15px; }
 .pt .adm .rs-row__n { font-size: 24px; }
 @media (max-width: 767px) { .pt .adm .rs-row--ops { grid-template-columns: 44px minmax(0, 1fr); } }
+
+/* 시안 검토판 (2026-11-27): 뼈대 · 포함 칸 · 확인창 안 정보 줄 · 진행 관리 정보 */
+.adm-skel__body { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+.adm-skel[data-kind="split"] .adm-skel__body { grid-template-columns: minmax(0, 1fr) 340px; }
+.adm-skel__side { height: 320px; margin-top: 14px; }
+@media (max-width: 1023px) { .adm-skel[data-kind="split"] .adm-skel__body { grid-template-columns: minmax(0, 1fr); } .adm-skel__side { display: none; } }
+.adm-pick { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; }
+.adm-pick input { width: 18px; height: 18px; accent-color: var(--brand); }
+.adm-pick input:disabled { cursor: default; }
+.adm-dl { display: grid; gap: 6px; margin: 0; font-size: 14px; }
+.adm-dl > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; }
+.adm-dl dt { color: var(--muted); }
+.adm-dl dd { margin: 0; color: var(--ink); font-weight: 500; }
+.adm-memo { margin-top: 16px; }
+.adm-memo h2 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+.adm-head-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

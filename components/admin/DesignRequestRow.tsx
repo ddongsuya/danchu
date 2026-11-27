@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
 
 const OPTS = [["received", "접수"], ["making", "제작 중"], ["review", "검토"], ["applied", "적용"], ["cancelled", "취소"]] as const;
 
@@ -8,13 +10,14 @@ const OPTS = [["received", "접수"], ["making", "제작 중"], ["review", "검�
 export function DesignRequestRow({ id, org, date, status: s0, note, reply: r0, files }: { id: string; org: string; date: string; status: string; note: string; reply: string; files: { name: string; size: number }[] }) {
   const [status, setStatus] = useState(s0);
   const [reply, setReply] = useState(r0);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const toast = useToast();
+  // 저장은 토스트, 실패는 칸 아래 한 줄 (시안 a-qd~saved)
   const save = async () => {
-    setBusy(true); setMsg("");
+    setErr("");
     const r = await fetch(`/api/admin/design-requests/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, reply }) }).catch(() => null);
-    setBusy(false);
-    setMsg(r?.ok ? "저장했어요" : "저장하지 못했어요");
+    if (r?.ok) toast("기관에 보일 답을 저장했어요");
+    else setErr("답을 저장하지 못했어요. 입력한 내용은 그대로 있어요.");
   };
   return (
     <div style={{ padding: "16px 0", display: "grid", gap: 10 }}>
@@ -35,9 +38,9 @@ export function DesignRequestRow({ id, org, date, status: s0, note, reply: r0, f
         <div className="fld"><label className="fld__lab" htmlFor={`rp-${id}`}>기관에 보일 답</label>
           <input id={`rp-${id}`} className="inp" value={reply} maxLength={2000} placeholder="예: 11월 10일까지 시안을 보내요" onChange={(e) => setReply(e.target.value)} />
         </div>
-        <button type="button" className="b1" disabled={busy} onClick={save}>{busy ? "저장 중…" : "저장"}</button>
+        <Button className="b1" onClick={save}>저장</Button>
       </div>
-      {msg && <span role="status" style={{ fontSize: 13, color: "var(--muted)" }}>{msg}</span>}
+      {err && <span className="fld__err" role="alert">{err}</span>}
     </div>
   );
 }

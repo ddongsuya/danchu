@@ -3,7 +3,11 @@ import { dbReady, listCroOrgs, listProfiles } from "@/lib/data";
 import { UserRow } from "@/components/admin/UserRow";
 import { SearchBox } from "@/components/admin/SearchBox";
 import { Pager } from "@/components/admin/Pager";
+import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadError } from "@/components/admin/LoadError";
+import { particle } from "@/components/admin/act";
+import { captureError } from "@/lib/observe";
 
 export const dynamic = "force-dynamic";
 
@@ -11,20 +15,23 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
   const s = await requireSession("admin");
   const { q = "", page: pageStr = "1" } = await searchParams;
   const page = Math.max(1, parseInt(pageStr, 10) || 1);
-  const [{ list: users, hasMore }, orgs] = dbReady() ? await Promise.all([listProfiles(q || undefined, page), listCroOrgs()]) : [{ list: [], hasMore: false }, []];
+  // 못 읽으면 검색칸은 그대로 두고 표 자리에만 알린다 (시안 a-users~err)
+  const got = dbReady() ? await Promise.all([listProfiles(q || undefined, page), listCroOrgs()]).catch((e: unknown) => { captureError(e, "admin:users"); return null; }) : ([{ list: [], hasMore: false }, []] as const);
+  const [{ list: users, hasMore }, orgs] = got ?? [{ list: [], hasMore: false }, []];
   return (
     <>
       <div className="ph">
         <div>
           <h1>사용자</h1>
-          <p>이 페이지: 의뢰자 {users.filter((u) => u.role === "requester").length} · CRO {users.filter((u) => u.role === "cro").length} · 운영자 {users.filter((u) => u.role === "admin").length}</p>
         </div>
         <div className="ph__actions"><SearchBox q={q} placeholder="이메일 · 이름 · 회사" /></div>
       </div>
-      {users.length === 0 ? (
+      {!got ? (
+        <LoadError title="사용자를 불러오지 못했어요" />
+      ) : users.length === 0 ? (
         q
-          ? <EmptyState kind="filtered" title={`"${q}"에 맞는 사용자가 없습니다`} clearHref="/admin/users">이메일, 이름, 회사 중 하나로 다시 찾아 주세요.</EmptyState>
-          : <EmptyState title="사용자 없음" />
+          ? <EmptyState kind="filtered" title={`'${q}'${particle(q, "과", "와")} 맞는 사용자가 없어요`} action={<Link href="/admin/users" className="b2 bsm">검색 지우기</Link>} />
+          : <EmptyState title="사용자가 없어요" />
       ) : (
       <div className="card tbl-wrap">
         <table className="tbl">

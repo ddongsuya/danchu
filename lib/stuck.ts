@@ -39,7 +39,7 @@ export function stuckReasons(r: StuckRfq, invites: StuckInvite[], award: StuckAw
   }
   if (award && !award.contract_reported_at && ["selected", "contracting"].includes(r.status)) {
     const d = daysSince(award.awarded_at, now);
-    if (d >= CONTRACT_WAIT_DAYS) out.push({ kind: "contract", label: `${award.cro_name} 선택 후 ${d}일 · 계약 보고 없음`, action: "기관에 확인", days: d });
+    if (d >= CONTRACT_WAIT_DAYS) out.push({ kind: "contract", label: `${award.cro_name} 선정 후 ${d}일 · 계약 보고 없음`, action: "기관에 확인", days: d });
   }
   return out;
 }

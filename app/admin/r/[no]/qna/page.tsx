@@ -3,7 +3,7 @@ import { requireSession } from "@/lib/auth";
 import { getRfqByNo } from "@/lib/data";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { Crumb } from "@/components/app/ui";
-import { mdhm } from "@/lib/format";
+import { mmdd } from "@/lib/format";
 import { audit } from "@/lib/audit";
 import { QNA_TOPIC_LABEL, type QnaRow } from "@/lib/qna";
 import { testNames } from "@/lib/qna-data";
@@ -35,13 +35,11 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
       <Crumb href={`/admin/r/${rfq.rfq_no}`} label={rfq.rfq_no} />
       <div className="ph">
         <div>
-          <h1>질의응답 기록</h1>
-          <p>
-            {rfq.rfq_no} {rfq.substance} · 질의 {list.length}건 · 답변 대기 {list.filter((r) => r.answer == null).length}건
-          </p>
+          <h1>질의응답 기록 <span className="adm-muted tnum" style={{ fontWeight: 500 }}>/ {rfq.rfq_no}</span></h1>
         </div>
       </div>
-      {list.length === 0 ? <EmptyState title="질의 없음" /> : (
+      <p className="note note--tint adm-note">읽기 전용 · 열람 기록이 남아요. 운영자는 묻거나 답할 수 없어요.</p>
+      {list.length === 0 ? <EmptyState title="질의응답이 없어요" /> : (
       <div className="card tbl-wrap" tabIndex={0} role="region" aria-label="질의응답 기록">
         <table className="tbl" style={{ minWidth: 960 }}>
           <thead>
@@ -49,7 +47,7 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
               <th scope="col">일시</th>
               <th scope="col">방향</th>
               <th scope="col">기관</th>
-              <th scope="col">항목</th>
+              <th scope="col">주제</th>
               <th scope="col">질의</th>
               <th scope="col">답변</th>
               <th scope="col">공개 범위</th>
@@ -58,7 +56,7 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
           <tbody>
             {list.map((r) => (
               <tr key={r.id}>
-                <td className="tnum" style={{ whiteSpace: "nowrap" }}>{mdhm(r.created_at)}</td>
+                <td className="tnum" style={{ whiteSpace: "nowrap" }}>{mmdd(r.created_at)} {new Date(r.created_at).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false })}</td>
                 <td style={{ whiteSpace: "nowrap" }}>{r.direction === "cro" ? "기관 → 의뢰자" : "의뢰자 → 기관"}</td>
                 <td>{names.get(r.invite_id) ?? "-"}</td>
                 <td>
@@ -70,9 +68,8 @@ export default async function AdminQna({ params }: { params: Promise<{ no: strin
                   {r.body_has_contact && <span className="pill pill--warn" style={{ marginLeft: 6 }}>연락처 가림</span>}
                 </td>
                 <td style={{ whiteSpace: "pre-wrap", maxWidth: 320 }}>
-                  {r.answer ?? <span style={{ color: "var(--muted)" }}>답변 대기</span>}
+                  {r.answer != null ? <>{r.answered_at ? <span className="tnum">{mmdd(r.answered_at)} · </span> : null}{r.answer}</> : <span style={{ color: "var(--muted)" }}>답변 대기</span>}
                   {r.answer_has_contact && <span className="pill pill--warn" style={{ marginLeft: 6 }}>연락처 가림</span>}
-                  {r.answered_at && <span className="tnum" style={{ display: "block", color: "var(--muted)", fontSize: 12 }}>{mdhm(r.answered_at)}</span>}
                 </td>
                 <td style={{ whiteSpace: "nowrap" }}>{r.scope === "all" ? "참여 기관 전체" : r.scope === "private" ? "질의 기관만" : "-"}</td>
               </tr>

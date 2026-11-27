@@ -3,6 +3,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CroOrg } from "@/lib/auth";
 import { CATS } from "@/lib/rfq-schema";
+import { useToast } from "@/components/ui/Toast";
+
+/** 숫자 칸 검사 (시안 a-cro~ferr). 비우면 요금표라 빈 값은 통과 */
+export function termsErrors(f: { monthlyFee: string; perRequestFee: string; feeRate: string }): Partial<Record<"monthlyFee" | "perRequestFee" | "feeRate", string>> {
+  const e: Partial<Record<"monthlyFee" | "perRequestFee" | "feeRate", string>> = {};
+  if (f.monthlyFee && !/^\d+$/.test(f.monthlyFee)) e.monthlyFee = "숫자만 입력해 주세요.";
+  if (f.perRequestFee && !/^\d+$/.test(f.perRequestFee)) e.perRequestFee = "숫자만 입력해 주세요.";
+  if (f.feeRate && !/^\d+(\.\d+)?$/.test(f.feeRate)) e.feeRate = "숫자만 입력해 주세요.";
+  return e;
+}
 
 /**
  * 기관 약정과 운영 설정. 청구는 기관이 제출한 견적 1건 단위다 (lib/billing.ts):
@@ -26,11 +36,16 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
   const [autoReply, setAutoReply] = useState(!!org.auto_reply);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const toast = useToast();
+  const [errs, setErrs] = useState<ReturnType<typeof termsErrors>>({});
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const found = termsErrors(f);
+    setErrs(found);
+    if (Object.keys(found).length) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -40,11 +55,11 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
         body: JSON.stringify({ name: f.name, perRequestFee: f.perRequestFee === "" ? null : Number(f.perRequestFee), monthlyFee: f.monthlyFee === "" ? null : Number(f.monthlyFee), monthlyFeeFrom: f.monthlyFee === "" ? null : f.monthlyFeeFrom || null, feeRate: f.feeRate === "" ? null : Number(f.feeRate) / 100, contactEmail: f.contactEmail, billingEmail: f.billingEmail, contactPhone: f.contactPhone, categories: cats, autoReply }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
-      if (!r.ok) throw new Error(d.error || "저장하지 못했습니다.");
-      setMsg({ ok: true, text: d.message || "저장했습니다." });
+      if (!r.ok) throw new Error(d.error || "약정을 저장하지 못했어요. 입력한 내용은 그대로 있어요.");
+      toast("약정을 저장했어요");
       router.refresh();
     } catch (err) {
-      setMsg({ ok: false, text: err instanceof Error ? err.message : "저장하지 못했습니다." });
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "약정을 저장하지 못했어요. 입력한 내용은 그대로 있어요." });
     } finally {
       setBusy(false);
     }
@@ -54,10 +69,10 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
     <form className="stack" style={{ gap: 12 }} onSubmit={save}>
       <div className="grid2">
         <div className="fld"><label className="fld__lab" htmlFor="t-name">기관명</label><input id="t-name" className="inp" value={f.name} onChange={set("name")} /></div>
-        <div className="fld"><label className="fld__lab" htmlFor="t-monthly">월 구독료 (원)</label><input id="t-monthly" className="inp tnum" inputMode="numeric" value={f.monthlyFee} onChange={set("monthlyFee")} placeholder="요금표 1,000,000 · 구독하지 않으면 비워 둠" aria-describedby="t-monthly-help" /><span id="t-monthly-help" className="fld__help">5,000만 원 미만 견적이 여기에 포함됩니다. 바꾸거나 지우기 전에 지난달 명세를 마감해 두세요. 마감하지 않은 달에는 바뀐 값이 들어갑니다.</span></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-monthly">월 구독료 (원)</label><input id="t-monthly" className="inp tnum" inputMode="numeric" value={f.monthlyFee} onChange={set("monthlyFee")} placeholder="요금표 1,000,000 · 구독하지 않으면 비워 둠" aria-invalid={!!errs.monthlyFee || undefined} aria-describedby="t-monthly-help" />{errs.monthlyFee && <span className="fld__err" role="alert">{errs.monthlyFee}</span>}<span id="t-monthly-help" className="fld__help">5,000만 원 미만 견적이 여기에 포함됩니다. 바꾸거나 지우기 전에 지난달 명세를 마감해 두세요. 마감하지 않은 달에는 바뀐 값이 들어갑니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-monthly-from">구독 시작 월</label><input id="t-monthly-from" className="inp tnum" type="month" value={f.monthlyFeeFrom} onChange={set("monthlyFeeFrom")} disabled={f.monthlyFee === ""} aria-describedby="t-monthly-from-help" /><span id="t-monthly-from-help" className="fld__help">이 달부터 명세에 월 구독료가 나옵니다. 비워 두면 구독료를 저장한 달부터입니다.</span></div>
-        <div className="fld"><label className="fld__lab" htmlFor="t-fee">송부 비용 (원)</label><input id="t-fee" className="inp tnum" inputMode="numeric" value={f.perRequestFee} onChange={set("perRequestFee")} placeholder="비우면 요금표 (3만 · 5만)" aria-describedby="t-fee-help" /><span id="t-fee-help" className="fld__help">5,000만 원 이상 견적 1건마다. 요금표는 1억 원 미만 30,000원, 1억 원 이상 50,000원입니다. 재제출은 다시 받지 않습니다.</span></div>
-        <div className="fld"><label className="fld__lab" htmlFor="t-rate">성사 수수료율 (%)</label><input id="t-rate" className="inp tnum" inputMode="decimal" value={f.feeRate} onChange={set("feeRate")} placeholder="비우면 요금표 (2 · 5 · 7)" aria-describedby="t-rate-help" /><span id="t-rate-help" className="fld__help">적으면 5,000만 원 이상 견적이 체결될 때 계약 금액 전체에 이 요율을 곱합니다. 비우면 요금표대로 계약 금액을 구간으로 나눠 5,000만 원 초과 1억 원까지 2%, 1억 원 초과 5억 원까지 5%, 5억 원 초과분 7%를 곱해 더합니다.</span></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-fee">송부 비용 (원)</label><input id="t-fee" className="inp tnum" inputMode="numeric" value={f.perRequestFee} onChange={set("perRequestFee")} placeholder="비우면 요금표 (3만 · 5만)" aria-invalid={!!errs.perRequestFee || undefined} aria-describedby="t-fee-help" />{errs.perRequestFee && <span className="fld__err" role="alert">{errs.perRequestFee}</span>}<span id="t-fee-help" className="fld__help">5,000만 원 이상 견적 1건마다. 요금표는 1억 원 미만 30,000원, 1억 원 이상 50,000원입니다. 재제출은 다시 받지 않습니다.</span></div>
+        <div className="fld"><label className="fld__lab" htmlFor="t-rate">성사 수수료율 (%)</label><input id="t-rate" className="inp tnum" inputMode="decimal" value={f.feeRate} onChange={set("feeRate")} placeholder="비우면 요금표 (2 · 5 · 7)" aria-invalid={!!errs.feeRate || undefined} aria-describedby="t-rate-help" />{errs.feeRate && <span className="fld__err" role="alert">{errs.feeRate}</span>}<span id="t-rate-help" className="fld__help">적으면 5,000만 원 이상 견적이 체결될 때 계약 금액 전체에 이 요율을 곱합니다. 비우면 요금표대로 계약 금액을 구간으로 나눠 5,000만 원 초과 1억 원까지 2%, 1억 원 초과 5억 원까지 5%, 5억 원 초과분 7%를 곱해 더합니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-mail">대표 이메일 (배포 메일 수신)</label><input id="t-mail" className="inp" type="email" value={f.contactEmail} onChange={set("contactEmail")} /></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-bill">청구서 이메일</label><input id="t-bill" className="inp" type="email" value={f.billingEmail} onChange={set("billingEmail")} placeholder="비우면 대표 이메일" aria-describedby="t-bill-help" /><span id="t-bill-help" className="fld__help">월 청구서와 납부 안내를 받습니다. 기관 담당자 계정에도 함께 갑니다.</span></div>
         <div className="fld"><label className="fld__lab" htmlFor="t-phone">대표 연락처</label><input id="t-phone" className="inp" type="tel" value={f.contactPhone} onChange={set("contactPhone")} /></div>
@@ -75,8 +90,8 @@ export function OrgTerms({ org, autoReplyAvailable = false }: { org: CroOrg; aut
         </label>
       )}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <button type="submit" className="b1 bsm" disabled={busy || !f.name.trim() || cats.length === 0}>{busy ? "저장 중…" : "약정 저장"}</button>
-        {msg && <span style={{ fontSize: 13, color: msg.ok ? "var(--ok)" : "var(--err)" }} role="status">{msg.text}</span>}
+        <button type="submit" className="b1 bsm" disabled={busy || !f.name.trim() || cats.length === 0}>저장</button>
+        {msg && !msg.ok && <span className="fld__err" role="alert">{msg.text}</span>}
       </div>
     </form>
   );

@@ -20,11 +20,10 @@ export default async function AdminQuoteDesign() {
       <div className="ph">
         <div>
           <h1>견적서 양식 요청</h1>
-          <p>기관이 올린 견적서 파일로 양식을 만들고 단계를 바꿔요. 답은 기관의 견적서 양식 화면에 보여요.</p>
         </div>
       </div>
       {list.length === 0 ? (
-        <EmptyState title="받은 요청이 없어요" />
+        <EmptyState title="양식 요청이 없어요" />
       ) : (
         <div className="card card--rows">
           {list.map((r) => (

@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/components/AuthBits";
+import { Done, ErrorBox, Field, PasswordInput, TextInput, emailError, errStatus, postJson } from "@/components/AuthBits";
 
 const ERRORS: Record<string, string> = {
   link: "링크를 확인하지 못했어요. 메일의 버튼을 다시 눌러주세요.",
@@ -27,19 +27,26 @@ function Login() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = sp.get("next") || "";
-  const [mode, setMode] = useState<"password" | "magic">("magic");
+  // 메일 속 링크(요청·비교 보고서)로 들어온 사람. 로그인 없이 요청한 의뢰자는 비밀번호가 없으니 이메일 링크 하나로 이어 준다 (2026-11-02 가상 35명 테스트 1번)
+  const fromMail = /^\/app\/r\//.test(next);
+  // 시안 l-login: 비밀번호가 먼저. 메일 링크로 들어온 사람만 이메일 링크가 먼저
+  const [mode, setMode] = useState<"password" | "magic">(fromMail ? "magic" : "password");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(ERRORS[sp.get("error") || ""] || "");
   const [sent, setSent] = useState(false);
+  const [errs, setErrs] = useState<{ email?: string; pw?: string }>({});
+  const [locked, setLocked] = useState("");
   const notice = NOTICES[sp.get("notice") || ""] || "";
-  // 메일 속 링크(요청·비교 보고서)로 들어온 사람. 로그인 없이 요청한 의뢰자는 비밀번호가 없으니 이메일 링크 하나로 이어 준다 (2026-11-02 가상 35명 테스트 1번)
-  const fromMail = /^\/app\/r\//.test(next);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const found = { email: emailError(email) || undefined, pw: mode === "password" && !pw ? "비밀번호를 입력해 주세요." : undefined };
+    setErrs(found);
+    setLocked("");
+    if (found.email || found.pw) { document.getElementById(found.email ? "email" : "pw")?.focus(); return; }
     setBusy(true);
     setError("");
     try {
@@ -51,7 +58,12 @@ function Login() {
       await postJson("/api/auth/magic", { email, next });
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "로그인하지 못했어요.");
+      const text = err instanceof Error ? err.message : "로그인하지 못했어요.";
+      const st = errStatus(err);
+      // 틀린 비밀번호는 비밀번호 칸 아래, 여러 번 틀려 막히면 위쪽 띠 (시안 l-login~wrong · ~locked)
+      if (st === 429) setLocked(text);
+      else if (st === 401 && mode === "password") setErrs({ pw: text });
+      else setError(text);
     } finally {
       setBusy(false);
     }
@@ -79,16 +91,18 @@ function Login() {
       </div>
 
       <div className="auth__tabs" role="group" aria-label="로그인 방법">
-        <button type="button" aria-pressed={mode === "password"} onClick={() => setMode("password")}>비밀번호</button>
-        <button type="button" aria-pressed={mode === "magic"} onClick={() => setMode("magic")}>이메일 링크</button>
+        <button type="button" aria-pressed={mode === "password"} onClick={() => { setMode("password"); setErrs({}); }}>비밀번호</button>
+        <button type="button" aria-pressed={mode === "magic"} onClick={() => { setMode("magic"); setErrs({}); }}>이메일 링크</button>
       </div>
 
-      <form className="auth__form" onSubmit={submit}>
-        <Field id="email" label="이메일" required>
-          <TextInput id="email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" autoFocus />
+      {locked && <div className="auth__ban" role="alert"><span>{locked}</span><Link href="/forgot">비밀번호 찾기</Link></div>}
+
+      <form className="auth__form" onSubmit={submit} noValidate>
+        <Field id="email" label="이메일" required error={errs.email}>
+          <TextInput id="email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" aria-invalid={!!errs.email || undefined} autoFocus />
         </Field>
         {mode === "password" ? (
-          <Field id="pw" label="비밀번호" required>
+          <Field id="pw" label="비밀번호" required error={errs.pw}>
             <PasswordInput id="pw" value={pw} onChange={setPw} placeholder="비밀번호" autoComplete="current-password" />
           </Field>
         ) : (
@@ -96,24 +110,15 @@ function Login() {
         )}
         {notice && <p className="field__help" role="status" style={{ margin: 0 }}>{notice}</p>}
         <ErrorBox>{error}</ErrorBox>
-        <button type="submit" className="btn--next" disabled={busy || !email || (mode === "password" && !pw)}>
-          {busy ? "확인 중…" : mode === "password" ? "로그인" : "로그인 링크 받기"}
+        <button type="submit" className="btn--next" disabled={busy} aria-busy={busy || undefined}>
+          {busy ? (mode === "password" ? "로그인하는 중" : "보내는 중") : mode === "password" ? "로그인" : "로그인 링크 받기"}
         </button>
-        {mode === "password" && (
-          <div className="auth__row">
-            <span />
-            <Link href="/forgot">비밀번호를 잊으셨나요?</Link>
-          </div>
-        )}
       </form>
 
       <div className="auth__links">
-        <span>
-          처음이신가요? <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`}>의뢰자 가입</Link>
-        </span>
-        <span>
-          시험기관이신가요? <Link href="/signup/cro">기관으로 참여 신청</Link>
-        </span>
+        <Link href="/forgot">비밀번호 찾기</Link>
+        <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`}>의뢰자 가입</Link>
+        <Link href="/signup/cro">기관으로 참여 신청</Link>
       </div>
     </div>
   );

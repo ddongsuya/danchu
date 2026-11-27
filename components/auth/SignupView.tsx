@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Done, ErrorBox, Field, PasswordInput, TextInput, postJson } from "@/components/AuthBits";
+import { Done, ErrorBox, Field, PasswordInput, TextInput, emailError, errStatus, postJson } from "@/components/AuthBits";
 import { CONTACT } from "@/lib/rfq-schema";
 import { Chevron } from "@/components/Chevron";
 import { allConsented, ConsentChecks, type ConsentItem } from "./ConsentChecks";
@@ -15,6 +15,20 @@ const CONSENTS: ConsentItem[] = [
 ];
 
 const ORG_TYPES = CONTACT.find((f) => f.id === "orgType")?.options ?? [];
+
+export type SignupErrors = Partial<Record<"company" | "name" | "email" | "password" | "consent", string>>;
+
+/** 의뢰자 가입 칸 검사 (시안 l-signup~ferr). 오류는 칸 바로 아래 한 줄, 가입을 누르면 첫 오류 칸으로 */
+export function signupErrors(f: { company: string; name: string; email: string; password: string }, usePw: boolean, consented: boolean): SignupErrors {
+  const e: SignupErrors = {};
+  if (!f.company.trim()) e.company = "회사·기관명을 입력해 주세요.";
+  if (!f.name.trim()) e.name = "담당자 성명을 입력해 주세요.";
+  const em = emailError(f.email);
+  if (em) e.email = em;
+  if (usePw && f.password.length < 8) e.password = "비밀번호는 8자 이상이어야 해요.";
+  if (!consented) e.consent = "필수 약관에 동의해 주세요.";
+  return e;
+}
 
 export function SignupView() {
   return (
@@ -34,20 +48,27 @@ function Signup() {
   const [error, setError] = useState("");
   const [mailed, setMailed] = useState(true);
   const [done, setDone] = useState(false);
+  const [errs, setErrs] = useState<SignupErrors>({});
+  const [dup, setDup] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-
-  const ok = f.company && f.name && f.email && (!usePw || f.password.length >= 8) && allConsented(CONSENTS, agree);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ok || busy) return;
+    if (busy) return;
+    const found = signupErrors(f, usePw, allConsented(CONSENTS, agree));
+    setErrs(found);
+    setDup(false);
+    const first = (["company", "name", "email", "password"] as const).find((k) => found[k]);
+    if (Object.keys(found).length) { if (first) document.getElementById(first)?.focus(); return; }
     setBusy(true);
     setError("");
     try {
       const result = await postJson<{ mailed: boolean }>("/api/auth/signup", { ...f, password: usePw ? f.password : "", next });
       setMailed(result.mailed); setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "가입하지 못했어요.");
+      // 이미 가입한 이메일은 위쪽 띠와 로그인 길 (시안 l-signup~dup)
+      if (errStatus(err) === 409) setDup(true);
+      else setError(err instanceof Error ? err.message : "가입하지 못했어요.");
     } finally {
       setBusy(false);
     }
@@ -74,19 +95,24 @@ function Signup() {
       <div>
         <h1 className="auth__title">{next === "/app/new" ? "요청서를 보내려면 계정이 필요해요" : "의뢰자 가입"}</h1>
       </div>
+      <nav className="auth__tabs" aria-label="가입 갈래">
+        <Link href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`} aria-current="page">의뢰자</Link>
+        <Link href="/signup/cro">기관</Link>
+      </nav>
+      {dup && <div className="auth__ban auth__ban--info" role="alert"><span>이미 가입한 이메일이에요.</span><Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}>로그인</Link></div>}
 
-      <form className="auth__form" onSubmit={submit}>
+      <form className="auth__form" onSubmit={submit} noValidate>
         <div className="auth__grid">
-          <Field id="company" label="회사·기관명" required>
-            <TextInput id="company" value={f.company} onChange={set("company")} placeholder="(주)바이오벤처" autoComplete="organization" autoFocus />
+          <Field id="company" label="회사·기관명" required error={errs.company}>
+            <TextInput id="company" aria-invalid={!!errs.company || undefined} value={f.company} onChange={set("company")} placeholder="(주)바이오벤처" autoComplete="organization" autoFocus />
           </Field>
 
-          <Field id="name" label="담당자 성명" required>
-            <TextInput id="name" value={f.name} onChange={set("name")} autoComplete="name" />
+          <Field id="name" label="담당자 성명" required error={errs.name}>
+            <TextInput id="name" aria-invalid={!!errs.name || undefined} value={f.name} onChange={set("name")} autoComplete="name" />
           </Field>
 
-          <Field id="email" label="업무용 이메일" required help="견적·비교표 알림이 이 주소로 가요.">
-            <TextInput id="email" type="email" inputMode="email" value={f.email} onChange={set("email")} placeholder="name@company.com" autoComplete="email" />
+          <Field id="email" label="업무용 이메일" required help="견적·비교표 알림이 이 주소로 가요." error={errs.email}>
+            <TextInput id="email" aria-invalid={!!errs.email || undefined} type="email" inputMode="email" value={f.email} onChange={set("email")} placeholder="name@company.com" autoComplete="email" />
           </Field>
 
         </div>
@@ -116,25 +142,23 @@ function Signup() {
           </p>
         </div>
         {usePw && (
-          <Field id="password" label="비밀번호" required help="8자 이상">
+          <Field id="password" label="비밀번호" required help="8자 이상" error={errs.password}>
             <PasswordInput id="password" value={f.password} onChange={(v) => setF({ ...f, password: v })} />
           </Field>
         )}
 
         <ConsentChecks items={CONSENTS} checked={agree} onChange={setAgree} />
+        {errs.consent && <p className="field__err" role="alert">{errs.consent}</p>}
 
         <ErrorBox>{error}</ErrorBox>
-        <button type="submit" className="btn--next" disabled={!ok || busy}>
-          {busy ? "만드는 중…" : "가입"}
+        <button type="submit" className="btn--next" disabled={busy} aria-busy={busy || undefined}>
+          {busy ? "가입하는 중" : "가입"}
         </button>
       </form>
 
       <div className="auth__links">
         <span>
           이미 계정이 있나요? <Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}>로그인</Link>
-        </span>
-        <span>
-          시험기관이신가요? <Link href="/signup/cro">기관으로 참여 신청</Link>
         </span>
       </div>
     </div>
