@@ -1,5 +1,8 @@
 "use client";
 
+import { useToast } from "@/components/ui/Toast";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { withObj } from "@/lib/cro-due";
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -67,7 +70,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
   const [cat, setCat] = useState<string>("");
   const [kindTab, setKindTab] = useState<Kind | null>(() => (initialRows[0] ? kindOfCategory(initialRows[0].category) : null));
   const [q, setQ] = useState("");
-  const [toast, setToast] = useState("");
+  const toast = useToast();
 
   // ?item=대분류::시험 으로 들어오면 그 시험의 첫 줄을 연다 (견적서·회신 화면의 "표준가 정하기" 링크)
   useEffect(() => {
@@ -77,11 +80,6 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
     if (r) { setOpenId(r.id); setKindTab(kindOfCategory(r.category)); }
   }, [sp, initialRows]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(""), 2600);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   /** 시험 하나의 줄들을 저장하고, 서버가 돌려준 전체 목록으로 바꾼다. 새 줄의 id 를 돌려준다 */
   const saveRow = async (draft: CatalogRow, itemRates?: Rate[]): Promise<string> => {
@@ -104,7 +102,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
     if (!isNewId(r.id)) await postJson("/api/cro/catalog", { rows: [], removed: [r.id] });
     setRows((s) => s.filter((x) => x.id !== r.id));
     setOpenId(null);
-    setToast(`${r.item}을(를) 목록에서 뺐어요.`);
+    toast(`${withObj(r.item)} 목록에서 뺐어요`);
     router.refresh();
   };
 
@@ -138,7 +136,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
   }
   if (view.kind === "wizard") {
     const row = rows.find((r) => r.id === view.queue[view.at]);
-    const done = () => { setView({ kind: "list" }); setToast("시험 목록에 담았어요."); };
+    const done = () => { setView({ kind: "list" }); toast("시험 목록에 담았어요"); };
     if (!row) return ListView();
     return (
       <Wizard
@@ -198,7 +196,10 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
         </div>
 
         {groups.length === 0 ? (
-          <div className="tl__none"><b>찾는 시험이 없어요</b><p>검색어를 바꾸거나 "시험 추가"로 담아 주세요.</p></div>
+          // 첫 사용 · 검색 0건 · 분류 0건을 나눈다 (시안 검토판 c-catalog~first · ~zero · ~fz)
+          !rows.length ? <EmptyState title="아직 시험 목록이 없어요" />
+            : q.trim() ? <EmptyState kind="filtered" title={`'${q.trim()}'와 맞는 시험이 없어요`} action={<button type="button" className="b2 bsm" onClick={() => setQ("")}>검색 지우기</button>} />
+              : <EmptyState kind="filtered" title={`${cat} 시험이 없어요`} action={<button type="button" className="b2 bsm" onClick={() => setCat("")}>필터 지우기</button>} />
         ) : groups.map((g) => (
           <section key={g.cat} className="tl__grp" aria-labelledby={`g-${g.cat}`}>
             <h2 id={`g-${g.cat}`}>{g.cat} <span>{g.rows.length}개</span></h2>
@@ -238,11 +239,10 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
             rates={rates[open.item_key]}
             readOnly={readOnly}
             onClose={() => setOpenId(null)}
-            onSave={async (draft, r) => { await saveRow(draft, r); setOpenId(null); setToast("저장했어요."); }}
+            onSave={async (draft, r) => { await saveRow(draft, r); setOpenId(null); toast("시험 목록을 저장했어요"); }}
             onRemove={() => removeRow(open)}
           />
         )}
-        {toast && <div className="tl__toast" role="status">{toast}</div>}
       </div>
     );
   }
