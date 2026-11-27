@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 import { ManagedOrgForm } from "@/components/admin/ManagedOrgForm";
 import { FilterChips } from "@/components/admin/Blocks";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { particle } from "@/components/admin/act";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +44,7 @@ export default async function AdminCros({ searchParams }: { searchParams: Promis
         <div className="adm-bar__end"><SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} /></div>
       </div>
       {!all ? (
-        <LoadError title="기관 목록을 불러오지 못했어요" />
+        <ErrorState title="기관 목록을 불러오지 못했어요" />
       ) : list.length === 0 ? (
         q
           ? <EmptyState kind="filtered" title={`'${q}'${particle(q, "과", "와")} 맞는 기관이 없어요`} action={<Link href={href(status, "")} className="b2 bsm">검색 지우기</Link>} />

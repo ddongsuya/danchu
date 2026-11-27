@@ -8,7 +8,7 @@ import type { BillingInvoiceRow, BillingSnapshot } from "@/lib/db-types";
 import { comma, mmdd, nextDay, todaySeoul } from "@/lib/format";
 import { InvoiceIssue, InvoiceActions } from "@/components/admin/InvoiceActions";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { FilterChips } from "@/components/admin/Blocks";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +68,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       {!bank && <div className="note note--warn adm-note">입금 계좌가 설정되지 않았어요. 청구서에는 &ldquo;운영자가 회신으로 안내&rdquo;로 나가요.</div>}
 
       {error ? (
-        <LoadError title="청구서를 불러오지 못했어요" />
+        <ErrorState title="청구서를 불러오지 못했어요" />
       ) : list.length === 0 ? (
         <EmptyState title={all ? "청구서가 없어요" : r.from === cur.from ? "이번 달 청구서가 없어요" : `${r.label} 청구서가 없어요`} action={<Link href={`/admin/billing${all ? "" : `?month=${r.from.slice(0, 7)}`}`} className="b2 bsm">청구 명세</Link>} />
       ) : (

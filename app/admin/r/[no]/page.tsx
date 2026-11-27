@@ -30,7 +30,7 @@ import type { Values } from "@/lib/rfq-schema";
 import { captureError } from "@/lib/observe";
 import { CONTRACT_WAIT_DAYS } from "@/lib/stuck";
 import { MemoForm } from "@/components/admin/AdminActions";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +47,7 @@ export default async function AdminRfq({ params, searchParams }: { params: Promi
   if (!loaded) {
     return (
       <RequestFrame {...frame} tags={null} stuck={[]} tab={tab === "cda" && !frame.showCda ? "" : tab}>
-        <LoadError title="요청을 불러오지 못했어요" />
+        <ErrorState title="요청을 불러오지 못했어요" />
       </RequestFrame>
     );
   }

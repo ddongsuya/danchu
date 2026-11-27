@@ -5,7 +5,7 @@ import { SearchBox } from "@/components/admin/SearchBox";
 import { Pager } from "@/components/admin/Pager";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { particle } from "@/components/admin/act";
 import { captureError } from "@/lib/observe";
 
@@ -27,7 +27,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
         <div className="ph__actions"><SearchBox q={q} placeholder="이메일 · 이름 · 회사" /></div>
       </div>
       {!got ? (
-        <LoadError title="사용자를 불러오지 못했어요" />
+        <ErrorState title="사용자를 불러오지 못했어요" />
       ) : users.length === 0 ? (
         q
           ? <EmptyState kind="filtered" title={`'${q}'${particle(q, "과", "와")} 맞는 사용자가 없어요`} action={<Link href="/admin/users" className="b2 bsm">검색 지우기</Link>} />

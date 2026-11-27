@@ -12,7 +12,7 @@ import { ManagedBadge } from "@/components/admin/ManagedBadge";
 import { CONTRACT_STATUS_LABEL } from "@/lib/concierge";
 import { AdminSection } from "@/components/admin/Blocks";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { LoadError } from "@/components/admin/LoadError";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +109,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       <AdminSection id="statement" title="기관별 명세" sub="미정은 0원으로 보이지 않고 미정으로 표시합니다.">
       <div className="card tbl-wrap">
         {error && !snap ? (
-          <LoadError title="청구 명세를 불러오지 못했어요" />
+          <ErrorState title="청구 명세를 불러오지 못했어요" />
         ) : rows.length === 0 ? (
           <EmptyState title="이 달 청구할 내용이 없어요" />
         ) : (
