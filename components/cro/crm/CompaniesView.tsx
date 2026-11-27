@@ -78,7 +78,7 @@ export function CompaniesView({ c, q }: { c: CrmCtx; q: CompaniesQuery }) {
             </tbody>
           </table>
         </div>
-      ) : data.companies.length ? <p className="cx-none">조건에 맞는 고객사가 없어요.</p> : (
+      ) : data.companies.length ? <p className="cx-none">조건에 맞는 고객사가 없어요</p> : (
         <section className="cx-empty">
           <h2>아직 고객사가 없어요</h2>
           <p>단추 요청에서 선정되면 의뢰자 회사와 담당자가 자동으로 들어와요.</p>

@@ -104,9 +104,9 @@ export function ActivityView({ c, q }: { c: CrmCtx; q: FeedQuery }) {
           ))}
           {rows.length > FEED_MAX && <p className="cx-cap">최근 {FEED_MAX}건까지 보여요. 기간이나 고객사로 좁혀 주세요.</p>}
         </div>
-      ) : all.length ? <p className="cx-none">조건에 맞는 활동이 없어요.</p> : (
+      ) : all.length ? <p className="cx-none">조건에 맞는 기록이 없어요</p> : (
         <section className="cx-empty">
-          <h2>아직 활동이 없어요</h2>
+          <h2>아직 기록이 없어요</h2>
           <div className="cx-ph__acts"><Link className="b1 bsm" href={`${paths.log}?new=1`}>기록 남기기</Link></div>
         </section>
       )}

@@ -48,7 +48,7 @@ function MobileBoard({ cols, cur, link }: { cols: BoardColumn[]; cur: Stage; lin
             </li>
           ))}
         </ul>
-      ) : <p className="cx-none">이 단계 안건이 없어요.</p>}
+      ) : <p className="cx-none">이 단계 안건이 없어요</p>}
     </div>
   );
 }
@@ -162,7 +162,7 @@ export function DealsView({ c, q }: { c: CrmCtx; q: DealsQuery }) {
                 </tbody>
               </table>
             </div>
-          ) : <p className="cx-none">조건에 맞는 안건이 없어요.</p>}
+          ) : <p className="cx-none">조건에 맞는 안건이 없어요</p>}
         </>
       )}
     </div>
