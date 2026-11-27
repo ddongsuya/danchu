@@ -4,7 +4,7 @@ import { TAB_LABEL, type PipeItem, type PipeTab } from "@/lib/pipeline";
 import { md as mdKo, won, ymd } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { contractReportDue } from "@/lib/contract-reminder";
-import { daysLeft, replyDueLabel, sortByReplyDue } from "@/lib/cro-due";
+import { daysLeft, replyDueLabel, sortReceived } from "@/lib/cro-due";
 import type { listAwardsForOrg } from "@/lib/data";
 import { contractConfirmState } from "@/lib/status";
 import { GAP_REASON_LABEL, isGapReason } from "@/lib/contract-gap";
@@ -21,7 +21,7 @@ import "./board.css";
  * 거르기 값과 검색은 주소(?tab ?q ?cat ?due ?glp ?sp ?sel)에 두어 새로고침·뒤로 가기에도 남는다.
  */
 export type Tab = "all" | Exclude<PipeTab, "other">;
-export type BoardQuery = { tab: Tab; q: string; cat: string; due: string; glp: string; sp: string; sel: string | null };
+export type BoardQuery = { tab: Tab; q: string; cat: string; due: string; glp: string; sp: string; sel: string | null; sort?: "" | "due" };
 export type AwardLite = {
   id: string;
   inviteId: string | null;
@@ -81,6 +81,7 @@ export function href(base: string, q: BoardQuery, patch: Partial<BoardQuery>): s
   if (m.due) sp.set("due", m.due);
   if (m.glp) sp.set("glp", m.glp);
   if (m.sp) sp.set("sp", m.sp);
+  if (m.sort) sp.set("sort", m.sort);
   if (m.sel) sp.set("sel", m.sel);
   const s = sp.toString();
   return s ? `${base}?${s}` : base;
@@ -111,6 +112,22 @@ function Pill({ item }: { item: PipeItem }) {
   return <span className={`bd-pill ${kind}`}>{item.stageLabel}</span>;
 }
 
+const SORTS: ["" | "due", string][] = [["", "받은 날 최근 순"], ["due", "회신 기한 가까운 순"]];
+
+function SortMenu({ base, q }: { base: string; q: BoardQuery }) {
+  const cur = SORTS.find(([v]) => v === (q.sort ?? "")) ?? SORTS[0];
+  return (
+    <details className="bd-chip bd-chip--sort">
+      <summary>{cur[1]}<CaretDown size={12} aria-hidden="true" /></summary>
+      <div className="bd-menu" role="list">
+        {SORTS.map(([v, l]) => (
+          <Link role="listitem" key={l} href={href(base, q, { sort: v, sel: null })} scroll={false} aria-current={v === cur[0] ? "true" : undefined}>{l}</Link>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function Chip({ label, value, opts, base, q, k }: { label: string; value: string; opts: [string, string][]; base: string; q: BoardQuery; k: "cat" | "due" | "glp" | "sp" }) {
   if (!opts.length) return null;
   const cur = opts.find(([v]) => v === value);
@@ -134,8 +151,8 @@ export function RequestsBoard({ items, awards, query, paths, companyOf, today, b
   const counts: Record<Tab, number> = { all: items.length, new: 0, draft: 0, sent: 0, won: 0 };
   for (const x of items) if (x.tab !== "other") counts[x.tab]++;
   const tabs = TABS.filter((t) => t !== "won" || counts.won > 0 || query.tab === "won");
-  // 표는 회신 기한 가까운 순 (시안 검토판 c-req, 2026-11-27). 지난 기한은 뒤로
-  const shown = sortByReplyDue(filterItems(items, query, today), today);
+  // 기본은 받은 날 최근 순 (시안 검토판 c-req). 정렬 고르기에서 회신 기한 가까운 순(지난 기한은 뒤로)
+  const shown = sortReceived(filterItems(items, query, today), query.sort ?? "", today);
   const uniq = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
   const catOpts = uniq(items.flatMap((x) => x.cats.split(" · "))).map((v) => [v, v] as [string, string]);
   const spOpts = uniq(items.flatMap((x) => x.species)).map((v) => [v, v] as [string, string]);
@@ -155,6 +172,7 @@ export function RequestsBoard({ items, awards, query, paths, companyOf, today, b
         </nav>
         <form className="bd-search" action={base} role="search">
           {query.tab !== "all" && <input type="hidden" name="tab" value={query.tab} />}
+          {query.sort && <input type="hidden" name="sort" value={query.sort} />}
           <MagnifyingGlass size={16} aria-hidden="true" />
           <input name="q" defaultValue={query.q} placeholder="요청 번호·시험 이름" aria-label="요청 번호·시험 이름 검색" />
         </form>
@@ -169,8 +187,8 @@ export function RequestsBoard({ items, awards, query, paths, companyOf, today, b
             <Chip label="회신 기한" k="due" value={query.due} opts={DUE_OPTS} base={base} q={query} />
             <Chip label="동물종" k="sp" value={query.sp} opts={spOpts} base={base} q={query} />
             {filtered && <Link href={href(base, query, { q: "", cat: "", due: "", glp: "", sp: "", sel: null })} className="bd-reset" scroll={false}>필터 지우기</Link>}
+            <SortMenu base={base} q={query} />
             <span className="bd-n tnum">{shown.length}건</span>
-            <span className="bd-sort">회신 기한 가까운 순</span>
           </div>
           {query.tab === "sent" ? <SentView items={shown} query={query} base={base} /> : <MainView items={shown} query={query} base={base} paths={paths} companyOf={companyOf} today={today} />}
         </>

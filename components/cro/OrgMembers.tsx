@@ -38,6 +38,7 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
       body: `내보내면 ${m.email} 계정은 이 기관의 요청과 견적서를 볼 수 없습니다.`,
       confirmLabel: "내보내기 확정",
       pendingLabel: "내보내는 중",
+      retryLabel: "다시 내보내기",
       danger: true,
       action: async () => { if (!(await post(m.id, "remove")).ok) throw new Error("구성원을 내보내지 못했어요. 구성원은 그대로예요."); },
     });
@@ -49,6 +50,7 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
       body: `거절하면 ${m.email}에 거절 결과를 알립니다.`,
       confirmLabel: "거절",
       pendingLabel: "거절하는 중",
+      retryLabel: "다시 거절",
       danger: true,
       action: async () => { if (!(await post(m.id, "reject")).ok) throw new Error("연결 요청을 거절하지 못했어요. 요청은 그대로예요."); },
     });

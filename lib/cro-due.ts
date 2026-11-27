@@ -80,3 +80,9 @@ export function withObj(w: string): string {
   const c = w.charCodeAt(w.length - 1) - 0xac00;
   return `${w}${c >= 0 && c < 11172 && c % 28 ? "을" : "를"}`;
 }
+
+/** 받은 요청 표 정렬 (시안 검토판 c-req): 기본 받은 날 최근 순, "due" 는 회신 기한 가까운 순 */
+export function sortReceived<T extends { sentAt: string; replyBy: string; no: string }>(items: readonly T[], sort: "" | "due", today: string): T[] {
+  if (sort === "due") return sortByReplyDue(items, today);
+  return [...items].sort((a, b) => b.sentAt.localeCompare(a.sentAt) || b.no.localeCompare(a.no));
+}

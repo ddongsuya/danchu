@@ -99,6 +99,7 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
       body: c.body,
       confirmLabel: c.ok,
       pendingLabel: "보내는 중",
+      retryLabel: "다시 보내기",
       action: async () => {
         const r = await fetch(`/api/quote/${token}/detail`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode, items: edited, totalWeeks: weeks, note }) }).catch(() => null);
         if (!r?.ok) {

@@ -38,6 +38,7 @@ export function ContractReport({ awardId, quoteAmount = null }: { awardId: strin
           ),
           confirmLabel: "체결 보고",
           pendingLabel: "보고하는 중",
+          retryLabel: "다시 보고",
           action: async () => {
             const res = await fetch(`/api/awards/${awardId}/contract`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, amount, note, gapReason: gapReason || undefined }) }).catch(() => null);
             if (!res?.ok) throw new Error("저장하지 못했어요. 다시 눌러 주세요. 입력한 내용은 그대로 있어요.");

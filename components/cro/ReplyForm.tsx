@@ -363,6 +363,7 @@ export function ReplyForm({ token, backHref, doneHref, orgCerts, docFill, docLin
       ),
       confirmLabel: "제출",
       pendingLabel: "제출하는 중",
+      retryLabel: "다시 제출",
       action: async () => {
         const fail = "회신을 제출하지 못했어요. 입력한 내용은 그대로 있어요.";
         // 제출본이 자동 저장에 덮이지 않도록 대기 중·진행 중인 초안 저장을 멈춘다

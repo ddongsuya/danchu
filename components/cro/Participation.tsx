@@ -10,12 +10,13 @@ import { useConfirm } from "@/components/ui/ConfirmDialog";
  */
 type Mode = "decline" | "withdraw";
 
-const COPY: Record<Mode, { title: string; body: (joinBy: string) => string; ok: string; pending: string; fail: string; help: string }> = {
+const COPY: Record<Mode, { title: string; body: (joinBy: string) => string; ok: string; pending: string; retry: string; fail: string; help: string }> = {
   decline: {
     title: "이 요청에 불참할까요?",
     body: (joinBy) => `불참으로 처리하면 참여 자리에 세지 않고, ${joinBy ? `참여 결정 기한 ${joinBy}까지는` : "참여 결정 기한까지는"} 자리가 남아 있으면 다시 참여할 수 있습니다.`,
     ok: "불참으로 처리",
     pending: "처리하는 중",
+    retry: "다시 처리",
     fail: "불참으로 처리하지 못했어요. 참여 상태는 바뀌지 않았어요.",
     help: "사유는 단추 운영자에게만 전달돼요.",
   },
@@ -24,6 +25,7 @@ const COPY: Record<Mode, { title: string; body: (joinBy: string) => string; ok: 
     body: () => "철회하면 이 요청에 다시 참여할 수 없고, 작성 중이던 내용은 의뢰자에게 보이지 않습니다. 철회한 요청은 청구하지 않습니다.",
     ok: "참여 철회",
     pending: "철회하는 중",
+    retry: "다시 철회",
     fail: "처리하지 못했어요. 참여 상태는 바뀌지 않았어요.",
     help: "사유는 단추 운영자에게만 전달돼요.",
   },
@@ -50,6 +52,7 @@ export function useParticipation(token: string, endpoint?: string) {
       ),
       confirmLabel: operator ? (mode === "withdraw" ? "기관이 알린 철회 기록" : "기관이 알린 불참 기록") : c.ok,
       pendingLabel: c.pending,
+      retryLabel: c.retry,
       danger: true,
       action: async () => {
         const res = await fetch(endpoint ?? `/api/quote/${token}/decline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: reason.current, mode }) }).catch(() => null);

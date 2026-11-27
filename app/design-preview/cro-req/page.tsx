@@ -25,7 +25,7 @@ const VIEWS: [string, string][] = [
   ["reply", "회신 쓰기"], ["reply-ro", "회신 읽기 전용"], ["done", "제출 완료"],
 ];
 
-type Sp = { view?: string; tab?: string; q?: string; cat?: string; due?: string; sp?: string; sel?: string };
+type Sp = { view?: string; tab?: string; q?: string; cat?: string; due?: string; sp?: string; sel?: string; sort?: string };
 
 /** 기관 받은 요청 · 요청 상세 · 회신 화면 검토 (시안 검토판 c-req · c-r · c-join · c-reply · q-*). 예시 데이터, 저장 안 됨 */
 export default async function CroReqPreview({ searchParams }: { searchParams: Promise<Sp> }) {
@@ -40,7 +40,7 @@ export default async function CroReqPreview({ searchParams }: { searchParams: Pr
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items = buildPipeline(invites as any, awards as any, now);
     const tab = (["new", "draft", "sent", "won"] as const).find((t) => t === sp.tab) ?? "all";
-    const query: BoardQuery = { tab: tab as Tab, q: sp.q ?? "", cat: sp.cat ?? "", due: sp.due ?? "", glp: "", sp: sp.sp ?? "", sel: sp.sel ?? null };
+    const query: BoardQuery = { tab: tab as Tab, q: sp.q ?? "", cat: sp.cat ?? "", due: sp.due ?? "", glp: "", sp: sp.sp ?? "", sel: sp.sel ?? null, sort: sp.sort === "due" ? "due" : "" };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     body = <RequestsBoard items={items} awards={awards.map((a) => awardLiteOf(a as any))} query={query} paths={PATHS} companyOf={{}} today={todaySeoul()} base={B} />;
   } else if (view === "first") {

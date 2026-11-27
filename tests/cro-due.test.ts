@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_REPLY_PDF, daysLeft, doneAt, replyDueLabel, replyPdfError, saveStatus, sortByReplyDue, validUntilError, withObj, withRo } from "@/lib/cro-due";
+import { MAX_REPLY_PDF, daysLeft, doneAt, replyDueLabel, replyPdfError, saveStatus, sortByReplyDue, sortReceived, validUntilError, withObj, withRo } from "@/lib/cro-due";
 
 const TODAY = "2027-07-14";
 
@@ -82,5 +82,19 @@ describe("withRo", () => {
 describe("withObj", () => {
   it("받침에 맞춰 을/를", () => {
     expect(["영업 담당", "김 책임", "견적 담당자", "Kim"].map(withObj)).toEqual(["영업 담당을", "김 책임을", "견적 담당자를", "Kim를"]);
+  });
+});
+
+describe("sortReceived", () => {
+  const rows = [
+    { no: "A", sentAt: "2027-07-05", replyBy: "2027-07-16" },
+    { no: "B", sentAt: "2027-07-13", replyBy: "2027-07-27" },
+    { no: "C", sentAt: "2027-06-21", replyBy: "2027-07-01" },
+  ];
+  it("기본은 받은 날 최근 순", () => {
+    expect(sortReceived(rows, "", TODAY).map((r) => r.no)).toEqual(["B", "A", "C"]);
+  });
+  it("due 는 회신 기한 가까운 순, 지난 기한은 뒤", () => {
+    expect(sortReceived(rows, "due", TODAY).map((r) => r.no)).toEqual(["A", "B", "C"]);
   });
 });

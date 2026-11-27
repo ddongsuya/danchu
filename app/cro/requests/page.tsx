@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * 받은 요청 (2026-11-07, 옛 "견적 진행", CRM 1단계에서 /cro → /cro/requests). 받은 요청 · 제출한 견적 · 수주를 요청 하나의 흐름으로 본다.
  * ?sel=<초대 id> 는 오른쪽(휴대폰은 다음 화면) 상세. 빠진 배포는 승인·분야 변경 시점과 매일 크론이 채운다.
  */
-type Sp = { sel?: string; tab?: string; q?: string; cat?: string; due?: string; glp?: string; sp?: string };
+type Sp = { sel?: string; tab?: string; q?: string; cat?: string; due?: string; glp?: string; sp?: string; sort?: string };
 const one = (v: unknown, max = 60) => (typeof v === "string" ? v.slice(0, max) : "");
 
 export default async function CroRequests({ searchParams }: { searchParams: Promise<Sp> }) {
@@ -41,6 +41,7 @@ export default async function CroRequests({ searchParams }: { searchParams: Prom
     glp: ["GLP", "Non-GLP"].includes(one(sp.glp)) ? one(sp.glp) : "",
     sp: one(sp.sp),
     sel: sp.sel && /^[0-9a-f-]{36}$/.test(sp.sel) ? sp.sel : null,
+    sort: sp.sort === "due" ? "due" : "",
   };
   let loaded: [Awaited<ReturnType<typeof listInvitesForOrg>>, Awaited<ReturnType<typeof listAwardsForOrg>>];
   try {

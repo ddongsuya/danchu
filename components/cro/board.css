@@ -38,8 +38,6 @@
 .bd-menu a[aria-current="true"] { background: var(--band); color: var(--ink); font-weight: 500; }
 .bd-reset { font-size: 13px; color: var(--muted); text-underline-offset: 3px; }
 .bd-n { margin-left: auto; font-size: 13px; color: var(--muted); }
-.bd-sort { font-size: 13px; color: var(--muted); }
-.bd-sort::before { content: "·"; margin-right: 8px; }
 .bd-due--today { font-weight: 700; color: var(--ink); }
 
 /* 표 + 오른쪽 칸 */
