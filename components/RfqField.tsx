@@ -1,5 +1,6 @@
 "use client";
 
+import { CONFID_LABEL } from "@/lib/confid-label";
 import { useEffect, useRef, useState } from "react";
 import type { Field, Values } from "@/lib/rfq-schema";
 import { Chevron } from "./Chevron";
@@ -43,6 +44,8 @@ export function RfqField({
   const str = typeof v === "string" ? v : "";
   const arr = Array.isArray(v) ? v : [];
   const multi = field.type === "chips";
+  // 저장 값은 그대로 두고 화면 이름만 바꾼다 (공개 범위: CDA 없이 · 단추 표준 CDA · 자체 CDA, 시안 r-new3)
+  const show = (o: string) => (id === "confid" ? CONFID_LABEL[o] : undefined) ?? o;
   /** 위자드에서는 선택형을 목록형 큰 카드로 그린다 */
   const asList = big && ["radio", "segmented", "select", "chips"].includes(field.type);
 
@@ -124,7 +127,7 @@ export function RfqField({
             <option value="">선택</option>
             {field.options?.map((o) => (
               <option key={o} value={o}>
-                {o}
+                {show(o)}
               </option>
             ))}
           </select>
@@ -145,7 +148,7 @@ export function RfqField({
                 aria-pressed={on}
                 onClick={() => onChange(id, multi ? (on ? arr.filter((x) => x !== o) : [...arr, o]) : o)}
               >
-                <span>{o}</span>
+                <span>{show(o)}</span>
                 <svg className="opt__check" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
                   <circle cx="12" cy="12" r="11" fill="var(--brand)" />
                   <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -161,7 +164,7 @@ export function RfqField({
           {field.options?.map((o) => (
             <label key={o}>
               <input type="radio" name={id} value={o} checked={str === o} onChange={() => onChange(id, o)} />
-              <span>{o}</span>
+              <span>{show(o)}</span>
             </label>
           ))}
         </div>
@@ -171,7 +174,7 @@ export function RfqField({
         <div className="segmented" role="group" aria-label={field.label || id}>
           {field.options?.map((o) => (
             <button key={o} type="button" aria-pressed={str === o} onClick={() => onChange(id, o)}>
-              {o}
+              {show(o)}
             </button>
           ))}
         </div>
@@ -189,7 +192,7 @@ export function RfqField({
                 aria-pressed={on}
                 onClick={() => onChange(id, on ? arr.filter((x) => x !== o) : [...arr, o])}
               >
-                {o}
+                {show(o)}
               </button>
             );
           })}

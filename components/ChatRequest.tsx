@@ -384,8 +384,8 @@ export function ChatRequest({
       const opts = [5, 7, 10].map((n) => ({ n, d: ymd(addBusinessDays(nowSeoul(), n)) }));
       ans = (
         <div className="cr-g2">
-          {opts.map(({ n, d }) => opt(`평일 ${n}일`, () => { onChange("replyBy", d); answer(q, `평일 ${n}일`, { k: "review" }); }, { sm: dayOnly(d), pri: replyBy === d }))}
-          {opt("날짜 고르기", () => go({ k: "date" }))}
+          {opts.map(({ n, d }) => opt(`평일 ${n}일 · ${dayOnly(d)}`, () => { onChange("replyBy", d); answer(q, `평일 ${n}일 · ${dayOnly(d)}`, { k: "review" }); }, { pri: replyBy === d }))}
+          {opt(!opts.some((o) => o.d === replyBy) && values.replyBy ? `날짜 고르기 · ${short(replyBy)}` : "날짜 고르기", () => go({ k: "date" }), { pri: !opts.some((o) => o.d === replyBy) && !!values.replyBy })}
         </div>
       );
       break;
