@@ -5,7 +5,7 @@ import { ConfirmForm } from "@/components/auth/ConfirmForm";
 export const metadata: Metadata = { title: "이메일 확인 · 단추", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-const TITLE: Record<string, string> = { recovery: "비밀번호를 다시 정해요", magiclink: "로그인해요", signup: "가입을 완료해요", email: "이메일을 확인해요" };
+const TITLE: Record<string, string> = { recovery: "비밀번호 재설정", magiclink: "로그인", signup: "가입 완료", email: "이메일 확인" };
 
 /**
  * 메일의 버튼이 여기로 온다. 이 페이지는 토큰을 쓰지 않는다.

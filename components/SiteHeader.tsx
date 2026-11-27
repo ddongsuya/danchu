@@ -14,7 +14,7 @@ export function SiteHeader({ cta = true }: { cta?: boolean }) {
         <SiteNav />
         <div className="right">
           <HeaderAuth className="si" />
-          {cta && <RfqLink className="btn solid sm" preregLabel={<>사전예약하기</>}>견적 요청하기</RfqLink>}
+          {cta && <RfqLink className="btn solid sm" preregLabel={<>사전예약</>}>견적 요청</RfqLink>}
         </div>
       </nav>
     </>

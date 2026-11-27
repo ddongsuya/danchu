@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { loadQuote } from "@/lib/quote-load";
 import { viewerLoadOpts } from "@/lib/auth";
 import { ReplyForm } from "@/components/cro/ReplyForm";
+import { Crumb } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,18 @@ export default async function TokenReply({ params }: { params: Promise<{ token: 
   if (!got.joined) redirect(`/q/${token}`);
   return (
     <>
+      {/* 운영자 대리 입력 (시안 a-offer): 제목 · 요청 번호 · 기준 띠. 기관이 여는 회신 화면은 그대로 */}
       {operator && (
-        <p className="note note--tint" style={{ marginBottom: 16, flexDirection: "column", gap: 2 }}>
-          <b style={{ fontWeight: 600 }}>운영자 대리 입력 · {got.croName}</b>
-          <span>기관이 보낸 견적서 PDF를 첨부하고 금액·기간·조건을 PDF 그대로 옮겨 적어 주세요. 제출하면 비교표에 &ldquo;단추 정리 · 기관 PDF 기준&rdquo;으로 표시되고, PDF 원본이 기준 문서로 함께 전달돼요. 비교표가 열리면 의뢰자에게 그대로 보이므로 PDF와 대조를 마친 뒤 제출해 주세요.</span>
-        </p>
+        <>
+          <Crumb href={`/admin/r/${got.rfq.no}`} label={`${got.rfq.no} 요청으로`} />
+          <div className="ph">
+            <div>
+              <h1>{got.croName} 견적 대신 입력</h1>
+              <p className="tnum">{got.rfq.no} · 기관이 참여한 뒤에만</p>
+            </div>
+          </div>
+          <p className="note note--tint q-note">기관이 메일로 보낸 견적서 PDF 기준 · 기관 열람으로 기록하지 않음</p>
+        </>
       )}
       <ReplyForm token={token} backHref={`/q/${token}`} doneHref={`/q/${token}/reply/done`} />
     </>

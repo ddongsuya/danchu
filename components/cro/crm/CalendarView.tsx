@@ -6,6 +6,7 @@ import {
 } from "@/lib/crm-shape";
 import { EventForm, SheetButton, type CrmOpts } from "./forms";
 import { qs, type CrmPaths } from "./opts";
+import "./layout-crm.css";
 
 export type CalView = "week" | "month";
 const H0 = 8;
@@ -74,8 +75,8 @@ export function CalendarView({ view, anchor, day, items, sel, mine, paths, opts,
     <div className={`cal${sel ? " cal--sel" : ""}`} data-view={view}>
       <header className="cal__h">
         <div>
-          <h1>{title}</h1>
-          <p className="tnum">{summary}{mine ? " · 내 일정만" : ""}</p>
+          <h1>캘린더</h1>
+          <p className="tnum"><b>{title}</b> · {summary}{mine ? " · 내 일정만" : ""}</p>
         </div>
         <div className="cal__ctl">
           <Link href={qs(paths.calendar, { v: view === "week" ? null : view, mine: mine ? "1" : null })} className="b2 bsm">오늘</Link>
@@ -210,7 +211,7 @@ export function CalendarView({ view, anchor, day, items, sel, mine, paths, opts,
                   ))}
                 </ul>
               ) : <p className="crm-hint">이번 주에 다가오는 기한이 없어요.</p>}
-              <p className="crm-hint">할 일 기한, 보낸 견적의 유효기간, 단추 요청의 참여·회신 기한이 저절로 올라와요. 일정을 누르면 여기에 자세히 보여요.</p>
+              <p className="crm-hint">할 일 기한, 보낸 견적의 유효기간, 단추 요청의 참여·회신 기한이 자동으로 들어와요.</p>
             </div>
           )}
         </aside>

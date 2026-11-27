@@ -43,3 +43,12 @@
  .auth__grid{grid-template-columns:1fr}
  .auth__title{font-size:28px}
 }
+
+/* 시안 검토판 (2026-11-27): 칸 아래 오류 한 줄 · 위쪽 띠(이미 가입·잠김) · 가입 갈래 고르기 */
+.field__err{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--error-fg)}
+.a .input[aria-invalid="true"]{border-color:var(--error-fg)}
+.auth__ban{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 16px;border-radius:2px;background:var(--error-bg);color:var(--error-fg);font-size:14px;line-height:1.5}
+.auth__ban--info{background:var(--white);border:1px solid var(--card-line);color:var(--body)}
+.auth__ban a{color:inherit;font-weight:500;text-decoration:underline;text-underline-offset:4px}
+.auth__tabs a{display:flex;align-items:center;justify-content:center;min-height:36px;padding:6px 8px;font-size:14px;color:var(--muted);text-decoration:none;border-radius:1px}
+.auth__tabs a[aria-current="page"]{background:var(--ink);color:var(--surface);font-weight:500}

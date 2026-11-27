@@ -103,7 +103,7 @@ export function SiteNav() {
               ))}
             </nav>
             <div className="mnav__foot" onClick={closeOnLink}>
-              {guestPrereg ? <a href={PREREG_HREF} className="btn solid">사전예약하기</a> : <a href={requestHref} className="btn solid">견적 요청하기</a>}
+              {guestPrereg ? <a href={PREREG_HREF} className="btn solid">사전예약</a> : <a href={requestHref} className="btn solid">견적 요청</a>}
               <a href={me ? me.to : "/login"} className="btn ghost">{me ? PORTAL[me.role] : "로그인"}</a>
               <div className="mnav__sub">
                 <a href="/privacy"><strong>개인정보처리방침</strong></a>

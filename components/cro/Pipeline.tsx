@@ -2,6 +2,8 @@ import Link from "next/link";
 import { LockSimple } from "@phosphor-icons/react/dist/ssr";
 import { GROUP_LABEL, groupPipeline, type PipeItem } from "@/lib/pipeline";
 import { dday } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
+import "./layout-quote.css";
 
 /**
  * 견적 진행 (2026-11-07). 넓은 화면: 왼쪽 목록 + 오른쪽 상세. 휴대폰: 목록 화면 → 누르면 상세 화면(?sel=).
@@ -22,22 +24,20 @@ export function Pipeline({ items, sel, paths = CRO_PATHS, companyOf = {} }: { it
     return (
       <>
         <div className="ph"><div><h1>받은 요청</h1></div></div>
-        <div className="empty">
-          <b>아직 받은 요청이 없어요</b>
+        <EmptyState title="아직 받은 요청이 없어요" action={paths.catalog ? <Link href={paths.catalog} className="b2 bsm">시험 목록 보기</Link> : <Link href="/cro/org" className="b2 bsm">수행 분야 보기</Link>}>
           수행 분야와 맞는 요청이 오면 참여 안내를 메일과 알림으로 보내요.
-          <div style={{ marginTop: 14 }}>{paths.catalog ? <Link href={paths.catalog} className="b2 bsm">시험 목록 보기</Link> : <Link href="/cro/org" className="b2 bsm">수행 분야 보기</Link>}</div>
-        </div>
+        </EmptyState>
       </>
     );
   }
 
   return (
     <div className={`pl${cur ? " pl--sel" : ""}`}>
+      <div className="pl__head">
+        <h1>받은 요청</h1>
+        <p className="tnum">할 일 {todo}건 · 진행 중 {live}건</p>
+      </div>
       <div className="pl__list">
-        <div className="pl__head">
-          <h1>받은 요청</h1>
-          <p className="tnum">할 일 {todo}건 · 진행 중 {live}건</p>
-        </div>
         {groups.map((g) => (
           <section key={g.group} className="pl__grp" aria-label={GROUP_LABEL[g.group]}>
             <h2><span>{GROUP_LABEL[g.group]}</span><span className="tnum">{g.items.length}</span></h2>

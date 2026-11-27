@@ -13,7 +13,7 @@ export default function NotFound() {
           <p className="lead" style={{ marginTop: 16 }}>주소가 바뀌었거나 잘못 입력된 것 같아요. 메일 속 링크라면 메일에서 다시 눌러 주세요.</p>
         </div>
         <div className="ctas">
-          <a className="btn solid" href="/request">견적 요청하기</a>
+          <a className="btn solid" href="/request">견적 요청</a>
           <a className="btn ghost" href="/">홈으로</a>
         </div>
       </section>

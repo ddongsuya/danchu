@@ -26,7 +26,7 @@ export default async function DocPrint({ params }: { params: Promise<{ id: strin
         <div>
           <Link href={`/cro/docs/${id}`} className="crumb">견적서 편집으로</Link>
           <h1>{got.head.docNo} PDF</h1>
-          <p>인쇄 창에서 대상을 &quot;PDF로 저장&quot;으로 고르세요. 용지는 A4, 여백은 없음으로 두면 화면과 같아요.</p>
+          <p>인쇄 창에서 대상을 &quot;PDF로 저장&quot;으로 골라 주세요. 용지 A4, 여백 없음이면 화면과 같아요.</p>
         </div>
         <div className="ph__actions">
           <a className="b2 bsm" href={`/api/cro/docs/${id}/xlsx`}>엑셀</a>

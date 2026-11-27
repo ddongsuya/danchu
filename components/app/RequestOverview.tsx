@@ -7,10 +7,19 @@ import type { RfqSummary } from "@/lib/data";
 import { TRACK_STAGES, reportReady, terseRow, timelineCounts, timelineEvents, timelineLayout } from "@/lib/request-story";
 import { HowItWorks } from "@/components/app/HowItWorks";
 import { md } from "@/lib/format";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export type RequestListItem = Pick<RfqSummary, "id" | "rfq_no" | "status" | "substance" | "categories" | "joined" | "cap" | "submitted" | "sent" | "opened" | "reply_by" | "created_at" | "compared_at" | "selected_quote_id" | "started_at"> & { outcome?: string | null };
 const FILTERS = ["전체", "진행 중", "보고서 열림", "종료"] as const;
 const DONE = ["closed", "cancelled"];
+/** 검색·필터 결과가 없을 때 제목에 붙는 상태 이름 (시안 v7 "'KR-0932'와 맞는 종료된 요청이 없어요") */
+const FILTER_ADJ: Record<(typeof FILTERS)[number], string> = { 전체: "", "진행 중": "진행 중인", "보고서 열림": "보고서가 열린", 종료: "종료된" };
+
+/** 검색어 조사는 값마다 달라지므로(와/과) 바뀌지 않는 "에"를 쓴다 */
+function noMatchTitle(query: string, filter: (typeof FILTERS)[number]): string {
+  const kind = [FILTER_ADJ[filter], "요청"].filter(Boolean).join(" ");
+  return query ? `'${query}'에 맞는 ${kind}이 없어요` : `${kind}이 없어요`;
+}
 
 /**
  * 의뢰자 홈 (2026-11-10 대표 선택: 시안 5 "시간축"). 첫 장면은 숫자 제목 하나와 시간축.
@@ -21,9 +30,10 @@ const DONE = ["closed", "cancelled"];
 /** 가로 축에서 같은 날 겹친 일정을 아래로 내리는 한 칸의 높이. 일정 하나가 점·이름·상태·요청 번호 네 줄(약 80px)이다 */
 const TL_ROW = 84;
 
-export function RequestOverview({ name, list, today }: { name: string; list: RequestListItem[]; today: string }) {
+/** query: 주소의 ?q= (사이드바 "요청 검색"). 있으면 요청 수와 상관없이 검색 칸을 열고 커서를 둔다 */
+export function RequestOverview({ name, list, today, query: initial }: { name: string; list: RequestListItem[]; today: string; query?: string }) {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initial ?? "");
   const events = timelineEvents(list, today);
   const c = timelineCounts(events, today);
   const lay = timelineLayout(events, today);
@@ -37,7 +47,8 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
   const filtered = source.filter((r) => `${r.rfq_no} ${r.substance} ${r.categories.join(" ")}`.toLocaleLowerCase().includes(query));
   const firstLate = events.find((e) => e.kind === "late");
   const firstOpen = events.find((e) => e.kind === "open");
-  const tools = list.length > 8;
+  const searching = initial !== undefined;
+  const tools = list.length > 8 || searching;
   const short = (d: string) => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
   // 세로 축에서 오늘 선이 들어갈 자리
   const todayAt = events.findIndex((e) => e.date > today);
@@ -47,9 +58,9 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
       <section className="tlh" aria-labelledby="home-title">
         <div className="tlh__head">
           <div>
-            <p className="rs-k">{name} 님의 견적 요청</p>
+            {list.length > 0 && <p className="rs-k">{name} 님의 견적 요청</p>}
             {list.length === 0 ? (
-              <h1 id="home-title" className="tlh__h1">첫 견적 요청을 보내 보세요</h1>
+              <h1 id="home-title" className="tlh__h1">내 견적 요청</h1>
             ) : c.todo + c.due === 0 ? (
               <h1 id="home-title" className="tlh__h1">{c.open ? `보고서 ${c.open}건 열림` : active.length ? `진행 중 ${active.length}건` : `끝난 요청 ${list.length}건`}</h1>
             ) : (
@@ -64,9 +75,9 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
             <Link href={firstLate.href} className="b1 blg"><span className="tnum">{firstLate.rfq_no}</span> 기한 변경</Link>
           ) : firstOpen ? (
             <Link href={firstOpen.href} className="b1 blg"><span className="tnum">{firstOpen.rfq_no}</span> 보고서</Link>
-          ) : (
+          ) : list.length > 0 ? (
             <Link href="/app/new" className="b1 blg">새 견적 요청</Link>
-          )}
+          ) : null}
         </div>
 
         {events.length > 0 && (
@@ -111,7 +122,12 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
         )}
       </section>
 
-      {list.length === 0 && <HowItWorks role="requester" open />}
+      {list.length === 0 && (
+        <>
+          <EmptyState kind="first" title="견적 요청이 없어요" action={<Link href="/app/new" className="b1">새 견적 요청</Link>} />
+          <HowItWorks role="requester" open />
+        </>
+      )}
 
       {list.length > 0 && (
         <section className="rs-block tlh__list" aria-labelledby="list-title">
@@ -126,16 +142,23 @@ export function RequestOverview({ name, list, today }: { name: string; list: Req
               <label className="rs-search">
                 <MagnifyingGlass size={18} aria-hidden="true" />
                 <span className="sr-only">요청 번호, 물질명, 시험 분야 검색</span>
-                <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명" />
+                <input type="search" autoFocus={searching} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="요청 번호, 물질명" />
               </label>
             </div>
           )}
           <p className="sr-only" role="status">{filtered.length}건의 요청</p>
           {filtered.length === 0 ? (
-            <div className="rs-empty">
-              <b>조건에 맞는 요청 없음</b>
-              <button type="button" className="b2" onClick={() => { setSearch(""); setFilter("전체"); }}>전체 요청</button>
-            </div>
+            <EmptyState
+              kind="filtered"
+              title={noMatchTitle(search.trim(), filter)}
+              action={
+                query ? (
+                  <button type="button" className="b2" onClick={() => setSearch("")}>검색 지우기</button>
+                ) : filter !== "전체" ? (
+                  <button type="button" className="b2" onClick={() => setFilter("전체")}>필터 지우기</button>
+                ) : null
+              }
+            />
           ) : (
             <div className="rs-list">
               {filtered.map((r) => {

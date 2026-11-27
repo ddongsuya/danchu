@@ -74,7 +74,7 @@ describe("의뢰자 견적 화면은 비교표 공개 뒤에만", () => {
     }
   });
   it("기한 전 선정 확인 단계와 '수정될 수 있음' 표시가 남아 있지 않다", () => {
-    for (const f of ["app/app/r/[no]/compare/page.tsx", "app/app/r/[no]/q/[quoteId]/page.tsx", "app/app/r/[no]/q/[quoteId]/select/page.tsx", "components/SelectCroForm.tsx", "components/CompareBoard.tsx"]) {
+    for (const f of ["app/app/r/[no]/compare/page.tsx", "app/app/r/[no]/q/[quoteId]/page.tsx", "app/app/r/[no]/q/[quoteId]/select/page.tsx", "components/app/QuotePanel.tsx", "components/CompareBoard.tsx"]) {
       const s = src(f);
       expect(s, f).not.toMatch(/selectionCaution|quoteRevisable|REVISABLE_LABEL|기한 전에도 선정/);
     }

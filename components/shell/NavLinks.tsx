@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { IconName, NavItem } from "./Shell";
 
-import { House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad, UsersThree, CalendarBlank, Sun, Kanban, ChartBar, NotePencil, DotsThreeCircle, Tag } from "@phosphor-icons/react";
+import { ArrowLeft, House, Plus, Bell, UserCircle, Tray, FileText, Medal, Buildings, ListBullets, Gear, Receipt, Compass, BookOpenText, Notepad, UsersThree, CalendarBlank, Sun, Kanban, ChartBar, NotePencil, DotsThreeCircle, Tag, MagnifyingGlass } from "@phosphor-icons/react";
 import { Fragment } from "react";
 
-const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad, clients: UsersThree, calendar: CalendarBlank, today: Sun, deals: Kanban, report: ChartBar, note: NotePencil, more: DotsThreeCircle, tag: Tag };
+const ICONS = { home: House, plus: Plus, bell: Bell, user: UserCircle, inbox: Tray, doc: FileText, award: Medal, org: Buildings, list: ListBullets, cros: Buildings, settings: Gear, receipt: Receipt, explore: Compass, book: BookOpenText, quote: Notepad, clients: UsersThree, calendar: CalendarBlank, today: Sun, deals: Kanban, report: ChartBar, note: NotePencil, more: DotsThreeCircle, tag: Tag, search: MagnifyingGlass };
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const Glyph = ICONS[name];
   return <Glyph size={size} weight="regular" aria-hidden="true" />;
@@ -24,12 +24,23 @@ function activeHref(pathname: string, items: NavItem[]): string | null {
   return on[0]?.href ?? null;
 }
 
-export function NavLinks({ items, variant }: { items: NavItem[]; variant: "side" }) {
+/**
+ * 사이드바 메뉴. settings 를 주면 설정 화면(그 목록의 주소)에 있는 동안 사이드바가 설정 메뉴로 바뀐다 (시안 c-set-* · a-profile).
+ * 맨 위 "돌아가기"는 home 으로 간다.
+ */
+export function NavLinks({ items: main, settings, home }: { items: NavItem[]; settings?: NavItem[]; home?: string }) {
   const pathname = usePathname();
+  const inSettings = !!settings?.some((i) => isOn(pathname, i));
+  const items = inSettings && settings ? settings : main;
   const active = activeHref(pathname, items);
-  void variant;
   return (
     <>
+      {inSettings && home && (
+        <Link href={home} className="pt__navi pt__back" data-on="0">
+          <ArrowLeft size={20} aria-hidden="true" />
+          <span>돌아가기</span>
+        </Link>
+      )}
       {items.map((it, i) => <Fragment key={it.href}>
         {it.group && it.group !== items[i - 1]?.group && <span className="pt__grp" aria-hidden="true">{it.group}</span>}
         {it.soon ? (

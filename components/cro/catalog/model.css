@@ -196,3 +196,33 @@
 .ms__t.ms__et .ms__wide { min-width: 128px; }
 .ms__et .ms__smps { max-width: 88px; }
 .ms__et .ms__opt { padding: 0 6px; }
+
+/* ── 독성 표준 설계 (2026-11-26). 모델 표준과 같은 판: 절마다 머리 아래 선, 안쪽은 촘촘하게 ── */
+.tx .tx__h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.25; text-wrap: balance; }
+.tx .ms__main { gap: 40px; }
+.tx__sec { display: flex; flex-direction: column; min-width: 0; }
+.tx__sec > .ms__sec { padding-bottom: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--cline); }
+.tx__body { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.tx__nums .tf__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tx__t td.tx__name { min-width: 168px; }
+.tx__t td.tx__dose { min-width: 128px; }
+.tx__t th.r, .tx__t td.r { width: 1%; white-space: nowrap; }
+.tx .tx__rec { min-width: 64px; }
+.tx .tx__rec:disabled { cursor: default; }
+.tx__notes { display: flex; flex-direction: column; gap: 4px; margin-top: -8px; }
+.tx__book { font-size: 13px; line-height: 1.6; color: var(--body); }
+.tx__book a { color: inherit; text-underline-offset: 3px; }
+.tx__adds { display: flex; gap: 20px; flex-wrap: wrap; }
+.tx__exp { gap: 16px; }
+.tx__led .fld { display: flex; flex-direction: column; gap: 8px; }
+.tx__sum { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--track); }
+.tx__sum div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tx__sum dt { font-size: 12px; color: var(--muted); }
+.tx__sum dd { margin: 0; font-size: 14px; color: var(--ink); }
+@media (max-width: 899px) { .tx__nums .tf__grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 699px) {
+  .tx .tx__h1 { font-size: 22px; }
+  .tx .ms__main { gap: 32px; }
+  .tx__t td.tx__name { min-width: 120px; }
+  .tx__t td.tx__dose { min-width: 104px; }
+}

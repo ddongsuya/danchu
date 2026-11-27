@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { inkOn, LAYOUTS, type DocData, type DocHead, type QuoteStyle } from "@/lib/quote-doc";
 import { uploadToSigned } from "@/lib/upload";
+import { useToast } from "@/components/ui/Toast";
 import { Cover, QuotePage, pageCount } from "./DocPages";
 
 const SWATCHES = ["#1b1b19", "#23395b", "#1f4e46", "#5b2333", "#4a3f6b", "#6b4a1f"];
@@ -48,6 +49,7 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const toast = useToast();
   const [hex, setHex] = useState(initial.brandColor ?? "#1b1b19");
   const logoRef = useRef<HTMLInputElement>(null);
 
@@ -75,7 +77,7 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
     setBusy(false);
     if (!r?.ok) return setMsg({ ok: false, text: d?.error || "저장하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요." });
     setDirty(false);
-    setMsg({ ok: true, text: "저장했어요. 로고와 색은 모든 견적서에, 거래 조건 기본 문구는 새 견적서부터 들어가요." });
+    toast("견적서 양식을 저장했어요.");
     router.refresh();
   };
 
@@ -97,7 +99,6 @@ export function StyleEditor({ initial, sample, sampleIsReal, requests, readOnly 
 
         <section className="qsty__sec">
           <h2 className="qsty__h2">로고와 브랜드 색</h2>
-          <p className="qed__muted">고르는 대로 미리보기에 바로 보여요.</p>
           <div className="fld">
             <span className="fld__lab">로고</span>
             <div className="qsty__logo">
@@ -224,7 +225,7 @@ function DesignRequestForm({ requests, readOnly }: { requests: DesignReq[]; read
               {files.map((f, i) => <span key={`${f.name}-${i}`} className="tag">{f.name}<button type="button" className="qed__x" aria-label={`${f.name} 빼기`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>×</button></span>)}
               <button type="button" className="b2 bsm" disabled={readOnly} onClick={() => ref.current?.click()}>파일 올리기</button>
             </div>
-            <p className="fld__help">PDF·엑셀·워드·이미지, 파일당 20MB 이하. 회사 정보가 든 실제 견적서도 괜찮아요. 운영자만 열어 봐요.</p>
+            <p className="fld__help">PDF·엑셀·워드·이미지, 파일당 20MB 이하. 운영자만 열어 봐요.</p>
           </div>
           <div className="fld">
             <label className="fld__lab" htmlFor="dr-note">요청 내용 <span className="qnew__opt">선택</span></label>

@@ -16,7 +16,7 @@ const fx = vi.hoisted(() => ({
   calls: [] as { table: string; op: string; payload?: unknown; filters: [string, string, unknown][] }[],
   /** 다음 select 에 돌려줄 오류 (표 이름 → 메시지) */
   failSelect: {} as Record<string, string>,
-  schema: { data: 50 as unknown, error: null as null | { code?: string; message: string } },
+  schema: { data: 51 as unknown, error: null as null | { code?: string; message: string } },
   sendMail: vi.fn(async (_m: unknown) => true),
   notifyUsers: vi.fn(async () => {}),
   logEvent: vi.fn(async () => {}),
@@ -117,7 +117,7 @@ beforeEach(() => {
   fx.tables = { rfq_requests: [rfqRow()], rfq_invites: [], profiles: [], cro_orgs: [], cro_catalog: [] };
   fx.calls = [];
   fx.failSelect = {};
-  fx.schema = { data: 50, error: null };
+  fx.schema = { data: 51, error: null };
   fx.sendMail.mockReset().mockResolvedValue(true);
   fx.notifyUsers.mockClear();
   fx.logEvent.mockClear();
@@ -219,8 +219,8 @@ describe("배포 대상 조회 오류는 '대상 없음'이 아니다 (#10)", ()
     expect(await readSchemaStatus()).toMatchObject({ ok: false, reason: "behind", version: 21 });
     fx.schema = { data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } };
     expect(await readSchemaStatus()).toMatchObject({ ok: false, reason: "error" });
-    fx.schema = { data: 50, error: null };
-    expect(await readSchemaStatus()).toEqual({ ok: true, version: 50, required: 50 });
+    fx.schema = { data: 51, error: null };
+    expect(await readSchemaStatus()).toEqual({ ok: true, version: 51, required: 51 });
   });
 });
 
@@ -233,7 +233,7 @@ describe("배포 순서 확인 (npm run check:schema)", () => {
   });
   it("판이 모자라면 실패, 맞으면 통과", async () => {
     expect((await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "21") })).ok).toBe(false);
-    expect(await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "50") })).toMatchObject({ ok: true, version: 50 });
+    expect(await checkSchema({ url: "x.supabase.co", key: "k", fetchImpl: fake(200, "51") })).toMatchObject({ ok: true, version: 51 });
   });
   it("환경변수가 없으면 실패하고, 주소·키를 출력하지 않는다", async () => {
     const r = await checkSchema({ url: "", key: "" });
@@ -291,17 +291,15 @@ describe("선정은 확인 화면이 본 견적 판으로만 (#7)", () => {
     expect((await r.json()).code).toBe("already_selected");
     expect(fx.notifyUsers).not.toHaveBeenCalled();
   });
-  it("상세 화면이 본 판을 선정 화면에 넘기고, 선정 화면은 그 판으로만 선정한다", () => {
-    // 상세의 선택 버튼(2곳)이 ?rev= 로 상세에서 본 판을 넘긴다
-    expect(readFileSync("app/app/r/[no]/q/[quoteId]/page.tsx", "utf8").match(/select\?rev=\$\{q\.revision\}/g)).toHaveLength(2);
-    const page = readFileSync("app/app/r/[no]/q/[quoteId]/select/page.tsx", "utf8");
-    // 지금 판이 아니라 상세에서 본 판을 보내고, 다르거나 없으면 폼을 그리지 않는다
-    expect(page).toMatch(/revision=\{seenRevision\}/);
-    expect(page).toMatch(/!seenRevision \|\| seenRevision !== q\.revision/);
-    expect(page).not.toMatch(/revision=\{q\.revision\}/);
-    const form = readFileSync("components/SelectCroForm.tsx", "utf8");
-    expect(form).toMatch(/JSON\.stringify\(\{ quoteId, revision \}\)/);
-    expect(form).toMatch(/quote_changed/);
+  it("비교 보고서 패널이 본 판으로만 선정하고, 바뀌었으면 확인창 안에서 막는다", () => {
+    // 비교표가 각 견적의 판을 패널에 넘기고, 패널의 확인창은 그 판을 보낸다 (지금 판을 다시 읽지 않는다)
+    expect(readFileSync("app/app/r/[no]/compare/page.tsx", "utf8")).toMatch(/revision: q\.revision/);
+    const panel = readFileSync("components/app/QuotePanel.tsx", "utf8");
+    expect(panel).toMatch(/const revision = col\.revision \?\? 0;/);
+    expect(panel).toMatch(/JSON\.stringify\(\{ quoteId: col\.id, revision \}\)/);
+    expect(panel).toMatch(/quote_changed/);
+    // 예전 선정 화면 주소는 패널로 보낸다
+    expect(readFileSync("app/app/r/[no]/q/[quoteId]/select/page.tsx", "utf8")).toMatch(/compare#q-/);
   });
 });
 
@@ -327,7 +325,7 @@ describe("첨부 안내: 일반·CDA 모두 같은 경고 (#1)", () => {
     expect(src).not.toContain("파일 내용 안의 회사명은 가려지지 않으니");
   });
   it("화면 문구에 긴 대시가 없다", () => {
-    const src = readFileSync("components/AttachmentNotice.tsx", "utf8") + readFileSync("components/SelectCroForm.tsx", "utf8") + QUOTE_CHANGED_MESSAGE;
+    const src = readFileSync("components/AttachmentNotice.tsx", "utf8") + readFileSync("components/app/QuotePanel.tsx", "utf8") + QUOTE_CHANGED_MESSAGE;
     expect(src).not.toMatch(/[–—]/);
   });
 });

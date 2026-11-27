@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * 효력시험 기관 단가표 화면 (0047, 시안 v15 "단가표 동물·투여·분자 분석" 보드).
+ * 기관 단가표 화면 (0047, 시안 v15 "단가표 동물·투여·분자 분석" 보드). 효력시험 표준가 계산에 쓰고,
+ * 기관이 켜면 독성시험 동물 단가에도 쓴다 (0051 apply_tox).
  * 왼쪽 분류 목록 → 가운데 그 분류 칸으로 추가·고치기 + 표 → 오른쪽 관리비·이익 %와 단가 바꾼 기록.
  * 가격은 기관이 넣는다. 고르는 목록(lib/price-lists.ts)에 없으면 직접 적는다.
  */
@@ -10,6 +11,7 @@ import { CaretDown } from "@phosphor-icons/react";
 import { CAT_FIELDS, PRICE_CATS, PRICE_CAT_LABEL, PRICE_UNIT_LABEL, type PriceCat, type PriceItem, type PriceUnit } from "@/lib/price-book";
 import { PRICE_LISTS, type PickList } from "@/lib/price-lists";
 import type { PriceBook, PriceLog } from "@/lib/price-book-db";
+import { useToast } from "@/components/ui/Toast";
 
 const won = (n: number) => n.toLocaleString("ko-KR");
 
@@ -56,11 +58,13 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
   const [items, setItems] = useState<PriceItem[]>(initial.items);
   const [log, setLog] = useState<PriceLog[]>(initial.log);
   const [margin, setMargin] = useState<number>(initial.marginPct);
+  const [applyTox, setApplyTox] = useState<boolean>(!!initial.applyTox);
   const [cat, setCat] = useState<PriceCat>("animal");
   const [form, setForm] = useState<Form>(() => emptyForm("animal"));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(loadError ? "단가표를 불러오지 못했어요. 새로고침해 주세요." : null);
   const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
   /** 휴대폰에서만: 추가·고치기 칸을 전체 화면으로 연다 (넓은 화면은 늘 펼쳐 둔다) */
   const [sheet, setSheet] = useState(false);
 
@@ -136,7 +140,8 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
       setItems((xs) => (form.id ? xs.map((x) => (x.id === it.id ? it : x)) : [...xs, it]));
       setForm(emptyForm(cat));
       setSheet(false);
-      setNote(form.id ? `${it.name} 저장했어요.` : `${it.name} 추가했어요.`);
+      setNote(null);
+      toast("단가표를 저장했어요.");
       void refreshLog();
     } catch (e) {
       setErr((e as Error).message);
@@ -167,8 +172,8 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
     <div className="pb">
       <header className="pb__head">
         <div>
-          <span className="pb__crumb">효력시험</span>
           <h1>단가표</h1>
+          <p className="pb__crumb">{applyTox ? "효력시험, 독성시험 동물" : "효력시험"}</p>
         </div>
       </header>
 
@@ -300,6 +305,7 @@ export function PriceBookView({ initial, readOnly = false, loadError = false, lo
 
         <aside className="pb__side">
           <MarginCard value={margin} onSaved={setMargin} readOnly={readOnly} local={local} />
+          <ToxCard on={applyTox} onSaved={setApplyTox} readOnly={readOnly} local={local} />
           <section className="pb__log" aria-labelledby="pb-log">
             <h2 id="pb-log">단가 바꾼 기록</h2>
             {log.length ? (
@@ -460,6 +466,40 @@ function MarginCard({ value, onSaved, readOnly, local }: { value: number; onSave
         {dirty && <button type="submit" className="b1 bsm" disabled={readOnly || state === "saving"}>저장</button>}
       </form>
       {msg ? <p className="fld__err" role="alert">{msg}</p> : <p className="pb__mut">단가 합계에 더함<br />의뢰자 비공개</p>}
+    </section>
+  );
+}
+
+/** 단가표를 독성시험 동물 단가에도 쓰기 (0051). 기관마다 다르게 정한다 */
+function ToxCard({ on, onSaved, readOnly, local }: { on: boolean; onSaved: (v: boolean) => void; readOnly: boolean; local: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function flip() {
+    const next = !on;
+    setBusy(true);
+    setMsg(null);
+    try {
+      if (!local) {
+        const res = await fetch("/api/cro/price-book", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ apply_tox: next }) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "저장하지 못했어요.");
+      }
+      onSaved(next);
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="pb__margin pb__tox" aria-labelledby="pb-tox">
+      <div className="pb__toxrow">
+        <h2 id="pb-tox">독성시험 동물 단가에도 쓰기</h2>
+        <button type="button" className="tgl" aria-pressed={on} aria-labelledby="pb-tox" onClick={() => void flip()} disabled={readOnly || busy}><span /></button>
+      </div>
+      {msg ? <p className="fld__err" role="alert">{msg}</p> : <p className="pb__mut">시험 목록의 독성 동물·회복군 단가가 빈 칸이면 동물 분류 단가로 계산해요.</p>}
     </section>
   );
 }

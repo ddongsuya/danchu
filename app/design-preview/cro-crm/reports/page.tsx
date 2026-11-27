@@ -5,7 +5,7 @@ import { Frame } from "../frame";
 import { previewCtx, previewEnabled } from "../fixtures";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "보고서 검토 · 단추", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "분석 검토 · 단추", robots: { index: false, follow: false } };
 
 export default async function CrmReportsPreview({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   if (!previewEnabled()) notFound();

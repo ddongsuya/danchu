@@ -167,7 +167,7 @@ function PdPlanQ({ pd, std, readOnly, setPd, set }: { pd: PdDesign; std?: PdDesi
           <input className="inp" aria-label="평가 지표 추가" placeholder="예: 대장 길이" value={ep} disabled={readOnly} onChange={(e) => setEp(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && ep.trim()) { e.preventDefault(); setPd((x) => ({ ...x, endpoints: [...new Set([...x.endpoints, ep.trim().slice(0, 80)])] })); setEp(""); } }} />
           <button type="button" className="b2" disabled={readOnly || !ep.trim()} onClick={() => { setPd((x) => ({ ...x, endpoints: [...new Set([...x.endpoints, ep.trim().slice(0, 80)])] })); setEp(""); }}>넣기</button>
         </div>
-        <span className="qf__help">금액이 드는 선택 지표는 시험 목록의 &quot;따로 받는 항목&quot;으로 적어 두면 여기서 켤 수 있어요.</span>
+        <span className="qf__help">금액이 드는 선택 지표는 시험 목록의 &quot;따로 받는 항목&quot;으에서 추가해요.</span>
       </div>
     </>
   );

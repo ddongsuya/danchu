@@ -1,79 +1,76 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { REOPEN_DAYS } from "@/lib/request-policy";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 const OUTCOMES = ["외부 진행", "보류", "취소"] as const;
 type Outcome = (typeof OUTCOMES)[number];
-const HELP: Record<Outcome, string> = {
-  "외부 진행": "단추 밖에서 어느 기관과 진행하기로 했는지 적어 주세요. 전달된 기관이면 이름만 적어도 돼요.",
-  보류: `지금은 진행하지 않아요. 비교표가 열린 뒤 보류했고 받은 견적이 있으면 ${REOPEN_DAYS}일 안에 이 화면에서 다시 열 수 있어요.`,
-  취소: "시험 계획이 바뀌어 요청을 취소해요. 회신한 기관에 결과를 안내해요.",
-};
 
-/**
- * 비교표를 받았지만 기관을 선정하지 않고 요청을 마무리할 때.
- * 선정 버튼을 누르지 않은 이유를 한 번 묻는다. 선정이 아니면 어떤 경로였는지 단추가 알아야
- * 기관별 청구 명세와 선정률을 바르게 볼 수 있다.
- */
-export function OutcomeForm({ no, compared }: { no: string; compared: boolean }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome | "">("");
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  const submit = async () => {
-    if (!outcome || busy) return;
-    setBusy(true);
-    setErr("");
-    try {
-      const r = await fetch(`/api/rfq/${no}/outcome`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outcome, note }) });
-      const d = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) throw new Error(d.error || "저장하지 못했어요.");
-      router.refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "저장하지 못했어요.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!open) {
-    return (
-      <div className="card" style={{ padding: 18 }}>
-        <div className="sec-title" style={{ margin: "0 0 6px" }}><h2>{compared ? "기관을 선정하지 않고 마무리하나요?" : "이 요청을 더 진행하지 않나요?"}</h2></div>
-        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>{compared ? "비교표의 기관과 진행하려면 비교표에서 선정해 주세요. 선정하면 그 기관에 연락처가 전달돼요. 다른 경로로 진행하거나 보류하는 경우 여기서 알려 주시면 회신 기관에 결과를 안내해요." : "계획이 바뀌었거나 다른 경로로 진행하기로 했다면 여기서 마무리할 수 있어요. 회신 중인 기관에는 닫혔다고 안내해요."}</p>
-        <button type="button" className="b2" onClick={() => setOpen(true)}>{compared ? "선정 없이 마무리" : "요청 마무리"}</button>
-      </div>
-    );
-  }
+/** 확인창 본문: 마무리 방법과 메모. 값은 확인창이 실행할 때 읽는다 */
+function OutcomeBody({ compared, onChange }: { compared: boolean; onChange: (v: { outcome?: Outcome; note?: string }) => void }) {
   return (
-    <div className="card" style={{ padding: 18 }}>
-      <div className="sec-title" style={{ margin: "0 0 10px" }}><h2>어떻게 마무리하나요?</h2></div>
-      <div className="stack" style={{ gap: 8 }}>
+    <>
+      <p>
+        마무리하면 안내를 받은 기관에 요청이 닫혔다고 알립니다.{" "}
+        {compared ? `보류를 고르면 ${REOPEN_DAYS}일 안에 다시 열 수 있습니다.` : "비교표가 열리기 전이라 보류를 골라도 다시 열 수 없습니다."}
+      </p>
+      <fieldset className="rq-end">
+        <legend className="fld__label">어떻게 마무리하나요?</legend>
         {OUTCOMES.map((o) => (
-          <label key={o} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 12px", background: outcome === o ? "var(--tint)" : "var(--sf)", borderRadius: 10, cursor: "pointer" }}>
-            <input type="radio" name="outcome" value={o} checked={outcome === o} onChange={() => setOutcome(o)} style={{ marginTop: 3 }} />
-            <span>
-              <b style={{ fontWeight: 600 }}>{o}</b>
-              <span style={{ display: "block", fontSize: 13, color: "var(--muted)" }}>{HELP[o]}</span>
-            </span>
+          <label key={o} className="rq-end__o">
+            <input type="radio" name="outcome" value={o} onChange={() => onChange({ outcome: o })} />
+            <span><b>{o}</b></span>
           </label>
         ))}
-        {outcome && (
-          <label className="fld">
-            <span className="fld__label">{outcome === "외부 진행" ? "진행 기관 · 사유 (필수)" : "메모 (선택)"}</span>
-            <textarea className="inp" rows={2} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={outcome === "외부 진행" ? "예: 기존 거래 기관과 진행, 조건이 맞아서" : ""} />
-          </label>
-        )}
-        {err && <p role="alert" style={{ fontSize: 13, color: "var(--err)" }}>{err}</p>}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" className="b1" disabled={!outcome || busy} onClick={submit}>{busy ? "저장 중" : "마무리"}</button>
-          <button type="button" className="b2" disabled={busy} onClick={() => setOpen(false)}>돌아가기</button>
-        </div>
-      </div>
-    </div>
+      </fieldset>
+      <label className="fld">
+        <span className="fld__label">메모 (선택)</span>
+        <textarea className="inp" rows={2} maxLength={500} onChange={(e) => onChange({ note: e.currentTarget.value })} />
+      </label>
+      <p className="fld__help">외부 진행을 고르면 진행 기관과 사유를 적어야 해요.</p>
+    </>
   );
+}
+
+/**
+ * "요청 마무리" (시안 r-outcome): 선정 없이 마무리할 때 확인창 하나에서 방법(외부 진행 · 보류 · 취소)과 메모를 받고 바로 처리한다.
+ * 처리 중에는 "마무리하는 중", 실패하면 창 안에서 알리고 "다시 마무리". 보류는 비교표가 열린 뒤에 고른 경우에만 REOPEN_DAYS 안에 다시 연다.
+ * initialOpen: 요청 화면 주소가 ?end=1 이면 화면을 열자마자 확인창을 띄운다
+ */
+export function OutcomeForm({ no, compared, initialOpen = false, label = "요청 마무리", className = "b2" }: { no: string; compared: boolean; initialOpen?: boolean; label?: string; className?: string }) {
+  const router = useRouter();
+  const confirm = useConfirm();
+  const val = useRef<{ outcome?: Outcome; note: string }>({ note: "" });
+
+  const open = async () => {
+    val.current = { note: "" };
+    const ok = await confirm({
+      title: "이 요청을 더 진행하지 않나요?",
+      body: <OutcomeBody compared={compared} onChange={(v) => { val.current = { ...val.current, ...v }; }} />,
+      confirmLabel: "마무리",
+      cancelLabel: "돌아가기",
+      pendingLabel: "마무리하는 중",
+      danger: true,
+      action: async () => {
+        const { outcome, note } = val.current;
+        if (!outcome) throw new Error("마무리 방법을 골라 주세요.");
+        if (outcome === "외부 진행" && !note.trim()) throw new Error("진행 기관과 사유를 메모에 적어 주세요.");
+        const r = await fetch(`/api/rfq/${no}/outcome`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outcome, note }) }).catch(() => null);
+        if (!r?.ok) throw new Error("요청을 마무리하지 못했어요. 요청 상태는 바뀌지 않았어요.");
+      },
+    });
+    if (ok) router.refresh();
+  };
+
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!initialOpen || opened.current) return;
+    opened.current = true;
+    void open();
+    // 처음 한 번만 연다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialOpen]);
+
+  return <button type="button" className={className} onClick={() => void open()}>{label}</button>;
 }

@@ -15,7 +15,7 @@ import { shortCite } from "./cite";
 import { repeatDoseFor, type ClinDuration, type Stage as TableStage } from "./design-guide";
 import type { Values } from "./rfq-schema";
 
-export const ADVISOR_DISCLAIMER = "공개 가이드라인을 정리한 참고 자료예요. 최종 설계는 규제기관, 담당 기관과 함께 논의하세요.";
+export const ADVISOR_DISCLAIMER = "공개 가이드라인을 정리한 참고 자료예요. 최종 설계는 규제기관, 담당 기관과 함께 정해요.";
 
 export type Answers = Record<string, string | string[] | undefined>;
 
@@ -118,7 +118,7 @@ export const QUESTIONS: Question[] = [
   { id: "chType", step: 1, q: "어떤 물질인가요?", options: ["일반 화학물질", "농약 원제", "농약 품목"], required: true, when: (a) => a.product === "화학물질·농약" },
   { id: "chTon", step: 2, q: "연간 제조·수입량은 얼마인가요?", sub: "등록 톤수에 따라 제출 자료가 정해져요.", options: ["1톤 이상 10톤 미만", "10톤 이상 100톤 미만", "100톤 이상 1,000톤 미만", "1,000톤 이상"], required: true, when: (a) => a.product === "화학물질·농약" && a.chType === "일반 화학물질" },
   { id: "chGas", step: 2, q: "기체이거나 주로 흡입으로 노출되나요?", options: ["예", "아니오"], when: (a) => a.product === "화학물질·농약" && a.chType === "일반 화학물질" },
-  { id: "prior", step: 3, when: (a) => !["화장품", "의료기기", "화학물질·농약"].includes(String(a.product ?? "")), q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 제안에서 제외해요.", multi: true, options: PRIOR, required: true },
+  { id: "prior", step: 3, when: (a) => !["화장품", "의료기기", "화학물질·농약"].includes(String(a.product ?? "")), q: "이미 가진 시험 자료를 모두 골라 주세요", sub: "가진 시험은 목록에서 빼요.", multi: true, options: PRIOR, required: true },
 ];
 
 export function visibleQuestions(a: Answers): Question[] {
@@ -176,7 +176,7 @@ export function advise(a: Answers): Advice {
   if (!SUPPORTED_PRODUCTS.includes(product)) {
     return {
       supported: false,
-      message: `${product || "이 유형"}의 제안은 준비 중이에요. 지금은 시험 항목을 직접 골라 요청해 주세요. 패키지로 시작하면 항목을 한 번에 채울 수 있어요.`,
+      message: `${product || "이 유형"}의 가이드라인 정리는 준비 중이에요. 지금은 시험 항목을 직접 골라 요청해 주세요. 패키지로 시작하면 항목을 한 번에 채울 수 있어요.`,
       tests: [], owned: [], later: [], notes: [], askCro: [], prereq: [],
     };
   }

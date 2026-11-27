@@ -83,7 +83,7 @@ export function InviteList({ items }: { items: InviteItem[] }) {
       {shown.length === 0 ? (
         <div className="rs-empty">
           <b>{items.length === 0 ? "아직 받은 요청이 없어요" : "조건에 맞는 요청이 없어요"}</b>
-          {items.length === 0 ? <><span>분야가 맞는 요청이 오면 메일과 알림으로 알려요.</span><Link href="/cro/org" className="b2">수행 분야 확인하기</Link></> : <span>다른 필터를 골라 보세요.</span>}
+          {items.length === 0 ? <Link href="/cro/org" className="b2">수행 분야 보기</Link> : null}
         </div>
       ) : (
         <div className="rs-list">

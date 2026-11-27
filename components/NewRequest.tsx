@@ -32,7 +32,10 @@ import { PRESETS, presetItems } from "@/lib/presets";
 import { DesignHints } from "@/components/guide/DesignHints";
 import { requestChecks } from "@/lib/design-guide";
 import { needsCda } from "@/lib/request-policy";
+import { CONFID_LABEL } from "@/lib/confid-label";
+import { businessDayLabel } from "@/lib/dates";
 import { AttachmentNotice } from "@/components/AttachmentNotice";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { KINDS, isKind, type Kind } from "@/lib/study-kinds";
 
 const KIND_ORDER: Kind[] = ["tox", "pd", "pk", "other"];
@@ -67,7 +70,7 @@ const FIELD_LABELS: Record<string, string> = {
   croCount: "받을 견적 수",
   nominees: "지명 기관",
   nomineesOnly: "지명 기관에만 안내",
-  confid: "정보 공개 방식",
+  confid: "CDA",
   categories: "시험 항목",
   notes: "추가 설명",
 };
@@ -93,6 +96,7 @@ export function NewRequest({
   guest?: boolean;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [phase, setPhase] = useState<"start" | "advisor" | "edit" | "chat">("start");
   /** 네 갈래 첫 화면에서 고른 갈래. 있으면 시험 항목을 그 갈래 것만 보여 준다 (이미 고른 항목은 남긴다) */
   const [kind, setKind] = useState<Kind | null>(null);
@@ -172,7 +176,7 @@ export function NewRequest({
     setSaveState(
       ok
         ? "이 브라우저에 임시 저장됨"
-        : "임시 저장하지 못했어요. 이 화면을 닫지 말고 다시 시도해 주세요.",
+        : "임시 저장하지 못했어요. 이 화면을 닫으면 쓴 내용이 사라져요.",
     );
   }, [userId, ready, phase, step, values, files, missingFiles, pendingNo, kind, guest, guestContact, pendingToken]);
   useEffect(() => {
@@ -199,7 +203,7 @@ export function NewRequest({
   // 효력·약동학·개별 분석은 설계 입력이 요청서의 본문이라 기존 단계를 그대로 쓴다
   const quick = (!kind || kind === "tox") && !pendingNo && step === 0;
   const toChat = () => {
-    if (!cats.length) return setError("시험 분야를 하나 이상 골라 주세요.");
+    if (!cats.length) return setError("시험 항목을 하나 이상 골라 주세요.");
     if (!values.purpose) return setError("의뢰 목적을 골라 주세요.");
     setValues((old) => ({ ...old, intent: old.intent || "비교 견적" }));
     setError("");
@@ -214,15 +218,13 @@ export function NewRequest({
     setEditingReview(true);
     go(n);
   };
-  const applyPreset = (key: string, replace = false) => {
+  const applyPreset = async (key: string, replace = false) => {
     const p = PRESETS.find((x) => x.key === key);
     if (!p) return;
     if (
       replace &&
       cats.length &&
-      !window.confirm(
-        "시험 항목과 항목별 상세 조건을 이 구성으로 바꿀까요? 일정·물질·첨부는 유지돼요.",
-      )
+      !(await confirm({ title: "시험 항목을 이 구성으로 바꿀까요?", body: "시험 항목과 항목별 상세 조건이 바뀝니다. 일정·물질·첨부는 그대로 둡니다.", confirmLabel: "바꾸기" }))
     )
       return;
     setUndo(values);
@@ -292,6 +294,9 @@ export function NewRequest({
       setPreset(key);
       applyPreset(key);
     }
+    // 홈 입력창에 적은 시험물질 이름 (시안 r-home)
+    const sub = sp.get("substance")?.trim();
+    if (sub) setValues((v) => ({ ...v, substance: sub.slice(0, 100) }));
   };
   const field = (f: Field, id = f.id) => (
     <RfqField
@@ -320,9 +325,11 @@ export function NewRequest({
       const f = wiz.fields.find((f) => f.id === id)!;
       if (id === "categories" && kind) {
         const keep = cats.filter((c) => !KINDS[kind].cats.includes(c as Cat));
-        const help = kind === "tox" ? f.help || wiz.sub : "다른 갈래의 시험은 첫 화면에서 따로 요청하세요.";
+        const help = kind === "tox" ? f.help || wiz.sub : "다른 갈래의 시험은 첫 화면에서 따로 요청해요.";
         return field({ ...f, help, options: [...KINDS[kind].cats, ...keep] });
       }
+      // 공개 범위는 시안 질문 그대로 (r-new3). 안내 문장은 화면 위 한 줄에 있다
+      if (id === "confid") return field({ ...f, label: "CDA가 필요한가요?" });
       return field({ ...f, help: f.help || wiz.sub });
     });
   // 로그인 전에는 담당자 정보를 보내기 직전 확인 창에서 받는다
@@ -385,7 +392,7 @@ export function NewRequest({
         const d = await r.json();
         if (!r.ok || !d.rfqNo)
           throw new Error(
-            d.error || "접수하지 못했어요. 다시 시도해 주세요.",
+            d.error || "요청서를 접수하지 못했어요. 잠시 후 다시 보내 주세요.",
           );
         no = d.rfqNo as string;
         setPendingNo(no);
@@ -458,7 +465,7 @@ export function NewRequest({
           }}
         />
       );
-  if (!ready) return <p role="status">작성 중인 요청을 확인하고 있어요.</p>;
+  if (!ready) return <p role="status">요청서 불러오는 중</p>;
   if (phase === "advisor")
     return (
       <div className="request">
@@ -493,7 +500,7 @@ export function NewRequest({
         )}
         <h1>{fork === "tox" ? KINDS.tox.name : "새 견적 요청"}</h1>
         <p className="request__lead">
-          {fork === "tox" ? KINDS.tox.lead : resume ? "쓰던 요청서를 이어서 쓰거나 새로 시작하세요." : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
+          {fork === "tox" ? KINDS.tox.lead : resume ? "" : "고른 종류에 맞는 요청서가 열려요."}
         </p>
         {notice && (
           <p className="note note--tint" role="status">
@@ -531,11 +538,9 @@ export function NewRequest({
               </button>
               <button
                 className="b2"
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
-                      "저장된 초안을 지우고 새로 작성할까요? 이미 접수된 요청은 삭제되지 않아요.",
-                    )
+                    await confirm({ title: "쓰던 요청서를 지울까요?", body: "이 브라우저에 임시 저장된 요청서가 지워집니다. 이미 접수한 요청서는 지워지지 않습니다.", confirmLabel: "지우고 새로 쓰기", danger: true })
                   ) {
                     clearDraft(userId);
                     if (!guest) clearDraft(GUEST);
@@ -573,7 +578,7 @@ export function NewRequest({
             </button>
             <button onClick={() => start("tox")}>
               <b>시험 직접 고르기</b>
-              <span>필요한 시험을 알고 계시면 바로 요청서를 쓰세요.</span>
+              <span>필요한 시험을 알고 있을 때</span>
             </button>
           </div>
         )}
@@ -625,12 +630,12 @@ export function NewRequest({
       </h1>
       <p className="request__lead">
         {step === 0
-          ? quick ? "" : "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
+          ? "알고 있는 조건만 입력하세요."
           : step === 1
-            ? "미정인 조건은 비워 둘 수 있어요."
+            ? `회신 기한을 비워 두면 평일 7일 뒤(${businessDayLabel(7)})로 정해져요.`
             : step === 2
-              ? "요청 내용이 공개되는 범위를 확인하세요."
-              : "입력한 내용과 첨부 상태를 확인한 뒤 요청을 보내세요."}
+              ? "회사명과 연락처는 선정한 기관만 볼 수 있습니다. CDA를 고르면 첨부파일은 기관별 체결을 확인한 뒤 공개합니다."
+              : ""}
       </p>
       {pendingNo && (
         <div className="note note--tint">
@@ -808,8 +813,7 @@ export function NewRequest({
                   </>
                 ) : (
                   <p className="fld__help">
-                    보내기를 누르면 이메일과 담당자 정보를 묻고, 메일로 받은
-                    번호를 확인해요. 쓰신 요청서는 그대로 둬요.
+                    보내기를 누르면 이메일 인증 뒤 접수돼요.
                   </p>
                 )}
               </section>
@@ -863,6 +867,7 @@ export function NewRequest({
                             ? (values[id] as string[]).join(", ") || "미선택"
                             : typeof values[id] === "boolean" || id === "nomineesOnly"
                               ? values[id] === true ? "예" : "아니요"
+                              : id === "confid" ? CONFID_LABEL[String(values[id])] ?? "입력하지 않음"
                               : String(values[id] || "입력하지 않음")}
                         </dd>
                       </div>
@@ -992,7 +997,7 @@ export function NewRequest({
       {step === 3 && (
         <p className="note note--tint" role="note">
           가이드라인을 정리한 참고 자료예요. 최종 설계는 규제기관, 담당 기관과
-          함께 논의하세요.
+          함께 정해요.
         </p>
       )}
       {error && (
@@ -1021,7 +1026,7 @@ export function NewRequest({
               } else go(step + 1);
             }}
           >
-            {editingReview ? "수정 완료" : `다음: ${STEPS[step + 1]}`}
+            {editingReview ? "수정 완료" : "다음"}
           </button>
         ) : (
           <button
@@ -1032,7 +1037,7 @@ export function NewRequest({
             {preview
               ? "검토용 화면 · 제출 불가"
               : busy
-                ? "보내는 중…"
+                ? "보내는 중"
                 : pendingNo
                   ? "첨부 다시 올리기"
                   : "견적 요청 보내기"}

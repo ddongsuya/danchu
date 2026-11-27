@@ -12,11 +12,25 @@ export function comma(n: number): string {
   return `${n.toLocaleString("ko-KR")}원`;
 }
 
-/** "2026-10-12" → "10월 12일" */
+/** 날짜("2026-10-12")는 그대로, 시각(ISO)은 서울 날짜로 → "2026-10-12" */
+function seoulDate(s: string): string {
+  if (s.length <= 10) return s;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? s.slice(0, 10) : d.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
+}
+/** "2026-10-12" 또는 ISO 시각 → "10월 12일" (서울) */
 export function md(s: string | null | undefined): string {
   if (!s) return "-";
-  const [, m, d] = s.slice(0, 10).split("-");
+  const [, m, d] = seoulDate(s).split("-");
   return `${+m}월 ${+d}일`;
+}
+/** "2026-12-01" 또는 ISO 시각 → "12-01" (서울). 일정 줄의 날짜 칸 */
+export function mmdd(s: string | null | undefined): string {
+  return s ? seoulDate(s).slice(5, 10) : "";
+}
+/** "2026-12-07" → "2026-12-08" (서울 달력 기준 다음 날) */
+export function nextDay(ymd: string): string {
+  return new Date(new Date(`${ymd.slice(0, 10)}T12:00:00+09:00`).getTime() + 864e5).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
 }
 /** ISO → "2026.09.08" */
 export function ymd(s: string | null | undefined): string {

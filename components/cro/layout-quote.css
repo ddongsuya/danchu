@@ -1,0 +1,106 @@
+/* ─────────────────────────────────────────────
+   기관 견적·운영 화면 배치 (시안 v7 배치 점검, 2026-11-26)
+   받은 요청 · 제출한 견적 · 수주 · 계약 결과 보고 · 견적서 목록 · 요금제·결제 · 기관 · 제출 완료.
+   색·글꼴·모서리는 기존 토큰 그대로. 여기서는 짜임(제목 줄, 두 칸, 묶음, 정렬)만 정한다.
+   portal.css 에 덧붙이지 않는다 (여러 작업이 같은 파일을 고치면 합칠 때 깨진다).
+   ───────────────────────────────────────────── */
+
+/* 표 숫자 열: 오른쪽 맞춤 + 같은 폭 숫자 */
+.lq-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl th.lq-num { text-align: right; }
+
+/* ── 받은 요청 (/cro/requests): 제목 줄을 목록·상세 위 한 줄로 ── */
+.pl__head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pl__head p { margin-top: 0; }
+.pl__rh h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance; margin-top: 2px; }
+.pl__rh > .pill { flex: none; }
+@media (min-width: 960px) {
+  .pl__head { grid-column: 1 / -1; }
+  .pl__detail { border: 1px solid var(--cline); }
+  .pl__fix { box-shadow: none; border-top: 1px solid var(--track); justify-content: flex-end; gap: 16px; }
+}
+@media (max-width: 959px) {
+  .pl--sel .pl__head { display: none; }
+}
+
+/* ── 청구서 1장 (/cro/billing/[id]): 문서 폭으로 묶는다 ── */
+.lq-doc { max-width: 880px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.lq-doc .tbl { min-width: 0; }
+@media (max-width: 639px) { .lq-doc { padding: 18px 16px; } }
+
+/* ── 수주 (/cro/awards): 건마다 제목 줄 + 왼쪽 보고 양식 / 오른쪽 연락처·할 일 ──
+   건 자체는 카드로 감싸지 않는다 (안의 양식이 카드라 중첩 카드가 된다). 건 사이는 위 선으로 나눈다. */
+.lq-aws { display: grid; }
+.lq-aw { display: grid; gap: 20px; padding: 28px 0; border-top: 1px solid var(--cline); }
+.lq-aw:first-child { border-top: 0; padding-top: 4px; }
+.lq-aw__hd { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 16px; flex-wrap: wrap; }
+.lq-aw__t { display: grid; gap: 2px; min-width: 0; }
+.lq-aw__no { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.lq-aw__t h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; text-wrap: balance; }
+.lq-aw__sub { font-size: 13px; color: var(--muted); }
+.lq-aw__acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lq-aw__body { display: grid; gap: 20px; }
+.lq-aw__main { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.lq-aw__main form > button[type="submit"] { display: flex; width: fit-content; margin-left: auto; }
+.lq-aw__side { display: grid; gap: 20px; align-content: start; min-width: 0; }
+.lq-aw__blk { display: grid; gap: 8px; }
+.lq-aw__blk h3 { font-size: 12px; font-weight: 600; color: var(--muted); }
+.lq-aw__kv, .lq-aw__rep { margin: 0; display: grid; }
+.lq-aw__kv div, .lq-aw__rep div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-top: 1px solid var(--track); font-size: 14px; }
+.lq-aw__kv div:first-child, .lq-aw__rep div:first-child { border-top: 0; }
+.lq-aw__kv dt, .lq-aw__rep dt { color: var(--muted); }
+.lq-aw__kv dd, .lq-aw__rep dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.lq-aw__kv a { color: var(--ink); text-underline-offset: 3px; }
+.lq-aw__rep { padding: 8px 16px; border: 1px solid var(--cline); border-radius: var(--r-lg); background: var(--wh); }
+.lq-aw__steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: lqstep; }
+.lq-aw__steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; font-size: 14px; counter-increment: lqstep; }
+.lq-aw__steps li::before {
+  content: counter(lqstep); grid-row: 1 / 3; width: 24px; height: 24px; border-radius: var(--r-pill); border: 1.5px solid var(--iline);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); box-sizing: border-box;
+}
+.lq-aw__steps li[aria-current="step"]::before { background: var(--brand); border-color: var(--brand); color: var(--onbrand); }
+.lq-aw__steps b { font-weight: 600; }
+.lq-aw__steps small { font-size: 12px; color: var(--muted); line-height: 1.5; }
+@media (min-width: 960px) {
+  .lq-aw__body { grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; }
+}
+
+/* ── 기관 (/cro/org): 설정 화면은 한 칸, 최대 760px ── */
+.lq-set { max-width: 760px; display: grid; gap: 16px; }
+.lq-set__note { max-width: 760px; margin-bottom: 16px; }
+.lq-set__sec { display: grid; gap: 14px; }
+.lq-set__hd h2 { font-size: 16px; font-weight: 700; }
+.lq-set__hd p { margin-top: 4px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.lq-set__rows .kv__v { font-weight: 500; }
+.lq-set__hint { padding: 10px 0 4px; font-size: 13px; color: var(--muted); }
+.lq-set__links .kv { align-items: center; color: var(--ink); text-decoration: none; }
+.lq-set__links .kv small { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.lq-set__links .kv svg { flex: none; color: var(--dash); }
+.lq-set__out { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; }
+.lq-set__out span { font-size: 12px; color: var(--ph); }
+
+/* ── 제출 완료 (/cro/r/[id]/reply?done=1, /q/[token]/reply/done): 가운데 440px 한 칸 ── */
+.lq-done { max-width: 440px; margin: 0 auto; padding: 40px 0 24px; display: grid; gap: 20px; text-align: center; }
+.lq-done__hero { display: grid; justify-items: center; gap: 8px; }
+.lq-done__hero h1 { margin-top: 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.lq-done__hero p { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.lq-done__kv { margin: 0; display: grid; padding: 4px 16px; border: 1px solid var(--cline); border-radius: var(--r-lg); background: var(--wh); text-align: left; }
+.lq-done__kv div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--track); font-size: 14px; }
+.lq-done__kv div:first-child { border-top: 0; }
+.lq-done__kv dt { color: var(--muted); }
+.lq-done__kv dd { margin: 0; font-weight: 600; }
+.lq-done__note { font-size: 13px; color: var(--muted); line-height: 1.6; text-wrap: pretty; }
+.lq-done__acts { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.lq-done__foot { font-size: 12px; color: var(--muted); }
+@media (max-width: 639px) {
+  .lq-done { padding-top: 24px; }
+  .lq-done__acts > * { flex: 1; }
+}
+
+/* 제출 완료 다음 일정 (시안 검토판 c-reply-done) */
+.lq-done__next { text-align: left; display: grid; gap: 8px; }
+.lq-done__next h2 { font-size: 14px; font-weight: 700; }
+.lq-done__next ol { margin: 0; padding: 0; list-style: none; display: grid; border-left: 1px solid var(--cline); }
+.lq-done__next li { display: grid; gap: 2px; padding: 6px 0 6px 14px; font-size: 14px; }
+.lq-done__next li span { color: var(--muted); font-size: 13px; }
+.qlist__search .inp { height: 36px; width: min(240px, 100%); font-size: 14px; }

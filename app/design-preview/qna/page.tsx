@@ -37,12 +37,15 @@ const SENT: QnaRow[] = [
 
 /**
  * 질의응답 화면 검토용 (로그인 없이). Vercel 미리보기 배포에서만 열린다. 보내기는 막혀 있다.
- * ?role=req 의뢰자(회신 중) · ?role=req&stage=compared 의뢰자(비교표 뒤, 기관에 질의) · ?role=cro 기관
+ * ?role=req 의뢰자(회신 중) · ?role=req&stage=compared 의뢰자(비교표 뒤, 기관에 질의) · ?role=cro 기관 · &empty=1 질의 없음 · &closed=1 선정 뒤 닫힘 · &err=1 불러오기 실패
  */
-export default async function QnaPreview({ searchParams }: { searchParams: Promise<{ role?: string; stage?: string }> }) {
+export default async function QnaPreview({ searchParams }: { searchParams: Promise<{ role?: string; stage?: string; empty?: string; closed?: string; err?: string }> }) {
   const enabled = process.env.VERCEL_ENV === "preview" || (process.env.VERCEL_ENV !== "production" && process.env.DANCHU_DESIGN_PREVIEW === "1");
   if (!enabled) notFound();
-  const { role, stage } = await searchParams;
+  const { role, stage, empty, closed: closedQ, err } = await searchParams;
+  const closed = closedQ === "1" ? "11월 24일 선정으로 질의응답이 닫혔어요" : null;
+  const failed = err === "1";
+  const none = empty === "1";
   const tests = new Map(TESTS.map((t) => [t.seq, t.name]));
   const cro = role === "cro";
   const session: Session = {
@@ -52,18 +55,18 @@ export default async function QnaPreview({ searchParams }: { searchParams: Promi
 
   let board;
   if (cro) {
-    const { mine, shared } = croItems([...SENT, ...ROWS], { inviteId: "inv-b", selectedInviteId: null, tests });
-    board = <QnaBoard side="cro" endpoint="" no="DC-2026-0000" substance="DC-101" backHref="/design-preview/qna?role=cro" mine={mine} shared={shared} canAsk canAnswer askBy="2026-11-20" tests={TESTS} />;
+    const { mine, shared } = croItems(none ? [] : [...SENT, ...ROWS], { inviteId: "inv-b", selectedInviteId: null, tests });
+    board = <QnaBoard side="cro" endpoint="" no="DC-2026-0000" backHref="/design-preview/qna?role=cro" mine={mine} shared={shared} canAsk={!closed} canAnswer={!closed} closed={closed} failed={failed} />;
   } else {
     const compared = stage === "compared";
     const labels = partyLabels(INV, compared);
-    const rows = compared ? [...SENT, ...ROWS] : ROWS;
+    const rows = none ? [] : compared ? [...SENT, ...ROWS] : ROWS;
     const items = sponsorItems(rows, { labels, selectedInviteId: null, tests });
     board = (
       <QnaBoard
-        side="sponsor" endpoint="" no="DC-2026-0000" substance="DC-101" backHref="/design-preview/qna?role=req"
+        side="sponsor" endpoint="" no="DC-2026-0000" backHref="/design-preview/qna?role=req" audience={INV.length} closed={closed} failed={failed}
         items={items} targets={compared ? INV.map((i) => ({ inviteId: i.id, label: labels.get(i.id)! })) : []}
-        canAsk={compared} canAnswer askBy={null} tests={TESTS}
+        canAsk={compared && !closed} canAnswer={!closed}
       />
     );
   }

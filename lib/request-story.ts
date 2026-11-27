@@ -63,7 +63,7 @@ export function noJoinPastDue(r: StoryReq & { joined: number }, today: string): 
 export function rowLine(r: StoryReq & Counts & { cap?: number | null }, today: string, md: (d: string) => string): { text: string; late: boolean } {
   if (r.status === "cancelled") return { text: "취소한 요청이에요", late: false };
   if (r.status === "closed") return { text: r.outcome ? `선택 없이 마무리 · ${r.outcome}` : "마무리한 요청이에요", late: false };
-  if (r.status === "selected" || r.status === "contracting") return { text: r.status === "contracting" ? "기관 선택 · 계약 진행 중" : "기관을 선택했어요 · 계약 소식을 기다리는 중", late: false };
+  if (r.status === "selected" || r.status === "contracting") return { text: r.status === "contracting" ? "기관 선정 · 계약 진행 중" : "기관을 선정했어요 · 계약 소식을 기다리는 중", late: false };
   if (reportReady(r)) return { text: `비교 보고서가 열렸어요 · 견적 ${r.submitted}건`, late: false };
   if (r.status === "received" && !r.sent) return { text: "기관에 보내기 전이에요", late: false };
   if (noJoinPastDue(r, today)) return { text: "참여한 기관 없이 회신 기한이 지났어요", late: true };
@@ -164,12 +164,12 @@ export function timelineLayout(events: TimelineEvent[], today: string, minGapPct
 }
 
 /** 목록 한 줄: 설명 문장 없이 사실만. stage 는 5칸 진행 막대의 지금 칸(0 전달, 1 참여, 2 견적, 3 보고서, 4 선택) */
-export const TRACK_STAGES = ["전달", "참여", "견적", "보고서", "선택"] as const;
+export const TRACK_STAGES = ["전달", "참여", "견적", "보고서", "선정"] as const;
 export function terseRow(r: TimelineReq & { cap?: number | null }, today: string, md: (d: string) => string): { text: string; late: boolean; stage: number; done: boolean; when: string; go: string } {
   const created = `${md(seoulDay(r.created_at))} 접수`;
   if (r.status === "cancelled") return { text: "취소", late: false, stage: 0, done: true, when: created, go: "열기" };
   if (r.status === "closed") return { text: r.outcome ? `선택 없이 마무리, ${r.outcome}` : "계약 완료", late: false, stage: 4, done: true, when: created, go: "열기" };
-  if (r.status === "selected" || r.status === "contracting") return { text: r.status === "contracting" ? "계약 진행 중" : "기관 선택, 계약 대기", late: false, stage: 4, done: false, when: created, go: "열기" };
+  if (r.status === "selected" || r.status === "contracting") return { text: r.status === "contracting" ? "계약 진행 중" : "기관 선정, 계약 대기", late: false, stage: 4, done: false, when: created, go: "열기" };
   if (reportReady(r)) return { text: `견적 ${r.submitted}건`, late: false, stage: 3, done: false, when: `${md(seoulDay(r.compared_at!))} 열림`, go: "보고서" };
   if (r.status === "received" && !r.sent) return { text: "전달 전", late: false, stage: 0, done: false, when: created, go: "열기" };
   if (noJoinPastDue(r, today)) return { text: `참여 0곳, 기한 ${md(r.reply_by!)} 지남`, late: true, stage: 1, done: false, when: `${daysBetween(r.reply_by!, today)}일 지남`, go: "기한 변경" };

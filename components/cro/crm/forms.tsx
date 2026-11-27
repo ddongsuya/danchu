@@ -8,6 +8,7 @@
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CaretDown, X } from "@phosphor-icons/react";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import {
   CONTACT_ROLE, CONTACT_ROLES, EVENT_KIND, EVENT_KINDS, EVENT_MODE, EVENT_MODES,
   hmKst, todayKst, ymdKst,
@@ -87,12 +88,12 @@ export function SheetButton({ label, title, className = "b2 bsm", children, open
 }
 
 // ─── 작은 입력 조각 ───
-export function Field({ label, htmlFor, help, children }: { label: string; htmlFor?: string; help?: string; children: React.ReactNode }) {
+export function Field({ label, htmlFor, help, error, children }: { label: string; htmlFor?: string; help?: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="fld">
       {htmlFor ? <label className="fld__lab" htmlFor={htmlFor}>{label}</label> : <span className="fld__lab">{label}</span>}
       {children}
-      {help && <span className="fld__help">{help}</span>}
+      {error ? <span className="fld__err" role="alert">{error}</span> : help && <span className="fld__help">{help}</span>}
     </div>
   );
 }
@@ -141,8 +142,11 @@ export function CompanyForm({ company, members = [] }: { company?: CrmCompany; m
     address: company?.address ?? "", website: company?.website ?? "", memo: company?.memo ?? "", email_domain: company?.email_domain ?? "", owner: company?.owner ?? "",
   });
   const set = (p: Partial<typeof v>) => setV({ ...v, ...p });
+  const [tried, setTried] = useState(false);
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    // 칸 오류는 칸 바로 아래 (시안 검토판 c-client-new~ferr)
+    if (!v.name.trim()) { setTried(true); document.getElementById("co-name")?.focus(); return; }
     const r = await send("companies", company ? "PATCH" : "POST", { ...(company ? { id: company.id } : {}), ...v, owner: v.owner || null });
     if (!r) return;
     close();
@@ -150,7 +154,7 @@ export function CompanyForm({ company, members = [] }: { company?: CrmCompany; m
   }
   return (
     <form className="crm-form" onSubmit={save}>
-      <Field label="고객사 이름" htmlFor="co-name"><input id="co-name" className="inp" value={v.name} maxLength={200} required onChange={(e) => set({ name: e.target.value })} /></Field>
+      <Field label="고객사 이름" htmlFor="co-name" error={tried && !v.name.trim() ? "고객사 이름을 입력해 주세요." : undefined}><input id="co-name" className="inp" value={v.name} maxLength={200} aria-invalid={(tried && !v.name.trim()) || undefined} onChange={(e) => set({ name: e.target.value })} /></Field>
       <Field label="다른 표기" htmlFor="co-alias" help="영문명, 예전 이름처럼 같은 회사를 부르는 이름. 쉼표로 나눠요. 단추에서 선정될 때 이 이름으로도 찾아 묶어요.">
         <input id="co-alias" className="inp" value={v.aliases} maxLength={600} onChange={(e) => set({ aliases: e.target.value })} />
       </Field>
@@ -187,8 +191,10 @@ export function ContactForm({ companyId, contact, dealId }: { companyId: string;
     phone: contact?.phone ?? "", mobile: contact?.mobile ?? "", memo: contact?.memo ?? "",
   });
   const set = (p: Partial<typeof v>) => setV({ ...v, ...p });
+  const [tried, setTried] = useState(false);
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!v.name.trim()) { setTried(true); document.getElementById("ct-name")?.focus(); return; }
     const r = await send("contacts", contact ? "PATCH" : "POST", { ...(contact ? { id: contact.id } : { company_id: companyId, deal_id: dealId ?? null }), ...v, role: v.role || null });
     if (r) close();
   }
@@ -200,7 +206,7 @@ export function ContactForm({ companyId, contact, dealId }: { companyId: string;
   return (
     <form className="crm-form" onSubmit={save}>
       {contact?.danchu_key && <p className="crm-note">단추에서 선정될 때 의뢰자가 적은 이름·연락처로 만들어졌어요. 고쳐도 단추 요청서는 바뀌지 않아요.</p>}
-      <Field label="이름" htmlFor="ct-name"><input id="ct-name" className="inp" value={v.name} maxLength={100} required onChange={(e) => set({ name: e.target.value })} /></Field>
+      <Field label="이름" htmlFor="ct-name" error={tried && !v.name.trim() ? "이름을 입력해 주세요." : undefined}><input id="ct-name" className="inp" value={v.name} maxLength={100} aria-invalid={(tried && !v.name.trim()) || undefined} onChange={(e) => set({ name: e.target.value })} /></Field>
       <div className="grid2">
         <Field label="소속" htmlFor="ct-dept"><input id="ct-dept" className="inp" value={v.dept} maxLength={100} placeholder="비임상팀" onChange={(e) => set({ dept: e.target.value })} /></Field>
         <Field label="직책" htmlFor="ct-title"><input id="ct-title" className="inp" value={v.title} maxLength={60} placeholder="팀장" onChange={(e) => set({ title: e.target.value })} /></Field>
@@ -252,8 +258,10 @@ export function EventForm({ opts, event, preset = {} }: { opts: CrmOpts; event?:
   const quotes = opts.quotes.filter((q) => (v.deal_id ? q.dealId === v.deal_id : !v.company_id || q.companyId === v.company_id) || q.id === v.quote_doc_id);
   const deals = opts.deals.filter((d) => !v.company_id || d.companyId === v.company_id || d.id === v.deal_id);
   const timed = v.kind !== "deadline" && !v.all_day;
+  const [tried, setTried] = useState(false);
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!v.title.trim()) { setTried(true); document.getElementById("ev-title")?.focus(); return; }
     const r = await send("events", event ? "PATCH" : "POST", {
       ...(event ? { id: event.id } : {}), ...v, all_day: !timed, start: timed ? v.start : undefined, end: timed ? v.end || undefined : undefined,
       mode: v.kind === "deadline" || v.kind === "other" ? null : v.mode, company_id: v.company_id || null, deal_id: v.deal_id || null, contact_id: v.attendee_contacts[0] ?? null, quote_doc_id: v.quote_doc_id || null,
@@ -268,7 +276,7 @@ export function EventForm({ opts, event, preset = {} }: { opts: CrmOpts; event?:
   return (
     <form className="crm-form" onSubmit={save}>
       <Seg value={v.kind} list={EVENT_KINDS} labels={EVENT_KIND} label="일정 종류" onChange={(kind) => set({ kind, mode: kind === "call" ? "phone" : v.mode === "phone" ? "in_person" : v.mode })} />
-      <Field label="제목" htmlFor="ev-title"><input id="ev-title" className="inp" value={v.title} maxLength={200} required placeholder={v.kind === "deadline" ? "예: 수정 견적 회신 약속" : "예: 견적 설명 미팅"} onChange={(e) => set({ title: e.target.value })} /></Field>
+      <Field label="제목" htmlFor="ev-title" error={tried && !v.title.trim() ? "제목을 입력해 주세요." : undefined}><input id="ev-title" className="inp" value={v.title} maxLength={200} aria-invalid={(tried && !v.title.trim()) || undefined} placeholder={v.kind === "deadline" ? "예: 수정 견적 회신 약속" : "예: 견적 설명 미팅"} onChange={(e) => set({ title: e.target.value })} /></Field>
       <div className="crm-row3">
         <Field label="날짜" htmlFor="ev-date"><input id="ev-date" className="inp tnum" type="date" value={v.date} required onChange={(e) => set({ date: e.target.value })} /></Field>
         {timed ? (
@@ -322,17 +330,38 @@ export function EventForm({ opts, event, preset = {} }: { opts: CrmOpts; event?:
   );
 }
 
+/**
+ * 되돌릴 수 없는 CRM 동작을 확인 창에서 처리한다 (창 안에서 처리 중 · 실패 · 다시). 성공하면 true.
+ * 시안 검토판: 제목은 해요체 질문, 결과 문장은 합니다체 한 문장
+ */
+export function useCrmConfirm() {
+  const confirm = useConfirm();
+  return (o: { title: string; body: string; ok: string; pending: string; fail: string; kind: string; method: Method; payload: Record<string, unknown> }) =>
+    confirm({
+      title: o.title,
+      body: o.body,
+      confirmLabel: o.ok,
+      pendingLabel: o.pending,
+      retryLabel: `다시 ${o.ok}`,
+      danger: true,
+      action: async () => {
+        const r = await fetch(`/api/cro/crm/${o.kind}`, { method: o.method, headers: { "content-type": "application/json" }, body: JSON.stringify(o.payload) }).catch(() => null);
+        if (!r?.ok) {
+          const j = (await r?.json().catch(() => ({}))) as { error?: string } | undefined;
+          throw new Error(r && r.status < 500 && r.status !== 403 && j?.error ? j.error : o.fail);
+        }
+      },
+    });
+}
+
 /** 기록 지우기 (기록 줄 옆) */
 export function ActivityDelete({ id }: { id: string }) {
-  const { busy, err, send } = useSend();
-  const [ask, setAsk] = useState(false);
-  if (!ask) return <button type="button" className="crm-lk" onClick={() => setAsk(true)}>지우기</button>;
+  const router = useRouter();
+  const ask = useCrmConfirm();
   return (
-    <span className="crm-confirm">
-      <button type="button" className="crm-lk" onClick={() => send("activities", "DELETE", { id })} disabled={busy}>정말 지우기</button>
-      <button type="button" className="crm-lk" onClick={() => setAsk(false)}>그대로 두기</button>
-      <Err msg={err} />
-    </span>
+    <button type="button" className="crm-lk" onClick={async () => {
+      if (await ask({ title: "기록을 지울까요?", body: "지우면 이 기록과 붙인 파일을 되돌릴 수 없습니다.", ok: "지우기", pending: "지우는 중", fail: "기록을 지우지 못했어요. 기록은 그대로예요.", kind: "activities", method: "DELETE", payload: { id } })) router.refresh();
+    }}>지우기</button>
   );
 }
 
@@ -369,29 +398,20 @@ export function TaskActionAdd({ taskId }: { taskId: string }) {
 // ─── 합치기 ───
 export function MergeButton({ keep, drop, label }: { keep: string; drop: string; label: string }) {
   const router = useRouter();
-  const { busy, err, send } = useSend();
-  const [ask, setAsk] = useState(false);
-  if (!ask) return <button type="button" className="crm-lk" onClick={() => setAsk(true)}>{label}</button>;
+  const ask = useCrmConfirm();
   return (
-    <span className="crm-confirm">
-      <button type="button" className="crm-lk" disabled={busy} onClick={async () => { const r = await send("merge", "POST", { keep, drop }); if (r) router.refresh(); }}>{busy ? "합치는 중" : "합치기 확인"}</button>
-      <button type="button" className="crm-lk" onClick={() => setAsk(false)}>취소</button>
-      <Err msg={err} />
-    </span>
+    <button type="button" className="crm-lk" onClick={async () => {
+      if (await ask({ title: "고객사를 합칠까요?", body: "합치면 담당자·안건·기록이 한 고객사로 모이고 되돌릴 수 없습니다.", ok: "합치기", pending: "합치는 중", fail: "고객사를 합치지 못했어요. 고객사는 그대로예요.", kind: "merge", method: "POST", payload: { keep, drop } })) router.refresh();
+    }}>{label}</button>
   );
 }
 
 /** 고객사 지우기 (단추에서 선정된 고객사는 서버가 막는다) */
 export function CompanyDelete({ id, back }: { id: string; back: string }) {
-  const { busy, err, send } = useSend();
-  const [ask, setAsk] = useState(false);
-  if (!ask) return <button type="button" className="btxt" onClick={() => setAsk(true)}>고객사 지우기</button>;
+  const ask = useCrmConfirm();
   return (
-    <div className="crm-confirm">
-      <span className="crm-hint">담당자·기록·일정·할 일이 함께 지워져요. 안건과 견적서는 고객사 없이 남아요.</span>
-      <button type="button" className="b2 b2--danger bsm" disabled={busy} onClick={async () => { if (await send("companies", "DELETE", { id })) location.assign(back); }}>지우기</button>
-      <button type="button" className="btxt" onClick={() => setAsk(false)}>취소</button>
-      <Err msg={err} />
-    </div>
+    <button type="button" className="btxt" onClick={async () => {
+      if (await ask({ title: "고객사를 지울까요?", body: "지우면 담당자·기록·일정·할 일이 함께 지워지고 되돌릴 수 없습니다.", ok: "지우기", pending: "지우는 중", fail: "고객사를 지우지 못했어요. 고객사는 그대로예요.", kind: "companies", method: "DELETE", payload: { id } })) location.assign(back);
+    }}>고객사 지우기</button>
   );
 }

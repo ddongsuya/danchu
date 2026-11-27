@@ -1,53 +1,29 @@
 import { notFound } from "next/navigation";
-import { md } from "@/lib/format";
 import { requireSession } from "@/lib/auth";
 import { getInviteById } from "@/lib/data";
 import { loadByInvite } from "@/lib/quote-load";
 import { loadOptsFor } from "@/lib/concierge";
 import { RequestView } from "@/components/cro/RequestView";
-import { DeclineForm } from "@/components/cro/DeclineForm";
 import { Crumb } from "@/components/app/ui";
 import { detailCueOfInvite } from "@/lib/detail-data";
 import { qnaCounts } from "@/lib/qna-data";
 
 export const dynamic = "force-dynamic";
 
-/** 포털 요청 화면. 참여 전 요약·참여 결정과 참여 뒤 요청서 전체는 /q 와 같다 (RequestView). ?decline=1 은 참여 철회 확인 */
-export default async function CroRequest({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ decline?: string }> }) {
+/** 포털 요청 화면. 참여 전 요약·참여 결정과 참여 뒤 요청서 전체는 /q 와 같다 (RequestView). 불참·참여 철회는 확인 창에서 처리한다 */
+export default async function CroRequest({ params }: { params: Promise<{ id: string }> }) {
   const s = await requireSession("cro");
   const { id } = await params;
-  const { decline } = await searchParams;
   const inv = await getInviteById(id);
   if (!inv || (s.profile.role !== "admin" && inv.cro_org_id !== s.profile.cro_org_id)) notFound();
   const got = await loadByInvite(inv, loadOptsFor(s.profile.role));
   if (!got) notFound();
-  const open = !got.closed && !got.declined && !got.expired && got.draft?.status !== "submitted";
-  if (decline === "1" && open) {
-    const withdraw = got.joined;
-    const joinByLabel = got.joinBy ? md(new Date(got.joinBy).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" })) : "";
-    return (
-      <>
-        <Crumb href={`/cro/r/${id}`} label={got.rfq.no} />
-        <div className="ph">
-          <div>
-            <h1>{withdraw ? "이 요청의 참여를 철회해요" : "이번 요청에 불참해요"}</h1>
-            <p>
-              {withdraw
-                ? "철회하면 자리가 비고 청구하지 않아요. 이 요청은 종료 목록으로 이동하고 다시 참여할 수 없어요."
-                : `불참해도 다음 참여 안내에 영향이 없어요.${joinByLabel ? ` 참여 결정 기한(${joinByLabel})까지는 남은 자리가 있으면 다시 참여할 수 있어요.` : ""}`}
-            </p>
-          </div>
-        </div>
-        <DeclineForm token={inv.token} mode={withdraw ? "withdraw" : "decline"} backHref={`/cro/r/${id}`} afterHref="/cro" operator={got.operator} />
-      </>
-    );
-  }
   const detail = got.joined ? await detailCueOfInvite(inv.id, inv.rfq_id, `/cro/r/${id}`) : null;
   const qna = got.joined && !got.withdrawn ? { href: `/cro/r/${id}/qna`, ...(await qnaCounts(inv.rfq_id, inv.id)) } : null;
   return (
     <>
       <Crumb href={`/cro/requests?sel=${id}`} label="받은 요청" />
-      <RequestView got={got} replyHref={`/cro/r/${id}/reply`} withdrawHref={`/cro/r/${id}?decline=1`} afterDeclineHref="/cro" detail={detail} qna={qna} />
+      <RequestView got={got} replyHref={`/cro/r/${id}/reply`} afterWithdrawHref="/cro/requests" afterDeclineHref="/cro/requests" detail={detail} qna={qna} portal />
     </>
   );
 }

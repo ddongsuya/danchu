@@ -7,7 +7,8 @@ import { cleanLabel, coreFields, detailLines, MAX_DETAIL_TARGETS, PROGRESS_FIELD
 import type { Cat } from "@/lib/rfq-schema";
 import { addBusinessDays, nowSeoul } from "@/lib/dates";
 import { uploadToSigned } from "@/lib/upload";
-import { won } from "@/lib/format";
+import { md, won } from "@/lib/format";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { ChatShell, Composer, Opt, type Said } from "@/components/ChatShell";
 
 /**
@@ -76,7 +77,7 @@ export function DetailRequest({
   const [files, setFiles] = useState<File[]>([]);
   const [replyBy, setReplyBy] = useState(() => ymd(addBusinessDays(nowSeoul(), 5)));
   const [date, setDate] = useState("");
-  const [busy, setBusy] = useState(false);
+  const confirm = useConfirm();
   const [error, setError] = useState("");
   const [failed, setFailed] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -108,26 +109,28 @@ export function DetailRequest({
       </button>
     ));
 
+  // 보내기 전 확인창 (시안 r-detail2 send): 받는 기관과 2차 회신 기한, 한 번만 보낼 수 있다는 결과를 알리고 창 안에서 처리한다
   const send = async () => {
-    setBusy(true);
     setError("");
-    try {
-      const r = await fetch(`/api/rfq/${no}/detail`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quoteIds: targets, detail: vals, replyBy }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "상세 견적 요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
-      const bad: string[] = [];
-      for (const f of files) if (!(await uploadDetailFile(no, f).catch(() => false))) bad.push(f.name);
-      setFailed(bad);
-      go({ k: "done" });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "다시 시도해 주세요.");
-    } finally {
-      setBusy(false);
-    }
+    const count = ["", "한", "두", "세"][names.length] ?? String(names.length);
+    const ok = await confirm({
+      title: `상세 조건을 ${names.join(", ")}에 보낼까요?`,
+      body: `보내면 ${count} 기관에 2차 견적 요청이 가고, 2차 회신 기한은 ${md(replyBy)}입니다. 상세 조건은 이 요청에서 한 번만 보낼 수 있습니다.`,
+      confirmLabel: "보내기",
+      pendingLabel: "보내는 중",
+      action: async () => {
+        const r = await fetch(`/api/rfq/${no}/detail`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quoteIds: targets, detail: vals, replyBy }),
+        }).catch(() => null);
+        if (!r?.ok) throw new Error("상세 조건을 보내지 못했어요. 입력한 내용은 그대로 있어요.");
+        const bad: string[] = [];
+        for (const f of files) if (!(await uploadDetailFile(no, f).catch(() => false))) bad.push(f.name);
+        setFailed(bad);
+      },
+    });
+    if (ok) go({ k: "done" });
   };
 
   let q = "";
@@ -345,7 +348,7 @@ export function DetailRequest({
       ans = (
         <>
           {error && <p className="cr-err" role="alert">{error}</p>}
-          <Opt label={busy ? "보내는 중이에요" : "상세 조건 보내기"} pri arrow={!busy} disabled={busy || preview || !targets.length} onClick={send} />
+          <Opt label="상세 조건 보내기" pri arrow disabled={preview || !targets.length} onClick={() => void send()} />
         </>
       );
       break;

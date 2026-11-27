@@ -17,17 +17,15 @@ const FL_CYCLE = [{"tag": "Tox", "t": "반복투여독성 4주", "k": "동물", 
 export default function Home() {
   const prereg = preregActive();
   // 사전예약 기간에는 새 방문자의 첫 행동이 견적 요청이 아니라 사전예약이다 (lib/prereg.ts)
-  const cta = prereg ? <a className="btn solid" href="/early">사전예약하기</a> : <a className="btn solid" href="/request">견적 요청하기</a>;
+  const cta = prereg ? <a className="btn solid" href="/early">사전예약</a> : <a className="btn solid" href="/request">견적 요청</a>;
   return (
     <Site onescreen={false} headerCta={false}>
 {prereg && <EarlyNotice days={daysToPilot()} />}
 <div className="first">
 <div className="hero">
 <div>
-<h1><span className="h1l">비임상 시험 견적,</span><span className="h1l">단추에서 비교하세요.</span></h1>
-<p className="sub">한 번 요청으로 여러 기관의 견적을 받아보세요.</p>
+<h1><span className="h1l">비임상 시험 견적,</span><span className="h1l">여러 기관에서 받아 비교</span></h1>
 <div className="ctas">{cta}<a className="btn ghost" href="/#fields">시험 종류 보기</a></div>
-<p className="micro">의뢰자는 무료로 이용해요. <a href="/for-cro">기관으로 참여하기</a></p>
 </div>
 
 <div className="fd fo" aria-hidden="true"><MarkDrift /></div>
@@ -40,11 +38,10 @@ export default function Home() {
 <section id="cmp" className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
 <div className="gm-cmp-grid">
 <div className="gm-copy">
-<h2 id="cmp-h">같은 시험, 다른 견적<br /><span>무엇이 다른지 비교하세요.</span></h2>
-<p className="gm-lead">총액만 보면 B가 싸 보여요. 같은 항목끼리 보면 달라요.</p>
+<h2 id="cmp-h">같은 시험, 다른 견적<br /><span>항목별 비교</span></h2>
 </div>
 <figure className="gm-sheet" aria-label="예시 기관 A와 B의 견적 비교">
-<header><b>B 기관 견적에는 TK 분석이 빠져 있어요.</b><small>반복투여독성 4주 · 설치류</small></header>
+<header><b>반복투여독성 4주 · 설치류</b></header>
 <table className="gm-items">
 <thead><tr><th scope="col">항목</th><th scope="col">기관 A</th><th scope="col">기관 B</th></tr></thead>
 <tbody>
@@ -55,7 +52,6 @@ export default function Home() {
 </tbody>
 </table>
 <p className="gm-gap">차이 <s className="g-old">300만 원</s> <span className="g-chip">같은 항목 기준 100만 원</span></p>
-<figcaption>최종 금액은 각 기관의 정식 견적서로 확인하세요.</figcaption>
 </figure>
 </div>
 </section>
@@ -80,7 +76,7 @@ export default function Home() {
 <div className="g-mrow"><span>기관 A</span><span className="g-bt"><i style={{ "--w": "1" }}></i></span><em data-to="1000">1,000</em></div>
 <div className="g-mrow"><span>기관 B</span><span className="g-bt"><i style={{ "--w": ".9" }}></i></span><em data-to="900">900</em></div>
 <div className="g-mrow g-wait"><span>기관 C</span><span className="g-bt"><i style={{ "--w": "0" }}></i></span><em>대기</em></div>
-<small>요청한 견적서가 모이면 비교표가 도착해요. 직접 확인하고 기관을 선정할 수 있어요.</small>
+<small>견적서가 모이면 비교표로 정리돼요.</small>
 </div>
 <span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span>
 <span className="g-rp" aria-hidden="true">1,000</span><span className="g-rp" aria-hidden="true">900</span>
@@ -91,8 +87,7 @@ export default function Home() {
 <section className="gm gm-ev" data-gm="ev">
 <div className="gm-ev-grid">
 <div>
-<h2>어떤 시험이 필요할지<br /><span>가이드라인에서 먼저 확인하세요.</span></h2>
-<p className="lead">시험을 구성할 때 참고할 공개 가이드라인을 모아 두었어요.</p>
+<h2>어떤 시험이 필요한지<br /><span>가이드라인 근거로 찾기</span></h2>
 <div className="ctas" style={{ marginTop: "32px" }}><a className="btn g-ghost" href="/request/new?start=advisor">가이드라인 찾아보기</a></div>
 </div>
 <div className="gm-adv" aria-label="가이드라인 찾아보기 예시">
@@ -102,7 +97,6 @@ export default function Home() {
 <li className="g-sr"><div className="g-t"><b>복귀돌연변이시험</b><small>임상 단회 투여 전</small></div><span className="g-src"><i className="g-mk"></i>OECD TG 471</span><span className="g-pg" aria-hidden="true"><span>OECD TG 471</span><i style={{ "--w": ".7" }}></i><i style={{ "--w": ".84" }}></i><i className="g-hl" style={{ "--w": ".58" }}></i><i style={{ "--w": ".66" }}></i></span></li>
 <li className="g-sr"><div className="g-t"><b>안전성약리 핵심 시험</b><small>심혈관, 호흡, 중추신경</small></div><span className="g-src"><i className="g-mk"></i>ICH S7A</span><span className="g-pg" aria-hidden="true"><span>ICH S7A</span><i className="g-hl" style={{ "--w": ".74" }}></i><i style={{ "--w": ".62" }}></i><i style={{ "--w": ".8" }}></i><i style={{ "--w": ".54" }}></i></span></li>
 </ul>
-<p className="g-foot">참고 자료예요. 최종 설계는 규제기관, 담당 기관과 함께 정하세요.</p>
 </div>
 </div>
 </section>
@@ -112,7 +106,6 @@ export default function Home() {
 <div className="fin-grid">
 <div className="copyin">
 <h2 id="fin-h">비임상 시험의 시작은<br /><span>단추</span></h2>
-<p className="lead">원하는 조건으로 여러 기관에 견적을 요청하세요.</p>
 <div className="ctas">{cta}</div>
 </div>
 <div className="bm" aria-hidden="true">
@@ -131,7 +124,7 @@ export default function Home() {
 </svg>
 </div>
 </div>
-<div className="cro"><p>시험 기관 담당자이신가요? 더 다양한 고객을 단추에서 만나보세요.</p><a className="btn ghost" href="/for-cro">기관으로 참여하기</a></div>
+<div className="cro"><p>시험 기관이신가요?</p><a className="btn ghost" href="/for-cro">기관 참여</a></div>
 </div>
 </section>
       <HomeMotion />

@@ -1,22 +1,32 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CaretRight, Check, EnvelopeSimple, FileText, Handshake, LockSimple, NotePencil, PencilSimple, Phone, Plus } from "@phosphor-icons/react/dist/ssr";
-import { DEAL_KIND, STAGE_LABEL, STATUS_LABEL, amountLabel, buildTimeline, byDay, stageSpans, type Stage, type Status, type TimelineItem } from "@/lib/crm-deals";
-import { CONTACT_ROLE, EVENT_MODE, hmKst, mdW, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
+import { DEAL_KIND, STAGE_LABEL, STATUS_LABEL, amountLabel, buildTimeline, byDay, stageSpans, type Stage, type Status, type TimelineItem, closedLabel } from "@/lib/crm-deals";
+import { CONTACT_ROLE, EVENT_MODE, hmKst, mdW, personLabel, todayKst, wonKo, ymdKst } from "@/lib/crm-shape";
 import { ActivityDelete, ContactForm, SheetButton } from "./forms";
-import { CloseButtons, Composer, CopyText, DealDelete, DealForm, DoneButton, StageBar } from "./deal-ui";
+import { CloseButtons, Composer, CopyText, DealDelete, DealForm, DoneButton, StageBar, WonReasonButton } from "./deal-ui";
+import { ActivityFiles, VoiceNote } from "./files-ui";
+import { isAudioFile } from "@/lib/crm-files";
+import { quoteRows } from "@/lib/crm-analysis";
+import { QuoteTable, ContractBox } from "./quotes-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
+import "./layout-crm.css";
 
 const KIND_ICON = { meeting: Handshake, call: Phone, email: EnvelopeSimple, memo: NotePencil, stage: ArrowRight, quote: FileText, task: Check } as const;
 
 /** 날짜 머리: "오늘 11.9", "11.6 금" */
 export const dayHead = (ymd: string, now: number) => (ymd === todayKst(now) ? `오늘 ${+ymd.slice(5, 7)}.${+ymd.slice(8, 10)}` : mdW(ymd));
 
-/** 타임라인 한 줄 (안건·고객사 화면이 함께 쓴다) */
-export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: string | null }) {
+/**
+ * 타임라인 한 줄 (안건·고객사·담당자 화면이 함께 쓴다). clip 이 있으면 본문을 그 글자 수로 줄인다.
+ * 녹음 파일이 붙은 미팅은 본문 대신 녹음 + 회의록 칸 (회의록은 줄이지 않은 본문으로 고친다).
+ */
+export function TimelineRow({ x, dealHref, clip }: { x: TimelineItem; dealHref?: string | null; clip?: number }) {
   const I = x.kind === "danchu" ? null : KIND_ICON[x.kind as keyof typeof KIND_ICON] ?? NotePencil;
+  const voice = x.ref?.type === "activity" && x.kind === "meeting" && (x.files ?? []).some(isAudioFile);
+  const body = x.body && clip && x.body.length > clip ? `${x.body.slice(0, clip)}…` : x.body;
   return (
     <li className="cx-ev" data-k={x.kind}>
       <span className={`cx-ev__dot${x.kind === "danchu" ? " cx-ev__dot--d" : ""}`} aria-hidden="true">{I ? <I size={15} /> : "단"}</span>
@@ -26,9 +36,9 @@ export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: strin
           {x.amount != null && <> · <span className="tnum">{wonKo(x.amount)}</span></>}
           {x.diffNote && <> <span className="cx-diff">{x.diffNote}</span></>}
         </p>
-        {x.body && (
+        {voice && x.ref ? <VoiceNote activityId={x.ref.id} files={x.files ?? []} body={x.body ?? ""} /> : body && (
           <div className="cx-ev__q">
-            <p>{x.body}</p>
+            <p>{body}</p>
           </div>
         )}
         {(x.sub || dealHref) && (
@@ -37,6 +47,7 @@ export function TimelineRow({ x, dealHref }: { x: TimelineItem; dealHref?: strin
             {dealHref && <> · <Link href={dealHref} className="cx-lk">안건 열기</Link></>}
           </p>
         )}
+        {x.ref?.type === "activity" && <ActivityFiles activityId={x.ref.id} files={x.files ?? []} />}
         {x.ref?.type === "activity" && <span className="cx-ev__del"><ActivityDelete id={x.ref.id} /></span>}
       </div>
       <time className="cx-ev__tm tnum" dateTime={x.at}>{hmKst(x.at)}</time>
@@ -52,7 +63,11 @@ export type DealTab = "log" | "info" | "people";
 export const dealTab = (v?: string): DealTab => (v === "info" || v === "people" ? v : "log");
 const DEAL_TABS: [DealTab, string][] = [["log", "기록"], ["info", "안건 정보"], ["people", "담당자·견적서"]];
 
-export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: DealTab }) {
+/** 가운데 칸: 활동(기본) · 견적·계약 (?v=quotes, 와이어프레임 v7 c-deal-quotes) */
+export type DealPane = "acts" | "quotes";
+export const dealPane = (v?: string): DealPane => (v === "quotes" ? "quotes" : "acts");
+
+export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: string; m?: DealTab; v?: DealPane }) {
   const { data, paths, now, me } = c;
   const rows = rowsOf(c);
   const r = rows.find((x) => x.deal.id === id);
@@ -79,6 +94,8 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
   const next = r.next;
   const nextEvent = next?.kind === "event" ? data.events.find((e) => e.id === next.id) : null;
   const nextTask = next?.kind === "task" ? data.tasks.find((t) => t.id === next.id) : null;
+  const qRows = quoteRows({ quotes, deals: [d], history: hist, danchu: c.danchu, docs: paths.docs });
+  const people = new Map(data.contacts.map((x) => [x.id, personLabel(x.name, x.title)]));
   return (
     <div className="cx cx-deal" data-m={m}>
       <nav className="crumb cx-crumb" aria-label="위치">
@@ -94,7 +111,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
             <span aria-hidden="true">·</span><b className="tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</b>
             {d.owner && <><span aria-hidden="true">·</span><span>담당 {mem.get(d.owner) ?? "-"}</span></>}
             {r.danchuNo && <span className="cx-chip"><span className="cx-d" aria-hidden="true">단</span>단추 {r.danchuNo}</span>}
-            {d.status !== "open" && <span className={`cx-st cx-st--${d.status}`}>{STATUS_LABEL[d.status as Status]}{d.lost_reason ? ` · ${d.lost_reason}` : ""}</span>}
+            {d.status !== "open" && <span className={`cx-st cx-st--${d.status}`}>{closedLabel(d)}</span>}
           </p>
         </div>
         <div className="cx-ph__acts">
@@ -120,25 +137,21 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
       </nav>
 
       <div className="cx-dealcols">
-        <dl className="cx-facts">
-          <div><dt>{d.status === "won" ? "계약 금액" : "금액"}</dt><dd className="cx-facts__big tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</dd></div>
-          {d.status === "won" && d.won_amount != null && d.amount != null && d.won_amount !== d.amount && <div><dt>견적 금액</dt><dd className="tnum">{wonKo(d.amount)}</dd></div>}
-          {d.status === "lost" && <div><dt>실패 사유</dt><dd>{d.lost_reason || "기타"}{d.lost_note && <small className="cx-muted cx-facts__note">{d.lost_note}</small>}</dd></div>}
-          <div><dt>예상 계약</dt><dd className="tnum">{d.expected_on ? `${d.expected_on.slice(0, 4)}년 ${+d.expected_on.slice(5, 7)}월` : <span className="cx-muted">정하지 않음</span>}</dd></div>
-          <div><dt>시험 갈래</dt><dd>{d.kind ? DEAL_KIND[d.kind] : <span className="cx-muted">-</span>}{src?.cats.length ? <span className="cx-muted"> · {src.cats.slice(0, 2).join(", ")}</span> : null}</dd></div>
-          {d.substance && <div><dt>대상 물질</dt><dd>{d.substance}</dd></div>}
-          {d.submit_to && <div><dt>제출처</dt><dd>{d.submit_to}</dd></div>}
-          {d.report_lang && <div><dt>보고서 언어</dt><dd>{d.report_lang}</dd></div>}
-          <div><dt>담당 영업</dt><dd>{d.owner ? mem.get(d.owner) ?? "-" : <span className="cx-muted">정하지 않음</span>}</dd></div>
-          <div><dt>출처</dt><dd>{danchu ? <>단추 요청 {r.danchuNo}<Lock /></> : d.source === "import" ? "엑셀에서 가져옴" : "직접 받은 문의"}</dd></div>
-          {src?.award && <div><dt>선정일</dt><dd className="tnum">{ymdKst(src.award.awardedAt).replaceAll("-", ".")}<Lock /></dd></div>}
-          {src?.replyBy && !src.award && d.status === "open" && <div><dt>회신 기한</dt><dd className="tnum">{mdW(src.replyBy.slice(0, 10))}<Lock /></dd></div>}
-          {company?.first_deal_on && <div><dt>첫 거래</dt><dd className="tnum">{company.first_deal_on.slice(0, 4)}년 {+company.first_deal_on.slice(5, 7)}월</dd></div>}
-          {d.memo && <div><dt>메모</dt><dd className="cx-pre">{d.memo}</dd></div>}
-          {danchu && <div><dt>단추 요청</dt><dd><Link href={`/cro/r/${d.invite_id}`} className="cx-lk">요청서 보기</Link></dd></div>}
-        </dl>
-
         <div className="cx-center">
+          <nav className="cx-tabs2 cx-panetabs" aria-label="안건 내용">
+            <Link href="?" replace scroll={false} aria-current={v === "acts" ? "page" : undefined}>활동</Link>
+            <Link href="?v=quotes" replace scroll={false} aria-current={v === "quotes" ? "page" : undefined}>견적·계약<span className="tnum">{qRows.length}</span></Link>
+          </nav>
+          {v === "quotes" ? (
+            <>
+              <section className="cx-grp" aria-labelledby="d-qt">
+                <div className="cx-grp__h"><h2 id="d-qt">보낸 견적</h2><span className="cx-grp__end tnum">{qRows.length}건</span></div>
+                <QuoteTable rows={qRows} people={people} personHref={company ? (cid) => `${paths.clients}/${company.id}/contacts/${cid}` : undefined}
+                  empty={<>아직 보낸 견적이 없어요</>} />
+              </section>
+              <ContractBox deal={d} src={src} history={hist} />
+            </>
+          ) : (<>
           {d.status === "open" && (
             next ? (
               <div className="cx-next" id="next-band">
@@ -153,7 +166,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                   : next.id ? <DoneButton kind={next.kind === "event" ? "events" : "tasks"} id={next.id} /> : null}
               </div>
             ) : (
-              <p className="cx-next cx-next--none" id="next-band"><b>다음 할 일이 없어요.</b> 아래 &quot;할 일&quot;에서 날짜를 잡거나, 기록을 남기며 다음 할 일 날짜를 골라요.</p>
+              <p className="cx-next cx-next--none" id="next-band"><b>다음 할 일이 없어요.</b></p>
             )
           )}
           <Composer dealId={d.id} companyId={d.company_id} contacts={composerContacts} members={opts.members} me={me} startTab={!next && d.status === "open" ? "task" : "memo"} />
@@ -166,14 +179,42 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                 </section>
               ))}
             </div>
-          ) : <p className="cx-none">아직 기록이 없어요. 통화나 미팅을 마치면 위에 한 줄 남겨요.</p>}
+          ) : <p className="cx-none">아직 기록이 없어요</p>}
+          </>)}
         </div>
 
-        <aside className="cx-rail" aria-label="담당자와 견적서">
-          <section className="cx-rail__s">
-            <h2 className="cx-rail__h">담당자
-              {company && <SheetButton className="cx-lk cx-rail__add" title="담당자 추가" label={<><Plus size={13} aria-hidden="true" />추가</>}><ContactForm companyId={company.id} dealId={d.id} /></SheetButton>}
-            </h2>
+        <aside className="cx-rail" aria-label="안건 정보와 담당자, 견적서">
+          <section className="cx-grp cx-rail__info" aria-labelledby="d-info">
+            <div className="cx-grp__h"><h2 id="d-info">안건 정보</h2></div>
+            <dl className="cx-props">
+              <div><dt>{d.status === "won" ? "계약 금액" : "금액"}</dt><dd className="cx-facts__big tnum">{amountLabel(d.status === "won" ? d.won_amount ?? d.amount : d.amount)}</dd></div>
+              {d.status === "won" && d.won_amount != null && d.amount != null && d.won_amount !== d.amount && <div><dt>견적 금액</dt><dd className="tnum">{wonKo(d.amount)}</dd></div>}
+              {d.status === "won" && (
+                <div>
+                  <dt>수주 이유</dt>
+                  <dd>{d.won_reason || <span className="cx-muted">적지 않음</span>}<WonReasonButton dealId={d.id} reason={d.won_reason} note={d.won_note} />{d.won_note && <small className="cx-muted cx-facts__note">{d.won_note}</small>}</dd>
+                </div>
+              )}
+              {d.status === "lost" && <div><dt>실패 사유</dt><dd>{d.lost_reason || "기타"}{d.lost_note && <small className="cx-muted cx-facts__note">{d.lost_note}</small>}</dd></div>}
+              <div><dt>예상 계약</dt><dd className="tnum">{d.expected_on ? `${d.expected_on.slice(0, 4)}년 ${+d.expected_on.slice(5, 7)}월` : <span className="cx-muted">정하지 않음</span>}</dd></div>
+              <div><dt>시험 갈래</dt><dd>{d.kind ? DEAL_KIND[d.kind] : <span className="cx-muted">-</span>}{src?.cats.length ? <span className="cx-muted"> · {src.cats.slice(0, 2).join(", ")}</span> : null}</dd></div>
+              {d.substance && <div><dt>대상 물질</dt><dd>{d.substance}</dd></div>}
+              {d.submit_to && <div><dt>제출처</dt><dd>{d.submit_to}</dd></div>}
+              {d.report_lang && <div><dt>보고서 언어</dt><dd>{d.report_lang}</dd></div>}
+              <div><dt>담당 영업</dt><dd>{d.owner ? mem.get(d.owner) ?? "-" : <span className="cx-muted">정하지 않음</span>}</dd></div>
+              <div><dt>출처</dt><dd>{danchu ? <>단추 요청 {r.danchuNo}<Lock /></> : d.source === "import" ? "엑셀에서 가져옴" : "직접 받은 문의"}</dd></div>
+              {src?.award && <div><dt>선정일</dt><dd className="tnum">{ymdKst(src.award.awardedAt).replaceAll("-", ".")}<Lock /></dd></div>}
+              {src?.replyBy && !src.award && d.status === "open" && <div><dt>회신 기한</dt><dd className="tnum">{mdW(src.replyBy.slice(0, 10))}<Lock /></dd></div>}
+              {company?.first_deal_on && <div><dt>첫 거래</dt><dd className="tnum">{company.first_deal_on.slice(0, 4)}년 {+company.first_deal_on.slice(5, 7)}월</dd></div>}
+              {d.memo && <div><dt>메모</dt><dd className="cx-pre">{d.memo}</dd></div>}
+              {danchu && <div><dt>단추 요청</dt><dd><Link href={`/cro/r/${d.invite_id}`} className="cx-lk">요청서 보기</Link></dd></div>}
+            </dl>
+          </section>
+
+          <section className="cx-grp" aria-labelledby="d-ppl">
+            <div className="cx-grp__h"><h2 id="d-ppl">담당자</h2>
+              {company && <span className="cx-grp__end"><SheetButton className="cx-lk cx-rail__add" title="담당자 추가" label={<><Plus size={13} aria-hidden="true" />추가</>}><ContactForm companyId={company.id} dealId={d.id} /></SheetButton></span>}
+            </div>
             {dealContacts.length ? (
               <ul className="cx-ppl">
                 {dealContacts.map((p, i) => {
@@ -182,7 +223,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                     <li key={p.id}>
                       <span className="cx-av" aria-hidden="true">{p.name.slice(0, 1)}</span>
                       <span className="cx-ppl__x">
-                        <b>{p.name}{p.title && !p.name.includes(p.title) ? ` ${p.title}` : ""}{i === 0 && dealContacts.length > 1 && <span className="cx-chip">주 담당</span>}</b>
+                        <b><Link href={`${paths.clients}/${p.company_id}/contacts/${p.id}`} className="cx-tlink">{personLabel(p.name, p.title)}</Link>{i === 0 && dealContacts.length > 1 && <span className="cx-chip">주 담당</span>}</b>
                         <small>{[p.dept, p.role ? CONTACT_ROLE[p.role] : "", last ? `마지막 연락 ${ymdKst(last.occurred_at) === todayKst(now) ? "오늘" : mdW(ymdKst(last.occurred_at))}` : ""].filter(Boolean).join(" · ")}</small>
                       </span>
                       <span className="cx-ppl__ico">
@@ -193,11 +234,11 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                   );
                 })}
               </ul>
-            ) : <p className="cx-muted cx-small">{danchu && !company ? "의뢰자가 우리 견적을 고르면 고객사와 담당자가 저절로 들어와요." : company ? "이 안건의 담당자를 추가해요." : "고객사를 정하면 담당자를 붙일 수 있어요."}</p>}
+            ) : <p className="cx-muted cx-small">{danchu && !company ? "의뢰자가 우리 견적을 고르면 고객사와 담당자가 자동으로 들어와요." : company ? "담당자가 없어요." : "고객사를 정하면 담당자를 붙일 수 있어요."}</p>}
           </section>
 
-          <section className="cx-rail__s">
-            <h2 className="cx-rail__h">견적서</h2>
+          <section className="cx-grp" aria-labelledby="d-qv">
+            <div className="cx-grp__h"><h2 id="d-qv">견적서</h2>{quotes.length > 0 && <span className="cx-grp__end tnum">{quotes.length}장</span>}</div>
             {quotes.length || src?.quote ? (
               <ul className="cx-qv">
                 {[...quotes].reverse().map((q, i) => (
@@ -219,7 +260,7 @@ export function DealView({ c, id, m = "log" }: { c: CrmCtx; id: string; m?: Deal
                   </li>
                 )}
               </ul>
-            ) : <p className="cx-muted cx-small">아직 견적서가 없어요. 위 &quot;견적서 만들기&quot;로 시작하면 이 안건에 붙어요.</p>}
+            ) : <p className="cx-muted cx-small">아직 견적서가 없어요.</p>}
           </section>
 
         </aside>

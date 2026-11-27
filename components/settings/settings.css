@@ -1,0 +1,31 @@
+/* 설정 화면 (components/settings/SettingsPage.tsx, 시안 r-set-* · c-set-* · a-profile) */
+.set { display: flex; flex-direction: column; gap: 20px; max-width: 760px; }
+.set h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.03em; }
+.set-sec { display: flex; flex-direction: column; gap: 10px; }
+.set-sec h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.set-rows { display: flex; flex-direction: column; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 8px 0; border-bottom: 1px solid var(--card-line); font-size: 15px; }
+.set-row > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.set-row small { font-size: 12px; color: var(--muted); }
+.set-row > label { font-size: 15px; }
+.set-blk { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--card-line); }
+.set-blk__l { font-size: 15px; }
+.set-sel { border: 1px solid var(--input-line); border-radius: var(--r-md); background: var(--white); color: var(--ink); font: inherit; font-size: 14px; height: 36px; padding: 0 10px; }
+.set-ban { margin-top: 12px; align-items: center; justify-content: space-between; }
+.set-skl { display: block; width: 60%; height: 14px; border-radius: 6px; background: var(--track); }
+.pt .fld__err { margin: 4px 0 0; font-size: 13px; color: var(--error-fg); }
+
+/* 의뢰자: 왼쪽 탭 + 오른쪽 내용 (ChatGPT 설정 창 짜임) */
+.set--tabs { flex-direction: row; gap: 0; max-width: 860px; margin: 8px auto 0; border: 1px solid var(--card-line); border-radius: var(--r-lg); background: var(--white); overflow: hidden; min-height: 480px; }
+.set-tabs { flex: none; width: 200px; display: flex; flex-direction: column; gap: 2px; padding: 12px 8px; background: var(--track); }
+.pt .set-tabs a { padding: 9px 12px; border-radius: var(--r-md); font-size: 14px; color: var(--ink2); text-decoration: none; }
+.pt .set-tabs a[aria-current="page"] { background: var(--white); color: var(--ink); font-weight: 600; }
+.set-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px 24px 28px; }
+.set-body h1 { font-size: 17px; padding-bottom: 12px; border-bottom: 1px solid var(--card-line); }
+@media (hover: hover) and (pointer: fine) { .pt .set-tabs a:hover:not([aria-current]) { background: var(--band); } }
+@media (max-width: 639px) {
+  .set--tabs { flex-direction: column; border: 0; border-radius: 0; background: none; margin: 0; min-height: 0; }
+  .set-tabs { width: auto; flex-direction: row; overflow-x: auto; scrollbar-width: none; padding: 4px; border-radius: var(--r-md); }
+  .pt .set-tabs a { white-space: nowrap; }
+  .set-body { padding: 16px 0 0; }
+}

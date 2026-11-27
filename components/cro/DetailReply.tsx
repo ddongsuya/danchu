@@ -1,10 +1,13 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { CaretRight, PencilSimple } from "@phosphor-icons/react";
 import { DETAIL_STATUS_LABEL, revisedTotal, type DetailLine, type DetailReplyItem, type DetailStatus } from "@/lib/detail-quote";
 import { md, won } from "@/lib/format";
 import { ChatShell, Composer, Opt, type Said } from "@/components/ChatShell";
+import "./layout-request.css";
 
 /**
  * 기관의 2차 회신 (0042). 의뢰자가 보낸 상세 조건을 보고 1차 견적에서 달라지는 줄만 고쳐 한 번 보낸다.
@@ -35,7 +38,6 @@ type Step =
   | { k: "reason"; seq: number }
   | { k: "total" }
   | { k: "review" }
-  | { k: "confirm"; mode: "keep" | "decline" }
   | { k: "done"; mode: "revise" | "keep" | "decline" };
 
 type Edit = { amount: number | null; weeks: number | null; mode: "as_requested" | "assumed"; reason: string };
@@ -44,15 +46,31 @@ const digits = (v: string) => Number(v.replace(/[^\d]/g, "")) || 0;
 /** 차이 표시: +600만 원 */
 const delta = (n: number) => `${n >= 0 ? "+" : "-"}${won(Math.abs(n))}`;
 
-export function DetailReply({ token, view, backHref, fileToken, operator = false, preview = false }: { token: string; view: DetailReplyView; backHref: string; fileToken?: string; operator?: boolean; preview?: boolean }) {
+/** firstDocId: 1차 견적서(견적서 툴)가 있으면 복사해 2차 견적서를 쓰는 버튼을 단다 (기관 포털만, 2026-11-26 시안 v7) */
+export function DetailReply({ token, view, backHref, fileToken, operator = false, preview = false, firstDocId }: { token: string; view: DetailReplyView; backHref: string; fileToken?: string; operator?: boolean; preview?: boolean; firstDocId?: string }) {
+  const router = useRouter();
+  const [docBusy, setDocBusy] = useState(false);
+  const [docErr, setDocErr] = useState("");
+  const makeRound2 = async () => {
+    if (!firstDocId || docBusy) return;
+    setDocBusy(true);
+    setDocErr("");
+    try {
+      const r = await fetch(`/api/cro/docs/${firstDocId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "round2" }) });
+      const j = (await r.json().catch(() => ({}))) as { id?: string; error?: string };
+      if (!r.ok || !j.id) throw new Error(j.error || "견적서를 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.");
+      router.push(`/cro/docs/${j.id}`);
+    } catch (e) {
+      setDocErr(e instanceof Error ? e.message : "견적서를 만들지 못했어요.");
+      setDocBusy(false);
+    }
+  };
   const open = view.status === "sent" && !view.expired && !view.closed;
   const [step, setStep] = useState<Step>(open ? { k: "start" } : { k: "done", mode: view.status === "submitted" ? "revise" : view.status === "kept" ? "keep" : "decline" });
   const [said, setSaid] = useState<Said[]>([]);
   const [edits, setEdits] = useState<Record<number, Edit>>({});
   const [weeks, setWeeks] = useState<number | null>(view.first.weeks);
   const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
 
   const items = view.first.items;
   const edited = Object.entries(edits).map(([seq, e]) => ({ seq: Number(seq), ...e }));
@@ -68,23 +86,29 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
     });
   const nameOf = (seq: number) => items.find((i) => i.seq === seq)?.name ?? "";
 
+  // 2차 회신은 한 번이라 보내기 전에 확인 창에서 결과를 알리고, 창 안에서 보낸다 (시안 검토판 c-detail2~send · ~keep · q-detail~keep)
+  const confirm = useConfirm();
   const send = async (mode: "revise" | "keep" | "decline") => {
-    setBusy(true);
-    setError("");
-    try {
-      const r = await fetch(`/api/quote/${token}/detail`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, items: edited, totalWeeks: weeks, note }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "회신을 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
-      go({ k: "done", mode });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "다시 시도해 주세요.");
-    } finally {
-      setBusy(false);
-    }
+    const c = mode === "revise"
+      ? { title: "2차 회신을 보낼까요?", body: `보내면 의뢰자 비교표에 2차 견적 ${total.toLocaleString("ko-KR")}원이 1차 대신 들어가고, 2차 회신은 다시 보낼 수 없습니다.`, ok: "보내기", fail: "회신을 보내지 못했어요. 잠시 후 다시 시도해 주세요." }
+      : mode === "keep"
+        ? { title: "1차 견적을 그대로 보낼까요?", body: `보내면 의뢰자 비교표에 1차 견적 ${view.first.total.toLocaleString("ko-KR")}원이 2차 회신으로 표시되고, 2차 회신은 다시 보낼 수 없습니다.`, ok: "그대로 보내기", fail: "회신을 보내지 못했어요. 1차 견적은 그대로예요." }
+        : { title: "이번에는 2차 견적을 내지 않을까요?", body: "보내면 1차 견적이 비교표에 그대로 남고, 2차 회신은 다시 보낼 수 없습니다.", ok: "내지 않기", fail: "회신을 보내지 못했어요. 1차 견적은 그대로예요." };
+    const ok = await confirm({
+      title: c.title,
+      body: c.body,
+      confirmLabel: c.ok,
+      pendingLabel: "보내는 중",
+      retryLabel: "다시 보내기",
+      action: async () => {
+        const r = await fetch(`/api/quote/${token}/detail`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode, items: edited, totalWeeks: weeks, note }) }).catch(() => null);
+        if (!r?.ok) {
+          const d = (await r?.json().catch(() => ({}))) as { error?: string } | undefined;
+          throw new Error(r && r.status < 500 && d?.error ? d.error : c.fail);
+        }
+      },
+    });
+    if (ok) go({ k: "done", mode });
   };
 
   const condCard = (
@@ -112,7 +136,7 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
   let hint = "";
   let body: React.ReactNode = null;
   let ans: React.ReactNode = null;
-  const prog = { start: 1, conds: 1, rows: 2, amount: 2, weeks: 2, basis: 2, reason: 2, total: 3, review: 4, confirm: 4, done: 4 }[step.k];
+  const prog = { start: 1, conds: 1, rows: 2, amount: 2, weeks: 2, basis: 2, reason: 2, total: 3, review: 4, done: 4 }[step.k];
 
   switch (step.k) {
     case "start": {
@@ -122,8 +146,8 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
       ans = (
         <>
           <Opt label="고쳐 보낼게요" pri arrow onClick={() => { setSaid([{ q: "2차 회신", a: "고쳐 보낼게요", onEdit: () => go({ k: "start" }) }]); go({ k: "rows", page: 0 }); }} />
-          <Opt label="1차 그대로 보낼게요" sm="바꿀 것 없음" onClick={() => go({ k: "confirm", mode: "keep" })} />
-          <button type="button" className="cr-lk" onClick={() => go({ k: "confirm", mode: "decline" })}>이번엔 보내기 어려워요</button>
+          <Opt label="1차 그대로 보낼게요" sm="바꿀 것 없음" onClick={() => send("keep")} />
+          <button type="button" className="cr-lk" onClick={() => send("decline")}>이번엔 보내기 어려워요</button>
         </>
       );
       break;
@@ -278,21 +302,7 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
           <form className="cr-comp cr-comp--sm" onSubmit={(e) => e.preventDefault()}>
             <input value={note} onChange={(e) => setNote(e.target.value.slice(0, 500))} placeholder="의뢰자에게 남길 말 (선택)" aria-label="의뢰자에게 남길 말" />
           </form>
-          {error && <p className="cr-err" role="alert">{error}</p>}
-          <Opt label={busy ? "보내는 중이에요" : "2차 견적 보내기"} pri arrow={!busy} disabled={busy || preview || !edited.length} onClick={() => send("revise")} />
-        </>
-      );
-      break;
-    }
-    case "confirm": {
-      const keep = step.mode === "keep";
-      q = keep ? "1차 견적 그대로 보낼까요?" : "이번에는 2차 견적을 내지 않을까요?";
-      hint = keep ? `${won(view.first.total)} · 보낸 뒤 수정 불가` : "1차 견적은 비교 보고서에 그대로 유지";
-      ans = (
-        <>
-          {error && <p className="cr-err" role="alert">{error}</p>}
-          <Opt label={busy ? "보내는 중이에요" : keep ? "1차 그대로 보내기" : "내지 않기"} pri disabled={busy || preview} onClick={() => send(step.mode)} />
-          <button type="button" className="cr-lk" onClick={() => go({ k: "start" })}>돌아가기</button>
+          <Opt label="2차 견적 보내기" pri arrow disabled={preview || !edited.length} onClick={() => send("revise")} />
         </>
       );
       break;
@@ -309,7 +319,7 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
   }
 
   const doc = (
-    <article className="cr-doc" aria-label="2차 견적">
+    <article className="cr-doc cr-doc--reply" aria-label="2차 견적">
       <header className="cr-doc__hd">
         <h2>2차 견적</h2>
         <span className="cr-mono">{view.no}</span>
@@ -347,13 +357,19 @@ export function DetailReply({ token, view, backHref, fileToken, operator = false
               <span>{it.name}</span>
               <b className="cr-mono">
                 {e && e.amount !== it.amount ? <><s className="cr-was">{it.amount == null ? "-" : won(it.amount)}</s><mark className="cr-now">{e.amount == null ? "-" : won(e.amount)}</mark></> : it.amount == null ? "-" : won(it.amount)}
-                {e?.mode === "assumed" && e.reason ? <small style={{ display: "block", fontWeight: 400 }}>{e.reason}</small> : null}
+                {e?.mode === "assumed" && e.reason ? <small className="cr-doc__why">{e.reason}</small> : null}
               </b>
             </li>
           );
         })}
-        <li><span>전체 기간</span><b>{shownWeeks ? `${shownWeeks}주` : "-"}</b></li>
+        <li className="cr-doc__total"><span>전체 기간</span><b>{shownWeeks ? `${shownWeeks}주` : "-"}</b></li>
       </ul>
+      {firstDocId && (
+        <div className="cr-doc__tool">
+          <button type="button" className="cr-doc__toolbtn" disabled={docBusy || preview} onClick={makeRound2}>{docBusy ? "견적서를 만드는 중이에요" : "견적서 툴에서 2차 견적서 만들기"}</button>
+          {docErr && <p className="cr-err" role="alert">{docErr}</p>}
+        </div>
+      )}
       {operator && <p className="cr-doc__foot">운영자 화면</p>}
     </article>
   );

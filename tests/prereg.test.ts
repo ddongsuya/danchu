@@ -47,7 +47,7 @@ describe("사전예약 문자", () => {
   });
   it("시범 운영 문자는 갈래마다 다르다", () => {
     expect(earlyOpenSms("req")).not.toBe(earlyOpenSms("cro"));
-    expect(earlyOpenSms("req")).toContain("2027년 12월 31일");
+    expect(earlyOpenSms("req")).toContain("시범 운영 시작");
   });
 });
 

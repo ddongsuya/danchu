@@ -24,7 +24,7 @@ export function ClaimPendingButton({ token }: { token: string }) {
   return (
     <div className="stack" style={{ gap: 12 }}>
       {err && <p className="note note--err" role="alert">{err}</p>}
-      <button type="button" className="b1" disabled={busy} aria-busy={busy} onClick={send}>{busy ? "보내는 중…" : "이 요청서 보내기"}</button>
+      <button type="button" className="b1" disabled={busy} aria-busy={busy} onClick={send}>{busy ? "보내는 중" : err ? "다시 보내기" : "이 요청서 보내기"}</button>
     </div>
   );
 }

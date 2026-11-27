@@ -22,7 +22,7 @@ export default async function ContractDraftPage({ params }: { params: Promise<{ 
   return (
     <>
       <div className="noprint">
-        <Crumb href="/cro/awards" label="수주·계약" />
+        <Crumb href="/cro/requests?tab=won" label="받은 요청" />
       </div>
       <div className="ph noprint">
         <div>
@@ -32,7 +32,7 @@ export default async function ContractDraftPage({ params }: { params: Promise<{ 
           </p>
         </div>
         <div className="ph__actions">
-          <PrintButton />
+          <PrintButton label="PDF 내려받기" />
           {!done && <SendDraftButton awardId={award.id} sentAt={sentAt} />}
         </div>
       </div>

@@ -1,118 +1,149 @@
 import Link from "next/link";
-import { CalendarBlank, CaretRight, EnvelopeSimple, Handshake, Phone, Plus, VideoCamera } from "@phosphor-icons/react/dist/ssr";
-import { STAGE_LABEL, amountLabel, todayList, weekStrip, type Stage } from "@/lib/crm-deals";
-import { hmKst, todayKst, weekdayKo, ymdKst } from "@/lib/crm-shape";
+import { STAGE_LABEL, todayList, weekStrip, type Stage } from "@/lib/crm-deals";
+import { dLabel, todayKst, weekdayKo } from "@/lib/crm-shape";
+import type { PipeItem } from "@/lib/pipeline";
 import { SheetButton, TaskCheck } from "./forms";
 import { DealForm } from "./deal-ui";
 import { buildOpts } from "./opts";
 import { rowsOf, type CrmCtx } from "./ctx";
 import "./crm.css";
+import "@/components/cro/board.css";
 
-const MODE_ICON = { video: VideoCamera, phone: Phone, in_person: Handshake } as const;
+/** 받은 요청에서 오늘 화면 할 일로 올리는 단계 (참여 결정 · 작성 · 선정 뒤 보고). 제출하고 기다리는 것과 끝난 것은 뺀다 */
+const REQ_TODO = new Set(["todo", "decide", "work", "won"]);
+
+type Row = { key: string; what: string; where: string; due: string | null; time: string | null; href: string | null; taskId?: string; done: boolean; sub: string };
+
+/** 기한이 시각(참여 결정 기한 등)이면 서울 날짜로 */
+const ymdOf = (v: string | null) => (!v ? null : v.length <= 10 ? v : new Date(v).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }));
+
+/** 기한 칸: 7일 안이면 D-n 표시, 지난 것은 "n일 지남", 그 밖에는 월-일 */
+function Due({ r, now }: { r: Row; now: number }) {
+  if (r.time) return <span className="tnum">{r.time}</span>;
+  if (!r.due) return <span className="bd-mut">-</span>;
+  const d = dLabel(r.due, now);
+  if (d.n < 0) return <span className="bd-pill bd-pill--b tnum">{d.label}</span>;
+  if (d.n <= 7) return <span className="bd-pill bd-pill--w tnum">{d.n === 0 ? "D-day" : `D-${d.n}`}</span>;
+  return <span className="tnum">{r.due.slice(5)}</span>;
+}
 
 /**
- * 오늘 (시안 v5 1번). 숫자 카드 대신 두 목록: 오늘 할 일(할 일·일정·단추 기한, 시간순)과 손이 필요한 안건.
- * 넓은 화면 오른쪽에는 이번 주 일정.
+ * 오늘 (2026-11-26 시안 v7 c-today). 왼쪽: 할 일 표(받은 요청의 다음 할 일 + 오늘 일정·할 일)와 조치 필요 안건.
+ * 오른쪽: 이번 주 일정, 캘린더, 숫자 두 개(진행 중인 요청 · 이번 달 제출). 계산은 lib/crm-deals · lib/pipeline 그대로.
  */
-export function TodayView({ c, undecided }: { c: CrmCtx; undecided: Parameters<typeof todayList>[0]["invites"] }) {
+export function TodayView({ c, undecided, reqs = [] }: { c: CrmCtx; undecided: Parameters<typeof todayList>[0]["invites"]; reqs?: PipeItem[] }) {
   const { data, paths, now, me } = c;
   const today = todayKst(now);
   const rows = rowsOf(c);
-  const list = todayList({ tasks: data.tasks, events: data.events, rows, invites: undecided, me, now, base: paths.deals });
-  const need = rows.filter((r) => r.flag).sort((x, y) => (x.flag!.tone === y.flag!.tone ? y.days - x.days : x.flag!.tone === "due" ? -1 : 1));
+  // 단추 기한은 받은 요청 줄로 보이므로 CRM 쪽에서는 일정·할 일만 쓴다
+  const crm = todayList({ tasks: data.tasks, events: data.events, rows, invites: undecided, me, now, base: paths.deals }).filter((x) => x.kind !== "danchu");
+  const todo: Row[] = [
+    ...reqs.filter((p) => p.action && REQ_TODO.has(p.group)).map((p) => ({ key: `p:${p.id}`, what: p.next, where: `${p.no} · ${p.tests || p.title}`, due: ymdOf(p.due), time: null, href: p.action!.href, done: false, sub: "" })),
+    ...crm.map((x) => ({ key: x.key, what: x.title, where: x.sub, due: x.kind === "task" ? today : null, time: x.time, href: x.href, taskId: x.taskId, done: x.done, sub: x.sub })),
+  ].sort((a, b) => Number(a.done) - Number(b.done) || (a.due ?? "9999").localeCompare(b.due ?? "9999") || (a.time ?? "").localeCompare(b.time ?? ""));
+  // 조치 필요 안건: 받은 요청에서 온 조치(요청 화면·수주 링크)는 위 표에 있으므로 뺀다
+  const need = rows
+    .filter((r) => r.flag && !r.flag.href.startsWith("/cro/r/") && !r.flag.href.startsWith("/cro/awards"))
+    .sort((x, y) => (x.flag!.tone === y.flag!.tone ? y.days - x.days : x.flag!.tone === "due" ? -1 : 1));
   const week = weekStrip({ events: data.events, quotes: data.quotes, deals: data.deals, companies: data.companies, now });
+  const weekDays = new Set(week.days.map((w) => w.date));
+  const plan = [
+    ...week.items.map((x, i) => ({ key: `w${i}`, title: x.title, date: x.date, time: x.time, due: false })),
+    ...reqs.filter((p) => (p.tab === "new" || p.tab === "draft") && weekDays.has(p.replyBy)).map((p) => ({ key: `r:${p.id}`, title: `${p.no} 회신 기한`, date: p.replyBy, time: null as string | null, due: true })),
+  ].sort((a, b) => `${a.date}${a.time ?? "99"}`.localeCompare(`${b.date}${b.time ?? "99"}`));
+  const month = today.slice(0, 7);
+  const live = reqs.filter((p) => p.tab === "new" || p.tab === "draft").length;
+  const sentThisMonth = reqs.filter((p) => p.submittedOn?.startsWith(month)).length;
   const opts = buildOpts({ ...data, me });
   const d = new Date(`${today}T12:00:00+09:00`);
-  const events = list.filter((x) => x.kind === "event").length;
-  const tasks = list.filter((x) => x.kind !== "event" && !x.done).length;
-  const nowHm = hmKst(new Date(now).toISOString());
-  const live = (x: (typeof list)[number]) => {
-    if (x.kind !== "event" || !x.time || x.done) return false;
-    const e = data.events.find((ev) => `e:${ev.id}` === x.key);
-    const end = e?.ends_at ? hmKst(e.ends_at) : `${String(Math.min(23, +x.time.slice(0, 2) + 1)).padStart(2, "0")}${x.time.slice(2)}`;
-    return x.time <= nowHm && nowHm < end;
-  };
   const noDeals = data.ready && !data.deals.length;
   return (
-    <div className="cx cx-t">
-      <header className="cx-ph">
-        <div>
-          <h1>{d.getUTCMonth() + 1}월 {d.getUTCDate()}일 {weekdayKo(today)}요일</h1>
-          <p className="cx-ph__sub">일정 <b className="tnum">{events}</b> · 할 일 <b className="tnum">{tasks}</b> · 손이 필요한 안건 <b className="tnum">{need.length}</b></p>
+    <div className="bd cx-t">
+      <div className="bd-hd cx-t__hd">
+        <h1>오늘</h1>
+        <span className="cx-t__date">{d.getUTCMonth() + 1}월 {d.getUTCDate()}일 {weekdayKo(today)}요일</span>
+        <div className="cx-t__acts">
+          <Link href={`${paths.log}?new=1`} className="b2 bsm">기록 추가</Link>
+          <SheetButton className="b1 bsm" title="안건 만들기" label="안건 만들기"><DealForm opts={opts} base={paths.deals} /></SheetButton>
         </div>
-        <div className="cx-ph__acts">
-          <Link href={`${paths.calendar}?w=${week.from}`} className="b2 bsm"><CalendarBlank size={16} aria-hidden="true" />주간 캘린더</Link>
-          <SheetButton className="b1 bsm" title="안건 만들기" label={<><Plus size={16} aria-hidden="true" />안건 만들기</>}><DealForm opts={opts} base={paths.deals} /></SheetButton>
-        </div>
-      </header>
+      </div>
       {!data.ready && <p className="cx-banner" role="status">CRM 저장소를 준비하는 중이에요. 준비가 끝나면 단추 요청이 안건으로 들어와요.</p>}
-      {noDeals && (
-        <section className="cx-empty">
-          <h2>아직 안건이 없어요</h2>
-          <p>단추 요청에 참여하면 안건이 저절로 생겨요. 지금 쓰는 고객 엑셀이 있으면 한 번에 옮길 수 있어요.</p>
-          <div className="cx-ph__acts"><Link className="b2" href={paths.import}>엑셀 가져오기</Link></div>
-        </section>
-      )}
-      <div className="cx-today">
-        <section className="cx-sec" aria-labelledby="t-todo">
-          <div className="cx-sec__h"><h2 id="t-todo">오늘 할 일</h2><span className="cx-muted">일정과 할 일을 시간순으로</span></div>
-          {list.length ? (
-            <ul className="cx-todo">
-              {list.map((x) => {
-                const I = x.kind === "event" && x.mode ? MODE_ICON[x.mode as keyof typeof MODE_ICON] ?? CalendarBlank : null;
-                return (
-                  <li key={x.key} data-live={live(x) ? "1" : "0"} data-done={x.done ? "1" : "0"} data-late={x.overdue ? "1" : "0"}>
-                    {x.taskId ? <TaskCheck id={x.taskId} title={x.title} done={x.done} sub={x.sub} /> : (
-                      <div className="cx-todo__row">
-                        <span className="cx-todo__time tnum">{I && <I size={15} aria-hidden="true" />}{x.time ?? (x.kind === "danchu" ? <span className="cx-d" aria-hidden="true">단</span> : "오늘")}</span>
-                        {x.href ? <Link href={x.href} className="cx-todo__t"><b>{x.title}</b><small>{x.sub}</small></Link> : <span className="cx-todo__t"><b>{x.title}</b><small>{x.sub}</small></span>}
-                      </div>
-                    )}
-                    {live(x) ? <span className="cx-now">지금</span> : x.badge ? <span className={`cx-badge${x.overdue ? " cx-badge--late" : ""}`}>{x.badge}</span> : x.done ? <span className="cx-muted">완료</span> : null}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : <p className="cx-none">오늘 잡힌 일정과 할 일이 없어요. 오른쪽 안건부터 다음 할 일을 잡아 보세요.</p>}
-        </section>
-
-        <section className="cx-sec" aria-labelledby="t-need">
-          <div className="cx-sec__h"><h2 id="t-need">손이 필요한 안건</h2><Link href={`${paths.deals}?f=need`} className="cx-lk">보드에서 보기</Link></div>
-          {need.length ? (
-            <ul className="cx-need">
-              {need.slice(0, 8).map((r) => (
-                <li key={r.deal.id}>
-                  <Link href={r.flag!.href.startsWith("/cro/r/") || r.flag!.href.startsWith("/cro/awards") ? r.flag!.href : `${paths.deals}/${r.deal.id}`} className="cx-need__a">
-                    <span className="cx-need__t"><b>{r.company ?? (r.danchuNo ?? "")}{r.company || r.danchuNo ? " · " : ""}{r.deal.title}</b>
-                      <small><span className={`cx-flag cx-flag--${r.flag!.tone}`}>{r.flag!.label}</span>{STAGE_LABEL[r.deal.stage as Stage]} {r.days}일째 · {r.deal.amount != null ? `예상 ${amountLabel(r.deal.amount)}` : "금액 미정"}</small>
-                    </span>
-                    <span className="cx-need__go">{r.flag!.action}<CaretRight size={14} aria-hidden="true" /></span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="cx-none">모든 진행 안건에 다음 할 일이 잡혀 있어요.</p>}
-        </section>
-
-        <aside className="cx-side" aria-label="이번 주 일정">
-          <section className="cx-box">
-            <div className="cx-sec__h"><h2>{week.next ? "다음 주" : "이번 주"}</h2><span className="cx-muted tnum">{+week.from.slice(5, 7)}.{+week.from.slice(8)} ~ {+week.to.slice(5, 7)}.{+week.to.slice(8)}</span></div>
-            <ol className="cx-week">
-              {week.days.map((w) => (
-                <li key={w.date} data-today={w.date === today ? "1" : "0"}>
-                  <small>{weekdayKo(w.date)}</small><b className="tnum">{+w.date.slice(8)}</b><span aria-label={`일정 ${w.count}개`}>{"•".repeat(Math.min(3, w.count))}</span>
-                </li>
-              ))}
-            </ol>
-            {week.items.length ? (
-              <ul className="cx-week__list">
-                {week.items.slice(0, 6).map((x, i) => <li key={i}><span className="tnum">{weekdayKo(x.date)}{x.time ? ` ${x.time}` : ""}</span>{x.title}</li>)}
-              </ul>
-            ) : <p className="cx-muted">{week.next ? "다음 주" : "이번 주"} 일정이 없어요.</p>}
+      <div className="bd-split cx-t__split">
+        <div className="bd-l">
+          <section aria-labelledby="t-todo">
+            <h2 id="t-todo" className="cx-t__h">할 일 <span className="tnum">{todo.filter((r) => !r.done).length}건</span></h2>
+            {todo.length ? (
+              <>
+                <table className="bd-tb">
+                  <thead><tr><th>할 일</th><th>요청 · 안건</th><th>기한</th><th className="r"><span className="sr-only">열기</span></th></tr></thead>
+                  <tbody>
+                    {todo.map((r) => (
+                      <tr key={r.key} data-done={r.done ? "1" : "0"}>
+                        <td className="bd-tt">{r.taskId ? <TaskCheck id={r.taskId} title={r.what} done={r.done} sub="" /> : r.what}</td>
+                        <td>{r.where || <span className="bd-mut">-</span>}</td>
+                        <td><Due r={r} now={now} /></td>
+                        <td className="r">{r.href && <Link href={r.href} className="b2 bsm">열기</Link>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <ul className="bd-ls">
+                  {todo.map((r) => (
+                    <li key={r.key}>
+                      {r.href ? (
+                        <Link href={r.href}>
+                          <span className="bd-ls__t">{r.what}</span>
+                          <span className="bd-ls__s">{r.where}</span>
+                          <Due r={r} now={now} />
+                        </Link>
+                      ) : r.taskId ? <div className="cx-t__task"><TaskCheck id={r.taskId} title={r.what} done={r.done} sub={r.sub} /></div> : null}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : <div className="cx-t__empty"><span>오늘 할 일이 없어요</span><Link className="b2 bsm" href="/cro/requests">받은 요청 보기</Link></div>}
           </section>
+
+          <section aria-labelledby="t-need" className="cx-t__need">
+            <h2 id="t-need" className="cx-t__h">조치 필요 안건</h2>
+            {noDeals ? (
+              <div className="cx-t__empty"><span>아직 안건이 없어요</span><Link className="b2 bsm" href={paths.import}>엑셀 가져오기</Link></div>
+            ) : need.length ? (
+              <ul className="cx-t__list">
+                {need.slice(0, 8).map((r) => (
+                  <li key={r.deal.id}>
+                    <span className="cx-t__lt"><b>{r.deal.title}</b><small>{[r.company ?? r.danchuNo, `${STAGE_LABEL[r.deal.stage as Stage]} 단계 ${r.days}일째`].filter(Boolean).join(" · ")}</small></span>
+                    <span className={`bd-pill ${r.flag!.tone === "due" ? "bd-pill--b" : "bd-pill--w"}`}>{r.flag!.label}</span>
+                    <Link href={`${paths.deals}/${r.deal.id}`} className="cx-t__go">열기</Link>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="cx-none">조치가 필요한 안건이 없어요</p>}
+          </section>
+        </div>
+
+        <aside className="bd-r cx-t__side" aria-labelledby="t-week">
+          <section>
+            <h2 id="t-week" className="cx-t__h">{week.next ? "다음 주 일정" : "이번 주 일정"}</h2>
+            {plan.length ? (
+              <ul className="cx-t__list cx-t__plan">
+                {plan.slice(0, 6).map((x) => (
+                  <li key={x.key}>
+                    <span className="cx-t__lt"><b>{x.title}</b><small className="tnum">{x.date.slice(5)} ({weekdayKo(x.date)}){x.time ? ` ${x.time}` : ""}</small></span>
+                    {x.due && <span className="bd-pill bd-pill--w">기한</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="cx-none">일정이 없어요</p>}
+            <Link href={`${paths.calendar}?w=${week.from}`} className="cx-t__cal">캘린더</Link>
+          </section>
+          <dl className="cx-t__stats">
+            <div><dt>진행 중인 요청</dt><dd className="tnum">{live}</dd></div>
+            <div><dt>이번 달 제출</dt><dd className="tnum">{sentThisMonth}</dd></div>
+          </dl>
         </aside>
       </div>
-      <Link href={paths.log} className="b1 cx-mfab only-narrow">통화 기록 남기기</Link>
+      <Link href={`${paths.log}?new=1`} className="b1 cx-mfab only-narrow">통화 기록 남기기</Link>
     </div>
   );
 }

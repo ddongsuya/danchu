@@ -1,0 +1,8 @@
+/* 요청 진행 (2026-11-27 시안 검토판 r-req): 바로 가기 단추 줄. 의뢰자 화면만 쓴다 */
+.rq-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.rq-nums--4 > div { padding: 14px 12px; }
+.rq-nums--4 dt { white-space: nowrap; }
+.rq-banner--bad { border-color: var(--err); background: var(--err-bg); }
+.rq-banner--bad .rq-banner__t b { color: var(--err); font-weight: 600; }
+.rq-done__acts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 959px) { .rq-done__acts > * { flex: 1; } }

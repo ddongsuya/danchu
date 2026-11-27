@@ -9,7 +9,7 @@ import "./early.css";
 export const metadata: Metadata = {
   ...pageMeta(
     "사전예약 · 단추",
-    "2027년 6월 1일 시범 운영 전에 단추를 사전예약하세요. 예약 완료와 시범 운영 시작을 문자로 알려요.",
+    "2027년 6월 1일 시범 운영 전 사전예약. 예약 완료와 시범 운영 시작을 문자로 알려요.",
     "/early",
   ),
   robots: { index: false },
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
 type SP = Promise<{ for?: string }>;
 
 const POINTS = {
-  req: ["한 번의 요청으로 여러 기관에.", "금액만 비교 마시고 구성도 함께 비교하세요.", "선정 전까지 회사명은 비공개로.", "의뢰자는 무료로 이용해보세요!"],
-  cro: ["분야에 맞는 요청서만 받아보세요.", "회신한 견적은 의뢰자만 봐요.", "필요한 요청에만 참여하세요.", "2027년 말까지 무료로 이용해보세요."],
+  req: ["한 번의 요청으로 여러 기관에.", "금액과 구성을 함께 비교.", "선정 전까지 회사명은 비공개로."],
+  cro: ["분야에 맞는 요청서만 받아요.", "회신한 견적은 의뢰자만 봐요.", "참여할 요청은 직접 골라요."],
 };
 
 /**
@@ -39,8 +39,7 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         <div className="ea2-hero">
           <div className="ea2-copy">
             <p className="ea2-live mono">{open ? <>사전예약 진행 중 · D-{d}</> : "시범 운영 중"}</p>
-            <h1 id="ea2-t"><span>단추를</span><br /><span>가장 먼저 만나보세요.</span></h1>
-            <p className="ea2-sub">사전예약하고 시범 운영 소식을 문자로 받아보세요.</p>
+            <h1 id="ea2-t"><span>단추</span><br /><span>사전예약</span></h1>
           </div>
           <EarlySpec className="ea2-spec" />
         </div>

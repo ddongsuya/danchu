@@ -10,6 +10,9 @@ import { quotesThisMonth, seatsUsed } from "@/lib/plan-usage";
 import type { BillingInvoiceRow } from "@/lib/db-types";
 import { comma, todaySeoul, ymd } from "@/lib/format";
 import "@/components/cro/plan/plan.css";
+import "@/components/cro/layout-quote.css";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 
 export const dynamic = "force-dynamic";
 
@@ -56,13 +59,13 @@ async function Invoices({ orgId, today }: { orgId: string; today: string }) {
     ? await sb.from("billing_invoices").select("id, invoice_no, month, total, due_date, status, paid_on").eq("org_id", orgId).neq("status", "void").order("month", { ascending: false })
     : { data: [], error: null };
   const list = (data ?? []) as Pick<BillingInvoiceRow, "id" | "invoice_no" | "month" | "total" | "due_date" | "status" | "paid_on">[];
-  if (error) return <div className="note note--warn" role="alert">청구서를 불러오지 못했어요. 잠시 뒤 새로고침해 주세요.</div>;
-  if (!list.length) return <div className="empty"><b>아직 청구서가 없어요</b>청구서가 나오면 이메일과 알림으로 알려요.</div>;
+  if (error) return <ErrorState title="청구서를 불러오지 못했어요" />;
+  if (!list.length) return <EmptyState title="아직 청구서가 없어요" />;
   return (
     <div className="card tbl-wrap">
       <table className="tbl tbl--stack">
         <thead>
-          <tr><th>청구 달</th><th>번호</th><th className="tnum">합계 (부가세 포함)</th><th>납부 기한</th><th>상태</th></tr>
+          <tr><th>청구 달</th><th>번호</th><th className="lq-num">합계 (부가세 포함)</th><th>납부 기한</th><th>상태</th></tr>
         </thead>
         <tbody>
           {list.map((x) => {
@@ -71,7 +74,7 @@ async function Invoices({ orgId, today }: { orgId: string; today: string }) {
               <tr key={x.id}>
                 <td data-label="청구 달"><Link href={`/cro/billing/${x.id}`}>{Number(x.month.slice(0, 4))}년 {Number(x.month.slice(5, 7))}월</Link></td>
                 <td data-label="번호" className="tnum">{x.invoice_no}</td>
-                <td data-label="합계" className="tnum">{comma(x.total)}</td>
+                <td data-label="합계" className="lq-num">{comma(x.total)}</td>
                 <td data-label="납부 기한" className="tnum">{ymd(x.due_date)}</td>
                 <td data-label="상태"><span className={`pill ${PILL[v]}`}>{INVOICE_VIEW_LABEL[v]}{x.status === "paid" && x.paid_on ? ` · ${ymd(x.paid_on)}` : ""}</span></td>
               </tr>

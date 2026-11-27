@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
 import { loadCatalog } from "@/lib/catalog-db";
-import { loadDoc, loadRates, loadStyle } from "@/lib/quote-doc-db";
+import { loadDoc, loadQuoteRates, loadStyle } from "@/lib/quote-doc-db";
 import { featureError } from "@/lib/plan-usage";
 import { PendingOrg } from "@/components/cro/PendingOrg";
 import { DocEditor } from "@/components/cro/quote/DocEditor";
@@ -16,7 +16,8 @@ export default async function DocPage({ params }: { params: Promise<{ id: string
   if (!org || org.status !== "approved") return <PendingOrg org={org} pendingOrg={s.pendingOrg} />;
   if (!dbReady()) notFound();
   const { id } = await params;
-  const [got, catalog, rates, style] = await Promise.all([loadDoc(org.id, id), loadCatalog(org.id), loadRates(org.id), loadStyle(org.id, org.name)]);
+  const catalogP = loadCatalog(org.id);
+  const [got, catalog, rates, style] = await Promise.all([loadDoc(org.id, id), catalogP, loadQuoteRates(org.id, catalogP), loadStyle(org.id, org.name)]);
   if (!got) notFound();
   // 판 고르기는 Pro(branding). 잠겨 있으면 단추 기본 판으로
   const lock = !!featureError(org, "branding");

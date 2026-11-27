@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { saveStatus } from "@/lib/cro-due";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash, X } from "@phosphor-icons/react";
@@ -10,6 +11,7 @@ import {
   type DocData, type DocGroup, type DocHead, type DocTest, type Phase, type PhaseKind, type QuoteStyle, type Rate,
 } from "@/lib/quote-doc";
 import type { CatalogRow } from "@/lib/catalog";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { KindTab, OrigBox, kindTabs, type KTab } from "./KindQ";
 import { PD_PAGES, PdCover, PdDetailPage, PdEvalPage, PdQuotePage, pdDocTest } from "./PdPages";
 import { COND_LABEL, Cover, DetailPage, GuidePage, Logo, brandVars, QuotePage, SchedulePage, condLine, guidePages, pageCount, pageKeys, type PageKey } from "./DocPages";
@@ -44,10 +46,13 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const router = useRouter();
   const [head, setHead] = useState<DocHead>(head0);
   const [data, setData] = useState<DocData>(initial);
+  const confirm = useConfirm();
   const [page, setPage] = useState<PageKey>(initial.tests[0] ? `detail:${initial.tests[0].uid}` : "cover");
   const [mode, setMode] = useState<Mode>("edit");
   const [pane, setPane] = useState<Pane>("desk");
   const [saved, setSaved] = useState<"idle" | "saving" | "saved" | "failed">("saved");
+  // 이 화면에서 마지막으로 저장한 시각 (제목 줄 "저장됨 14:02")
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [picker, setPicker] = useState(false);
   const timer = useRef<number>(0);
   const abort = useRef<AbortController | null>(null);
@@ -75,6 +80,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
       }).then((r) => r.ok).catch(() => (ac.signal.aborted ? null : false));
       if (ok === null || mine !== rev.current) return;
       setSaved(ok ? "saved" : "failed");
+      if (ok) setSavedAt(Date.now());
     }, 800);
   };
   useEffect(() => () => { window.clearTimeout(timer.current); abort.current?.abort(); }, []);
@@ -89,8 +95,8 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const setH = (patch: Partial<DocHead>) => { const next = { ...head, ...patch }; setHead(next); queue(next, data); };
   const setTest = (u: string, patch: Partial<DocTest>) => setDoc({ tests: data.tests.map((t) => (t.uid === u ? { ...t, ...patch } : t)) });
   const addTest = (t: DocTest) => { setDoc({ tests: [...data.tests, t] }); setPage(`detail:${t.uid}`); setPicker(false); setPane("desk"); };
-  const removeTest = (t: DocTest) => {
-    if (!window.confirm(`"${t.title}" 시험을 견적서에서 뺄까요?`)) return;
+  const removeTest = async (t: DocTest) => {
+    if (!(await confirm({ title: `"${t.title}" 시험을 견적서에서 뺄까요?`, body: "이 시험에 입력한 설계와 금액도 함께 빠집니다.", confirmLabel: "빼기", danger: true }))) return;
     const rest = data.tests.filter((x) => x.uid !== t.uid);
     setDoc({ tests: rest });
     setPage(rest[0] ? `detail:${rest[0].uid}` : "cover");
@@ -115,7 +121,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
   const pdp = pdx && { head, data, t: pdx.t, q: pdx.q, style };
   const pdFix = pdx && !readOnly && <div className="qed__pdfix"><Link className="b2 bsm" href={`/cro/docs/${head.id}/fill?step=detail`}>요청 반영에서 고치기</Link></div>;
   const section = pdx ? (page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 평가항목" : "3부 · 시험 구성") : page === "cover" ? "1부 · 표지" : page === "quote" ? "2부 · 견적서" : page === "schedule" ? "4부 · 시험 수행 일정표" : gk >= 0 ? "5부 · 시험 안내" : `3부 · 시험 ${data.tests.findIndex((t) => t.uid === test?.uid) + 1} / ${data.tests.length}`;
-  const savedLabel = readOnly ? "읽기 전용" : saved === "saving" ? "저장 중…" : saved === "failed" ? "저장 실패" : "자동 저장됨";
+  const savedLabel = readOnly ? "읽기 전용" : saveStatus(saved, savedAt);
 
   return (
     <div className="qed" data-pane={pane}>
@@ -129,7 +135,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
         </div>
         <div className="qed__actions">
           <span role="status" className="qed__saved" data-s={saved}>{savedLabel}</span>
-          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 저장</button>}
+          {saved === "failed" && <button type="button" className="b2 bsm" onClick={() => queue(head, data)}>다시 연결</button>}
           {!readOnly && <Link className="b2 bsm" href={`/cro/docs/${head.id}/fill`}>질문으로 채우기</Link>}
           <a className="b2 bsm" href={`/api/cro/docs/${head.id}/xlsx`}>엑셀</a>
           <Link className="b2 bsm" href={`/cro/docs/${head.id}/print`}>PDF</Link>
@@ -150,7 +156,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
           <nav className="qed__toc">
             <Toc on={page === "cover"} onClick={() => { setPage("cover"); setPane("desk"); }} title="표지" sub="의뢰자, 견적번호" thumb="cover" />
             <Toc on={page === "quote"} onClick={() => { setPage("quote"); setPane("desk"); }} title="견적서" sub={`시험 ${data.tests.length}건 · 합계`} thumb="quote" />
-            <Toc on={!!test} onClick={() => { if (data.tests[0]) { setPage(`detail:${data.tests[0].uid}`); setPane("desk"); } }} title={pdx ? "시험 구성" : "시험 상세 설명"} sub={pdx ? "스키마, 군 구성" : data.tests.length ? "시험 설계 편집" : "시험을 추가하세요"} thumb="detail" />
+            <Toc on={!!test} onClick={() => { if (data.tests[0]) { setPage(`detail:${data.tests[0].uid}`); setPane("desk"); } }} title={pdx ? "시험 구성" : "시험 상세 설명"} sub={pdx ? "스키마, 군 구성" : data.tests.length ? "시험 설계 편집" : "시험 없음"} thumb="detail" />
             {!pdx && data.tests.length > 0 && (
               <ol className="qed__tests">
                 {data.tests.map((t) => {
@@ -168,7 +174,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
             )}
             {pdx
               ? <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="평가항목" sub={`${(pdx.t.kd?.pd?.evals ?? []).filter((e) => !e.optional).length}개 항목`} thumb="schedule" />
-              : <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험을 추가하세요"} thumb="schedule" />}
+              : <Toc on={page === "schedule"} onClick={() => { setPage("schedule"); setPane("desk"); }} title="시험 수행 일정표" sub={scheduleWeeks(data) ? `착수부터 최종 보고서까지 ${scheduleWeeks(data)}주` : "시험 없음"} thumb="schedule" />}
             {guides.length > 0 && <Toc on={gk >= 0} onClick={() => { setPage("guide:0"); setPane("desk"); }} title="시험 안내" sub={`시험 종류 ${guides.flat().length}건`} thumb="detail" />}
             {guides.length > 1 && (
               <ol className="qed__tests">
@@ -222,7 +228,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
               {test && <TestEdit t={test} idx={data.tests.indexOf(test)} count={data.tests.length} head={head} style={style} set={(p) => setTest(test.uid, p)} onRemove={() => removeTest(test)} onMove={(d) => move(test, d)} pageNo={pageNo} total={total} readOnly={readOnly} />}
               {page === "schedule" && <ScheduleEdit data={data} setTest={setTest} head={head} style={style} total={total} readOnly={readOnly} />}
               {guideEl}
-              {page.startsWith("detail:") && !test && <div className="qd"><p className="qed__empty">시험을 추가하면 여기에서 설계를 고칠 수 있어요.</p></div>}
+              {page.startsWith("detail:") && !test && <div className="qd"><p className="qed__empty">아직 시험이 없어요.</p></div>}
             </div>
           )}
         </main>
@@ -270,7 +276,7 @@ export function DocEditor({ head: head0, initial, style: orgStyle, catalog, rate
                 <tr className="qed__grand"><td>합계금액</td><td className="tnum">{n(totals.grand)}</td></tr>
               </tbody>
             </table>
-            <p className="qed__muted">{head.validUntil ? <>견적 유효기간 <b className="tnum">{head.validUntil}</b>까지</> : "견적 유효기간을 표지에서 정하세요"}{scheduleWeeks(data) ? <> · 착수부터 최종 보고서까지 <b>{scheduleWeeks(data)}주</b></> : null}</p>
+            <p className="qed__muted">{head.validUntil ? <>견적 유효기간 <b className="tnum">{head.validUntil}</b>까지</> : "견적 유효기간은 표지에서 정해요"}{scheduleWeeks(data) ? <> · 착수부터 최종 보고서까지 <b>{scheduleWeeks(data)}주</b></> : null}</p>
           </section>
 
           <section className="qed__memo">
@@ -426,7 +432,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
 
       {kind !== "tox" && t.kd && <KindEdit t={t} set={set} readOnly={readOnly} />}
 
-      {(t.groups.length > 0 || t.std.groups.length > 0) && (
+      {(t.groups.length > 0 || t.std.groups.length > 0 || kind === "tox") && (
         <>
           <div className="qed__h2row"><h2 className="qd__h2">군 구성</h2><span className="tnum">총 {total0 !== total1 ? <>{total0} → <mark>{total1}</mark></> : total1}마리</span></div>
           <div className="qed__tblwrap">
@@ -475,13 +481,15 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   <input type="checkbox" checked={e.on} disabled={readOnly} onChange={(ev) => set({ evals: t.evals.map((x, j) => (j === k ? { ...x, on: ev.target.checked } : x)) })} />
                   <span className={!e.base && e.on ? "qed__mk" : undefined}>{e.name}</span>
                 </label>
+                {!readOnly && r && isOwnRule(r) && <button type="button" className="btxt qed__del" aria-label={`${e.name} 규칙 삭제`} onClick={() => set(dropRule(t, r.id))}>삭제</button>}
                 <small>{e.base ? (r && deductOf(r) ? (e.on ? `기본 · 빼면 - ${n(deductOf(r))}` : `제외 - ${n(deductOf(r))}`) : "기본") : e.on ? "추가" : r?.add ? `추가 시 + ${n(r.add)}` : "추가 시 금액 없음"}</small>
               </li>
             );
           })}
         </ul>
-      ) : <p className="qed__muted">시험 목록에 표준가에 든 항목을 적어 두면 여기에 채워져요.</p>}
+      ) : <p className="qed__muted">시험 목록에 표준가에 든 항목이 없어요.</p>}
       {!readOnly && <EvalAdder onAdd={(name) => set({ evals: [...t.evals, { name, on: true, base: true }] })} />}
+      {!readOnly && <RuleAdder onAdd={(r) => set(r.kind === "flat" ? { rates: [...t.rates, r], evals: [...t.evals, { name: r.label, on: true, base: false, rateId: r.id }] } : { rates: [...t.rates, r], qty: { ...t.qty, [r.id]: 1 } })} />}
 
       {qtyRates.length > 0 && (
         <>
@@ -495,6 +503,7 @@ function TestEdit({ t, idx, count, head, style, set, onRemove, onMove, pageNo, t
                   {r.unit}
                 </span>
                 <small className="tnum">{r.add ? `${n(r.add)} / ${r.unit}` : "단가 없음"}</small>
+                {!readOnly && isOwnRule(r) && <button type="button" className="btxt qed__del" aria-label={`${r.shown} 규칙 삭제`} onClick={() => set(dropRule(t, r.id))}>삭제</button>}
               </li>
             ))}
           </ul>
@@ -527,6 +536,57 @@ function KindEdit({ t, set, readOnly }: { t: DocTest; set: (p: Partial<DocTest>)
         {tabs.map(([key, label]) => <button key={key} type="button" role="tab" className="chip" aria-selected={cur === key} aria-pressed={cur === key} onClick={() => setTab(key)}>{label}</button>)}
       </div>
       <div className="qed__kindbody"><KindTab tab={cur} t={t} readOnly={readOnly} set={setK} /></div>
+    </div>
+  );
+}
+
+/** 이 견적서에서 직접 더한 규칙 (시험 목록 단가와 구분, id 앞머리). 이것만 지울 수 있다 */
+const OWN_RULE = "own";
+const isOwnRule = (r: Rate) => r.id.startsWith(OWN_RULE);
+function dropRule(t: DocTest, id: string): Partial<DocTest> {
+  const qty = { ...t.qty };
+  delete qty[id];
+  return { rates: t.rates.filter((r) => r.id !== id), evals: t.evals.filter((e) => e.rateId !== id), qty };
+}
+
+/**
+ * 이 견적서에만 쓰는 단가 규칙 (2026-11-26 시안 v7 "규칙 추가"). 시험 목록의 가감 단가에 없는 변칙 조건을 금액과 함께 더한다.
+ * 정액: 평가항목처럼 켜면 1회 더함. 수량: 아래 수량 항목에 단가 × 수량으로 계산 (빼려면 수량 앞에 -)
+ */
+function RuleAdder({ onAdd }: { onAdd: (r: Rate) => void }) {
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"flat" | "qty">("flat");
+  const [unit, setUnit] = useState("");
+  const [add, setAdd] = useState("");
+  const won = Number(digits(add) || 0);
+  const ok = name.trim().length > 0 && won > 0;
+  const submit = () => {
+    if (!ok) return;
+    const label = name.trim().slice(0, 60);
+    onAdd({ id: uid(OWN_RULE), kind, label, unit: kind === "qty" ? unit.trim().slice(0, 12) || "회" : "시험", add: won, deduct: null, shown: label });
+    setName(""); setUnit(""); setAdd("");
+  };
+  return (
+    <div className="qed__ruleadd" role="group" aria-label="단가 규칙 추가">
+      <span className="qed__rulehd">단가 규칙 추가 <small>이 견적서에만</small></span>
+      <label className="qed__fl qed__fl--sel">종류
+        <select className="qed__in qed__sel" value={kind} onChange={(e) => setKind(e.target.value === "qty" ? "qty" : "flat")}>
+          <option value="flat">정액 (1회)</option>
+          <option value="qty">수량 × 단가</option>
+        </select>
+      </label>
+      <label className="qed__fl qed__fl--name">이름
+        <input className="qed__in" value={name} placeholder="안과 검사 추가" onChange={(e) => setName(e.target.value)} />
+      </label>
+      {kind === "qty" && (
+        <label className="qed__fl qed__fl--unit">단위
+          <input className="qed__in qed__unit" value={unit} placeholder="시점" onChange={(e) => setUnit(e.target.value)} />
+        </label>
+      )}
+      <label className="qed__fl qed__fl--amt">{kind === "qty" ? "단가 (원)" : "금액 (원)"}
+        <input className="qed__num" inputMode="numeric" value={add ? n(won) : ""} onChange={(e) => setAdd(e.target.value)} />
+      </label>
+      <button type="button" className="btxt" disabled={!ok} onClick={submit}>추가</button>
     </div>
   );
 }
@@ -588,7 +648,7 @@ function ScheduleEdit({ data, setTest, head, style, total, readOnly }: { data: D
       <section className="qd qd--edit" style={brandVars(style)}>
         <PageHead head={head} style={style} />
         <h1 className="qd__h1">시험 수행 일정표</h1>
-        <p className="qd__lead">시험물질 입고 주를 1주로 셉니다. 시험마다 시작 주와 단계를 고쳐요.</p>
+        <p className="qd__lead">시험물질 입고 주를 1주로 계산해요.</p>
         {data.tests.map((t) => (
           <div key={t.uid} className="qed__sched">
             <div className="qed__h2row">
@@ -618,7 +678,7 @@ function ScheduleEdit({ data, setTest, head, style, total, readOnly }: { data: D
             {!readOnly && <button type="button" className="btxt" onClick={() => { const last = t.phases[t.phases.length - 1]; setTest(t.uid, { phases: [...t.phases, { id: uid("p"), name: "새 단계", start: last ? last.start + (last.kind === "point" ? 1 : last.weeks) : 0, weeks: 1, kind: "report" }] }); }}><Plus size={14} aria-hidden="true" /> 단계 추가</button>}
           </div>
         ))}
-        {!data.tests.length && <p className="qed__muted">시험을 추가하면 시험 목록의 기간으로 일정이 채워져요.</p>}
+        {!data.tests.length && <p className="qed__muted">아직 시험이 없어요.</p>}
       </section>
       <p className="qed__under">PDF에서는 이렇게 보여요</p>
       <SchedulePage head={head} data={data} style={style} i={3 + data.tests.length} total={total} />
@@ -632,7 +692,7 @@ function ClientView({ data, rfqNo }: { data: DocData; rfqNo: string }) {
   return (
     <div className="qed__client">
       <h2 className="qed__h qed__h--lg">의뢰자가 비교표에서 보는 값</h2>
-      <p className="qed__muted">단추 요청 {rfqNo}의 회신 화면에 시험별 금액과 기간을 채워요. 의뢰자는 여러 기관의 값을 나란히 봐요.</p>
+      <p className="qed__muted">단추 요청 {rfqNo}의 회신 화면에 시험별 금액과 기간을 채워요.</p>
       <table className="tbl qed__ctbl">
         <thead><tr><th>시험</th><th>조건</th><th className="r">기간</th><th className="r">금액</th></tr></thead>
         <tbody>
@@ -651,8 +711,9 @@ function ClientView({ data, rfqNo }: { data: DocData; rfqNo: string }) {
 function DocMenu({ id, onDone }: { id: string; onDone: (href: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const confirm = useConfirm();
   const act = async (action: "copy" | "delete") => {
-    if (action === "delete" && !window.confirm("이 견적서를 삭제할까요? 되돌릴 수 없어요.")) return;
+    if (action === "delete" && !(await confirm({ title: "이 견적서를 삭제할까요?", body: "삭제하면 되돌릴 수 없습니다.", confirmLabel: "삭제", danger: true }))) return;
     setBusy(true); setErr("");
     const r = await fetch(`/api/cro/docs/${id}`, { method: action === "delete" ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: action === "copy" ? JSON.stringify({ action: "copy" }) : undefined }).catch(() => null);
     const d = (await r?.json().catch(() => ({}))) as { id?: string; error?: string } | undefined;
@@ -696,7 +757,7 @@ export function TestPicker({ catalog, rates, onAdd, onClose }: { catalog: Catalo
             ))}
           </div>
         ))}
-        {!byItem.size && <p className="qed__muted">{catalog.length ? "찾는 시험이 없어요." : "시험 목록에 담은 시험이 없어요. 시험 목록에 조건과 표준가를 적어 두면 그 값으로 채워져요."}</p>}
+        {!byItem.size && <p className="qed__muted">{catalog.length ? "찾는 시험이 없어요." : "시험 목록에 담은 시험이 없어요."}</p>}
       </div>
       <div className="qed__dlgfoot">
         <Link href="/cro/catalog" className="btxt">시험 목록 열기</Link>

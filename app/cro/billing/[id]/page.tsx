@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth";
 import { dbReady } from "@/lib/data";
@@ -7,6 +6,8 @@ import { bankInfo, INVOICE_VIEW_LABEL, invoiceItems, invoiceView } from "@/lib/i
 import type { BillingInvoiceRow } from "@/lib/db-types";
 import { comma, todaySeoul, ymd } from "@/lib/format";
 import { PrintButton } from "@/components/cro/PrintButton";
+import { Crumb } from "@/components/app/ui";
+import "@/components/cro/layout-quote.css";
 
 export const dynamic = "force-dynamic";
 
@@ -36,15 +37,15 @@ export default async function CroInvoice({ params }: { params: Promise<{ id: str
 
   return (
     <>
+      <div className="noprint"><Crumb href="/cro/billing?tab=invoices" label="청구서 목록" /></div>
       <div className="ph noprint">
         <div>
-          <Link href="/cro/billing?tab=invoices" style={muted}>청구서 목록</Link>
           <h1>{label} 이용료 청구서</h1>
         </div>
-        <div className="ph__actions"><PrintButton /></div>
+        <div className="ph__actions"><PrintButton label="PDF 내려받기" /></div>
       </div>
 
-      <article className="card invoice" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+      <article className="card invoice lq-doc">
         <header style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <div style={muted}>청구서 번호</div>
@@ -92,14 +93,14 @@ export default async function CroInvoice({ params }: { params: Promise<{ id: str
             <h2 style={{ fontSize: 15, margin: "0 0 8px" }}>견적서 송부 비용 내역</h2>
             <div className="tbl-wrap">
               <table className="tbl tbl--stack">
-                <thead><tr><th>요청</th><th>제출일</th><th className="tnum">견적 금액</th><th className="tnum">송부 비용</th></tr></thead>
+                <thead><tr><th>요청</th><th>제출일</th><th className="lq-num">견적 금액</th><th className="lq-num">송부 비용</th></tr></thead>
                 <tbody>
                   {lines.map((l) => (
                     <tr key={l.quote_id}>
                       <td data-label="요청" className="tnum">{l.rfq_no}</td>
                       <td data-label="제출일" className="tnum">{ymd(l.billing_at ?? l.first_submitted_at)}</td>
-                      <td data-label="견적 금액" className="tnum">{comma(l.total_amount ?? 0)}</td>
-                      <td data-label="송부 비용" className="tnum">{comma(l.fee_due ?? 0)}</td>
+                      <td data-label="견적 금액" className="lq-num">{comma(l.total_amount ?? 0)}</td>
+                      <td data-label="송부 비용" className="lq-num">{comma(l.fee_due ?? 0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -113,15 +114,15 @@ export default async function CroInvoice({ params }: { params: Promise<{ id: str
             <h2 style={{ fontSize: 15, margin: "0 0 8px" }}>계약 성사 수수료 내역</h2>
             <div className="tbl-wrap">
               <table className="tbl tbl--stack">
-                <thead><tr><th>요청</th><th>계약 확정일</th><th className="tnum">계약 금액</th><th className="tnum">요율</th><th className="tnum">수수료</th></tr></thead>
+                <thead><tr><th>요청</th><th>계약 확정일</th><th className="lq-num">계약 금액</th><th className="lq-num">요율</th><th className="lq-num">수수료</th></tr></thead>
                 <tbody>
                   {settled.map((a) => (
                     <tr key={a.award_id}>
                       <td data-label="요청" className="tnum">{a.rfq_no}</td>
                       <td data-label="계약 확정일" className="tnum">{ymd(a.contract_confirmed_at ?? a.contract_reported_at)}</td>
-                      <td data-label="계약 금액" className="tnum">{comma(a.contract_amount ?? 0)}</td>
-                      <td data-label="요율" className="tnum">{a.fee_rate == null ? "요금표" : `${Math.round(a.fee_rate * 10000) / 100}%`}</td>
-                      <td data-label="수수료" className="tnum">{comma(a.fee ?? 0)}</td>
+                      <td data-label="계약 금액" className="lq-num">{comma(a.contract_amount ?? 0)}</td>
+                      <td data-label="요율" className="lq-num">{a.fee_rate == null ? "요금표" : `${Math.round(a.fee_rate * 10000) / 100}%`}</td>
+                      <td data-label="수수료" className="lq-num">{comma(a.fee ?? 0)}</td>
                     </tr>
                   ))}
                 </tbody>

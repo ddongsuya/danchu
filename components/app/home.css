@@ -1,0 +1,30 @@
+/* 의뢰자 홈 (2026-11-27 시안 검토판 r-home): 입력창 + 갈래 칩 + 확인 필요. 의뢰자 화면만 쓴다 */
+.rh { max-width: 720px; margin: 0 auto; padding-top: clamp(24px, 12vh, 120px); display: flex; flex-direction: column; gap: 20px; }
+.pt .rh__h { margin: 0; text-align: center; font-size: clamp(24px, 3vw, 30px); font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; color: var(--ink); }
+.rh-comp { display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 12px 18px; border: 1px solid var(--cline); border-radius: 20px; background: var(--wh); box-shadow: 0 6px 24px rgba(27, 27, 25, 0.06); }
+.rh-comp:focus-within { border-color: var(--ink); }
+.pt .rh-comp__in { width: 100%; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 16px; color: var(--ink); outline: none; }
+.rh-comp__in::placeholder { color: var(--ph); }
+.rh-comp__row { display: flex; align-items: center; gap: 8px; }
+.rh-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.pt .rh-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid var(--cline); border-radius: 999px; font-size: 13px; color: var(--ink); text-decoration: none; transition: background-color 160ms ease, transform 160ms var(--ease-out); }
+.pt .rh-chip:active { transform: scale(0.97); }
+.pt .rh-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.pt .rh-send { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: var(--ink); color: var(--wh); cursor: pointer; transition: transform 160ms var(--ease-out); }
+.pt .rh-send:active { transform: scale(0.96); }
+.pt .rh-send:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .pt .rh-chip:hover { background: var(--sf); } }
+.rh-acts { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.rh-sec { margin-top: 12px; }
+.pt .rh-sec__h { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.rh-sec__h span { margin-left: 6px; color: var(--muted); font-weight: 400; }
+.rh-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--cline); border-radius: var(--r-lg); background: var(--wh); }
+.rh-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.rh-row + .rh-row { border-top: 1px solid var(--cline); }
+.rh-row__t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); }
+.pt .rh-row__no { font-size: 14px; font-weight: 600; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 959px) {
+  .rh { padding-top: 16px; }
+  .rh-row { flex-wrap: wrap; }
+  .rh-row > .b1, .rh-row > .b2 { width: 100%; justify-content: center; }
+}

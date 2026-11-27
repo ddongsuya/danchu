@@ -3,7 +3,6 @@ import { scaleWeeks, weekMonday, type SchedulePlan, type ScheduleRow } from "@/l
 /**
  * 견적 회신의 전체 일정 (경로형 간트, 2026-10-28 시안 B).
  * - 흑연 단색. 최종보고서 주를 정하는 순서(critical)만 진하게, 나머지는 옅게
- * - 형광 노랑은 "차이"에만: 가장 빠른 기관의 최종보고서 주(bestFinal)부터 이 일정의 최종보고서 주까지
  * - 값은 모두 기관이 회신에 적은 것. 단추는 순서나 기간을 정하지 않는다
  * 훅이 없어 서버 화면(의뢰자 상세)과 회신 화면 미리보기에서 함께 쓴다
  */
@@ -66,7 +65,6 @@ export function ScheduleGantt({
   plan,
   name,
   startDate,
-  bestFinal,
   scale: fixedScale,
   compact = false,
 }: {
@@ -75,8 +73,6 @@ export function ScheduleGantt({
   name?: string;
   /** 착수 가능일 (YYYY-MM-DD). 있으면 달 눈금과 날짜를 단다 */
   startDate?: string | null;
-  /** 같은 요청에서 가장 빠른 기관의 최종보고서 주 (번역 포함). 노란 차이 띠의 시작 */
-  bestFinal?: number | null;
   /** 여러 기관을 같은 축으로 볼 때 */
   scale?: number;
   /** 회신 화면 미리보기: 머리 숫자를 작게, 경로 줄 생략 */
@@ -92,8 +88,7 @@ export function ScheduleGantt({
   }
   const final = plan.finalWeek;
   const ko = plan.finalReportWeek ?? final;
-  const scale = fixedScale ?? scaleWeeks(final, bestFinal);
-  const late = bestFinal != null && final > bestFinal ? final - bestFinal : 0;
+  const scale = fixedScale ?? scaleWeeks(final);
   const ticks = ticksOf(scale, startDate, compact ? 4 : 7);
   const chain = lines.filter((l) => l.study.critical).map((l) => l.study.name);
   const dateOf = (w: number) => { const d = startDate ? weekMonday(startDate, w) : null; return d ? d.replaceAll("-", ".") : null; };
@@ -107,10 +102,9 @@ export function ScheduleGantt({
           <span className="sg-num tnum">{ko}주차</span>
           {dateOf(ko) && <span className="sg-cap tnum">예상 {dateOf(ko)} 주</span>}
         </div>
-        {(hasTrans || late > 0) && (
+        {hasTrans && (
           <p className="sg-sub">
-            {hasTrans && <>번역 포함 <b className="tnum">{final}주차</b>{dateOf(final) ? ` · 예상 ${dateOf(final)} 주` : ""}</>}
-            {late > 0 && <mark className="sg-late">가장 빠른 기관보다 +{late}주</mark>}
+            번역 포함 <b className="tnum">{final}주차</b>{dateOf(final) ? ` · 예상 ${dateOf(final)} 주` : ""}
           </p>
         )}
       </div>
@@ -137,7 +131,6 @@ export function ScheduleGantt({
             <div key={l.study.id} className={`sg-row${c ? " sg-row--crit" : ""}`} role="row">
               <span className="sg-name" role="cell">{l.study.name}</span>
               <div className="sg-track" role="cell" aria-label={range(l)}>
-                {late > 0 && <span className="sg-band" style={{ left: pct(bestFinal!, scale), width: pct(late, scale) }} />}
                 <span className="sg-bar" style={{ left: pct(l.study.start, scale), width: pct(l.study.weeks, scale) }} />
                 {l.report && <span className={`sg-rep${l.report.critical ? " is-crit" : ""}`} style={{ left: pct(l.report.start, scale), width: pct(l.report.weeks, scale) }} />}
                 {l.translation && <span className={`sg-tr${l.translation.critical ? " is-crit" : ""}`} style={{ left: pct(l.translation.start, scale), width: pct(l.translation.weeks, scale) }} />}
@@ -148,12 +141,6 @@ export function ScheduleGantt({
         })}
       </div>
 
-      <ul className="sg-legend">
-        <li><i className="sg-key sg-key--crit" />최종보고서 시점을 정하는 순서</li>
-        <li><i className="sg-key" />함께 진행</li>
-        <li><i className="sg-key sg-key--rep" />초안 뒤 최종보고서{hasTrans ? " · 번역" : ""}</li>
-        {late > 0 && <li><i className="sg-key sg-key--late" />가장 빠른 기관과의 차이</li>}
-      </ul>
       {plan.incomplete.length > 0 && <p className="sg-note">기간이 비어 일정에 넣지 못한 항목이 {plan.incomplete.length}개 있어요.</p>}
     </div>
   );

@@ -72,3 +72,15 @@ export function topCategoryShare(c: ReportCol, rows: ReportRow[]): { category: s
   const [category, v] = [...by.entries()].sort((a, b) => b[1] - a[1])[0];
   return { category, share: v / sum };
 }
+
+/** 모든 기관의 항목 금액을 합쳤을 때 금액이 가장 큰 분야 (금액·기간 탭 숫자 칸). 금액이 하나도 없으면 null */
+export function topCategoryAll(cols: ReportCol[], rows: ReportRow[]): string | null {
+  const by = new Map<string, number>();
+  for (const c of cols) for (const it of c.items) {
+    if (it.avail === "불가" || typeof it.amount !== "number" || it.amount <= 0) continue;
+    const cat = rows.find((r) => r.seq === it.seq)?.category ?? "기타";
+    by.set(cat, (by.get(cat) ?? 0) + it.amount);
+  }
+  const top = [...by.entries()].sort((a, b) => b[1] - a[1])[0];
+  return top ? top[0] : null;
+}

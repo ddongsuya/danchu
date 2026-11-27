@@ -115,7 +115,16 @@ export type OtherDesign = {
   report: number | null;
 };
 
-export type KindDesign = { pd?: PdDesign; pk?: PkDesign; other?: OtherDesign };
+/* ── 독성 표준 설계 (2026-11-26) ────────────────────── */
+
+/**
+ * 독성 군마다 이름·용량·회복 동물 여부. 군 수·마릿수는 시험 목록 칸(groups_ctrl·groups_test·per_sex·recovery_*)이 정하고,
+ * 여기는 그 순서(대조군 먼저)대로 같은 번째 군에 붙는다. rec 가 없으면 대조군·최고용량군에 회복 동물 (lib/quote-doc standardGroups)
+ */
+export type ToxGroup = { label: string; dose: string; rec?: boolean };
+export type ToxDesign = { groups: ToxGroup[] };
+
+export type KindDesign = { pd?: PdDesign; pk?: PkDesign; other?: OtherDesign; tox?: ToxDesign };
 
 /** 의뢰자 원안 (받은 요청에서 만든 견적서). 표시와 달라진 칸 비교에 쓴다 */
 export type Orig = {
@@ -375,14 +384,25 @@ function cleanOther(v: unknown): OtherDesign | undefined {
   return { sample: s(o.sample, 120), n: cnt(o.n, 99999), perSample: won(o.perSample), setup: won(o.setup), report: won(o.report) };
 }
 
+function cleanTox(v: unknown): ToxDesign | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const groups = (Array.isArray(o.groups) ? o.groups : []).slice(0, 40).map((g) => {
+    const x = (g && typeof g === "object" ? g : {}) as Record<string, unknown>;
+    return { label: s(x.label, 40), dose: s(x.dose, 40), ...(typeof x.rec === "boolean" ? { rec: x.rec } : {}) };
+  });
+  return groups.some((g) => g.label || g.dose || g.rec != null) ? { groups } : undefined;
+}
+
 export function cleanKd(v: unknown): KindDesign | undefined {
   if (!v || typeof v !== "object") return undefined;
   const o = v as Record<string, unknown>;
   const out: KindDesign = {};
-  const pd = cleanPd(o.pd), pk = cleanPk(o.pk), other = cleanOther(o.other);
+  const pd = cleanPd(o.pd), pk = cleanPk(o.pk), other = cleanOther(o.other), tox = cleanTox(o.tox);
   if (pd) out.pd = pd;
   if (pk) out.pk = pk;
   if (other) out.other = other;
+  if (tox) out.tox = tox;
   return Object.keys(out).length ? out : undefined;
 }
 

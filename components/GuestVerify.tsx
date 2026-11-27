@@ -121,6 +121,7 @@ export function GuestVerify({
   const sendCode = async () => {
     if (busy) return;
     const next = { email: c.email.trim().toLowerCase(), company: c.company.trim(), name: c.name.trim(), phone: c.phone.trim() };
+    if (!next.email) return setError("이메일을 입력해 주세요.");
     if (!EMAIL_RE.test(next.email)) return setError("이메일 형식을 확인해 주세요.");
     if (!next.company || !next.name) return setError("회사·기관명과 담당자 성명을 입력해 주세요.");
     onContact(next);
@@ -140,7 +141,7 @@ export function GuestVerify({
       setCode("");
       setResendIn(RESEND_AFTER);
       setStep("code");
-      if (!d.mailed) setError("메일을 보내지 못했어요. 잠시 뒤 '다시 받기'를 눌러 주세요.");
+      if (!d.mailed) setError("인증번호 메일을 보내지 못했어요. 잠시 뒤 번호 다시 받기를 눌러 주세요.");
       startUploads(d.uploads ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "인증번호를 보내지 못했어요.");
@@ -198,7 +199,7 @@ export function GuestVerify({
     <div className="field">
       <label className="field__label" htmlFor={`gv-${id}`}>
         {label}
-        {required ? <span className="field__req">*</span> : <span className="fld__help"> 선택</span>}
+        {required ? <span className="field__req">*</span> : <span className="fld__help"> (선택)</span>}
       </label>
       <input
         id={`gv-${id}`}
@@ -229,7 +230,7 @@ export function GuestVerify({
         <button type="button" className="btxt" onClick={onClose} disabled={busy === "verify"}>
           취소
         </button>
-        <b>{step === "contact" ? "이메일 확인" : "인증번호"}</b>
+        <b>이메일 인증</b>
         <span aria-hidden="true" />
       </div>
 
@@ -241,8 +242,7 @@ export function GuestVerify({
             sendCode();
           }}
         >
-          <h2 id="gv-title">보내기 전에 이메일만 확인할게요.</h2>
-          <p className="gv__lead">쓰신 요청서는 이 화면에 그대로 둬요. 확인이 끝나면 바로 접수돼요.</p>
+          <h2 id="gv-title">보내기 전에 이메일을 인증해 주세요.</h2>
           {field("email", "이메일", "email", "email")}
           {field("company", "회사·기관명", "text", "organization")}
           {field("name", "담당자 성명", "text", "name")}
@@ -253,7 +253,7 @@ export function GuestVerify({
             </p>
           )}
           <button type="submit" className="b1 blg bfull" disabled={!!busy}>
-            {busy === "send" ? "보내는 중…" : "인증번호 받기"}
+            {busy === "send" ? "메일 보내는 중" : "인증번호 받기"}
           </button>
           <p className="fld__help gv__center">이미 가입하셨다면 같은 이메일로 인증하면 돼요.</p>
         </form>
@@ -289,7 +289,7 @@ export function GuestVerify({
             }}
           />
           <p id="gv-code-help" className="fld__help">
-            번호를 입력하면 쓰신 요청서가 바로 접수돼요. 메일 속 버튼으로 열면 요청서를 확인하고 보낼 수 있고, 보내면 이 화면도 이어져요.
+            번호를 입력하면 요청서가 바로 접수돼요.
           </p>
           {uploads.total > 0 && (
             <p className="fld__help" role="status">
@@ -305,17 +305,15 @@ export function GuestVerify({
               {error}
             </p>
           )}
-          {busy === "verify" && (
-            <p className="fld__help" role="status">
-              {uploads.running ? "첨부를 마저 올린 뒤 접수해요…" : "확인하고 접수하는 중이에요…"}
-            </p>
-          )}
+          <button type="submit" className="b1 blg bfull" disabled={!!busy || code.length < codeLength} aria-busy={busy === "verify" || undefined}>
+            {busy === "verify" ? (uploads.running ? `첨부 올리는 중 (${uploads.done}/${uploads.total})` : "접수하는 중") : "확인"}
+          </button>
           <div className="gv__row">
             {resendIn > 0 ? (
               <span className="fld__help tnum">다시 받기 {mmss}</span>
             ) : (
               <button type="button" className="btxt" onClick={resend} disabled={!!busy}>
-                {busy === "resend" ? "보내는 중…" : "번호 다시 받기"}
+                {busy === "resend" ? "보내는 중" : "번호 다시 받기"}
               </button>
             )}
             <button

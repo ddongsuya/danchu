@@ -16,7 +16,7 @@ export function earlyDoneMail(v: EarlyMailInput, at: Date = new Date()): { subje
     ...(v.role === "cro" && v.org ? ([["기관명", v.org]] as [string, string][]) : []),
     ["예약일", day],
     ["시험 분야", v.kinds.map((k) => EARLY_KIND_LABEL[k]).join(", ")],
-    ["시범 운영", "2027년 6월 1일 ~ 12월 31일, 무료"],
+    ["시범 운영", "2027년 6월 1일부터 12월 31일까지"],
     ["정식 운영", "2028년 1월 1일"],
     ["안내 문자", "시범 운영 개시"],
     ["변경·취소", "이 메일로 회신"],

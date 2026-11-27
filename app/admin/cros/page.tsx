@@ -1,77 +1,77 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { dbReady, listCroOrgs } from "@/lib/data";
-import { ymd } from "@/lib/format";
-import { QuickApprove } from "@/components/admin/QuickApprove";
+import { mmdd } from "@/lib/format";
+import { captureError } from "@/lib/observe";
 import { SearchBox } from "@/components/admin/SearchBox";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { ManagedBadge } from "@/components/admin/ManagedBadge";
 import { ManagedOrgForm } from "@/components/admin/ManagedOrgForm";
+import { FilterChips } from "@/components/admin/Blocks";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { particle } from "@/components/admin/act";
 
 export const dynamic = "force-dynamic";
 
 const ST: Record<string, [string, string]> = { pending: ["승인 대기", "pill--warn"], approved: ["참여 중", "pill--ok"], rejected: ["반려", "pill--err"], suspended: ["중지", "pill--err"] };
+const TABS: [string, string][] = [["", "전체"], ["pending", "승인 대기"], ["approved", "참여 중"]];
 
+/**
+ * 기관 (시안 검토판 a-cros). 제목 줄 탭(전체 · 승인 대기 · 참여 중, 숫자) + 검색 + "기관 추가", 아래 표 하나.
+ * 승인 · 반려는 기관 상세에서 확인창으로 한다. 승인 전 기관에는 참여 안내가 가지 않는다.
+ */
 export default async function AdminCros({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   await requireSession("admin");
-  const { status = "", q = "" } = await searchParams;
-  const list = dbReady() ? await listCroOrgs(status || undefined, q || undefined) : [];
-  const pending = list.filter((o) => o.status === "pending");
-  const rest = status ? list : list.filter((o) => o.status !== "pending");
-
-  const Table = ({ rows }: { rows: typeof list }) => (
-    <div className="card tbl-wrap">
-      <table className="tbl tbl--stack">
-        <thead>
-          <tr><th>기관</th><th>상태</th><th>GLP</th><th>수행 분야</th><th>담당자</th><th>신청일</th><th>처리</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((o) => (
-            <tr key={o.id}>
-              <td>
-                <Link href={`/admin/cros/${o.id}`} style={{ fontWeight: 700 }}>{o.name}</Link>{o.managed && <ManagedBadge />}
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.contact_name} · {o.contact_email}</div>
-              </td>
-              <td data-label="상태"><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
-              <td data-label="GLP" style={{ fontSize: 12 }}>{o.glp_certs.join(" · ") || "-"}</td>
-              <td data-label="수행 분야" style={{ fontSize: 12 }}>{o.categories.join(" · ") || "-"}</td>
-              <td className="tnum" data-label="담당자">{o.members}</td>
-              <td className="tnum" data-label="신청일">{ymd(o.created_at)}</td>
-              <td className="tbl__act" style={{ whiteSpace: "nowrap" }}>
-                <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                  {o.status === "pending" && <QuickApprove id={o.id} name={o.name} />}
-                  <Link href={`/admin/cros/${o.id}`} className="b2 bsm">상세</Link>
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const { status: st = "", q = "" } = await searchParams;
+  const status = TABS.some(([k]) => k === st) || ST[st] ? st : "";
+  // 탭 숫자를 같이 세려고 검색어로만 한 번 읽고 상태는 여기서 거른다
+  const all = dbReady() ? await listCroOrgs(undefined, q || undefined).catch((e: unknown) => { captureError(e, "admin:cros"); return null; }) : [];
+  const list = all ? (status ? all.filter((o) => o.status === status) : all) : [];
+  const n = (k: string) => (all ?? []).filter((o) => !k || o.status === k).length;
+  const href = (k: string, query = q) => {
+    const sp = new URLSearchParams({ ...(k ? { status: k } : {}), ...(query ? { q: query } : {}) });
+    return sp.size ? `/admin/cros?${sp}` : "/admin/cros";
+  };
 
   return (
     <>
       <div className="ph">
-        <div>
-          <h1>기관</h1>
-          <p>가입 신청을 검토하고 승인합니다. 아직 가입하지 않은 기관은 운영자 관리 기관으로 직접 추가합니다. 승인된 기관에만 참여 안내가 갑니다.</p>
-        </div>
-        <div className="ph__actions">
-          <Link href="/admin/cros" className={`b2 bsm`} aria-pressed={!status}>전체</Link>
-          <Link href="/admin/cros?status=pending" className="b2 bsm" aria-pressed={status === "pending"}>승인 대기</Link>
-          <Link href="/admin/cros?status=approved" className="b2 bsm" aria-pressed={status === "approved"}>참여 중</Link>
-          <SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} />
-        </div>
+        <div><h1>기관</h1></div>
+        <div className="ph__actions"><ManagedOrgForm /></div>
       </div>
-      <ManagedOrgForm />
-      {!status && pending.length > 0 && (
-        <>
-          <div className="sec-title" style={{ marginTop: 0 }}><h2>승인 대기 {pending.length}</h2></div>
-          <Table rows={pending} />
-        </>
+      <div className="adm-bar">
+        <FilterChips label="기관 상태" items={TABS.map(([k, label]) => ({ href: href(k), label, n: all ? n(k) : undefined, on: status === k }))} />
+        <div className="adm-bar__end"><SearchBox q={q} placeholder="기관명 · 대표 이메일 · 사업자번호" keep={{ status }} /></div>
+      </div>
+      {!all ? (
+        <ErrorState title="기관 목록을 불러오지 못했어요" />
+      ) : list.length === 0 ? (
+        q
+          ? <EmptyState kind="filtered" title={`'${q}'${particle(q, "과", "와")} 맞는 기관이 없어요`} action={<Link href={href(status, "")} className="b2 bsm">검색 지우기</Link>} />
+          : status
+            ? <EmptyState kind="filtered" title={`${ST[status]?.[0] ?? "이 상태"} 기관이 없어요`} action={<Link href="/admin/cros" className="b2 bsm">전체 보기</Link>} />
+            : <EmptyState title="기관이 없어요" />
+      ) : (
+        <div className="card tbl-wrap">
+          <table className="tbl tbl--stack">
+            <thead>
+              <tr><th>기관</th><th>상태</th><th>수행 분야</th><th>담당자</th><th className="num">신청일</th><th><span className="sr-only">상세</span></th></tr>
+            </thead>
+            <tbody>
+              {list.map((o) => (
+                <tr key={o.id}>
+                  <td><Link href={`/admin/cros/${o.id}`} className="strong">{o.name}</Link>{o.managed && <ManagedBadge />}<span className="sub">{o.contact_email}</span></td>
+                  <td data-label="상태"><span className={`pill ${ST[o.status][1]}`}>{ST[o.status][0]}</span></td>
+                  <td data-label="수행 분야" className="adm-small">{o.categories.join(" · ") || "-"}</td>
+                  <td data-label="담당자" className="adm-small">{o.contact_name || "-"}</td>
+                  <td className="num tnum" data-label="신청일">{mmdd(o.created_at)}</td>
+                  <td className="tbl__act"><Link href={`/admin/cros/${o.id}`} className="b2 bsm">상세</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      <div className="sec-title"><h2>{status ? ST[status]?.[0] ?? "기관" : "전체 기관"} {rest.length}</h2></div>
-      {rest.length === 0 ? <div className="empty"><b>기관이 없습니다</b>CRO가 가입 신청하거나 운영자가 기관을 추가하면 여기에 나타납니다.</div> : <Table rows={rest} />}
     </>
   );
 }

@@ -46,7 +46,7 @@ export function EarlyNotice({ days }: { days: number }) {
   return (
     <aside className="enote" data-on={on && !closed ? "" : undefined} aria-label="사전예약 알림">
       <p className="enote-t"><b>사전예약 진행 중</b><span>시범 운영까지 <span className="enote-d">D-{days}</span></span></p>
-      <a href="/early" className="btn solid enote-go">사전예약하기</a>
+      <a href="/early" className="btn solid enote-go">사전예약</a>
       <button type="button" className="enote-x" onClick={close} aria-label="알림 닫기"><X size={18} aria-hidden="true" /></button>
     </aside>
   );

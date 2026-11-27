@@ -1,325 +1,201 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { INCL_KEYS } from "@/lib/cro-data";
-import { comma, md, payTerms, won } from "@/lib/format";
-import { quoteKindLabel } from "@/lib/concierge";
-import { compareIncl, oddOnes } from "@/lib/compare-incl";
-import { DETAIL_STATUS_LABEL, type DetailReplyItem, type DetailStatus } from "@/lib/detail-quote";
+import { md } from "@/lib/format";
+import { useToast } from "@/components/ui/Toast";
+import { DETAIL_STATUS_LABEL } from "@/lib/detail-quote";
+import {
+  SORTS, condRows, itemOf, readBoardUrl, second, short, sortCols, testDiffers, testIncludes, totalOf, weeksOf, writeBoardUrl,
+  type BoardUrl, type CompareCol, type CompareRowDef, type SortKey,
+} from "@/lib/compare-board";
+import { QuotePanel, QuotePdf } from "@/components/app/QuotePanel";
+import "@/components/app/compare.css";
 
-export type CompareCol = {
-  id: string;
-  name: string;
-  total: number;
-  /** 0029 이전 견적: 항목 기간 중 가장 긴 값 */
-  weeks: number;
-  /** 0029: 모든 보고서(번역 포함)가 끝나는 주. 기관이 적은 기간·순서로 계산. 없으면 null */
-  final?: number | null;
-  /** 0029: 국문 최종보고서 주 */
-  finalReport?: number | null;
-  start: string | null;
-  valid: string | null;
-  pay: string | null;
-  includes: string[];
-  note: string | null;
-  glpOk: boolean;
-  glpMissing: string[];
-  glp: string[];
-  unavailable: string[];
-  conditional: number;
-  items: {
-    seq: number;
-    avail: string;
-    amount: number | null;
-    weeks: number | null;
-    design?: string;
-    note?: string;
-    explain?: [string, string][];
-    /** 이 시험 견적에 들어간 평가·분석 항목 (기관이 견적서에서 켠 것). 없으면 예전 견적 */
-    includes?: string[];
-  }[];
-  hasPdf: boolean;
-  selected: boolean;
-  /** 카탈로그 기준 자동 제출된 예비 견적 */
-  auto: boolean;
-  /** 운영자가 기관 PDF 를 보고 옮겨 적은 견적 (기준 문서는 PDF 원본) */
-  operator?: boolean;
-  /** 이 기관에 질의 (0045). 질의할 수 있을 때만 */
-  askHref?: string | null;
-  /** 2차 상세 견적 (0042). 상세 견적을 요청한 기관만 */
-  detail?: { status: DetailStatus; total: number | null; weeks: number | null; note: string | null; items: DetailReplyItem[] } | null;
-};
-export type CompareRowDef = { seq: number; name: string; category: string };
+export type { CompareCol, CompareRowDef } from "@/lib/compare-board";
 
-type SortKey = "default" | "total" | "final" | "start";
-const SORTS: [SortKey, string][] = [
-  ["default", "회신 도착 순"],
-  ["final", "최종보고서 빠른 순"],
-  ["total", "금액 낮은 순"],
-  ["start", "착수 빠른 순"],
-];
-type Tab = "sum" | "diff" | "test";
+const START: BoardUrl = { sort: "default", view: "all", quote: null, doc: false };
 
-/** 표 칸에 쓰는 짧은 금액. 만 원 단위로 떨어지면 "2억 700만", 아니면 원 단위 그대로 */
-const short = (n: number | null | undefined) => (n == null ? "미입력" : n % 10000 === 0 && n > 0 ? won(n).replace(/만 원$/, "만").trim() : comma(n));
-/** 최종보고서 순 정렬 값: 일정이 있으면 최종 주, 예전 견적은 가장 긴 항목 기간, 둘 다 없으면 맨 뒤 */
-const finalOf = (c: CompareCol) => c.final ?? (c.weeks || Infinity);
-const second = (c: CompareCol) => (c.detail?.status === "submitted" ? c.detail : null);
-/** 지금 기준 총액과 기간: 2차 견적이 왔으면 그 값 */
-const totalOf = (c: CompareCol) => second(c)?.total ?? c.total;
-const weeksOf = (c: CompareCol) => second(c)?.weeks ?? c.final ?? c.weeks;
-
-type Cond = { label: string; val: (c: CompareCol) => string; sub?: (c: CompareCol) => string | null };
-const CONDS: Cond[] = [
-  { label: "수행 범위", val: (c) => (c.unavailable.length ? `일부 불가 ${c.unavailable.length}건` : "전체 수행"), sub: (c) => [c.unavailable.join(", "), c.conditional ? `조건부 ${c.conditional}건` : ""].filter(Boolean).join(", ") || null },
-  { label: "견적 구분", val: (c) => quoteKindLabel({ auto: c.auto, entry_source: c.operator ? "operator" : "cro" }) },
-  { label: "최종보고서 제출", val: (c) => (c.final != null ? `${c.finalReport ?? c.final}주차` : c.weeks ? `${c.weeks}주` : "미입력"), sub: (c) => (c.final != null && c.finalReport != null && c.final > c.finalReport ? `번역 포함 ${c.final}주차` : null) },
-  { label: "별도 비용", val: (c) => c.note?.trim() || "기재 없음" },
-  ...INCL_KEYS.map((k): Cond => ({ label: k, val: (c) => (c.includes.includes(k) ? "포함" : "미포함") })),
-  { label: "GLP", val: (c) => c.glp.join(", ") || "등록 정보 없음", sub: (c) => (c.glpMissing.length ? `확인 필요 ${c.glpMissing.join(", ")}` : null) },
-  { label: "결제 조건", val: (c) => payTerms(c.pay) || "기재 없음" },
-  { label: "견적 유효기간", val: (c) => (c.valid ? md(c.valid) : "기관 확인") },
-];
-
-/** 시험별 금액 칸 */
-function itemOf(c: CompareCol, seq: number): { main: string; sub: string } {
-  const it = c.items.find((i) => i.seq === seq);
-  if (!it) return { main: "회신 없음", sub: "" };
-  const s2 = second(c)?.items.find((i) => i.seq === seq);
-  if (it.avail === "불가" && !s2) return { main: "수행 불가", sub: "" };
-  const amount = s2 ? s2.amount : it.amount;
-  const weeks = s2?.weeks ?? it.weeks;
-  const sub = [
-    weeks ? `${weeks}주` : "",
-    it.avail === "조건부 가능" ? "조건부" : "",
-    s2 && s2.amount !== it.amount ? `1차 ${short(it.amount)}` : "",
-    s2?.mode === "assumed" ? "기관 가정 조건" : "",
-  ].filter(Boolean).join(", ");
-  return { main: short(amount), sub };
+/** 열 머리 둘째 줄: "6월 28일 회신 · 2차 7월 8일" */
+function arrivedLine(c: CompareCol): string {
+  const first = c.arrivedAt ? `${md(c.arrivedAt)} 회신` : "회신";
+  if (!c.detail) return first;
+  if (c.detail.status === "submitted") return `${first} · 2차${c.detail.at ? ` ${md(c.detail.at)}` : ""}`;
+  return `${first} · ${DETAIL_STATUS_LABEL[c.detail.status]}`;
 }
 
-/** 시험 하나의 포함 항목 (불가 줄은 견주지 않는다) */
-function testIncludes(cols: CompareCol[], seq: number) {
-  return compareIncl(cols.map((c) => { const it = c.items.find((i) => i.seq === seq); return it && it.avail !== "불가" ? it.includes ?? null : null; }));
-}
-
-export function CompareBoard({
-  no,
-  cols,
-  rows,
-  canSelect,
-}: {
-  no: string;
-  cols: CompareCol[];
-  rows: CompareRowDef[];
-  canSelect: boolean;
-}) {
-  const [sortBy, setSortBy] = useState<SortKey>("default");
-  const [shown, setShown] = useState(cols.map((c) => c.id));
-  const [tab, setTab] = useState<Tab>("sum");
+/**
+ * 비교견적표 (2026-11-27 시안 검토판 r-compare). 도구 줄(전체·차이 항목, 정렬, 링크 복사) → 기관이 열인 표.
+ * 열 머리 "상세"는 표 옆 분할 패널(휴대폰은 바닥 시트)로 열고, 정렬·보기·열린 기관은 주소(?sort=&view=#q-)에 둔다.
+ * 다수와 다른 값은 형광펜 대신 밑줄, 줄 이름 옆에 ≠. 휴대폰은 항목 이름 열을 고정하고 기관 열을 가로로 넘긴다.
+ */
+export function CompareBoard({ no, cols, rows, canSelect }: { no: string; cols: CompareCol[]; rows: CompareRowDef[]; canSelect: boolean }) {
+  const toast = useToast();
+  const [u, setU] = useState<BoardUrl>(START);
   const [openSame, setOpenSame] = useState(false);
-  const sorted = useMemo(
-    () =>
-      [...cols]
-        .filter((c) => shown.includes(c.id))
-        .sort((a, b) =>
-          sortBy === "default"
-            ? 0
-            : sortBy === "total"
-              ? (totalOf(a) || Infinity) - (totalOf(b) || Infinity)
-              : sortBy === "final"
-                ? finalOf(a) - finalOf(b) || (totalOf(a) || Infinity) - (totalOf(b) || Infinity)
-                : (a.start || "9999").localeCompare(b.start || "9999"),
-        ),
-    [cols, shown, sortBy],
-  );
-  const conds = CONDS.map((r) => {
-    const vals = sorted.map(r.val);
-    return { label: r.label, vals, subs: sorted.map((c) => r.sub?.(c) ?? null), odd: oddOnes(vals), same: new Set(vals).size <= 1 };
-  });
+  const opener = useRef<string | null>(null);
+
+  useEffect(() => {
+    const read = () => setU(readBoardUrl(window.location.search, window.location.hash));
+    read();
+    window.addEventListener("popstate", read);
+    window.addEventListener("hashchange", read);
+    return () => { window.removeEventListener("popstate", read); window.removeEventListener("hashchange", read); };
+  }, []);
+
+  const go = useCallback((next: BoardUrl, push = false) => {
+    setU(next);
+    const url = window.location.pathname + writeBoardUrl(window.location.search, next);
+    if (push) window.history.pushState(null, "", url); else window.history.replaceState(null, "", url);
+  }, []);
+
+  const sorted = useMemo(() => sortCols(cols, u.sort), [cols, u.sort]);
+  const conds = useMemo(() => condRows(sorted), [sorted]);
   const diff = conds.filter((r) => !r.same);
   const same = conds.filter((r) => r.same);
+  const many = sorted.length > 1;
+  const diffTests = rows.filter((r) => testDiffers(sorted, r.seq));
+  const diffCount = many ? diff.length + diffTests.length : 0;
+  const shownTests = u.view === "diff" ? diffTests : rows;
+  const cur = u.quote ? sorted.find((c) => c.id === u.quote) ?? null : null;
   const n = sorted.length;
-  const quoteHref = (c: CompareCol) => `/app/r/${no}/q/${c.id}`;
-  const tag = (c: CompareCol) => (second(c) ? <span className="cb-tag">2차</span> : null);
-  const wasLine = (c: CompareCol) => {
-    const s2 = second(c);
-    if (s2?.total != null && s2.total !== c.total) return `1차 ${short(c.total)} ${s2.total > c.total ? "+" : "-"}${short(Math.abs(s2.total - c.total))}`;
-    return c.detail && !s2 ? DETAIL_STATUS_LABEL[c.detail.status] : "";
+
+  const open = (id: string) => { opener.current = id; go({ ...u, quote: id, doc: false }, !u.quote); };
+  const close = () => {
+    go({ ...u, quote: null, doc: false });
+    // 패널을 연 "상세" 단추로 포커스를 돌려준다
+    const id = opener.current ?? u.quote;
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-open-quote="${id}"]`)?.focus());
   };
-  const amount = (c: CompareCol) => (totalOf(c) ? short(totalOf(c)) : "미입력");
-  const weeks = (c: CompareCol) => (weeksOf(c) ? `${weeksOf(c)}주` : "미입력");
-  const start = (c: CompareCol) => (c.start ? md(c.start) : "기관 확인");
-  const val = (v: string, odd: boolean) => (odd ? <mark className="cmp-gap cb-odd">{v}</mark> : v);
-  const TABS: [Tab, string][] = [["sum", "요약"], ["diff", `차이 항목 ${diff.length}`], ["test", "시험별 금액"]];
-  const mcols = { gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` };
-  // 네 곳부터는 한 화면에 다 들어가지 않아 옆으로 민다
-  const mwide = n > 3 ? { minWidth: n * 112 } : undefined;
-  const mrow = (key: string, cap: string, cells: React.ReactNode[], cls = "") => (
-    <div key={key} className={`cb-mr ${cls}`} style={mwide}>
-      <p>{cap}</p>
-      <div className="cb-mcols tnum" style={mcols}>{cells.map((x, i) => <div key={sorted[i].id}>{x}</div>)}</div>
+  const step = (d: number) => {
+    if (!cur) return;
+    const i = sorted.findIndex((c) => c.id === cur.id);
+    go({ ...u, quote: sorted[(i + d + n) % n].id, doc: false });
+  };
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast("링크를 복사했어요");
+    } catch {
+      toast("링크를 복사하지 못했어요. 주소창에서 복사해 주세요", { tone: "error" });
+    }
+  };
+
+  const mark = (v: string, odd: boolean) => (odd ? <span className="cmp-dif">{v}</span> : v);
+  const neq = <span className="cmp-neq" aria-label="차이">≠</span>;
+  const cell = (c: CompareCol, node: React.ReactNode, cls = "") => <td key={c.id} className={`${c.id === cur?.id ? "is-cur" : ""} ${cls}`.trim() || undefined}>{node}</td>;
+
+  const table = (
+    <div className="cmp-wrap" tabIndex={0} role="region" aria-label="기관별 견적 비교표">
+      <table className="cmp-t" style={{ minWidth: 140 + n * 180 }}>
+        <caption className="sr-only">기관별 견적 비교, 단위 원, VAT 별도</caption>
+        <thead>
+          <tr>
+            <th scope="col" className="cmp-t__lab">항목</th>
+            {sorted.map((c) => (
+              <th scope="col" key={c.id} className={c.id === cur?.id ? "is-cur" : undefined}>
+                <span className="cmp-name">{c.name}{second(c) && <span className="cb-tag">2차</span>}{c.selected && <span className="pill pill--ok">선정</span>}</span>
+                <b className="cmp-amt tnum">{totalOf(c) ? short(totalOf(c)) : "미입력"}</b>
+                <small className="tnum">{arrivedLine(c)}</small>
+                <small>{c.hasPdf ? "견적서 PDF" : "견적서 PDF 없음"}</small>
+                <button type="button" className="cmp-open" data-open-quote={c.id} aria-expanded={c.id === cur?.id} onClick={() => (c.id === cur?.id ? close() : open(c.id))}>상세</button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {diff.length > 0 && (
+            <tr className="cmp-g"><th scope="colgroup" colSpan={n + 1}>조건<em className="tnum">{u.view === "diff" ? `차이 ${diff.length}` : `${diff.length}개`}</em></th></tr>
+          )}
+          {diff.map((r) => (
+            <tr key={r.label}>
+              <th scope="row">{r.label}{r.odd.some(Boolean) && neq}</th>
+              {r.vals.map((v, i) => cell(sorted[i], <>{mark(v, r.odd[i])}{r.subs[i] && <span className="cb-sub">{r.subs[i]}</span>}</>))}
+            </tr>
+          ))}
+          <tr className="cmp-g"><th scope="colgroup" colSpan={n + 1}>시험별 금액 (원)<em className="tnum">{u.view === "diff" ? `차이 ${diffTests.length}` : `${rows.length}개`}</em></th></tr>
+          {shownTests.map((r) => {
+            const inc = testIncludes(sorted, r.seq);
+            const cells = sorted.map((c) => itemOf(c, r.seq));
+            const odd = testDiffers(sorted, r.seq);
+            return (
+              <Fragment key={r.seq}>
+                <tr>
+                  <th scope="row">{r.name}{odd && neq}</th>
+                  {cells.map((x, i) => cell(sorted[i], <>{mark(x.main, odd && !x.num)}{x.sub && <span className="cb-sub">{x.sub}</span>}</>, "tnum"))}
+                </tr>
+                {(inc?.diff ?? []).map((d) => (
+                  <tr key={`${r.seq}-${d.key}`} className="cmp-inc">
+                    <th scope="row">{d.key}{d.odd.some(Boolean) && neq}</th>
+                    {d.vals.map((v, i) => cell(sorted[i], mark(v, d.odd[i])))}
+                  </tr>
+                ))}
+                {u.view === "all" && inc && inc.common.length > 0 && (
+                  <tr className="cmp-inc"><th scope="row">공통 포함 {inc.common.length}</th><td colSpan={n}>{inc.common.join(", ")}</td></tr>
+                )}
+              </Fragment>
+            );
+          })}
+          <tr className="cmp-tot">
+            <th scope="row">견적 총액 (VAT 별도)</th>
+            {sorted.map((c) => cell(c, totalOf(c) ? short(totalOf(c)) : "미입력", "tnum"))}
+          </tr>
+          <tr>
+            <th scope="row">소요 기간</th>
+            {sorted.map((c) => cell(c, weeksOf(c) ? `${weeksOf(c)}주` : "미입력", "tnum"))}
+          </tr>
+          {u.view === "all" && same.length > 0 && (
+            <>
+              <tr className="cmp-more">
+                <th scope="row" colSpan={n + 1}>
+                  <button type="button" aria-expanded={openSame} onClick={() => setOpenSame((o) => !o)}>공통 항목 {same.length} · {openSame ? "접기" : "펼치기"}</button>
+                </th>
+              </tr>
+              {openSame && same.map((r) => (
+                <tr key={r.label}><th scope="row">{r.label}</th><td colSpan={n}>{r.vals[0]}</td></tr>
+              ))}
+            </>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 
   return (
-    <div className="cb">
-      {cols.length > 1 && (
-        <div className="cb-ctl">
-          {cols.length > 3 && (
-            <div className="chips" role="group" aria-label="비교할 기관">
-              {cols.map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className="chip"
-                  aria-pressed={shown.includes(c.id)}
-                  disabled={shown.length === 1 && shown.includes(c.id)}
-                  onClick={() => setShown(shown.includes(c.id) ? shown.filter((id) => id !== c.id) : [...shown, c.id])}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <select className="sel cb-sort" aria-label="정렬" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)}>
+    <div className="cmp">
+      <div className="cmp-tools">
+        {many && (
+          <div className="cmp-seg" role="group" aria-label="보기">
+            <button type="button" aria-pressed={u.view === "all"} onClick={() => go({ ...u, view: "all" })}>전체</button>
+            <button type="button" aria-pressed={u.view === "diff"} onClick={() => go({ ...u, view: "diff" })}>차이 항목 <span className="tnum">{diffCount}</span></button>
+          </div>
+        )}
+        {many && (
+          <select className="sel cmp-sort" aria-label="정렬" value={u.sort} onChange={(e) => go({ ...u, sort: e.target.value as SortKey })}>
             {SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>
-        </div>
-      )}
-
-      {/* 넓은 화면: 기관이 열인 표 한 장. 줄은 가로선 없이 번갈아 깔리는 바탕으로 나눈다 */}
-      <div className="cb-wide tbl-wrap" tabIndex={0} role="region" aria-label="기관별 견적 비교표">
-        <table className="cb-t" style={{ minWidth: 180 + n * 200 }}>
-          <caption className="sr-only">기관별 견적 비교, VAT 별도</caption>
-          <thead>
-            <tr>
-              <td />
-              {sorted.map((c) => (
-                <th scope="col" key={c.id}>
-                  <span className="cb-name">{c.name}{tag(c)}{c.selected && <span className="pill pill--ok">선정</span>}</span>
-                  <b className="cb-amt tnum">{amount(c)}</b>
-                  <span className="cb-sub tnum">{wasLine(c)}</span>
-                  <span className="cb-kv">기간 <b className="tnum">{weeks(c)}</b>착수 <b className="tnum">{start(c)}</b></span>
-                  <Link href={quoteHref(c)} className="cb-pick">{canSelect ? "견적서 확인, 선정" : "견적서 보기"}</Link>
-                  {c.hasPdf && <a href={`/api/quotes/${c.id}/pdf`} className="cb-pdf">PDF 원본</a>}
-                  {c.askHref && <Link href={c.askHref} className="cb-pdf">질의</Link>}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          {diff.length > 0 && (
-            <tbody>
-              <tr className="cb-g"><th colSpan={n + 1} scope="colgroup">차이 항목<span className="tnum">{diff.length}</span></th></tr>
-              {diff.map((r) => (
-                <tr key={r.label}>
-                  <th scope="row">{r.label}</th>
-                  {r.vals.map((v, i) => <td key={sorted[i].id}>{val(v, r.odd[i])}{r.subs[i] && <span className="cb-sub">{r.subs[i]}</span>}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          )}
-          {same.length > 0 && (
-            <tbody>
-              <tr className="cb-g">
-                <th colSpan={n + 1} scope="colgroup">
-                  <button type="button" aria-expanded={openSame} onClick={() => setOpenSame((o) => !o)}>
-                    공통 항목<span className="tnum">{same.length}</span><i>{openSame ? "접기" : "펼치기"}</i>
-                  </button>
-                </th>
-              </tr>
-              {openSame && same.map((r) => (
-                <tr key={r.label}>
-                  <th scope="row">{r.label}</th>
-                  <td colSpan={n}>{r.vals[0]}</td>
-                </tr>
-              ))}
-            </tbody>
-          )}
-          <tbody className="cb-tests">
-            <tr className="cb-g"><th colSpan={n + 1} scope="colgroup">시험별 금액<span className="tnum">{rows.length}</span></th></tr>
-            {rows.map((r, ri) => {
-              const inc = testIncludes(sorted, r.seq);
-              const alt = ri % 2 === 1 ? "cb-alt" : "";
-              return [
-                <tr key={r.seq} className={alt}>
-                  <th scope="row">{r.name}</th>
-                  {sorted.map((c) => { const x = itemOf(c, r.seq); return <td key={c.id} className="tnum">{x.main}{x.sub && <span className="cb-sub">{x.sub}</span>}</td>; })}
-                </tr>,
-                ...(inc?.diff ?? []).map((d) => (
-                  <tr key={`${r.seq}-${d.key}`} className={`cb-inc ${alt}`}>
-                    <th scope="row">{d.key}</th>
-                    {d.vals.map((v, i) => <td key={sorted[i].id}>{val(v, d.odd[i])}</td>)}
-                  </tr>
-                )),
-                inc && inc.common.length > 0 && (
-                  <tr key={`${r.seq}-common`} className={`cb-inc ${alt}`}>
-                    <th scope="row">공통 포함<span className="tnum">{inc.common.length}</span></th>
-                    <td colSpan={n}>{inc.common.join(", ")}</td>
-                  </tr>
-                ),
-              ];
-            })}
-            <tr className="cb-total">
-              <th scope="row">합계</th>
-              {sorted.map((c) => <td key={c.id} className="tnum">{amount(c)}</td>)}
-            </tr>
-          </tbody>
-        </table>
+        )}
+        <span className="cmp-tools__sp" />
+        <button type="button" className="b2 bsm" onClick={copy}>링크 복사</button>
       </div>
 
-      {/* 좁은 화면: 같은 표를 요약, 차이 항목, 시험별 금액 세 화면으로 나눈다 */}
-      <div className="cb-m">
-        <div className="crm-seg" role="tablist" aria-label="비교표 보기">
-          {TABS.map(([k, label]) => (
-            <button key={k} type="button" role="tab" id={`cb-tab-${k}`} aria-selected={tab === k} aria-controls="cb-panel" onClick={() => setTab(k)}>{label}</button>
-          ))}
+      <div className={cur ? "cmp-split" : undefined}>
+        <div className="cmp-split__main">
+          {cur && u.doc ? <QuotePdf col={cur} onBack={() => go({ ...u, doc: false })} /> : table}
         </div>
-        <div className="cb-mscroll" role="tabpanel" id="cb-panel" aria-labelledby={`cb-tab-${tab}`}>
-          <div className="cb-mcols cb-mhead" style={{ ...mcols, ...mwide }}>
-            {sorted.map((c) => (
-              <Link key={c.id} href={quoteHref(c)}>
-                <b>{c.name}{tag(c)}</b>
-                <span>{canSelect ? "견적서, 선정" : "견적서"}</span>
-              </Link>
-            ))}
-          </div>
-          {tab === "sum" && (
-            <>
-              {mrow("total", "견적 총액", sorted.map((c) => <>{amount(c)}{wasLine(c) && <span className="cb-sub">{second(c) ? `1차 ${short(c.total)}` : wasLine(c)}</span>}</>), "cb-mr--big")}
-              {mrow("weeks", "소요 기간", sorted.map(weeks))}
-              {mrow("start", "착수 가능일", sorted.map(start))}
-              {same.length > 0 && (
-                <div className="cb-same">
-                  <button type="button" aria-expanded={openSame} onClick={() => setOpenSame((o) => !o)}>
-                    공통 항목<span className="tnum">{same.length}</span><i>{openSame ? "접기" : "펼치기"}</i>
-                  </button>
-                  {openSame && <dl>{same.map((r) => <div key={r.label}><dt>{r.label}</dt><dd>{r.vals[0]}</dd></div>)}</dl>}
-                </div>
-              )}
-            </>
-          )}
-          {tab === "diff" && (diff.length ? diff.map((r) => mrow(r.label, r.label, r.vals.map((v, i) => <>{val(v, r.odd[i])}{r.subs[i] && <span className="cb-sub">{r.subs[i]}</span>}</>))) : <p className="cb-none">차이 항목 없음</p>)}
-          {tab === "test" && (
-            <>
-              {rows.map((r, ri) => {
-                const inc = testIncludes(sorted, r.seq);
-                return <div key={r.seq} className={`cb-mgrp${ri % 2 === 0 ? " cb-alt" : ""}`}>{[
-                  mrow(String(r.seq), r.name, sorted.map((c) => { const x = itemOf(c, r.seq); return <>{x.main}{x.sub && <span className="cb-sub">{x.sub}</span>}</>; })),
-                  ...(inc?.diff ?? []).map((d) => mrow(`${r.seq}-${d.key}`, d.key, d.vals.map((v, i) => val(v, d.odd[i])), "cb-mr--inc")),
-                  inc && inc.common.length > 0 && (
-                    <div key={`${r.seq}-common`} className="cb-mr cb-mr--inc cb-mr--common" style={mwide}>
-                      <p>공통 포함 {inc.common.length}</p>
-                      <span>{inc.common.join(", ")}</span>
-                    </div>
-                  ),
-                ]}</div>;
-              })}
-              {mrow("sum", "합계", sorted.map(amount), "cb-mr--total")}
-            </>
-          )}
-        </div>
+        {cur && (
+          <QuotePanel
+            key={cur.id}
+            no={no}
+            col={cur}
+            rows={rows}
+            canSelect={canSelect}
+            onClose={close}
+            onPrev={() => step(-1)}
+            onNext={() => step(1)}
+            onDoc={() => go({ ...u, doc: true })}
+          />
+        )}
       </div>
 
       {/* 단추가 옮겨 적은 견적이 있을 때만: 약관 제8조와 같은 말 (tests/compare-rules.test.ts) */}

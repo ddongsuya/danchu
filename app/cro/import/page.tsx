@@ -4,6 +4,7 @@ import { PendingOrg } from "@/components/cro/PendingOrg";
 import { ImportFlow } from "@/components/cro/crm/ImportFlow";
 import { loadCtx } from "@/components/cro/crm/load";
 import "@/components/cro/crm/crm.css";
+import "@/components/cro/crm/layout-crm.css";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,6 @@ export default async function CroImport() {
       <header className="cx-ph">
         <div>
           <h1>엑셀 가져오기</h1>
-          <p className="cx-ph__sub">지금 쓰는 고객·안건 엑셀을 한 번에 옮겨요. 열 이름을 보고 칸을 맞추고, 확인할 것만 노랗게 남겨요.</p>
         </div>
         <div className="cx-ph__acts"><Link href={paths.deals} className="btxt">취소</Link></div>
       </header>

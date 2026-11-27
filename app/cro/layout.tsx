@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { requireSession } from "@/lib/auth";
-import { dbReady, unreadCount } from "@/lib/data";
+import { dbReady, listNotifications, unreadCount } from "@/lib/data";
 import { AppState } from "@/components/app/AppState";
 import { Shell, type NavItem } from "@/components/shell/Shell";
 import { PreregGate } from "@/components/app/Prereg";
@@ -15,7 +15,7 @@ import { todaySeoul } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "단추 CRO",
-  description: "배포된 견적 요청을 확인하고 단추 표준 양식으로 회신해요.",
+  description: "받은 견적 요청을 확인하고 회신해요.",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "단추 CRO" },
   robots: { index: false, follow: false },
 };
@@ -24,7 +24,8 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 export default async function CroLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession("cro", "/cro");
   const prereg = await sessionInPrereg(session);
-  const unread = dbReady() && !prereg ? await unreadCount(session.userId) : 0;
+  // 위 바의 종: 읽지 않은 수와 최근 알림 네 개 (시안 c-bell)
+  const [unread, recent] = dbReady() && !prereg ? await Promise.all([unreadCount(session.userId), listNotifications(session.userId, 4).then((r) => r.list)]) : [0, []];
   // 2026-11-13 요금제별 화면 구성 (lib/cro-nav.ts). 시범 운영 중에는 모두 Pro 구성이고 요금제 표시도 없다
   const today = todaySeoul();
   const tier = croTier(session.org, today);
@@ -44,7 +45,7 @@ export default async function CroLayout({ children }: { children: React.ReactNod
             "(function(){try{var s=JSON.parse(localStorage.getItem('danchu.app.settings')||'{}');var t=s.theme||'system';var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})()",
         }}
       />
-      <Shell session={session} nav={nav} tabs={tabs} plan={paid ? PLANS[tier].name : undefined} usage={usage}>
+      <Shell session={session} nav={nav} tabs={tabs} plan={paid ? PLANS[tier].name : undefined} usage={usage} recent={recent}>
         {prereg ? <PreregGate role="cro" days={daysToPilot()} reserved={await reserved(session.email)} hasOrg={!!(session.org || session.pendingOrg)}>{children}</PreregGate> : children}
       </Shell>
     </AppState>

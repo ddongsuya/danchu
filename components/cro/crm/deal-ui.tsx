@@ -8,9 +8,13 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarBlank, CaretRight, Check, Copy, DotsThree, Handshake, NotePencil, Phone, User, X } from "@phosphor-icons/react";
-import { DEAL_KIND, DEAL_KINDS, LOST_REASONS, STAGES, STAGE_LABEL, type Stage, type StageSpan } from "@/lib/crm-deals";
-import { addDaysYmd, todayKst, weekdayKo } from "@/lib/crm-shape";
+import { DEAL_KIND, DEAL_KINDS, LOST_REASONS, STAGES, STAGE_LABEL, WON_REASONS, type Stage, type StageSpan } from "@/lib/crm-deals";
+import { ACT_BODY_MAX, addDaysYmd, todayKst, weekdayKo } from "@/lib/crm-shape";
 import { Err, Field, Select, useSend, useSheetClose, type CrmOpts, type Opt } from "./forms";
+import { FilePicker, uploadCrmFiles } from "./files-ui";
+import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { withRo } from "@/lib/cro-due";
 
 // ─── 새 안건 · 안건 고치기 ───
 type DealDraft = {
@@ -25,6 +29,7 @@ export function DealForm({ opts, deal, preset = {}, base, locked = false }: {
   const close = useSheetClose();
   const router = useRouter();
   const { busy, err, setErr, send } = useSend();
+  const toast = useToast();
   const hid = useId();
   const [v, setV] = useState<DealDraft>(() => ({
     title: deal?.title ?? "", company_id: deal?.company_id ?? preset.company_id ?? "", new_company: "", contact_ids: deal?.contact_ids ?? [], amount: deal?.amount != null ? deal.amount.toLocaleString("ko-KR") : "",
@@ -49,6 +54,7 @@ export function DealForm({ opts, deal, preset = {}, base, locked = false }: {
     const r = await send("deals", deal ? "PATCH" : "POST", deal ? { id: deal.id, ...body } : { ...body, stage: v.stage });
     if (!r) return;
     close();
+    if (!deal) toast("안건을 만들었어요");
     if (!deal && r.id) router.push(`${base}/${r.id}`);
   }
   return (
@@ -159,17 +165,22 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
   const ref = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<"won" | "lost" | null>(null);
   const { busy, err, setErr, send } = useSend();
+  const toast = useToast();
   const [reason, setReason] = useState<string>("");
   const [note, setNote] = useState("");
   const [follow, setFollow] = useState("");
   const [amount, setAmount] = useState(deal.amount != null ? deal.amount.toLocaleString("ko-KR") : "");
   const hid = useId();
-  const open = (m: "won" | "lost") => { setMode(m); setErr(""); requestAnimationFrame(() => ref.current?.showModal()); };
+  const open = (m: "won" | "lost") => { setMode(m); setReason(""); setErr(""); requestAnimationFrame(() => ref.current?.showModal()); };
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (mode === "lost" && !reason) return setErr("실패 사유를 하나 골라 주세요.");
-    const r = await send("move", "POST", mode === "won" ? { id: deal.id, status: "won", stage: "contract", won_amount: amount } : { id: deal.id, status: "lost", reason, note, follow_up_on: follow || undefined });
-    if (r) ref.current?.close();
+    if (!reason) return setErr(mode === "won" ? "수주 이유를 하나 골라 주세요." : "실패 사유를 하나 골라 주세요.");
+    const r = await send("move", "POST", mode === "won" ? { id: deal.id, status: "won", stage: "contract", won_amount: amount, reason, note } : { id: deal.id, status: "lost", reason, note, follow_up_on: follow || undefined });
+    // 실패는 창 안에서 알리고 상태는 그대로 (시안 검토판 c-deal-won~err · c-deal-lost~err)
+    if (!r) return setErr(mode === "won" ? "수주로 처리하지 못했어요. 안건 상태는 바뀌지 않았어요." : "실패로 처리하지 못했어요. 안건 상태는 바뀌지 않았어요.");
+    ref.current?.close();
+    // 실패 처리는 진행 중 목록에서 빠지므로 되돌리기를 준다 (시안 검토판 c-deals~lost)
+    if (mode === "lost") toast("안건을 실패로 옮겼어요", { action: { label: "되돌리기", onClick: () => { void send("move", "POST", { id: deal.id, status: "open" }); } } });
   }
   if (deal.status !== "open") {
     return (
@@ -178,41 +189,96 @@ export function CloseButtons({ deal }: { deal: { id: string; title: string; sub:
   }
   return (
     <>
-      <button type="button" className="cx-won" onClick={() => open("won")}>수주</button>
-      <button type="button" className="cx-lost" onClick={() => open("lost")}>실패</button>
+      <button type="button" className="cx-lost" onClick={() => open("lost")}>실패 처리</button>
+      <button type="button" className="cx-won" onClick={() => open("won")}>수주 처리</button>
       <dialog ref={ref} className="cx-dialog" aria-labelledby={hid} onClose={() => setMode(null)} onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}>
         {mode && (
           <form onSubmit={save} className="cx-dialog__in">
             <header>
-              <h2 id={hid}>{mode === "won" ? "수주로 바꿀까요?" : "실패로 바꿀까요?"}</h2>
-              <p>{deal.sub}</p>
+              <h2 id={hid}>{mode === "won" ? "수주로 처리할까요?" : "실패로 처리할까요?"}</h2>
+              <p>{mode === "won" ? "처리하면 안건이 수주로 바뀌고, 수주 이유는 분석의 수주 이유에 모입니다." : "처리하면 안건이 진행 중 목록에서 빠지고, 실패 사유는 분석에 모입니다."}</p>
               <button type="button" className="crm-x" aria-label="닫기" onClick={() => ref.current?.close()}><X size={20} aria-hidden="true" /></button>
             </header>
             {mode === "won" ? (
-              <Field label="계약 금액" htmlFor={`${hid}-a`} help="보고서의 수주 금액이 돼요. 단추 요청은 계약 결과 보고 금액이 따로 남아요.">
-                <input id={`${hid}-a`} className="inp tnum" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
-              </Field>
+              <>
+                <ReasonPicker label="수주 이유 (하나)" list={WON_REASONS} value={reason} onChange={setReason} />
+                <Field label="메모 (선택)" htmlFor={`${hid}-wn`}>
+                  <textarea id={`${hid}-wn`} className="ta" rows={2} value={note} maxLength={2000} placeholder="예: 회복군 제외안으로 일정을 2주 당길 수 있어서 선택" onChange={(e) => setNote(e.target.value)} />
+                </Field>
+                <Field label="계약 금액" htmlFor={`${hid}-a`} help="분석 화면의 수주 금액이 돼요. 단추 요청은 계약 결과 보고 금액이 따로 남아요.">
+                  <input id={`${hid}-a`} className="inp tnum" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                </Field>
+              </>
             ) : (
               <>
-                <fieldset className="cx-reasons">
-                  <legend className="fld__lab">실패 사유</legend>
-                  {LOST_REASONS.map((r) => (
-                    <label key={r} data-on={reason === r ? "1" : "0"}><input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} /> {r}</label>
-                  ))}
-                </fieldset>
+                <ReasonPicker label="실패 사유" list={LOST_REASONS} value={reason} onChange={setReason} />
                 <Field label="메모 (선택)" htmlFor={`${hid}-n`}>
                   <textarea id={`${hid}-n`} className="ta" rows={2} value={note} maxLength={2000} placeholder="예: 예산이 2,500만 원 안쪽이라고 함. 내년 상반기에 다시 문의 예정." onChange={(e) => setNote(e.target.value)} />
                 </Field>
                 <Field label="다시 연락할 날 (선택)" htmlFor={`${hid}-f`} help="고르면 그날 '다시 연락하기' 할 일이 생겨요.">
                   <input id={`${hid}-f`} className="inp tnum" type="date" min={todayKst()} value={follow} onChange={(e) => setFollow(e.target.value)} />
                 </Field>
-                {deal.danchu && <p className="cx-danchu-note"><span className="cx-d" aria-hidden="true">단</span>단추에서 온 안건은 의뢰자가 다른 기관을 고르면 &quot;다른 기관 선정&quot;으로 저절로 바뀌어요.</p>}
+                {deal.danchu && <p className="cx-danchu-note"><span className="cx-d" aria-hidden="true">단</span>단추에서 온 안건은 의뢰자가 다른 기관을 고르면 &quot;다른 기관 선정&quot;으로 자동으로 바뀌어요.</p>}
               </>
             )}
             <Err msg={err} />
             <div className="crm-acts">
               <button type="button" className="b2" onClick={() => ref.current?.close()}>취소</button>
-              <button type="submit" className="b1" disabled={busy}>{busy ? "바꾸는 중" : mode === "won" ? "수주로 바꾸기" : "실패로 바꾸기"}</button>
+              <button type="submit" className={mode === "won" ? "b1" : "b1 b1--danger"} disabled={busy}>{busy ? "처리하는 중" : mode === "won" ? "수주 처리" : "실패 처리"}</button>
+            </div>
+          </form>
+        )}
+      </dialog>
+    </>
+  );
+}
+
+/** 사유 하나 고르기 (수주 이유·실패 사유) */
+function ReasonPicker({ label, list, value, onChange }: { label: string; list: readonly string[]; value: string; onChange: (v: string) => void }) {
+  const name = useId();
+  return (
+    <fieldset className="cx-reasons">
+      <legend className="fld__lab">{label}</legend>
+      {list.map((r) => (
+        <label key={r} data-on={value === r ? "1" : "0"}><input type="radio" name={name} value={r} checked={value === r} onChange={() => onChange(r)} /> {r}</label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** 수주한 안건의 수주 이유 적기·고치기 (단추가 저절로 수주로 바꾼 안건은 비어 있다) */
+export function WonReasonButton({ dealId, reason: cur, note: curNote }: { dealId: string; reason: string; note: string }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [show, setShow] = useState(false);
+  const { busy, err, setErr, send } = useSend();
+  const [reason, setReason] = useState(cur);
+  const [note, setNote] = useState(curNote);
+  const hid = useId();
+  const open = () => { setReason(cur); setNote(curNote); setErr(""); setShow(true); requestAnimationFrame(() => ref.current?.showModal()); };
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reason) return setErr("수주 이유를 하나 골라 주세요.");
+    if (await send("move", "POST", { id: dealId, status: "won", reason, note })) ref.current?.close();
+  }
+  return (
+    <>
+      <button type="button" className="cx-lk" onClick={open}>{cur ? "고치기" : "이유 적기"}</button>
+      <dialog ref={ref} className="cx-dialog" aria-labelledby={hid} onClose={() => setShow(false)} onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}>
+        {show && (
+          <form onSubmit={save} className="cx-dialog__in">
+            <header>
+              <h2 id={hid}>수주 이유</h2>
+              <p>남긴 이유는 분석 화면에서 이유별로 모여요.</p>
+              <button type="button" className="crm-x" aria-label="닫기" onClick={() => ref.current?.close()}><X size={20} aria-hidden="true" /></button>
+            </header>
+            <ReasonPicker label="수주 이유" list={WON_REASONS} value={reason} onChange={setReason} />
+            <Field label="자세히 (선택)" htmlFor={`${hid}-n`}>
+              <textarea id={`${hid}-n`} className="ta" rows={2} value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} />
+            </Field>
+            <Err msg={err} />
+            <div className="crm-acts">
+              <button type="button" className="b2" onClick={() => ref.current?.close()}>취소</button>
+              <button type="submit" className="b1" disabled={busy}>{busy ? "저장 중" : "저장"}</button>
             </div>
           </form>
         )}
@@ -238,6 +304,7 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
   dealId: string | null; companyId: string | null; contacts: Opt[]; members: Opt[]; me: string; compact?: boolean; autoFocus?: boolean; startTab?: Tab; onDone?: () => void;
 }) {
   const { busy, err, setErr, send } = useSend();
+  const toast = useToast();
   const hid = useId();
   const [tab, setTab] = useState<Tab>(startTab);
   const [body, setBody] = useState("");
@@ -246,6 +313,9 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
   const [nextTitle, setNextTitle] = useState("");
   const [assignee, setAssignee] = useState(me);
   const [pickDate, setPickDate] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const router = useRouter();
   useEffect(() => setWho((w) => (contacts.some((c) => c.id === w) ? w : contacts[0]?.id ?? "")), [contacts]);
   const chips = useMemo(() => dueChips(), []);
   const person = contacts.find((c) => c.id === who)?.name ?? "";
@@ -253,14 +323,28 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
     e.preventDefault();
     if (!body.trim()) return setErr(tab === "task" ? "할 일을 적어 주세요." : "내용을 적어 주세요.");
     const base = { deal_id: dealId, company_id: dealId ? null : companyId, contact_id: who || null };
+    const attach = tab !== "task" && files.length > 0;
     const r = tab === "task"
       ? await send("tasks", "POST", { ...base, title: body, due_on: nextOn || null, assignee: assignee || null, category: "contact" })
       : await send("activities", "POST", {
         ...base, kind: tab, body, attendee_contacts: who ? [who] : [], attendee_members: tab === "meeting" ? [me] : [],
         next_title: nextOn ? nextTitle || (person ? `${person}에게 회신` : "다시 연락하기") : "", next_due: nextOn || null, next_category: "contact",
-      });
+      }, { refresh: !attach });
     if (!r) return;
-    setBody(""); setNextOn(""); setNextTitle(""); setPickDate(false);
+    // 기록이 저장된 뒤 파일을 올린다 (파일이 안 올라가도 기록은 남고, 기록 줄에서 다시 붙일 수 있다)
+    if (attach && r.id) {
+      setUploading(true);
+      const fails = await uploadCrmFiles(r.id, files);
+      setUploading(false);
+      router.refresh();
+      if (fails.length) {
+        setBody(""); setFiles([]);
+        setErr(`기록은 저장했어요. 파일 ${fails.length}개를 붙이지 못했어요. 기록 줄에서 다시 붙여 주세요. ${fails.join(" ")}`);
+        return;
+      }
+    }
+    setBody(""); setNextOn(""); setNextTitle(""); setPickDate(false); setFiles([]);
+    toast(tab === "task" ? "할 일을 추가했어요" : "기록을 남겼어요");
     onDone?.();
   }
   return (
@@ -271,13 +355,16 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
           return <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => { setTab(t); setErr(""); }}><I size={16} aria-hidden="true" />{TAB_LABEL[t]}</button>;
         })}
       </div>
-      <label className="sr-only" htmlFor={`${hid}-b`}>{tab === "task" ? "할 일" : "내용"}</label>
+      {tab === "meeting"
+        ? <label className="cx-compose__lab" htmlFor={`${hid}-b`}>회의록</label>
+        : <label className="sr-only" htmlFor={`${hid}-b`}>{tab === "task" ? "할 일" : "내용"}</label>}
       {tab === "task" ? (
         <input id={`${hid}-b`} className="inp cx-compose__line" value={body} maxLength={200} autoFocus={autoFocus} placeholder="예: 회복군 포함안 금액 다시 보내기" onChange={(e) => setBody(e.target.value)} />
       ) : (
-        <textarea id={`${hid}-b`} className="cx-compose__ta" rows={compact ? 6 : 2} value={body} maxLength={8000} autoFocus={autoFocus}
-          placeholder={tab === "memo" ? "통화나 미팅에서 나온 이야기를 적어요." : tab === "call" ? "통화에서 나눈 이야기, 정한 것, 남은 질문" : "미팅에서 다룬 것, 정한 것, 다음에 할 것"} onChange={(e) => setBody(e.target.value)} />
+        <textarea id={`${hid}-b`} className="cx-compose__ta" rows={tab === "meeting" ? (compact ? 10 : 6) : compact ? 6 : 2} value={body} maxLength={ACT_BODY_MAX} autoFocus={autoFocus}
+          placeholder={tab === "memo" ? "통화나 미팅에서 나온 이야기를 적어요." : tab === "call" ? "통화에서 나눈 이야기, 정한 것, 남은 질문" : "참석자, 다룬 안건, 정한 것, 다음에 할 것"} onChange={(e) => setBody(e.target.value)} />
       )}
+      {tab !== "task" && <FilePicker files={files} onChange={setFiles} />}
       {(tab !== "memo" || nextOn || pickDate || compact) && (
         <div className="cx-compose__next">
           <span className="fld__lab">{tab === "task" ? "기한" : "다음 할 일"}</span>
@@ -309,7 +396,7 @@ export function Composer({ dealId, companyId, contacts, members, me, compact = f
           </label>
         )}
         {tab === "memo" && !nextOn && !pickDate && !compact && <button type="button" className="cx-mini" onClick={() => setPickDate(true)}><CalendarBlank size={15} aria-hidden="true" />다음 할 일 날짜</button>}
-        <button type="submit" className="b1 bsm" disabled={busy}>{busy ? "저장 중" : tab === "task" ? "할 일 추가" : "기록 저장"}</button>
+        <button type="submit" className="b1 bsm" disabled={busy || uploading}>{uploading ? "파일 올리는 중" : busy ? "저장 중" : tab === "task" ? "할 일 추가" : "기록 저장"}</button>
       </div>
       <Err msg={err} />
     </form>
@@ -356,13 +443,16 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
   const [over, setOver] = useState<Stage | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
   const { err, send } = useSend();
+  const toast = useToast();
   async function move(id: string, to: Stage) {
     const from = cols.find((c) => c.cards.some((x) => x.id === id));
     if (!from || from.stage === to) return;
     const card = from.cards.find((x) => x.id === id)!;
     const before = cols;
     setCols(cols.map((c) => (c.stage === from.stage ? { ...c, count: c.count - 1, cards: c.cards.filter((x) => x.id !== id) } : c.stage === to ? { ...c, count: c.count + 1, cards: [{ ...card, days: 0 }, ...c.cards] } : c)));
-    if (!(await send("move", "POST", { id, stage: to }))) setCols(before);
+    if (!(await send("move", "POST", { id, stage: to }))) return setCols(before);
+    // 단계 옮김은 바로 처리하고 되돌리기를 준다 (시안 검토판 c-deals~move)
+    toast(`안건을 ${withRo(STAGE_LABEL[to])} 옮겼어요`, { action: { label: "되돌리기", onClick: () => { setCols(before); void send("move", "POST", { id, stage: from.stage }); } } });
   }
   return (
     <>
@@ -401,7 +491,7 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
                   </article>
                 );
               })}
-              {!c.cards.length && <p className="cx-col__empty">{c.stage === "inquiry" ? "새 문의를 안건으로 만들거나 엑셀에서 가져와요." : "이 단계 안건이 없어요."}</p>}
+              {!c.cards.length && <p className="cx-col__empty">{c.stage === "inquiry" ? "이 단계 안건이 없어요." : "이 단계 안건이 없어요."}</p>}
             </div>
           </section>
         ))}
@@ -410,17 +500,26 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
   );
 }
 
-/** 안건 지우기 (단추에서 온 안건은 서버가 막는다) */
+/** 안건 지우기 (단추에서 온 안건은 서버가 막는다). 되돌릴 수 없어 확인 창에서 처리한다 */
 export function DealDelete({ id, back }: { id: string; back: string }) {
-  const { busy, err, send } = useSend();
-  const [ask, setAsk] = useState(false);
-  if (!ask) return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={() => setAsk(true)}>안건 지우기</button></div>;
-  return (
-    <div className="crm-confirm cx-del">
-      <span className="crm-hint">이 안건의 기록·할 일·일정이 함께 지워져요. 견적서는 안건 없이 남아요.</span>
-      <button type="button" className="b2 b2--danger bsm" disabled={busy} onClick={async () => { if (await send("deals", "DELETE", { id }, { refresh: false })) location.assign(back); }}>지우기</button>
-      <button type="button" className="btxt" onClick={() => setAsk(false)}>취소</button>
-      <Err msg={err} />
-    </div>
-  );
+  const confirm = useConfirm();
+  const ask = async () => {
+    const ok = await confirm({
+      title: "안건을 지울까요?",
+      body: "지우면 이 안건의 기록·할 일·일정이 함께 지워지고 되돌릴 수 없습니다.",
+      confirmLabel: "지우기",
+      pendingLabel: "지우는 중",
+      retryLabel: "다시 지우기",
+      danger: true,
+      action: async () => {
+        const r = await fetch("/api/cro/crm/deals", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
+        if (!r?.ok) {
+          const j = (await r?.json().catch(() => ({}))) as { error?: string } | undefined;
+          throw new Error(r && r.status < 500 && j?.error ? j.error : "안건을 지우지 못했어요. 안건은 그대로예요.");
+        }
+      },
+    });
+    if (ok) location.assign(back);
+  };
+  return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={ask}>안건 지우기</button></div>;
 }

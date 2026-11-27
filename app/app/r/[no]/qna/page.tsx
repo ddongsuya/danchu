@@ -19,14 +19,14 @@ export default async function SponsorQna({ params, searchParams }: { params: Pro
       side="sponsor"
       endpoint={`/api/rfq/${rfq.rfq_no}/qna`}
       no={rfq.rfq_no}
-      substance={rfq.substance}
       backHref={`/app/r/${rfq.rfq_no}`}
       items={d.items}
       targets={d.targets}
+      audience={d.audience}
       canAsk={d.canAsk}
       canAnswer={d.canAnswer}
-      askBy={null}
-      tests={d.tests}
+      closed={d.closed}
+      failed={d.failed}
       initialId={q}
       initialTo={to}
       readOnly={s.profile.role === "admin"}

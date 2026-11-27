@@ -21,7 +21,7 @@ export function PreregGate({ role, days, reserved, hasOrg, children }: { role: "
 function Status({ reserved }: { reserved: boolean }) {
   return reserved
     ? <span className="pr-chip">사전예약 완료</span>
-    : <a className="pr-chip pr-chip--go" href="/early">사전예약하기 <CaretRight size={12} aria-hidden="true" /></a>;
+    : <a className="pr-chip pr-chip--go" href="/early">사전예약 <CaretRight size={12} aria-hidden="true" /></a>;
 }
 
 function Count({ days }: { days: number }) {
@@ -37,9 +37,9 @@ function Count({ days }: { days: number }) {
 type Tab = "rfq" | "cmp" | "pick" | "lib";
 const TABS: { k: Tab; t: string; d: string }[] = [
   { k: "rfq", t: "요청서", d: "한 번의 요청으로 여러 기관에." },
-  { k: "cmp", t: "비교표", d: "금액만 비교 마시고 구성도 함께 비교하세요." },
+  { k: "cmp", t: "비교표", d: "금액과 구성을 함께 비교." },
   { k: "pick", t: "선정", d: "선정 전까지 회사명은 비공개로." },
-  { k: "lib", t: "자료실", d: "ICH · 식약처 독성시험기준 원문을 확인하세요." },
+  { k: "lib", t: "자료실", d: "ICH · 식약처 독성시험기준 원문." },
 ];
 
 /** 의뢰자 대기 화면: 왼쪽 네 가지를 고르면 오른쪽에 화면 확인용 예시가 바뀐다 */
@@ -52,7 +52,7 @@ function PreregReq({ days, reserved }: { days: number; reserved: boolean }) {
         <div>
           <Status reserved={reserved} />
           <h1 id="pr-t">지금은 사전예약 기간이에요.</h1>
-          <p className="pr-sub">시범 운영 전에 단추를 미리 둘러보세요.</p>
+          <p className="pr-sub">요청은 6월 1일부터 열려요.</p>
         </div>
         <Count days={days} />
       </header>
@@ -91,7 +91,7 @@ function ReqPreview() {
         <div><dt>보낼 기관</dt><dd>3곳</dd></div>
       </dl>
       <p className="pr-note">요청서 한 장이 고른 기관 모두에게 가요.</p>
-      <a className="pr-btn" href="/request">요청서 둘러보기</a>
+      <a className="pr-btn" href="/request">요청서 보기</a>
     </>
   );
 }
@@ -150,9 +150,9 @@ function LibPreview() {
 
 const PREP_KEY = "danchu.prereg.cro";
 const PREP: { k: string; t: string; d: string; href: string }[] = [
-  { k: "org", t: "기관 정보 등록", d: "견적 보낼 시험과 설비를 적어두세요.", href: "/cro/org" },
-  { k: "sample", t: "예시 요청서 보기", d: "의뢰자의 요청서를 미리 확인하세요.", href: "/for-cro#st" },
-  { k: "terms", t: "이용 조건 확인", d: "2027년 말까지 무료로 이용해보세요.", href: "/terms/cro" },
+  { k: "org", t: "기관 정보 등록", d: "견적 보낼 시험과 설비", href: "/cro/org" },
+  { k: "sample", t: "예시 요청서 보기", d: "의뢰자 요청서 예시", href: "/for-cro#st" },
+  { k: "terms", t: "이용 조건 확인", d: "기관 이용약관", href: "/terms/cro" },
 ];
 
 /** 기관 대기 화면: 미리 준비하기 세 가지. 본 항목은 이 브라우저에 기억한다 (기관 정보는 등록 여부로) */
@@ -175,7 +175,7 @@ function PreregCro({ days, reserved, hasOrg }: { days: number; reserved: boolean
       <div className="pr-cro-t">
         <Status reserved={reserved} />
         <h1 id="pr-t">지금은 사전예약 기간이에요.</h1>
-        <p className="pr-sub">6월 1일부터 들어오는 요청에 견적을 보내보세요.</p>
+        <p className="pr-sub">요청은 6월 1일부터 들어와요.</p>
       </div>
       <div className="pr-prep">
         <p className="pr-prep-h"><b>미리 준비하기</b><span className="tnum" aria-label={`3개 중 ${doneN}개 완료`}>{doneN}/3</span></p>
@@ -192,7 +192,7 @@ function PreregCro({ days, reserved, hasOrg }: { days: number; reserved: boolean
           ))}
         </ul>
       </div>
-      <Link className="pr-go" href="/cro/org">{hasOrg ? "기관 정보 보기" : "기관 정보 등록하기"}</Link>
+      <Link className="pr-go" href="/cro/org">{hasOrg ? "기관 정보 보기" : "기관 정보 등록"}</Link>
     </section>
   );
 }

@@ -10,10 +10,17 @@ import { glpCoverage } from "@/lib/quote-items";
 import { designOfStored, explainOf } from "@/lib/catalog";
 import { Crumb } from "@/components/app/ui";
 import { CompareBoard, type CompareCol } from "@/components/CompareBoard";
+import { SelectedBanner } from "@/components/app/SelectedBanner";
+import { ComparePending } from "@/components/app/ComparePending";
+import { funnel } from "@/lib/request-story";
+import { quoteSelectable } from "@/lib/quote-policy";
+import { submittedDoc } from "@/lib/quote-doc-db";
+import { contractReportDue } from "@/lib/contract-reminder";
+import { eulReul } from "@/lib/josa";
+import { dday } from "@/lib/format";
 import { CompareReport } from "@/components/app/CompareReport";
 import { md } from "@/lib/format";
 import { comparisonOpened, pendingInvites, repliesClosed } from "@/lib/reply-window";
-import { occupiesSeat } from "@/lib/request-policy";
 import { captureError } from "@/lib/observe";
 import { hasSchedule } from "@/lib/quote-schedule";
 import { loadDetail } from "@/lib/detail-data";
@@ -32,32 +39,11 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   // 참여한 기관 중 아직 제출하지 않은 곳만 센다 (0023). 참여 결정 전 안내는 의뢰자에게 보이지 않는다
   const pending = pendingInvites(d.invites);
   if (!comparisonOpened(rfq) && s.profile.role !== "admin") {
-    const joined = d.invites.filter((i) => occupiesSeat(i)).length;
-    const submittedCount = d.invites.filter((i) => occupiesSeat(i) && i.status === "submitted").length;
-    const ended = ["closed", "cancelled"].includes(rfq.status);
+    const f = funnel(d.invites);
     return (
       <>
         <Crumb href={`/app/r/${rfq.rfq_no}`} label={rfq.rfq_no} />
-        <div className="ph">
-          <div>
-            <h1>비교 보고서</h1>
-            <p>{rfq.substance}</p>
-          </div>
-        </div>
-        <dl className="compare-status" aria-label="회신 현황">
-          <div><dt>참여</dt><dd className="tnum">{joined}곳</dd></div>
-          <div><dt>제출</dt><dd className="tnum">{submittedCount}곳</dd></div>
-          <div><dt>회신 기한</dt><dd className="tnum">{rfq.reply_by ? md(rfq.reply_by) : "미정"}</dd></div>
-        </dl>
-        <div className="empty">
-          <b>{ended ? "보고서가 열리기 전에 마무리한 요청이에요" : "비교 보고서가 아직 열리지 않았어요"}</b>
-          {ended
-            ? "보고서가 열리지 않아 기관 이름과 견적은 공개되지 않아요."
-            : `비교 보고서는 ${rfq.reply_by ? `회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열리고, ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 내면 더 빨리 열려요. 열리면 기관 이름과 견적을 함께 보여 주고 알림을 보내요.`}
-          <div style={{ marginTop: 14 }}>
-            <Link href={`/app/r/${rfq.rfq_no}`} className="b2">요청으로 돌아가기</Link>
-          </div>
-        </div>
+        <ComparePending replyBy={rfq.reply_by} f={f} ended={["closed", "cancelled"].includes(rfq.status)} />
       </>
     );
   }
@@ -85,7 +71,9 @@ export default async function Compare({ params }: { params: Promise<{ no: string
 
   // 2차 상세 견적 (0042): 요청한 기관의 열에 1차와 나란히 보인다
   const detail = await loadDetail(rfq.id);
-  const cols: CompareCol[] = quotes.map((q) => {
+  // 기관 견적서 툴로 만든 견적서가 제출한 견적과 같은지 (패널의 "기관 견적서" 링크)
+  const docs = await Promise.all(quotes.map((q) => submittedDoc(q).then((x) => !!x, () => false)));
+  const cols: CompareCol[] = quotes.map((q, qi) => {
     const dt = detail?.targets.find((t) => t.quoteId === q.id);
     const cov = glpCoverage(authorities, certsOf.get(q.cro_org_id ?? "") ?? []);
     const items = q.cro_quote_items ?? [];
@@ -110,37 +98,31 @@ export default async function Compare({ params }: { params: Promise<{ no: string
       conditional: items.filter((i) => i.avail === "조건부 가능").length,
       items: items.map((i) => ({ seq: i.seq, avail: i.avail ?? "", amount: i.amount, weeks: i.weeks, design: designOfStored(i.design), note: (() => { const t = [i.reason, i.design && typeof i.design.note === "string" ? i.design.note : ""].filter(Boolean).join(" · "); return (rfq.selected_quote_id === q.id ? t : maskedText(t)) || undefined; })(), explain: explainOf(rows.find((r) => r.seq === i.seq)?.category ?? "", i.design?.extra), includes: inclOf(i.design) })),
       hasPdf: !!q.pdf_path,
+      hasDoc: docs[qi],
+      arrivedAt: q.first_submitted_at ?? q.submitted_at,
+      revision: q.revision,
+      blocked: quoteSelectable(q) ? null : q.valid_until && dday(q.valid_until).n < 0 ? "견적 유효기간이 지나 바로 선정할 수 없어요." : "정식 견적서와 착수일이 확인되면 선정할 수 있어요.",
       askHref: qnaWindow(rfq).sponsorAsk ? `/app/r/${rfq.rfq_no}/qna?to=${q.invite_id}` : null,
       selected: rfq.selected_quote_id === q.id,
       auto: !!q.auto,
       operator: q.entry_source === "operator",
-      detail: dt ? { status: dt.status, total: dt.total, weeks: dt.weeks, note: (rfq.selected_quote_id === q.id ? dt.note : maskedText(dt.note)) || null, items: dt.items.map((i) => ({ ...i, reason: rfq.selected_quote_id === q.id ? i.reason : maskedText(i.reason) })) } : null,
+      detail: dt ? { at: dt.respondedAt, status: dt.status, total: dt.total, weeks: dt.weeks, note: (rfq.selected_quote_id === q.id ? dt.note : maskedText(dt.note)) || null, items: dt.items.map((i) => ({ ...i, reason: rfq.selected_quote_id === q.id ? i.reason : maskedText(i.reason) })) } : null,
     };
   });
 
   const canSelect = comparisonOpened(rfq) && !rfq.selected_quote_id && !["closed", "cancelled"].includes(rfq.status);
   const board = (
     <>
-      {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (
-        <p className="note" style={{ marginBottom: 16 }}>회신이 마감되어 견적은 더 바뀌지 않아요. 비교한 뒤 진행할 기관을 선택해 주세요.</p>
-      ) : (
+      {!comparisonOpened(rfq) && (
         <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기예요. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있어요.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
       )}
-      {detail ? (
-        <div className="cmp-detail">
-          <b>상세 견적</b>
-          <span className="tnum">2차 회신 기한 {md(detail.replyBy)} · 답한 곳 {detail.targets.filter((t) => t.status !== "sent").length}/{detail.targets.length}</span>
-        </div>
-      ) : canSelect && cols.length > 0 ? (
-        <div className="cmp-detail">
-          <b>상세 견적</b>
-          <span>1차 견적 기관 중 최대 3곳 · 요청마다 한 번</span>
-          <Link href={`/app/r/${rfq.rfq_no}/detail`} className="b2">상세 조건 보내기</Link>
-        </div>
-      ) : null}
+      {detail && <p className="cmp-msg tnum">2차 회신 기한 {md(detail.replyBy)} · 답한 곳 {detail.targets.filter((t) => t.status !== "sent").length}/{detail.targets.length}</p>}
       <CompareBoard no={rfq.rfq_no} cols={cols} rows={rows} canSelect={canSelect} />
     </>
   );
+  // 선정 결과 배너: 선정한 뒤 계약 보고 전까지 (선정 취소는 정하지 않은 정책이라 없다)
+  const award = rfq.status === "selected" ? d.award : null;
+  const banner = award ? <SelectedBanner no={rfq.rfq_no} text={`${md(award.awarded_at)} ${eulReul(award.cro_name)} 선정했어요 · 계약 결과 보고 기한 ${md(contractReportDue(award.awarded_at))}`} /> : null;
 
   return (
     <>
@@ -161,13 +143,12 @@ export default async function Compare({ params }: { params: Promise<{ no: string
         </>
       ) : (
         <CompareReport
-          no={rfq.rfq_no}
-          substance={rfq.substance}
           comparedAt={rfq.compared_at}
           cols={cols}
           rows={rows}
-          vat={`금액은 VAT 별도예요${authorities.length ? `, 제출처 ${authorities.join(", ")}` : ""}.`}
           board={board}
+          banner={banner}
+          detailHref={!detail && canSelect && cols.length > 0 ? `/app/r/${rfq.rfq_no}/detail` : null}
         />
       )}
     </>
