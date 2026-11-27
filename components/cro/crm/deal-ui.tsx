@@ -13,6 +13,7 @@ import { ACT_BODY_MAX, addDaysYmd, todayKst, weekdayKo } from "@/lib/crm-shape";
 import { Err, Field, Select, useSend, useSheetClose, type CrmOpts, type Opt } from "./forms";
 import { FilePicker, uploadCrmFiles } from "./files-ui";
 import { useToast } from "@/components/ui/Toast";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { withRo } from "@/lib/cro-due";
 
 // ─── 새 안건 · 안건 고치기 ───
@@ -499,17 +500,26 @@ export function Board({ cols: initial }: { cols: BoardColumn[] }) {
   );
 }
 
-/** 안건 지우기 (단추에서 온 안건은 서버가 막는다) */
+/** 안건 지우기 (단추에서 온 안건은 서버가 막는다). 되돌릴 수 없어 확인 창에서 처리한다 */
 export function DealDelete({ id, back }: { id: string; back: string }) {
-  const { busy, err, send } = useSend();
-  const [ask, setAsk] = useState(false);
-  if (!ask) return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={() => setAsk(true)}>안건 지우기</button></div>;
-  return (
-    <div className="crm-confirm cx-del">
-      <span className="crm-hint">이 안건의 기록·할 일·일정이 함께 지워져요. 견적서는 안건 없이 남아요.</span>
-      <button type="button" className="b2 b2--danger bsm" disabled={busy} onClick={async () => { if (await send("deals", "DELETE", { id }, { refresh: false })) location.assign(back); }}>지우기</button>
-      <button type="button" className="btxt" onClick={() => setAsk(false)}>취소</button>
-      <Err msg={err} />
-    </div>
-  );
+  const confirm = useConfirm();
+  const ask = async () => {
+    const ok = await confirm({
+      title: "안건을 지울까요?",
+      body: "지우면 이 안건의 기록·할 일·일정이 함께 지워지고 되돌릴 수 없습니다.",
+      confirmLabel: "지우기",
+      pendingLabel: "지우는 중",
+      retryLabel: "다시 지우기",
+      danger: true,
+      action: async () => {
+        const r = await fetch("/api/cro/crm/deals", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
+        if (!r?.ok) {
+          const j = (await r?.json().catch(() => ({}))) as { error?: string } | undefined;
+          throw new Error(r && r.status < 500 && j?.error ? j.error : "안건을 지우지 못했어요. 안건은 그대로예요.");
+        }
+      },
+    });
+    if (ok) location.assign(back);
+  };
+  return <div className="crm-acts cx-del"><button type="button" className="btxt" onClick={ask}>안건 지우기</button></div>;
 }

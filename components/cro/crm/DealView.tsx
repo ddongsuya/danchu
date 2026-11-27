@@ -147,7 +147,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
               <section className="cx-grp" aria-labelledby="d-qt">
                 <div className="cx-grp__h"><h2 id="d-qt">보낸 견적</h2><span className="cx-grp__end tnum">{qRows.length}건</span></div>
                 <QuoteTable rows={qRows} people={people} personHref={company ? (cid) => `${paths.clients}/${company.id}/contacts/${cid}` : undefined}
-                  empty={<>아직 보낸 견적이 없어요.</>} />
+                  empty={<>아직 보낸 견적이 없어요</>} />
               </section>
               <ContractBox deal={d} src={src} history={hist} />
             </>
@@ -179,7 +179,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
                 </section>
               ))}
             </div>
-          ) : <p className="cx-none">아직 기록이 없어요.</p>}
+          ) : <p className="cx-none">아직 기록이 없어요</p>}
           </>)}
         </div>
 
