@@ -25,14 +25,13 @@ export default async function CroQna({ params, searchParams }: { params: Promise
       side="cro"
       endpoint={`/api/quote/${inv.token}/qna`}
       no={got.rfq.no}
-      substance={got.rfq.substance}
       backHref={`/cro/r/${id}`}
       mine={d.mine}
       shared={d.shared}
       canAsk={d.canAsk && !stopped}
       canAnswer={d.canAnswer && !stopped}
-      askBy={d.replyBy}
-      tests={d.tests}
+      closed={d.closed}
+      failed={d.failed}
       initialId={q}
       readOnly={s.profile.role === "admin"}
     />

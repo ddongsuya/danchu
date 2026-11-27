@@ -2,45 +2,66 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretLeft } from "@phosphor-icons/react";
 import { CONTACT_MASK } from "@/lib/contact-guard";
-import { QNA_MAX, QNA_TOPICS, type QnaItem, type QnaScope, type QnaTarget, type QnaTopic } from "@/lib/qna";
+import { QNA_MAX, QNA_TOPICS, qnaBadge, type QnaItem, type QnaScope, type QnaTarget, type QnaTopic } from "@/lib/qna";
+import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import "./qna.css";
 
 /**
- * 의뢰자·기관 직접 질의응답 (0045). 시안 https://claude.ai/artifact/NTD7NFfqXvPUxAiLZrGnWr 승인안.
- * PC(≥960px): 왼쪽 질의 목록 + 오른쪽 질의 하나(답변 쓰기) 또는 새 질의.
- * 휴대폰: 한 화면 전체를 쓰고 목록 → 질의 하나 → (의뢰자 답변) 공개 범위 순서로 한 화면씩 넘긴다. 세로 스크롤은 목록이 길 때만.
+ * 의뢰자·기관 직접 질의응답 (0045). 시안 검토판 r-qna · r-qna-new · c-qna · q-qna.
+ * 머리 줄: 질의응답 / 요청 번호 · 전체·답변 대기 · 새 질의(창). 그 아래 닫힘 띠(선정·마무리 뒤).
+ * PC(≥960px): 왼쪽 질의 목록 + 오른쪽 질의 하나(답변 쓰기). 휴대폰: 목록 → 질의 하나를 한 화면씩.
+ * 규칙은 lib/qna.ts: 기관은 참여 뒤 비교표 전까지 묻고, 의뢰자는 비교표 뒤 견적을 낸 기관 1곳에 묻는다.
+ * 공개 범위는 의뢰자가 기관 질의에 답할 때만 고르고, 전체 공개는 확인창을 거친다. 운영자는 읽기만.
  */
 
 type Common = {
   /** POST 받을 곳: 의뢰자 /api/rfq/[no]/qna, 기관 /api/quote/[token]/qna. 빈 문자열이면 화면 검토용(보내지 않음) */
   endpoint: string;
   no: string;
-  substance: string;
   backHref: string;
   canAsk: boolean;
   canAnswer: boolean;
-  /** 기관 질의 마감 (회신 기한, 서울 날짜) */
-  askBy: string | null;
-  tests: { seq: number; name: string }[];
   initialId?: string;
   /** 운영자가 연 화면: 보내기 없음 */
   readOnly?: boolean;
+  /** 선정·마무리로 닫혔을 때 띠 문구 (lib/qna qnaClosedNote) */
+  closed?: string | null;
+  /** 질의응답을 읽지 못함 */
+  failed?: boolean;
 };
-type SponsorProps = Common & { side: "sponsor"; items: QnaItem[]; targets: QnaTarget[]; initialTo?: string };
+type SponsorProps = Common & { side: "sponsor"; items: QnaItem[]; targets: QnaTarget[]; initialTo?: string; /** 참여한 기관 수 */ audience: number };
 type CroProps = Common & { side: "cro"; mine: QnaItem[]; shared: QnaItem[] };
 export type QnaBoardProps = SponsorProps | CroProps;
 
-type View = { kind: "list" } | { kind: "item"; id: string } | { kind: "new" };
+type View = { kind: "list" } | { kind: "item"; id: string };
 
 const md = (iso: string | null) => {
   if (!iso) return "";
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00+09:00` : iso);
-  return `${d.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", timeZone: "Asia/Seoul" }).replace(/\s/g, "").replace(/\.$/, "")}`;
+  return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", timeZone: "Asia/Seoul" });
 };
-const mdhm = (iso: string) => `${md(iso)} ${new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" })}`;
+
+const SEND_FAIL = "답변을 보내지 못했어요. 입력한 내용은 그대로 있어요.";
+const ASK_FAIL = "질의를 보내지 못했어요. 입력한 내용은 그대로 있어요.";
+
+/** 서버가 규칙 위반을 알려 주면(4xx) 그 문장을, 그 밖에는 화면 문장을 쓴다 */
+async function post(endpoint: string, body: unknown, fallback: string): Promise<{ id?: string }> {
+  let res: Response;
+  try {
+    res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  } catch {
+    throw new Error(fallback);
+  }
+  const j = (await res.json().catch(() => ({}))) as { error?: string; id?: string };
+  if (!res.ok) throw new Error(res.status < 500 && j.error ? j.error : fallback);
+  return j;
+}
 
 /** 가린 연락처 자리를 따로 표시한다 */
 function Text({ text }: { text: string }) {
@@ -57,31 +78,24 @@ function Text({ text }: { text: string }) {
   );
 }
 
+/** 목록 줄의 누가 · 언제 · 주제 */
+function who(i: QnaItem, side: "sponsor" | "cro"): string {
+  if (side === "sponsor") return i.direction === "cro" ? i.party : `${i.party}에 보낸 질의`;
+  if (!i.inviteId) return "의뢰자 공개 답변";
+  return i.direction === "cro" ? "내 질의" : "의뢰자 질의";
+}
+
 export function QnaBoard(p: QnaBoardProps) {
   const router = useRouter();
-  const all = p.side === "sponsor" ? p.items : [...p.mine, ...p.shared];
-  const groups: { key: string; label: string; list: QnaItem[] }[] =
-    p.side === "sponsor"
-      ? [
-          { key: "wait", label: "답변 대기", list: p.items.filter((i) => i.toAnswer) },
-          { key: "all", label: "전체", list: p.items },
-        ]
-      : [
-          { key: "mine", label: "내 질의", list: p.mine },
-          { key: "shared", label: "공개 답변", list: p.shared },
-        ];
-  const firstGroup = p.side === "sponsor" ? (groups[0].list.length ? "wait" : "all") : "mine";
-  const [group, setGroup] = useState(firstGroup);
-  const initial: View = p.initialId && all.some((i) => i.id === p.initialId) ? { kind: "item", id: p.initialId } : p.side === "sponsor" && p.initialTo && p.canAsk ? { kind: "new" } : { kind: "list" };
-  const [view, setView] = useState<View>(initial);
-  // PC 오른쪽에 처음 보일 것: 고른 질의, 없으면 답할 질의, 없으면 첫 질의, 없으면 새 질의
-  const deskDefault = useMemo<View>(() => {
-    if (view.kind !== "list") return view;
-    const g = groups.find((x) => x.key === group)?.list ?? [];
-    const pick = g.find((i) => i.toAnswer) ?? g[0];
-    return pick ? { kind: "item", id: pick.id } : p.canAsk && !p.readOnly ? { kind: "new" } : { kind: "list" };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, group, p.canAsk, p.readOnly, all.length]);
+  const all = useMemo(() => (p.side === "sponsor" ? p.items : [...p.mine, ...p.shared]), [p]);
+  const waiting = all.filter((i) => i.answer == null);
+  const [group, setGroup] = useState<"all" | "wait">("all");
+  const [view, setView] = useState<View>(p.initialId && all.some((i) => i.id === p.initialId) ? { kind: "item", id: p.initialId } : { kind: "list" });
+  const [asking, setAsking] = useState(p.side === "sponsor" && !!p.initialTo && p.canAsk && !p.readOnly);
+  const list = group === "wait" ? waiting : all;
+  const open = !p.closed && !p.readOnly;
+  const canAsk = p.canAsk && open;
+  const canAnswer = p.canAnswer && open;
 
   useEffect(() => {
     // 주소의 ?q= 를 지금 고른 질의로 맞춘다 (새로 고쳐도 같은 질의, 알림 링크와 같은 모양)
@@ -92,68 +106,51 @@ export function QnaBoard(p: QnaBoardProps) {
     window.history.replaceState(null, "", url.toString());
   }, [view]);
 
-  const list = groups.find((g) => g.key === group)?.list ?? [];
-  const current = deskDefault.kind === "item" ? all.find((i) => i.id === deskDefault.id) ?? null : null;
-  const showNew = deskDefault.kind === "new";
+  // PC 오른쪽: 고른 질의, 없으면 답할 질의, 없으면 첫 질의
+  const current = (view.kind === "item" ? all.find((i) => i.id === view.id) : null) ?? list.find((i) => i.toAnswer) ?? list[0] ?? null;
 
-  const head = (
-    <div className="qa-head">
-      <Link href={p.backHref} className="qa-back" aria-label="요청으로 돌아가기">
-        <CaretLeft size={18} weight="bold" aria-hidden="true" />
-      </Link>
-      <div className="qa-head__t">
-        <span className="qa-no tnum">{p.no}</span>
-        <h1>질의응답</h1>
-      </div>
-      {p.side === "cro" && p.askBy && p.canAsk && (
-        <span className="qa-due">
-          질의 마감 <b className="tnum">{md(p.askBy)}</b>
-        </span>
-      )}
-    </div>
+  const note =
+    p.side === "sponsor"
+      ? !p.canAsk && open ? "새 질의는 비교표가 열린 뒤 견적을 낸 기관 1곳에 보낼 수 있어요." : ""
+      : p.canAsk && open ? "비교표가 열리기 전까지 의뢰자에게 물을 수 있어요. 선정되면 질의응답은 닫혀요." : "";
+
+  const newBtn = !p.readOnly && !p.closed && (p.side === "sponsor" || p.canAsk) && (
+    <button type="button" className="b1 bsm qa-newbtn" disabled={!canAsk} onClick={() => setAsking(true)}>
+      새 질의
+    </button>
   );
 
-  return (
-    <div className="qa" data-view={view.kind}>
-      {head}
+  let body: React.ReactNode;
+  if (p.failed) {
+    body = <ErrorState title="질의응답을 불러오지 못했어요" />;
+  } else if (all.length === 0) {
+    body = (
+      <EmptyState title="아직 질의가 없어요" action={p.side === "cro" && canAsk ? <button type="button" className="b1 bsm" onClick={() => setAsking(true)}>새 질의</button> : undefined}>
+        {note || undefined}
+      </EmptyState>
+    );
+  } else if (list.length === 0) {
+    body = <EmptyState kind="filtered" title="답변 대기 중인 질의가 없어요" action={<button type="button" className="b2 bsm" onClick={() => setGroup("all")}>필터 지우기</button>} />;
+  } else {
+    body = (
       <div className="qa-split">
-        {/* 목록 */}
         <section className="qa-list" aria-label="질의 목록">
-          <div className="qa-seg" role="tablist" aria-label="질의 구분">
-            {groups.map((g) => (
-              <button key={g.key} type="button" role="tab" aria-selected={group === g.key} className={group === g.key ? "on" : ""} onClick={() => setGroup(g.key)}>
-                {g.label} <span className="tnum">{g.list.length}</span>
-              </button>
-            ))}
-          </div>
           <div className="qa-rows">
-            {list.length === 0 && <p className="qa-empty">질의 없음</p>}
-            {list.map((i) => (
-              <button key={i.id} type="button" className={`qa-row${current?.id === i.id ? " on" : ""}`} onClick={() => setView({ kind: "item", id: i.id })}>
-                <span className="qa-meta">
-                  {i.party && <b>{i.party}</b>}
-                  <span>{i.topic}</span>
-                  {p.side === "sponsor" && i.direction === "sponsor" && <span>보낸 질의</span>}
-                  {p.side === "cro" && i.direction === "sponsor" && <span>의뢰자 질의</span>}
-                  <span className="tnum">{md(i.at)}</span>
-                  <Status i={i} />
-                </span>
-                <span className="qa-q">
-                  <Text text={i.body} />
-                </span>
-              </button>
-            ))}
+            {list.map((i) => {
+              const b = qnaBadge(i);
+              return (
+                <button key={i.id} type="button" className={`qa-row${current?.id === i.id ? " on" : ""}`} onClick={() => setView({ kind: "item", id: i.id })}>
+                  <span className="qa-row__t">
+                    <Text text={i.body} />
+                  </span>
+                  <span className="qa-meta">{`${who(i, p.side)} · ${md(i.at)} · ${i.topic}`}</span>
+                  <span className={`qa-st qa-st--${b.tone}`}>{b.label}</span>
+                </button>
+              );
+            })}
           </div>
-          {p.canAsk && !p.readOnly && (
-            <div className="qa-list__foot">
-              <button type="button" className="b1 qa-newbtn" onClick={() => setView({ kind: "new" })}>
-                새 질의
-              </button>
-            </div>
-          )}
+          {note && <p className="qa-note">{note}</p>}
         </section>
-
-        {/* 오른쪽 (휴대폰은 한 화면) */}
         <section className="qa-pane" aria-live="polite">
           {current && (
             <ItemPane
@@ -161,249 +158,271 @@ export function QnaBoard(p: QnaBoardProps) {
               item={current}
               side={p.side}
               endpoint={p.endpoint}
-              canAnswer={p.canAnswer && !p.readOnly}
+              canAnswer={canAnswer}
+              audience={p.side === "sponsor" ? p.audience : 0}
               onBack={() => setView({ kind: "list" })}
               onDone={() => router.refresh()}
             />
           )}
-          {showNew && (
-            <NewPane
-              key="new"
-              side={p.side}
-              endpoint={p.endpoint}
-              tests={p.tests}
-              targets={p.side === "sponsor" ? p.targets : []}
-              initialTo={p.side === "sponsor" ? p.initialTo : undefined}
-              onBack={() => setView({ kind: "list" })}
-              onDone={(id) => {
-                setGroup(p.side === "sponsor" ? "all" : "mine");
-                setView({ kind: "item", id });
-                router.refresh();
-              }}
-            />
-          )}
-          {!current && !showNew && <p className="qa-empty qa-empty--pane">질의 없음</p>}
         </section>
       </div>
-    </div>
-  );
-}
-
-function Status({ i }: { i: QnaItem }) {
-  if (i.answer != null) return <span className="qa-st">답변 완료</span>;
-  return <span className={i.toAnswer ? "qa-st qa-st--wait" : "qa-st"}>답변 대기</span>;
-}
-
-function scopeLabel(s: QnaScope | null): string {
-  return s === "all" ? "참여 기관 전체" : "질의 기관만";
-}
-
-function ItemPane({ item, side, endpoint, canAnswer, onBack, onDone }: { item: QnaItem; side: "sponsor" | "cro"; endpoint: string; canAnswer: boolean; onBack: () => void; onDone: () => void }) {
-  const [text, setText] = useState("");
-  const [scope, setScope] = useState<QnaScope>("all");
-  const [step, setStep] = useState<1 | 2>(1);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const answering = item.toAnswer && canAnswer;
-  const pickScope = side === "sponsor" && item.direction === "cro";
-  const asker = side === "sponsor" ? (item.direction === "cro" ? item.party : "의뢰자") : item.direction === "cro" ? (item.inviteId ? "우리 기관" : "참여 기관") : "의뢰자";
-  const answerer = side === "sponsor" ? (item.direction === "cro" ? "의뢰자" : item.party) : item.direction === "cro" ? "의뢰자" : "우리 기관";
-
-  async function send() {
-    if (busy) return;
-    const t = text.trim();
-    if (!t) return setErr("답변을 적어 주세요.");
-    if (!endpoint) return setErr("화면 검토용이라 보내지 않아요.");
-    setBusy(true);
-    setErr("");
-    try {
-      const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "answer", questionId: item.id, answer: t, ...(pickScope ? { scope } : {}) }) });
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(j.error || "답변을 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
-      setText("");
-      onDone();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "답변을 보내지 못했어요.");
-    } finally {
-      setBusy(false);
-    }
+    );
   }
 
   return (
-    <div className="qa-item" data-step={answering && pickScope ? step : 1}>
-      <div className="qa-bar">
-        <button type="button" className="qa-back" onClick={step === 2 ? () => setStep(1) : onBack} aria-label="뒤로">
+    <div className="qa" data-view={view.kind}>
+      <div className="qa-head">
+        <Link href={p.backHref} className="qa-back" aria-label="요청으로 돌아가기">
           <CaretLeft size={18} weight="bold" aria-hidden="true" />
-        </button>
-        <span className="qa-bar__t">{step === 2 ? "공개 범위" : item.party || item.topic}</span>
-      </div>
-      <div className="qa-body">
-        <div className="qa-s1">
-          <div className="qa-meta">
-            <span>{item.topic}</span>
-            {item.test && <span>{item.test}</span>}
-            <span className="tnum">{mdhm(item.at)}</span>
-            <Status i={item} />
-          </div>
-          <div className="qa-msg">
-            <span className="qa-by">질의 · {asker}</span>
-            <p className="qa-text">
-              <Text text={item.body} />
-            </p>
-          </div>
-          {item.answer != null && (
-            <div className="qa-msg">
-              <span className="qa-by">
-                답변 · {answerer} · <span className="tnum">{item.answeredAt ? mdhm(item.answeredAt) : ""}</span>
-                {item.direction === "cro" && ` · ${scopeLabel(item.scope)}`}
-              </span>
-              <p className="qa-text">
-                <Text text={item.answer} />
-              </p>
-            </div>
-          )}
-          {answering && (
-            <div className="qa-field qa-grow">
-              <label htmlFor={`ans-${item.id}`}>답변</label>
-              <textarea id={`ans-${item.id}`} value={text} maxLength={QNA_MAX} onChange={(e) => setText(e.target.value)} aria-describedby={`ans-n-${item.id}`} />
-              <span id={`ans-n-${item.id}`} className="qa-count tnum">
-                {text.length}/{QNA_MAX}
-              </span>
-            </div>
-          )}
-        </div>
-        {answering && pickScope && (
-          <fieldset className="qa-s2 qa-scope">
-            <legend>공개 범위</legend>
-            <label className={scope === "all" ? "on" : ""}>
-              <input type="radio" name={`scope-${item.id}`} checked={scope === "all"} onChange={() => setScope("all")} />
-              <span>
-                참여 기관 전체<small>질의 기관 이름 가림</small>
-              </span>
-            </label>
-            <label className={scope === "private" ? "on" : ""}>
-              <input type="radio" name={`scope-${item.id}`} checked={scope === "private"} onChange={() => setScope("private")} />
-              <span>{item.party}만</span>
-            </label>
-            <div className="qa-sum qa-m">
-              <span className="qa-by">보낼 답변</span>
-              <p>{text.trim() || "답변 없음"}</p>
-            </div>
-          </fieldset>
-        )}
-        {err && (
-          <p className="qa-err" role="alert">
-            {err}
-          </p>
-        )}
-      </div>
-      {answering && (
-        <div className="qa-foot">
-          {pickScope && step === 1 && (
-            <button type="button" className="b1 qa-m" disabled={!text.trim()} onClick={() => setStep(2)}>
-              다음
+        </Link>
+        <h1>
+          질의응답 <span className="qa-no tnum">/ {p.no}</span>
+        </h1>
+        {!p.failed && all.length > 0 && (
+          <div className="qa-seg" role="tablist" aria-label="질의 구분">
+            <button type="button" role="tab" aria-selected={group === "all"} className={group === "all" ? "on" : ""} onClick={() => setGroup("all")}>
+              전체
             </button>
-          )}
-          <button type="button" className={`b1${pickScope && step === 1 ? " qa-d" : ""}`} disabled={busy || !text.trim()} onClick={send}>
-            {busy ? "보내는 중" : "답변 보내기"}
-          </button>
-        </div>
+            <button type="button" role="tab" aria-selected={group === "wait"} className={group === "wait" ? "on" : ""} onClick={() => setGroup("wait")}>
+              답변 대기{waiting.length > 0 && <span className="tnum"> {waiting.length}</span>}
+            </button>
+          </div>
+        )}
+        <span className="qa-sp" />
+        {newBtn}
+      </div>
+      {p.closed && <p className="qa-ban">{p.closed}</p>}
+      {body}
+      {asking && (
+        <NewDialog
+          side={p.side}
+          endpoint={p.endpoint}
+          targets={p.side === "sponsor" ? p.targets : []}
+          initialTo={p.side === "sponsor" ? p.initialTo : undefined}
+          onClose={() => setAsking(false)}
+          onDone={(id) => {
+            setAsking(false);
+            setGroup("all");
+            setView({ kind: "item", id });
+            router.refresh();
+          }}
+        />
       )}
     </div>
   );
 }
 
-function NewPane({ side, endpoint, tests, targets, initialTo, onBack, onDone }: { side: "sponsor" | "cro"; endpoint: string; tests: { seq: number; name: string }[]; targets: QnaTarget[]; initialTo?: string; onBack: () => void; onDone: (id: string) => void }) {
-  const [to, setTo] = useState(initialTo && targets.some((t) => t.inviteId === initialTo) ? initialTo : targets.length === 1 ? targets[0].inviteId : "");
-  const [topic, setTopic] = useState<QnaTopic | "">("");
-  const [seq, setSeq] = useState<number | null>(null);
+function ItemPane({ item, side, endpoint, canAnswer, audience, onBack, onDone }: { item: QnaItem; side: "sponsor" | "cro"; endpoint: string; canAnswer: boolean; audience: number; onBack: () => void; onDone: () => void }) {
+  const confirm = useConfirm();
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [scope, setScope] = useState<QnaScope>("all");
   const [err, setErr] = useState("");
-  const ready = !!text.trim() && !!topic && (side === "cro" || !!to);
+  const [failed, setFailed] = useState(false);
+  const answering = item.toAnswer && canAnswer;
+  const pickScope = side === "sponsor" && item.direction === "cro";
+  const asker = side === "sponsor" ? (item.direction === "cro" ? item.party : "의뢰자") : item.direction === "cro" ? (item.inviteId ? "우리 기관" : "참여 기관") : "의뢰자";
+  const answerer = side === "sponsor" ? (item.direction === "cro" ? "의뢰자" : item.party) : item.direction === "cro" ? "의뢰자" : "우리 기관";
+  const waitNote = item.answer == null && !item.toAnswer ? (side === "cro" ? "의뢰자 답변 대기 · 의뢰자가 공개 범위를 골라 답해요" : `${item.party} 답변 대기`) : "";
+
+  async function run() {
+    if (!endpoint) throw new Error("화면 검토용이라 보내지 않아요.");
+    await post(endpoint, { action: "answer", questionId: item.id, answer: text.trim(), ...(pickScope ? { scope } : {}) }, SEND_FAIL);
+    setText("");
+    onDone();
+  }
 
   async function send() {
-    if (busy || !ready) return;
-    if (!endpoint) return setErr("화면 검토용이라 보내지 않아요.");
+    if (!text.trim()) return setErr("답변을 입력해 주세요.");
+    setErr("");
+    if (pickScope && scope === "all") {
+      // 확인창이 보내기를 실행하고, 실패하면 창 안에서 알린다. 결과는 보낸 뒤에만 true
+      await confirm({
+        title: "답변을 참여 기관 전체에 공개할까요?",
+        body: `보내면 참여한 기관${audience ? ` ${audience}곳` : ""}이 이 답변을 볼 수 있고, 질의한 기관 이름은 밝히지 않습니다.`,
+        confirmLabel: "답변 보내기",
+        pendingLabel: "보내는 중",
+        retryLabel: "다시 보내기",
+        action: run,
+      });
+      return;
+    }
+    try {
+      await run();
+      setFailed(false);
+    } catch (e) {
+      setFailed(true);
+      setErr(e instanceof Error ? e.message : SEND_FAIL);
+    }
+  }
+
+  return (
+    <div className="qa-item">
+      <div className="qa-bar">
+        <button type="button" className="qa-back" onClick={onBack} aria-label="목록으로">
+          <CaretLeft size={18} weight="bold" aria-hidden="true" />
+        </button>
+        <span className="qa-bar__t">{item.party || item.topic}</span>
+      </div>
+      <div className="qa-body">
+        <div className="qa-meta">
+          <span>{item.topic}</span>
+          {item.test && <span>{item.test}</span>}
+          <span className="tnum">{md(item.at)}</span>
+        </div>
+        <div className="qa-msg">
+          <span className="qa-by">질의 · {asker}</span>
+          <p className="qa-text">
+            <Text text={item.body} />
+          </p>
+        </div>
+        {item.answer != null && (
+          <div className="qa-msg">
+            <span className="qa-by">
+              답변 · {answerer} · <span className="tnum">{md(item.answeredAt)}</span>
+              {item.direction === "cro" && ` · ${item.scope === "all" ? "참여 기관 전체" : "질의한 기관만"}`}
+            </span>
+            <p className="qa-text">
+              <Text text={item.answer} />
+            </p>
+          </div>
+        )}
+        {waitNote && <p className="qa-note">{waitNote}</p>}
+        {answering && (
+          <div className="qa-form">
+            <div className="qa-field">
+              <label htmlFor={`ans-${item.id}`}>답변</label>
+              <textarea id={`ans-${item.id}`} value={text} maxLength={QNA_MAX} onChange={(e) => setText(e.target.value)} aria-invalid={!!err && !text.trim()} aria-describedby={`ans-n-${item.id}`} />
+              <span id={`ans-n-${item.id}`} className="qa-count tnum">
+                {text.length}/{QNA_MAX}
+              </span>
+            </div>
+            {pickScope && (
+              <fieldset className="qa-field qa-scope">
+                <legend>공개 범위</legend>
+                <div className="qa-radios">
+                  <label>
+                    <input type="radio" name={`scope-${item.id}`} checked={scope === "private"} onChange={() => setScope("private")} />
+                    질의한 기관만
+                  </label>
+                  <label>
+                    <input type="radio" name={`scope-${item.id}`} checked={scope === "all"} onChange={() => setScope("all")} />
+                    참여 기관 전체
+                  </label>
+                </div>
+                <p className="qa-help">참여 기관 전체를 고르면 다른 기관에는 질의한 기관을 밝히지 않아요.</p>
+              </fieldset>
+            )}
+            {err && (
+              <p className="qa-err" role="alert">
+                {err}
+              </p>
+            )}
+            <div className="qa-foot">
+              <Button className="b1" onClick={send}>
+                {failed ? "다시 보내기" : "답변 보내기"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** 새 질의 창 (시안 r-qna-new · c-qna~new). 처리 중에는 닫히지 않고, 실패는 창 안에서 알린다 */
+function NewDialog({ side, endpoint, targets, initialTo, onClose, onDone }: { side: "sponsor" | "cro"; endpoint: string; targets: QnaTarget[]; initialTo?: string; onClose: () => void; onDone: (id: string) => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const [to, setTo] = useState(initialTo && targets.some((t) => t.inviteId === initialTo) ? initialTo : targets[0]?.inviteId ?? "");
+  const [topic, setTopic] = useState<QnaTopic | "">("");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [fieldErr, setFieldErr] = useState<{ topic?: string; body?: string }>({});
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+  }, []);
+
+  async function send() {
+    if (busy) return;
+    const fe = { topic: topic ? undefined : "주제를 골라 주세요.", body: text.trim() ? undefined : "질의 내용을 입력해 주세요." };
+    setFieldErr(fe);
+    if (fe.topic || fe.body) {
+      ref.current?.querySelector<HTMLElement>(fe.topic ? "input[name='qa-topic']" : "#qa-new-body")?.focus();
+      return;
+    }
     setBusy(true);
     setErr("");
     try {
-      const res = await fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "ask", inviteId: to || undefined, topic, testSeq: seq, body: text.trim() }) });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; id?: string };
-      if (!res.ok || !j.id) throw new Error(j.error || "질의를 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
-      setText("");
+      if (!endpoint) throw new Error("화면 검토용이라 보내지 않아요.");
+      const j = await post(endpoint, { action: "ask", inviteId: side === "sponsor" ? to : undefined, topic, testSeq: null, body: text.trim() }, ASK_FAIL);
+      if (!j.id) throw new Error(ASK_FAIL);
       onDone(j.id);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "질의를 보내지 못했어요.");
+      setErr(e instanceof Error ? e.message : ASK_FAIL);
     } finally {
       setBusy(false);
     }
   }
 
+  const label = side === "sponsor" ? "보내기" : "질의 보내기";
   return (
-    <div className="qa-item" data-step={1}>
-      <div className="qa-bar">
-        <button type="button" className="qa-back" onClick={onBack} aria-label="뒤로">
-          <CaretLeft size={18} weight="bold" aria-hidden="true" />
-        </button>
-        <span className="qa-bar__t">새 질의</span>
-      </div>
-      <div className="qa-body">
-        <div className="qa-s1">
-          <h2 className="qa-d qa-newh">새 질의</h2>
-          {side === "sponsor" && (
-            <fieldset className="qa-field">
-              <legend>받는 기관</legend>
-              <div className="qa-chips">
-                {targets.map((t) => (
-                  <button key={t.inviteId} type="button" aria-pressed={to === t.inviteId} className={to === t.inviteId ? "on" : ""} onClick={() => setTo(t.inviteId)}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          )}
-          <fieldset className="qa-field">
-            <legend>관련 항목</legend>
-            <div className="qa-chips">
-              {QNA_TOPICS.map(([k, label]) => (
-                <button key={k} type="button" aria-pressed={topic === k} className={topic === k ? "on" : ""} onClick={() => setTopic(k)}>
-                  {label}
-                </button>
+    <dialog
+      ref={ref}
+      className="ix-dialog qa-dlg"
+      aria-labelledby="qa-dlg-t"
+      onCancel={(e) => { e.preventDefault(); if (!busy) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}
+    >
+      <form className="ix-dialog__in" onSubmit={(e) => { e.preventDefault(); void send(); }} aria-busy={busy || undefined}>
+        <h2 id="qa-dlg-t" className="ix-dialog__title">새 질의</h2>
+        {side === "sponsor" && (
+          <div className="qa-field">
+            <label htmlFor="qa-new-to">받는 기관</label>
+            <select id="qa-new-to" value={to} onChange={(e) => setTo(e.target.value)} disabled={busy}>
+              {targets.map((t) => (
+                <option key={t.inviteId} value={t.inviteId}>
+                  {t.label}
+                </option>
               ))}
-            </div>
-          </fieldset>
-          {tests.length > 0 && (
-            <fieldset className="qa-field">
-              <legend>관련 시험</legend>
-              <div className="qa-chips">
-                {tests.map((t) => (
-                  <button key={t.seq} type="button" aria-pressed={seq === t.seq} className={seq === t.seq ? "on" : ""} onClick={() => setSeq(seq === t.seq ? null : t.seq)}>
-                    {t.name}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          )}
-          <div className="qa-field qa-grow">
-            <label htmlFor="qa-new-body">질의 내용</label>
-            <textarea id="qa-new-body" value={text} maxLength={QNA_MAX} onChange={(e) => setText(e.target.value)} aria-describedby="qa-new-n" />
-            <span id="qa-new-n" className="qa-count tnum">
-              {text.length}/{QNA_MAX}
-            </span>
+            </select>
           </div>
+        )}
+        <fieldset className="qa-field">
+          <legend>주제</legend>
+          <div className="qa-radios">
+            {QNA_TOPICS.map(([k, l]) => (
+              <label key={k}>
+                <input type="radio" name="qa-topic" checked={topic === k} onChange={() => setTopic(k)} disabled={busy} aria-invalid={!!fieldErr.topic} />
+                {l}
+              </label>
+            ))}
+          </div>
+          {fieldErr.topic && <p className="qa-err">{fieldErr.topic}</p>}
+        </fieldset>
+        <div className="qa-field">
+          <label htmlFor="qa-new-body">{side === "sponsor" ? "질의 내용" : "내용"}</label>
+          <textarea id="qa-new-body" value={text} maxLength={QNA_MAX} onChange={(e) => setText(e.target.value)} disabled={busy} aria-invalid={!!fieldErr.body} aria-describedby="qa-new-help" />
+          {fieldErr.body && <p className="qa-err">{fieldErr.body}</p>}
         </div>
+        <p id="qa-new-help" className="qa-help">
+          {side === "sponsor" ? "견적을 낸 기관 1곳에 보내요 · 1,000자까지 · 선정 전에는 연락처가 가려져요." : "의뢰자에게 보내요 · 1,000자까지 · 연락처는 선정 전까지 가려져요."}
+        </p>
         {err && (
-          <p className="qa-err" role="alert">
+          <p className="ix-dialog__err" role="alert">
             {err}
           </p>
         )}
-      </div>
-      <div className="qa-foot">
-        <button type="button" className="b1" disabled={busy || !ready} onClick={send}>
-          {busy ? "보내는 중" : "질의 보내기"}
-        </button>
-      </div>
-    </div>
+        <div className="ix-dialog__acts">
+          <button type="button" className="b2" disabled={busy} onClick={onClose}>
+            취소
+          </button>
+          <button type="submit" className="b1" disabled={busy} aria-busy={busy || undefined}>
+            {busy ? "보내는 중" : err ? "다시 보내기" : label}
+          </button>
+        </div>
+      </form>
+    </dialog>
   );
 }

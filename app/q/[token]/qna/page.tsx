@@ -21,14 +21,13 @@ export default async function TokenQna({ params, searchParams }: { params: Promi
       side="cro"
       endpoint={`/api/quote/${token}/qna`}
       no={got.rfq.no}
-      substance={got.rfq.substance}
       backHref={`/q/${token}`}
       mine={d.mine}
       shared={d.shared}
       canAsk={d.canAsk && !stopped}
       canAnswer={d.canAnswer && !stopped}
-      askBy={d.replyBy}
-      tests={d.tests}
+      closed={d.closed}
+      failed={d.failed}
       initialId={q}
       readOnly={opts.operator}
     />
