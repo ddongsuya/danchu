@@ -67,3 +67,10 @@ export function saveStatus(state: SaveState, at: number | null): string {
 export function validUntilError(v: string, today: string): string | null {
   return v && v < today ? "오늘 이후 날짜를 골라 주세요." : null;
 }
+
+/** "협의로" · "견적으로": 받침이 있으면 "으로" (ㄹ 받침은 "로"). 토스트 문장용 */
+export function withRo(w: string): string {
+  const c = w.charCodeAt(w.length - 1) - 0xac00;
+  const jong = c >= 0 && c < 11172 ? c % 28 : 0;
+  return `${w}${jong && jong !== 8 ? "으로" : "로"}`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_REPLY_PDF, daysLeft, doneAt, replyDueLabel, replyPdfError, saveStatus, sortByReplyDue, validUntilError } from "@/lib/cro-due";
+import { MAX_REPLY_PDF, daysLeft, doneAt, replyDueLabel, replyPdfError, saveStatus, sortByReplyDue, validUntilError, withRo } from "@/lib/cro-due";
 
 const TODAY = "2027-07-14";
 
@@ -70,5 +70,11 @@ describe("회신 쓰기 도우미", () => {
     expect(validUntilError("2027-07-10", TODAY)).toBe("오늘 이후 날짜를 골라 주세요.");
     expect(validUntilError("2027-07-14", TODAY)).toBeNull();
     expect(validUntilError("", TODAY)).toBeNull();
+  });
+});
+
+describe("withRo", () => {
+  it("받침에 맞춰 로/으로", () => {
+    expect(["문의", "견적", "협의", "접수", "계약", "서울"].map(withRo)).toEqual(["문의로", "견적으로", "협의로", "접수로", "계약으로", "서울로"]);
   });
 });
