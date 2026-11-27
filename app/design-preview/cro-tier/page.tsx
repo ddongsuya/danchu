@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppState } from "@/components/app/AppState";
 import { Shell } from "@/components/shell/Shell";
-import { Pipeline } from "@/components/cro/Pipeline";
+import { RequestsBoard } from "@/components/cro/RequestsBoard";
+import { todaySeoul } from "@/lib/format";
 import { TodayView } from "@/components/cro/crm/TodayView";
 import { buildPipeline } from "@/lib/pipeline";
 import { croNav, CRO_PATHS, type CroTier } from "@/lib/cro-nav";
@@ -28,7 +29,9 @@ export default async function CroTierPreview({ searchParams }: { searchParams: P
   return (
     <AppState>
       <Shell session={SESSION} nav={nav} tabs={tabs} plan={PLANS[tier].name} usage={usage}>
-        {c ? <TodayView c={c} undecided={[...c.danchu.values()]} /> : <Pipeline items={items} sel={null} paths={PATHS} companyOf={{}} />}
+        {/* 시안 검토판 c-req-free: 시범 운영 중에는 모든 기관이 Pro 메뉴라 무료·Plus 메뉴는 2028년 이후 화면이다 */}
+        {!c && <p className="cx-preview" role="note">2028년 이후 {PLANS[tier].name} 요금제 메뉴 예시 · 시범 운영 중에는 모든 기관이 Pro 메뉴를 봐요</p>}
+        {c ? <TodayView c={c} undecided={[...c.danchu.values()]} /> : <RequestsBoard items={items} awards={[]} query={{ tab: "all", q: "", cat: "", due: "", glp: "", sp: "", sel: null }} paths={PATHS} companyOf={{}} today={todaySeoul()} base="/design-preview/cro-tier" />}
       </Shell>
     </AppState>
   );
