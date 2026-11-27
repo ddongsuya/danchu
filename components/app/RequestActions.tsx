@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { useRouter } from "next/navigation";
 
 async function post(url: string, body?: unknown): Promise<void> {
@@ -9,64 +10,69 @@ async function post(url: string, body?: unknown): Promise<void> {
 }
 
 /**
- * 기관이 보고한 계약 내용을 의뢰자가 확인한다. 맞으면 요청을 마치고, 다르면 운영자가 기관과 확인한다.
- * 7일 안에 답이 없으면 보고 내용대로 마무리된다는 사실을 함께 알린다.
+ * 기관이 보고한 계약 내용을 의뢰자가 확인한다 (시안 r-confirm · r-dispute). 이 카드가 확인창 역할이라 "맞아요"는 바로 확정하고,
+ * "달라요"는 확인창에서 실제와 다른 부분을 받아 운영자에게 보낸다. 보고 7일 뒤 답이 없으면 자동 확정된다.
  */
-export function ContractConfirm({ no, cro, date, amount, autoOn, gap }: { no: string; cro: string; date: string; amount: string; autoOn: string; gap?: string }) {
+export function ContractConfirm({ no, cro, date, amount, amountWon, gap }: { no: string; cro: string; date: string; amount: string; amountWon: string; autoOn?: string; gap?: string }) {
   const router = useRouter();
-  const [mode, setMode] = useState<"ask" | "dispute">("ask");
-  const [note, setNote] = useState("");
+  const confirm = useConfirm();
+  const note = useRef("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const run = async (action: "confirm" | "dispute") => {
+  const ok = async () => {
     if (busy) return;
     setBusy(true);
     setErr("");
     try {
-      await post(`/api/rfq/${encodeURIComponent(no)}/contract`, { action, note });
+      await post(`/api/rfq/${encodeURIComponent(no)}/contract`, { action: "confirm" });
       router.refresh();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "처리하지 못했어요.");
+    } catch {
+      setErr("계약을 확정하지 못했어요. 계약 상태는 바뀌지 않았어요.");
     } finally {
       setBusy(false);
     }
+  };
+  const dispute = async () => {
+    note.current = "";
+    const sent = await confirm({
+      title: "계약 내용이 다르다고 알릴까요?",
+      body: (
+        <>
+          <p>보내면 운영자가 기관과 확인한 뒤 알려 주고, 그동안 자동 확정은 멈춥니다.</p>
+          <label className="fld">
+            <span className="fld__label">실제와 다른 부분</span>
+            <textarea className="ta" rows={3} maxLength={1000} onChange={(e) => { note.current = e.currentTarget.value; }} />
+          </label>
+        </>
+      ),
+      confirmLabel: "운영자에게 보내기",
+      cancelLabel: "돌아가기",
+      pendingLabel: "보내는 중",
+      action: async () => {
+        if (!note.current.trim()) throw new Error("실제와 다른 부분을 적어 주세요.");
+        await post(`/api/rfq/${encodeURIComponent(no)}/contract`, { action: "dispute", note: note.current }).catch(() => {
+          throw new Error("운영자에게 보내지 못했어요. 입력한 내용은 그대로 있어요.");
+        });
+      },
+    });
+    if (sent) router.refresh();
   };
   return (
     <div id="contract-confirm" className="card" style={{ padding: 18, scrollMarginTop: 88 }}>
       <div className="sec-title" style={{ margin: "0 0 6px" }}>
         <h2>계약 내용이 맞나요?</h2>
       </div>
-      <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 12 }}>
-        <b style={{ fontWeight: 600, color: "var(--ink)" }}>{cro} 보고 · 체결일 {date} · 계약금액 {amount}</b>
-        {gap && (
-          <>
-            <br />
-            <span className="tnum">{gap}</span>
-          </>
-        )}
-        <br />
-        {autoOn}까지 답이 없으면 보고 내용대로 마무리해요.
-      </p>
-      {mode === "dispute" && (
-        <div className="fld" style={{ marginBottom: 12 }}>
-          <label className="fld__lab" htmlFor="dispute-note">실제와 다른 부분</label>
-          <textarea id="dispute-note" className="ta" rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
-          <span className="fld__help">운영자가 기관과 확인한 뒤 알려요.</span>
-        </div>
-      )}
+      <p style={{ fontSize: 14, color: "var(--body)", marginBottom: 12 }}>맞아요를 누르면 계약금액 {amountWon}으로 계약이 확정되고, 확정한 뒤에는 고칠 수 없습니다.</p>
+      <div className="card--rows" style={{ marginBottom: 12 }}>
+        <div className="kv"><span className="kv__k">기관</span><span className="kv__v">{cro}</span></div>
+        <div className="kv"><span className="kv__k">계약금액 (VAT 별도)</span><span className="kv__v tnum">{amount}</span></div>
+        <div className="kv"><span className="kv__k">계약일</span><span className="kv__v tnum">{date}</span></div>
+        {gap && <div className="kv"><span className="kv__k">견적 대비</span><span className="kv__v tnum">{gap}</span></div>}
+      </div>
       {err && <p className="note note--err" role="alert" style={{ marginBottom: 12 }}>{err}</p>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {mode === "ask" ? (
-          <>
-            <button type="button" className="b1" disabled={busy} onClick={() => run("confirm")}>{busy ? "처리 중…" : "맞아요"}</button>
-            <button type="button" className="b2" disabled={busy} onClick={() => setMode("dispute")}>달라요</button>
-          </>
-        ) : (
-          <>
-            <button type="button" className="b1" disabled={busy || !note.trim()} onClick={() => run("dispute")}>{busy ? "보내는 중…" : "운영자에게 보내기"}</button>
-            <button type="button" className="b2" disabled={busy} onClick={() => setMode("ask")}>돌아가기</button>
-          </>
-        )}
+        <button type="button" className="b2" disabled={busy} onClick={() => void dispute()}>달라요</button>
+        <button type="button" className="b1" disabled={busy} aria-busy={busy || undefined} onClick={ok}>{busy ? "확정하는 중" : err ? "다시 확정" : "맞아요"}</button>
       </div>
     </div>
   );

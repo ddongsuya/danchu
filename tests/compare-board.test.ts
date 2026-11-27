@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { boardDiffCount, readBoardUrl, sortCols, testDiffers, writeBoardUrl, type CompareCol } from "@/lib/compare-board";
 import { topCategoryAll } from "@/lib/compare-report";
-import { eulReul, gwaWa } from "@/lib/josa";
+import { eulReul, gwaWa, iGa } from "@/lib/josa";
 
 const col = (id: string, total: number, over: Partial<CompareCol> = {}): CompareCol => ({
   id, name: id, total, weeks: 10, start: "2027-08-01", valid: null, pay: null, includes: [], note: null, glpOk: true, glpMissing: [], glp: [],
@@ -58,5 +58,7 @@ describe("이름 뒤 조사", () => {
     expect(gwaWa("예시 기관 B")).toBe("예시 기관 B와");
     expect(gwaWa("연구소 1")).toBe("연구소 1과");
     expect(gwaWa("바이오(주)")).toBe("바이오(주)와");
+    expect(iGa("예시 기관 B")).toBe("예시 기관 B가");
+    expect(iGa("한국독성연구원")).toBe("한국독성연구원이");
   });
 });

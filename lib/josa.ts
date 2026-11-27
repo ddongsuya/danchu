@@ -19,3 +19,5 @@ function hasFinal(word: string): boolean {
 export const eulReul = (w: string) => `${w}${hasFinal(w) ? "을" : "를"}`;
 /** "기관 A" → "기관 A와", "한국독성" → "한국독성과" */
 export const gwaWa = (w: string) => `${w}${hasFinal(w) ? "과" : "와"}`;
+/** "기관 B" → "기관 B가", "한국독성" → "한국독성이" */
+export const iGa = (w: string) => `${w}${hasFinal(w) ? "이" : "가"}`;
