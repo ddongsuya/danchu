@@ -27,7 +27,7 @@ export default async function TokenRequest({ params, searchParams }: { params: P
         <div className="ph">
           <div>
             <span className="q-no">{got.rfq.no}</span>
-            <h1>{withdraw ? "이 요청의 참여를 철회해요" : "이번 요청에 불참해요"}</h1>
+            <h1>{withdraw ? "이 요청의 참여를 철회하시겠습니까?" : "이번 요청에 불참하시겠습니까?"}</h1>
             <p>
               {withdraw
                 ? "철회하면 자리가 비고 청구하지 않아요. 이 요청에는 다시 참여할 수 없어요."

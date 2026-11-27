@@ -37,7 +37,7 @@ export function LogView({ deals, start, members, me, back, base }: { deals: LogD
           <Composer key={id} dealId={id} companyId={d?.companyId ?? null} contacts={d?.contacts ?? []} members={members} me={me} compact startTab="call" onDone={() => router.push(`${base}/${id}`)} />
         </>
       ) : (
-        <p className="cx-none">진행 중인 안건이 없어요. 안건을 먼저 만들면 통화와 미팅을 붙여 남길 수 있어요.</p>
+        <p className="cx-none">진행 중인 안건이 없어요.</p>
       )}
     </div>
   );

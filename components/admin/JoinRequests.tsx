@@ -45,7 +45,7 @@ export function JoinRequests({ orgId, members, orgEmail = null, managed = false 
     <div className="card card--rows" style={{ borderColor: "var(--bline)" }}>
       <div style={{ padding: "12px 0 4px", fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>담당자 합류 신청 {members.length}</div>
       <p style={{ padding: "0 0 8px", fontSize: 12, color: "var(--muted)" }}>
-        기관 이메일 도메인과 담당자 정보를 확인한 뒤 연결하세요. 연결 전에는 이 기관의 요청서를 볼 수 없습니다.
+        기관 이메일 도메인과 담당자 정보를 확인한 뒤 연결해 주세요. 연결 전에는 이 기관의 요청서를 볼 수 없습니다.
         {orgEmail ? ` 등록된 대표 이메일: ${orgEmail}` : ""}
         {managed ? " 운영자 관리 기관은 연결하면 운영자 관리가 풀리고, 선정된 요청의 의뢰자 연락처까지 담당자에게 보입니다." : ""}
       </p>

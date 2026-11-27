@@ -81,7 +81,7 @@ export function CompaniesView({ c, q }: { c: CrmCtx; q: CompaniesQuery }) {
       ) : data.companies.length ? <p className="cx-none">조건에 맞는 고객사가 없어요.</p> : (
         <section className="cx-empty">
           <h2>아직 고객사가 없어요</h2>
-          <p>단추 요청에서 선정되면 의뢰자 회사와 담당자가 저절로 들어와요. 지금 쓰는 고객 엑셀이 있으면 한 번에 옮길 수 있어요.</p>
+          <p>단추 요청에서 선정되면 의뢰자 회사와 담당자가 자동으로 들어와요.</p>
           <div className="cx-ph__acts"><Link className="b2" href={paths.import}>엑셀 가져오기</Link></div>
         </section>
       )}
@@ -187,7 +187,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                       </tbody>
                     </table>
                   </div>
-                ) : <p className="cx-none">이 고객사의 안건이 없어요. 문의가 오면 &quot;안건 만들기&quot;로 시작해요.</p>}
+                ) : <p className="cx-none">이 고객사의 안건이 없어요.</p>}
               </section>
 
               <section className="cx-grp" aria-labelledby="co-recent">
@@ -201,7 +201,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                       </section>
                     ))}
                   </div>
-                ) : <p className="cx-none">아직 기록이 없어요. 안건 화면에서 통화·미팅·메모를 남기면 여기에도 모여요.</p>}
+                ) : <p className="cx-none">아직 기록이 없어요.</p>}
               </section>
             </div>
 
@@ -229,7 +229,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                       );
                     })}
                   </ul>
-                ) : <p className="cx-muted cx-small">담당자를 추가하면 안건과 기록에 이름으로 붙어요.</p>}
+                ) : <p className="cx-muted cx-small">담당자가 없어요.</p>}
               </section>
               <section className="cx-grp" aria-labelledby="co-info">
                 <div className="cx-grp__h"><h2 id="co-info">회사 정보</h2></div>
@@ -277,7 +277,6 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
         ) : (
           <section className="cx-empty">
             <h2>아직 담당자가 없어요</h2>
-            <p>담당자를 추가하면 안건과 기록에 이름으로 붙고, 담당자별로 보낸 견적과 결과를 모아 봐요.</p>
             <div className="cx-ph__acts"><SheetButton className="b2 bsm" title="담당자 추가" label={<><Plus size={16} aria-hidden="true" />담당자 추가</>}><ContactForm companyId={co.id} /></SheetButton></div>
           </section>
         )
@@ -290,7 +289,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
             <span className="cx-grp__end tnum">{qRows.length}건 · 선정 {qRows.filter((r) => r.result.tone === "won").length} · 실패 {qRows.filter((r) => r.result.tone === "lost").length}</span>
           </div>
           <QuoteTable rows={qRows} people={people} personHref={contactHref} deals={new Map(coDeals.map((d) => [d.id, [d.title, `${paths.deals}/${d.id}`]]))}
-            empty={<>이 고객사에 보낸 견적서가 없어요. 안건 화면에서 견적서를 만들면 여기에 모여요.</>} />
+            empty={<>이 고객사에 보낸 견적서가 없어요.</>} />
         </section>
       )}
 
@@ -319,7 +318,7 @@ export function CompanyView({ c, id, t, p, v }: { c: CrmCtx; id: string; t?: str
                 </section>
               ))}
             </div>
-          ) : <p className="cx-none">{person && tf === "all" ? `${person.name}님과의 기록이 아직 없어요.` : tf === "all" ? "아직 기록이 없어요. 안건 화면에서 통화·미팅·메모를 남기면 여기에도 모여요." : `${TL_FILTERS[tf].replace("만", "")} 기록이 없어요.`}</p>}
+          ) : <p className="cx-none">{person && tf === "all" ? `${person.name}님과의 기록이 아직 없어요.` : tf === "all" ? "아직 기록이 없어요." : `${TL_FILTERS[tf].replace("만", "")} 기록이 없어요.`}</p>}
         </section>
       )}
     </div>

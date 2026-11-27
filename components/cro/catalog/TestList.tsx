@@ -229,7 +229,7 @@ export function TestList({ items, initialRows, initialRates, orgCategories, read
             })}
           </section>
         ))}
-        <p className="tl__foot">회신을 보내면 그 조건이 이 목록에 저절로 쌓여요. &quot;최근 회신에서&quot; 표시가 붙은 줄은 확인만 하면 돼요.</p>
+        <p className="tl__foot">&quot;최근 회신에서&quot; 표시는 보낸 회신의 조건이 자동으로 들어온 줄이에요.</p>
 
         {open && (
           <Drawer
@@ -330,7 +330,7 @@ function Pick({ items, rows, orgCategories, first, readOnly, onBack, onAdd }: {
       </details>
 
       <div className="tp__bar">
-        <p>{err ? <span role="alert" className="tp__err">{err}</span> : first ? "안 골라도 돼요. 회신을 보내면 그 조건이 목록에 저절로 쌓여요." : picked.length ? `${picked.length}개 골랐어요` : "담을 시험을 골라 주세요"}</p>
+        <p>{err ? <span role="alert" className="tp__err">{err}</span> : first ? "안 골라도 돼요. 보낸 회신의 조건이 목록에 자동으로 들어와요." : picked.length ? `${picked.length}개 골랐어요` : "담을 시험을 골라 주세요"}</p>
         <button type="button" className="b1" disabled={!picked.length || busy || readOnly} onClick={submit}>{busy ? "담는 중…" : picked.length ? `${picked.length}개 담기` : "담기"}</button>
       </div>
     </div>
@@ -808,7 +808,7 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
       {step === 1 && kind !== "tox" && (
         <>
           <h1>{kind === "pd" ? "기관 표준 디자인을 적어 주세요" : kind === "pk" ? "표준 채혈·분석 설계를 적어 주세요" : "받는 시료를 적어 주세요"}</h1>
-          <p className="tw__lead">견적서는 이 설계에서 시작하고, 의뢰자 요청과 달라진 칸만 노랗게 표시해요. 모르는 칸은 비워 두세요.</p>
+          <p className="tw__lead">견적서는 이 설계에서 시작하고, 의뢰자 요청과 달라진 칸만 노랗게 표시해요. 모르는 칸은 비워 둬도 돼요.</p>
           <div className="tw__q tk__wiz"><KindStructure row={d} onChange={set} k={k} /></div>
         </>
       )}
@@ -825,7 +825,7 @@ function Wizard({ row, index, total, rates, readOnly, onSave, onNext, onClose }:
       {step === 1 && kind === "tox" && (
         <>
           <h1>표준 설계를 적어 주세요</h1>
-          <p className="tw__lead">표준가 기준 설계. 모르는 칸은 비워 두세요.</p>
+          <p className="tw__lead">표준가 기준 설계. 모르는 칸은 비워 둬도 돼요.</p>
           <div className="tw__q"><DesignFields row={d} onChange={set} k={k} /></div>
         </>
       )}

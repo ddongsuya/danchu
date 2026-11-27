@@ -53,7 +53,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
           <b>{ended ? "보고서가 열리기 전에 마무리한 요청이에요" : "비교 보고서가 아직 열리지 않았어요"}</b>
           {ended
             ? "보고서가 열리지 않아 기관 이름과 견적은 공개되지 않아요."
-            : `비교 보고서는 ${rfq.reply_by ? `회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열리고, ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 내면 더 빨리 열려요. 열리면 기관 이름과 견적을 함께 보여 주고 알림을 보내요.`}
+            : `비교 보고서는 ${rfq.reply_by ? `회신 기한(${md(rfq.reply_by)}) 다음 날 오전 9시에 열리고, ` : ""}참여 결정이 끝난 뒤 참여한 기관이 모두 내면 더 빨리 열려요. 열리면 알림을 보내요.`}
           <div style={{ marginTop: 14 }}>
             <Link href={`/app/r/${rfq.rfq_no}`} className="b2">요청으로 돌아가기</Link>
           </div>
@@ -122,7 +122,7 @@ export default async function Compare({ params }: { params: Promise<{ no: string
   const board = (
     <>
       {rfq.selected_quote_id ? null : comparisonOpened(rfq) ? (
-        <p className="note" style={{ marginBottom: 16 }}>회신이 마감되어 견적은 더 바뀌지 않아요. 비교한 뒤 진행할 기관을 선택해 주세요.</p>
+        <p className="note" style={{ marginBottom: 16 }}>회신이 마감되어 견적은 더 바뀌지 않아요.</p>
       ) : (
         <p className="note note--warn" style={{ marginBottom: 16 }}>운영자 보기예요. 비교표가 열리기 전이라 의뢰자에게는 이 표가 보이지 않고, 기관은 아직 견적을 고칠 수 있어요.{open ? ` 참여했지만 아직 내지 않은 기관 ${pending}곳.` : ""}</p>
       )}

@@ -122,7 +122,7 @@ function statusOf(p: StoryProps): { title: string; lead: string } {
   if (p.status === "closed") return { title: "선택 없이 마무리", lead: p.outcome ?? "" };
   if (!p.started) return { title: "아직 기관에 보내지 않음", lead: "첨부를 확인한 뒤 참여 안내를 보낼 수 있어요." };
   if (f.sent === 0) return { title: "보낼 기관 확인 중", lead: "분야에 바로 맞는 기관이 없어 운영자가 안내할 기관을 확인하고 있어요. 보통 영업일 1~2일 걸려요." };
-  if (p.comparedAt) return f.submitted ? { title: `비교 보고서 열림 · 견적 ${f.submitted}건`, lead: "참여한 기관의 금액·기간·항목을 같은 기준으로 맞춰 봤어요." } : { title: "견적 없이 회신 마감", lead: "기한을 늘리거나 마무리할지 정해 주세요." };
+  if (p.comparedAt) return f.submitted ? { title: `비교 보고서 열림 · 견적 ${f.submitted}건`, lead: "" } : { title: "견적 없이 회신 마감", lead: "기한을 늘리거나 마무리할지 정해 주세요." };
   // 진행 중 (시안 v7): 굵은 한 줄만. "참여 결정 기한 12-01 · 6곳 중 참여 0곳", "견적 1건 도착 · 회신 기한 12-15"
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
   const reply = p.replyBy ? ` · 회신 기한 ${md(p.replyBy)}` : "";
@@ -151,7 +151,7 @@ export function RequestStory(p: StoryProps) {
   ) : p.confirm ? (
     <a href="#contract-confirm" className="b1">계약 내용 확인</a>
   ) : p.canCompare && !p.award ? (
-    <Link href={`/app/r/${p.no}/compare`} className="b1">비교 보고서 받아보기</Link>
+    <Link href={`/app/r/${p.no}/compare`} className="b1">비교 보고서 보기</Link>
   ) : p.qna?.pending ? (
     <Link href={`/app/r/${p.no}/qna`} className="b1">질의응답 <span className="tnum">답변 대기 {p.qna.pending}</span></Link>
   ) : null;

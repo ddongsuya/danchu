@@ -7,9 +7,9 @@ import { Button } from "./Button";
 export type ErrorCause = "network" | "server" | "timeout";
 
 const COPY: Record<ErrorCause, [string, string]> = {
-  network: ["불러오지 못했습니다", "인터넷 연결을 확인한 뒤 다시 시도하세요."],
-  server: ["잠시 문제가 생겼습니다", "입력한 내용은 그대로 있습니다. 잠시 뒤 다시 시도하세요."],
-  timeout: ["응답이 늦어지고 있습니다", "30초가 지나도 답이 없어 멈췄습니다. 다시 시도하세요."],
+  network: ["불러오지 못했어요", "인터넷 연결을 확인한 뒤 다시 시도해 주세요."],
+  server: ["문제가 생겼어요", "잠시 뒤 다시 시도해 주세요."],
+  timeout: ["응답이 늦어요", "30초 동안 응답이 없어 멈췄어요. 다시 시도해 주세요."],
 };
 
 /**

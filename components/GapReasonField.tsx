@@ -30,7 +30,7 @@ export function GapReasonField({ id, quoteAmount, amount, reason, onReason, form
           </div>
           <span id={`${id}-help`} className="fld__help" style={{ display: "block", marginTop: 6 }}>
             {formal
-              ? "선정 견적과 10% 이상 다르면 사유를 남깁니다. 의뢰자 확인 화면에 함께 표시됩니다. 기타는 비고에 내용을 적습니다."
+              ? "선정 견적과 10% 이상 다르면 사유를 남겨요. 의뢰자 확인 화면에 함께 보여요. 기타는 비고에 내용을 적어요."
               : "선정 견적과 10% 이상 다르면 사유를 남겨 주세요. 의뢰자 확인 화면에 함께 보여요. 기타를 고르면 비고에 내용을 적어 주세요."}
           </span>
         </fieldset>

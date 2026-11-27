@@ -222,7 +222,7 @@ export function NewRequest({
     if (
       replace &&
       cats.length &&
-      !(await confirm({ title: "시험 항목을 이 구성으로 바꾸시겠습니까?", body: "시험 항목과 항목별 상세 조건이 바뀝니다. 일정·물질·첨부는 그대로 둡니다.", confirmLabel: "바꾸기" }))
+      !(await confirm({ title: "시험 항목을 이 구성으로 바꾸시겠습니까?", body: "시험 항목과 항목별 상세 조건이 바뀌어요. 일정·물질·첨부는 그대로 둬요.", confirmLabel: "바꾸기" }))
     )
       return;
     setUndo(values);
@@ -320,7 +320,7 @@ export function NewRequest({
       const f = wiz.fields.find((f) => f.id === id)!;
       if (id === "categories" && kind) {
         const keep = cats.filter((c) => !KINDS[kind].cats.includes(c as Cat));
-        const help = kind === "tox" ? f.help || wiz.sub : "다른 갈래의 시험은 첫 화면에서 따로 요청하세요.";
+        const help = kind === "tox" ? f.help || wiz.sub : "다른 갈래의 시험은 첫 화면에서 따로 요청해요.";
         return field({ ...f, help, options: [...KINDS[kind].cats, ...keep] });
       }
       return field({ ...f, help: f.help || wiz.sub });
@@ -493,7 +493,7 @@ export function NewRequest({
         )}
         <h1>{fork === "tox" ? KINDS.tox.name : "새 견적 요청"}</h1>
         <p className="request__lead">
-          {fork === "tox" ? KINDS.tox.lead : resume ? "쓰던 요청서를 이어서 쓰거나 새로 시작하세요." : "받을 견적의 종류를 고르세요. 고른 종류에 맞는 요청서가 열려요."}
+          {fork === "tox" ? KINDS.tox.lead : resume ? "" : "고른 종류에 맞는 요청서가 열려요."}
         </p>
         {notice && (
           <p className="note note--tint" role="status">
@@ -533,7 +533,7 @@ export function NewRequest({
                 className="b2"
                 onClick={async () => {
                   if (
-                    await confirm({ title: "저장된 초안을 지우고 새로 작성하시겠습니까?", body: "이미 접수된 요청은 삭제되지 않습니다.", confirmLabel: "새로 쓰기", danger: true })
+                    await confirm({ title: "저장된 초안을 지우고 새로 작성하시겠습니까?", body: "이미 접수된 요청은 지워지지 않아요.", confirmLabel: "새로 쓰기", danger: true })
                   ) {
                     clearDraft(userId);
                     if (!guest) clearDraft(GUEST);
@@ -571,7 +571,7 @@ export function NewRequest({
             </button>
             <button onClick={() => start("tox")}>
               <b>시험 직접 고르기</b>
-              <span>필요한 시험을 알고 계시면 바로 요청서를 쓰세요.</span>
+              <span>필요한 시험을 알고 있을 때</span>
             </button>
           </div>
         )}
@@ -623,12 +623,12 @@ export function NewRequest({
       </h1>
       <p className="request__lead">
         {step === 0
-          ? quick ? "" : "시험을 먼저 고르고, 세부 조건은 아는 만큼만 입력하세요."
+          ? quick ? "" : "세부 조건은 아는 만큼만 적어도 돼요."
           : step === 1
             ? "미정인 조건은 비워 둘 수 있어요."
             : step === 2
-              ? "요청 내용이 공개되는 범위를 확인하세요."
-              : "입력한 내용과 첨부 상태를 확인한 뒤 요청을 보내세요."}
+              ? "요청 내용이 공개되는 범위예요."
+              : ""}
       </p>
       {pendingNo && (
         <div className="note note--tint">
@@ -806,8 +806,7 @@ export function NewRequest({
                   </>
                 ) : (
                   <p className="fld__help">
-                    보내기를 누르면 이메일과 담당자 정보를 묻고, 메일로 받은
-                    번호를 확인해요. 쓰신 요청서는 그대로 둬요.
+                    보내기를 누르면 이메일 인증 뒤 접수돼요.
                   </p>
                 )}
               </section>
@@ -990,7 +989,7 @@ export function NewRequest({
       {step === 3 && (
         <p className="note note--tint" role="note">
           가이드라인을 정리한 참고 자료예요. 최종 설계는 규제기관, 담당 기관과
-          함께 논의하세요.
+          함께 정해요.
         </p>
       )}
       {error && (

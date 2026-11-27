@@ -129,7 +129,7 @@ export function EarlyFlow({ role, id }: { role: EarlyRole; id: string }) {
 
   return (
     <>
-      <button type="button" className="btn solid ef2-start" onClick={() => { moved.current = true; setOpen(true); }}>사전예약하기</button>
+      <button type="button" className="btn solid ef2-start" onClick={() => { moved.current = true; setOpen(true); }}>사전예약</button>
       <div className="ef2" data-open={open || undefined} role={open ? "dialog" : undefined} aria-modal={open || undefined} aria-labelledby={`${id}-t`}>
         <div className="ef2-top">
           {i > 0 && !done ? (
@@ -143,8 +143,8 @@ export function EarlyFlow({ role, id }: { role: EarlyRole; id: string }) {
           <div className="ef2-done" role="status">
             <p className="ef2-who">사전예약 완료</p>
             <h2 id={`${id}-t`} ref={titleRef} tabIndex={-1}>사전예약이<br />완료됐어요.</h2>
-            <p>시범 운영 전에 단추를 미리 둘러보세요.</p>
-            <a className="btn solid ef2-go" href={req ? "/signup?next=/app" : "/signup/cro"}>단추 둘러보기</a>
+            <p>시범 운영은 2027년 6월 1일에 시작해요.</p>
+            <a className="btn solid ef2-go" href={req ? "/signup?next=/app" : "/signup/cro"}>계정 만들기</a>
           </div>
         ) : (
           <div className="ef2-body">
@@ -200,7 +200,7 @@ export function EarlyFlow({ role, id }: { role: EarlyRole; id: string }) {
               {q.key === "basic" || q.key === "org" || q.key === "kinds" ? (
                 <button type="button" className="btn solid ef2-go" onClick={next} aria-describedby={err ? errId : undefined}>다음</button>
               ) : last ? (
-                <button type="button" className="btn solid ef2-go" onClick={submit} disabled={busy} aria-describedby={err ? errId : undefined}>{busy ? "보내는 중" : "사전예약하기"}</button>
+                <button type="button" className="btn solid ef2-go" onClick={submit} disabled={busy} aria-describedby={err ? errId : undefined}>{busy ? "보내는 중" : "사전예약"}</button>
               ) : (
                 <p className="ef2-hint">고르면 다음으로 넘어가요</p>
               )}

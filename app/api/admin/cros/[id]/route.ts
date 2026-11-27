@@ -29,7 +29,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     approve: { status: "approved", title: `${org.name} 참여가 승인되었습니다`, body: "이제 수행 분야에 맞는 견적 요청의 참여 안내가 갑니다. 요약을 보고 참여하면 요청서 전체가 열립니다. 기관 탭에서 GLP 인증과 수행 분야를 확인해 두세요.", msg: "승인했습니다." },
     reject: { status: "rejected", title: `${org.name} 가입 신청이 반려되었습니다`, body: reason || "자세한 사유는 support@danchu.kr로 문의해 주세요.", msg: "반려했습니다." },
     suspend: { status: "suspended", title: `${org.name} 참여가 일시 중지되었습니다`, body: reason || "문의는 support@danchu.kr로 보내주세요.", msg: "중지했습니다." },
-    optout: { status: "suspended", title: "", body: "", msg: "수신 거부로 처리했습니다. 이 기관에는 더 이상 요청서가 가지 않습니다." },
+    optout: { status: "suspended", title: "", body: "", msg: "수신 거부로 처리했어요. 이 기관에는 요청서가 가지 않아요." },
   };
   const m = map[action];
   if (!m) return NextResponse.json({ error: "알 수 없는 동작" }, { status: 400 });

@@ -62,7 +62,7 @@ export default async function AdminEarly() {
         </div>
       </div>
       {rows.length === 0 ? (
-        <EmptyState title="아직 예약이 없습니다">danchu.kr/early 에서 예약하면 여기에 쌓입니다.</EmptyState>
+        <EmptyState title="예약 없음" />
       ) : (
         <>
           <AdminSection id="kinds" title="분야별" sub={<>의뢰자가 답한 연간 의뢰 건수를 구간의 아래 값으로 더하면 <b className="tnum adm-ink">{yearlyLow.toLocaleString("ko-KR")}건</b>입니다. 기관에 설명할 때는 &ldquo;최소 이 정도&rdquo;로만 씁니다.</>}>

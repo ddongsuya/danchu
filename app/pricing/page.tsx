@@ -26,7 +26,7 @@ function PilotOnly() {
       <section className="pr pr-c" aria-labelledby="pr-h">
         <div className="pr-c__in">
           <h1 id="pr-h">시범 운영 기간,<br />모든 기능 0원</h1>
-          <p className="lead tnum">2027년 12월 31일까지 참여한 요청에는 요금이 없어요. 이 기간에 참여한 요청은 그 뒤에 계약해도 수수료가 없어요.</p>
+          <p className="lead tnum">2027년 12월 31일까지 참여한 요청은 그 뒤에 계약해도 요금과 수수료가 없어요.</p>
           <p className="pr-c__next">정식 서비스 요금은 시작 30일 전에 이 페이지와 메일로 알려요.</p>
           <ul className="pr-feat pr-c__feat">
             {PILOT_ITEMS.map((it) => <li key={it}><Check size={16} weight="bold" aria-hidden="true" />{it}</li>)}
@@ -71,9 +71,9 @@ export default function Page() {
     <Site current="/pricing" cue={false}>
       <section className="pr pr-d" aria-labelledby="pr-h">
         <div className="pr-hero">
-          <h1 id="pr-h">무료로 시작하고,<br />필요할 때 바꾸세요.</h1>
+          <h1 id="pr-h">요금제</h1>
           <p className="lead">기관 요금제는 2028년 1월 1일부터 적용돼요.</p>
-          <p className="pr-note tnum"><b>시범 운영</b>2027년 12월 31일까지 전 요금제 무료</p>
+          <p className="pr-note tnum"><b>시범 운영</b>2027년 12월 31일까지 전 요금제 0원</p>
         </div>
         <div className="pr-plans" role="list" aria-label="요금제">
           {PLAN_IDS.map((id) => {

@@ -23,7 +23,7 @@ export function QuickApprove({ id, name }: { id: string; name: string }) {
       if (!res.ok) throw new Error(d.error || "처리하지 못했습니다.");
       router.refresh();
     } catch (e) {
-      setErr(failureText(e, "처리하지 못했습니다. 다시 시도하세요."));
+      setErr(failureText(e, "처리하지 못했습니다. 다시 시도해 주세요."));
       setBusy(false);
     }
   };

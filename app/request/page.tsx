@@ -9,7 +9,7 @@ export const revalidate = 3600;
 
 export const metadata: Metadata = pageMeta(
   "비임상 시험 견적 요청 시작 · 단추",
-  "독성시험, 효력시험, 약동학, 개별 분석 가운데 받을 견적을 고르고 요청서를 시작하세요. 비임상 CRO·비임상 시험기관이 같은 양식으로 회신하고, 로그인 없이 작성해 보내기 직전에 이메일만 확인해요.",
+  "독성시험, 효력시험, 약동학, 개별 분석 가운데 받을 견적을 골라 요청서를 시작해요. 비임상 CRO·비임상 시험기관이 같은 양식으로 회신하고, 로그인 없이 작성해 보내기 직전에 이메일만 확인해요.",
   "/request",
   ["독성시험 견적 요청", "비임상 CRO 견적", "비임상 시험 견적"],
 );
@@ -22,7 +22,7 @@ export default function Page() {
         {preregActive() && (
           <p className="rq-pre" role="note">
             <span>지금은 사전예약 기간이에요. 새 계정의 견적 요청은 2027년 6월 1일부터 열려요.</span>
-            <a href="/early">사전예약하기</a>
+            <a href="/early">사전예약</a>
           </p>
         )}
         <h1 id="t">어떤 시험의 견적을 받을까요?</h1>

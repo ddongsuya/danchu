@@ -83,7 +83,7 @@ export default async function AdminRfq({ params, searchParams }: { params: Promi
             </div>
           )}
           {d.invites.length === 0 ? (
-            <EmptyState title="아직 참여 안내를 보내지 않았습니다" action={done ? undefined : <Link href={`/admin/r/${rfq.rfq_no}?tab=dist`} className="b2 bsm">참여 안내 추가</Link>}>분야가 맞는 기관을 골라 안내를 보내면 기관별 회신이 여기에 쌓입니다.</EmptyState>
+            <EmptyState title="보낸 참여 안내 없음" action={done ? undefined : <Link href={`/admin/r/${rfq.rfq_no}?tab=dist`} className="b2 bsm">참여 안내 추가</Link>} />
           ) : (
             <div className="card tbl-wrap">
               {/* 휴대폰 폭에서는 행을 카드처럼 세운다 (tbl--stack, 칸 이름은 data-label) */}
@@ -118,7 +118,7 @@ export default async function AdminRfq({ params, searchParams }: { params: Promi
                             <span className="sub">취소됨</span>
                           ) : (
                             // 참여 전에는 회신 링크(토큰)를 내보내지 않는다. 운영자 전용 요약 화면으로 연다 (운영자는 대신 참여할 수 없다)
-                            <Link href={`/admin/r/${rfq.rfq_no}/offer/${i.id}`} title="기관이 참여하기 전이라 요약만 보입니다. 운영자는 대신 참여하거나 견적을 입력할 수 없습니다. 기관에 링크를 다시 보내려면 메일 재발송을 쓰세요.">요약 보기</Link>
+                            <Link href={`/admin/r/${rfq.rfq_no}/offer/${i.id}`} title="기관이 참여하기 전이라 요약만 보입니다. 운영자는 대신 참여하거나 견적을 입력할 수 없습니다. 기관에 링크를 다시 보내려면 메일 재발송을 써 주세요.">요약 보기</Link>
                           )}
                           {["sent", "draft", "submitted"].includes(i.status) && !done && <div style={{ marginTop: 4 }}><InviteActions inviteId={i.id} croName={i.cro_name} canCancel={i.status !== "submitted" && (!!rfq.compared_at || (!i.joined_at && i.status !== "draft"))} /></div>}
                         </td>
@@ -213,7 +213,7 @@ export default async function AdminRfq({ params, searchParams }: { params: Promi
 
   const award = d.award;
   const contract = !award ? (
-    <EmptyState title="선택한 기관이 없습니다">의뢰자가 비교표에서 기관을 선택하면 계약 결과를 여기에 기록합니다.</EmptyState>
+    <EmptyState title="선택한 기관 없음" />
   ) : (
     <div className="adm-split">
       <div className="adm-col">
@@ -243,7 +243,7 @@ export default async function AdminRfq({ params, searchParams }: { params: Promi
   const history = (
     <AdminSection id="history" title="이력" count={d.events.length} actions={<Link href={`/admin/r/${rfq.rfq_no}/qna`} className="b2 bsm">질의응답 기록</Link>}>
       {d.events.length === 0 ? (
-        <EmptyState title="기록이 없습니다">요청 접수, 안내, 기한 변경 같은 일이 생기면 여기에 쌓입니다.</EmptyState>
+        <EmptyState title="기록 없음" />
       ) : (
         <div className="card card--rows adm-events">
           {[...d.events].reverse().map((e) => (

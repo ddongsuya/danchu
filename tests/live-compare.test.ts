@@ -316,7 +316,7 @@ describe("열린 비교표는 다시 열지 않고 회신 기한도 바꾸지 �
     expect(up?.filters).toContainEqual(["is:selected_quote_id", null]);
     const inv = fx.calls.find((c) => c.table === "rfq_invites" && c.op === "update");
     expect(inv?.payload).toMatchObject({ reply_by: "2099-01-05" });
-    expect(calls().find((c) => c[2]?.to.includes("a@example.com"))?.[1].body).toContain("비교표가 열리면 수정과 다시 제출은 닫힙니다");
+    expect(calls().find((c) => c[2]?.to.includes("a@example.com"))?.[1].body).toContain("비교표가 열리면 수정과 다시 제출은 닫혀요");
   });
   it("그 사이 비교표가 열렸으면(조건부 갱신 0건) 409 이고 초대 기한을 늘리지 않는다", async () => {
     fx.session = admin;
@@ -375,7 +375,7 @@ describe("참여 결정 기한 연장 (운영자, 요청마다 한 번, 0023)", 
     expect(fx.calls.some((c) => c.table === "rfq_invites" && c.op === "update")).toBe(false);
     const toU = calls().filter((c) => c[2]?.to.includes("undecided@example.com"));
     expect(toU).toHaveLength(1);
-    expect(toU[0][1].title).toContain("참여 결정 기한이 2099-01-08로 늘었습니다");
+    expect(toU[0][1].title).toContain("참여 결정 기한이 2099-01-08로 늘었어요");
     expect(`${toU[0][1].title} ${toU[0][1].body}`).not.toContain("ABC-1");
     expect(calls().some((c) => c[2]?.to.includes("joined@example.com"))).toBe(false);
     expect(calls().find((c) => c[0][0] === "sponsor-1")?.[1].title).toContain("참여 결정 기한");

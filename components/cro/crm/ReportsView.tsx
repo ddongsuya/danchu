@@ -117,10 +117,10 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
                   ))}
                 </ol>
               ) : <p className="cx-none">이 기간에 들어온 안건이 없어요.</p>}
-              {top > 0 && <p className="cx-cap">단계 전환율. 수주한 안건은 계약까지 간 것으로 셉니다.</p>}
+              {top > 0 && <p className="cx-cap">단계 전환율. 수주한 안건은 계약까지 간 것으로 계산해요.</p>}
             </section>
             <section className="cx-panel" aria-labelledby="r-dwell">
-              <div><h2 id="r-dwell">단계에 머문 평균 일수</h2><p className="cx-cap">{longest ? `${STAGE_LABEL[longest.stage as keyof typeof STAGE_LABEL]}에 가장 오래 머물러요.` : "단계를 옮긴 기록이 쌓이면 보여요."}</p></div>
+              <div><h2 id="r-dwell">단계에 머문 평균 일수</h2><p className="cx-cap">{longest ? `${STAGE_LABEL[longest.stage as keyof typeof STAGE_LABEL]}에 가장 오래 머물러요.` : "단계를 옮긴 기록이 없어요."}</p></div>
               <div className="cx-dwell">
                 {r.dwell.map((x) => (
                   <div key={x.stage}>
@@ -156,8 +156,8 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
                     </li>
                   ))}
                 </ol>
-              ) : <p className="cx-none">이 기간에 보낸 견적이 없어요. 견적서에 보낸 날을 적거나 단추 요청에 견적을 내면 여기에 모여요.</p>}
-              {qf.sent > 0 && <p className="cx-cap">안건 하나에 2차·3차 견적을 보내도 한 건으로 셉니다. 선정은 수주했거나 단추 요청에서 의뢰자가 우리 견적을 고른 안건, 계약은 계약 단계까지 간 수주와 단추에 체결로 보고한 안건이에요.</p>}
+              ) : <p className="cx-none">이 기간에 보낸 견적이 없어요.</p>}
+              {qf.sent > 0 && <p className="cx-cap">안건 하나에 2차·3차 견적을 보내도 한 건으로 계산해요. 선정은 수주했거나 단추 요청에서 의뢰자가 우리 견적을 고른 안건, 계약은 계약 단계까지 간 수주와 단추에 체결로 보고한 안건이에요.</p>}
             </section>
             <PerfTable title="고객사별" id="r-qco" rows={qf.byCompany} name={(id) => (id ? co.get(id) ?? "고객사" : "고객사 정하지 않음")} href={(id) => (id ? `${paths.clients}/${id}` : null)} />
           </div>
@@ -241,7 +241,7 @@ export function ReportsView({ c, q }: { c: CrmCtx; q: ReportsQuery }) {
                   <li className="cx-fc__sum"><span className="cx-fc__nm">합계</span><span className="tnum"><i>안건</i>{fc.open}건</span><span className="tnum"><i>금액 합계</i>{fc.sum ? wonKo(fc.sum) : "-"}</span><span className="tnum"><i>수주율 반영</i>{fc.sum && fc.weighted != null ? wonKo(fc.weighted) : "-"}</span></li>
                 </ul>
               ) : <p className="cx-none">진행 중인 안건이 없어요.</p>}
-              {fc.open > 0 && <p className="cx-cap">계약 예상일이나 금액이 비어 있는 안건은 안건 화면에서 채우면 이 표에 들어와요.</p>}
+              {fc.open > 0 && <p className="cx-cap">계약 예상일이나 금액이 비어 있는 안건은 이 표에 들어가지 않아요.</p>}
             </section>
           </div>
           <div className="cx-rep__col">
@@ -313,7 +313,7 @@ function PerfTable({ title, id, rows, name, sub, href, narrow = false }: {
             </tbody>
           </table>
         </div>
-      ) : <p className="cx-none">{title === "담당자별" ? "견적서에 받는 사람을 정하거나 안건에 담당자를 붙이면 여기에 모여요." : "이 기간에 보낸 견적이 없어요."}</p>}
+      ) : <p className="cx-none">{title === "담당자별" ? "담당자가 정해진 견적이 없어요." : "이 기간에 보낸 견적이 없어요."}</p>}
     </section>
   );
 }

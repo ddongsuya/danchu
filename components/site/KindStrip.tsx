@@ -10,7 +10,7 @@ const SUB: Record<Kind, string> = { tox: "독성", pd: "효력", pk: "약동학"
 export function KindStrip() {
   return (
     <nav className="kst" id="fields" aria-label="견적 받을 수 있는 시험">
-      <span className="lbl mono lab">이런 시험의 견적을 받아보세요</span>
+      <span className="lbl mono lab">견적 받을 수 있는 시험</span>
       <ul>
         {ORDER.map((k) => (
           <li key={k}>

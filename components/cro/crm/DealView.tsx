@@ -147,7 +147,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
               <section className="cx-grp" aria-labelledby="d-qt">
                 <div className="cx-grp__h"><h2 id="d-qt">보낸 견적</h2><span className="cx-grp__end tnum">{qRows.length}건</span></div>
                 <QuoteTable rows={qRows} people={people} personHref={company ? (cid) => `${paths.clients}/${company.id}/contacts/${cid}` : undefined}
-                  empty={<>아직 보낸 견적이 없어요. 위 &quot;견적서 만들기&quot;로 시작하면 이 안건에 붙어요.</>} />
+                  empty={<>아직 보낸 견적이 없어요.</>} />
               </section>
               <ContractBox deal={d} src={src} history={hist} />
             </>
@@ -166,7 +166,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
                   : next.id ? <DoneButton kind={next.kind === "event" ? "events" : "tasks"} id={next.id} /> : null}
               </div>
             ) : (
-              <p className="cx-next cx-next--none" id="next-band"><b>다음 할 일이 없어요.</b> 아래 &quot;할 일&quot;에서 날짜를 잡거나, 기록을 남기며 다음 할 일 날짜를 골라요.</p>
+              <p className="cx-next cx-next--none" id="next-band"><b>다음 할 일이 없어요.</b></p>
             )
           )}
           <Composer dealId={d.id} companyId={d.company_id} contacts={composerContacts} members={opts.members} me={me} startTab={!next && d.status === "open" ? "task" : "memo"} />
@@ -179,7 +179,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
                 </section>
               ))}
             </div>
-          ) : <p className="cx-none">아직 기록이 없어요. 통화나 미팅을 마치면 위에 한 줄 남겨요.</p>}
+          ) : <p className="cx-none">아직 기록이 없어요.</p>}
           </>)}
         </div>
 
@@ -234,7 +234,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
                   );
                 })}
               </ul>
-            ) : <p className="cx-muted cx-small">{danchu && !company ? "의뢰자가 우리 견적을 고르면 고객사와 담당자가 저절로 들어와요." : company ? "이 안건의 담당자를 추가해요." : "고객사를 정하면 담당자를 붙일 수 있어요."}</p>}
+            ) : <p className="cx-muted cx-small">{danchu && !company ? "의뢰자가 우리 견적을 고르면 고객사와 담당자가 자동으로 들어와요." : company ? "담당자가 없어요." : "고객사를 정하면 담당자를 붙일 수 있어요."}</p>}
           </section>
 
           <section className="cx-grp" aria-labelledby="d-qv">
@@ -260,7 +260,7 @@ export function DealView({ c, id, m = "log", v = "acts" }: { c: CrmCtx; id: stri
                   </li>
                 )}
               </ul>
-            ) : <p className="cx-muted cx-small">아직 견적서가 없어요. 위 &quot;견적서 만들기&quot;로 시작하면 이 안건에 붙어요.</p>}
+            ) : <p className="cx-muted cx-small">아직 견적서가 없어요.</p>}
           </section>
 
         </aside>

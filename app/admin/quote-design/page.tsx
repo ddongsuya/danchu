@@ -24,7 +24,7 @@ export default async function AdminQuoteDesign() {
         </div>
       </div>
       {list.length === 0 ? (
-        <EmptyState title="받은 요청이 없어요">기관이 견적서 양식 화면에서 제작을 요청하면 여기에 쌓여요.</EmptyState>
+        <EmptyState title="받은 요청이 없어요" />
       ) : (
         <div className="card card--rows">
           {list.map((r) => (

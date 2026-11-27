@@ -104,10 +104,9 @@ export function ActivityView({ c, q }: { c: CrmCtx; q: FeedQuery }) {
           ))}
           {rows.length > FEED_MAX && <p className="cx-cap">최근 {FEED_MAX}건까지 보여요. 기간이나 고객사로 좁혀 주세요.</p>}
         </div>
-      ) : all.length ? <p className="cx-none">조건에 맞는 활동이 없어요. 기간을 늘리거나 거르기를 풀어 보세요.</p> : (
+      ) : all.length ? <p className="cx-none">조건에 맞는 활동이 없어요.</p> : (
         <section className="cx-empty">
           <h2>아직 활동이 없어요</h2>
-          <p>통화·미팅·메일·메모를 남기거나 할 일·일정을 잡으면 여기에 모여요. 단추 요청에서 일어난 일도 함께 보여요.</p>
           <div className="cx-ph__acts"><Link className="b1 bsm" href={`${paths.log}?new=1`}>기록 남기기</Link></div>
         </section>
       )}

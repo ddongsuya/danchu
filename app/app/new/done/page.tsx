@@ -51,8 +51,8 @@ export default async function Done({
         {offered ? (
           <ol style={{ paddingLeft: 20, margin: 0 }} className="stack">
             <li>
-              오늘 · 시험 분야가 맞는 기관에 참여 안내를 보냈어요. 참여할
-              기관이 직접 참여를 정해요.
+              오늘 · 시험 분야가 맞는 기관에 참여 안내를 보냈어요. 참여 여부는
+              기관이 정해요.
             </li>
             {rfq.join_by && <li>{md(rfq.join_by)} · 참여 결정 기한</li>}
             <li>{md(due)} · 회신 기한</li>
@@ -78,8 +78,8 @@ export default async function Done({
         )}
         <p className="fld__help">
           비교표가 열리기 전에는 참여한 기관 수와 제출한 기관 수만 보여요.
-          기관 이름과 견적은 비교표가 열릴 때 함께 공개돼요. 그 사이에 하실
-          일은 없으며, 비교표가 열리면 메일로 알려요.
+          기관 이름과 견적은 비교표가 열릴 때 함께 공개돼요. 비교표가 열리면
+          메일로 알려요.
         </p>
         {needsCda(rfq.confidentiality) && (
           <p className="fld__help">

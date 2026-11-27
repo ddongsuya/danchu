@@ -9,7 +9,7 @@ import type { Values } from "./rfq-schema";
 /** 운영자(실무자) 검토 전에는 공개 페이지를 검색에서 숨기고 메뉴에 걸지 않는다 */
 export const GUIDE_REVIEWED = false;
 
-export const DISCLAIMER = "참고용 안내예요. 최종 시험 설계는 시험기관 및 규제기관 상담으로 확정하세요.";
+export const DISCLAIMER = "참고용 안내예요. 최종 시험 설계는 시험기관 및 규제기관 상담으로 확정해요.";
 
 /* ── 1. 임상 투여기간 → 반복투여독성 기간 (ICH M3(R2) 표 1·표 2) ─────────── */
 

@@ -45,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ no: string }> 
   const { data: open } = await sb.from("rfq_invites").select("id, token, cro_org_id, cro_email").eq("rfq_id", rfq.id).in("status", ["sent", "draft", "submitted"]);
   await sb.from("rfq_invites").update({ status: "expired" }).eq("rfq_id", rfq.id).in("status", ["sent", "draft"]);
   // 기관마다 따로 보낸다. 계정이 없거나 운영자 관리 기관은 로그인이 필요한 /cro 대신 회신 링크(/q)로
-  await notifyInvitedOrgs(open ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 마무리됐어요`, body: outcome === "취소" ? "의뢰자 사정으로 요청이 취소되어 회신이 닫혔어요." : "의뢰자가 이번에는 진행하지 않기로 해 회신이 닫혔어요. 참여해 주셔서 감사합니다.", portalHref: "/cro" });
+  await notifyInvitedOrgs(open ?? [], { kind: "시스템", title: `${rfq.rfq_no} 요청이 마무리됐어요`, body: outcome === "취소" ? "의뢰자 사정으로 요청이 취소되어 회신이 닫혔어요." : "의뢰자가 이번에는 진행하지 않기로 해 회신이 닫혔어요.", portalHref: "/cro" });
 
   await logEvent(rfq.id, "outcome", `선정 없이 마무리 · ${outcome}`, note || undefined, s.userId, { outcome });
   await notifyUsers(

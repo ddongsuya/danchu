@@ -58,7 +58,6 @@ export default async function CroRequests({ searchParams }: { searchParams: Prom
         <div className="ph"><div><h1>받은 요청</h1></div></div>
         <div className="empty">
           <b>아직 받은 요청이 없어요</b>
-          수행 분야와 맞는 요청이 오면 참여 안내를 메일과 알림으로 보내요.
           <div style={{ marginTop: 14 }}>{paths.catalog ? <Link href={paths.catalog} className="b2 bsm">시험 목록 보기</Link> : <Link href="/cro/org" className="b2 bsm">수행 분야 보기</Link>}</div>
         </div>
       </>

@@ -173,7 +173,7 @@ export function ToxStandard({ row: initial, siblings, rates, book, readOnly = fa
                   </table>
                 </div>
               ) : (
-                <div className="ms__empty">대조군·시험군 수를 적으면 군이 생겨요. 동물을 쓰지 않는 시험은 비워 두세요.</div>
+                <div className="ms__empty">대조군·시험군 수를 적으면 군이 생겨요. 동물을 쓰지 않는 시험은 비워 둬요.</div>
               )}
               {recOn && <p className="ms__mut">회복 동물은 기본으로 대조군과 최고용량군에 둬요. 다른 군에 두려면 회복 칸을 눌러 바꿔요.</p>}
             </div>

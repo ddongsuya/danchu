@@ -3,9 +3,9 @@ import Link from "next/link";
 type Kind = "first" | "filtered" | "denied";
 
 const TITLE: Record<Kind, string> = {
-  first: "아직 없습니다",
-  filtered: "조건에 맞는 결과가 없습니다",
-  denied: "볼 권한이 없습니다",
+  first: "아직 없어요",
+  filtered: "조건에 맞는 결과 없음",
+  denied: "볼 권한이 없어요",
 };
 
 /**

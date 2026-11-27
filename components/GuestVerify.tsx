@@ -241,8 +241,8 @@ export function GuestVerify({
             sendCode();
           }}
         >
-          <h2 id="gv-title">보내기 전에 이메일만 확인할게요.</h2>
-          <p className="gv__lead">쓰신 요청서는 이 화면에 그대로 둬요. 확인이 끝나면 바로 접수돼요.</p>
+          <h2 id="gv-title">이메일 확인</h2>
+          <p className="gv__lead">확인이 끝나면 요청서가 접수돼요.</p>
           {field("email", "이메일", "email", "email")}
           {field("company", "회사·기관명", "text", "organization")}
           {field("name", "담당자 성명", "text", "name")}
@@ -289,7 +289,7 @@ export function GuestVerify({
             }}
           />
           <p id="gv-code-help" className="fld__help">
-            번호를 입력하면 쓰신 요청서가 바로 접수돼요. 메일 속 버튼으로 열면 요청서를 확인하고 보낼 수 있고, 보내면 이 화면도 이어져요.
+            메일의 버튼으로 열어 보내도 접수돼요.
           </p>
           {uploads.total > 0 && (
             <p className="fld__help" role="status">

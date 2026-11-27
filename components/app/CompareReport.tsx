@@ -46,7 +46,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
           {widest && (
             <div>
               <h3>금액 차이가 가장 큰 항목</h3>
-              <p>{widest.row.name}. 설계나 포함 범위가 다를 수 있으니 비교견적표의 설계 줄을 함께 보세요.</p>
+              <p>{widest.row.name}. 설계나 포함 범위가 다를 수 있어요.</p>
               {widest.values.map((v) => bar(v.name, v.amount, Math.max(...widest.values.map((x) => x.amount)), `${won(v.amount)}${v.weeks ? ` · ${v.weeks}주` : ""}`))}
             </div>
           )}
@@ -67,7 +67,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
         <h2 id="r3-title" className="rs-h2">
           {!many ? "항목마다 수행 여부" : diff.length ? `차이 항목 ${diff.length}개` : "모든 항목에 같은 답을 했어요"}
         </h2>
-        {nowhere.length > 0 && <p className="rs-lead">모든 기관이 불가로 답한 항목: {nowhere.map((r) => r.name).join(", ")}. 따로 맡길 곳을 찾거나 기관과 범위를 다시 이야기해 보세요.</p>}
+        {nowhere.length > 0 && <p className="rs-lead">모든 기관이 불가로 답한 항목: {nowhere.map((r) => r.name).join(", ")}</p>}
         <div className="rs-mx-wrap">
           <table className="rs-mx">
             <thead>
@@ -107,7 +107,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
     <section className="rs-block" id="r4" aria-labelledby="r4-title">
           <p className="rs-bk">시험 설명과 근거</p>
           <h2 id="r4-title" className="rs-h2">견적에 들어간 시험, 무엇을 보나요</h2>
-          <p className="rs-lead">참고용 설명이에요. 실제 설계는 기관의 견적서와 시험계획서로 확인하세요.</p>
+          <p className="rs-lead">참고용 설명이에요. 실제 설계는 기관의 견적서와 시험계획서를 따라요.</p>
           <div className="rs-ex">
             {notes.map((n) => (
               <div key={n.key}>
@@ -127,7 +127,7 @@ export function CompareReport({ no, substance, comparedAt, cols, rows, vat, boar
       <header className="rp-head">
         <h1 className="rp-h1"><span className="tnum">{no}</span> {substance}</h1>
         <p className="rp-meta">비교 견적 보고서 <span>{comparedAt ? `${md(comparedAt)} 공개` : ""}</span><span>기관 {cols.length}곳</span><span>시험 {rows.length}건</span><span>VAT 별도</span></p>
-        <p className="rp-meta">최종 조건은 각 기관의 정식 견적서로 확인하세요.</p>
+        <p className="rp-meta">최종 조건은 각 기관의 정식 견적서를 따라요.</p>
       </header>
       <ReportTabs
         tabs={[

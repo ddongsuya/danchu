@@ -77,7 +77,7 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
         </div>
       ))}
       <div style={{ padding: "10px 0 12px", fontSize: 13, color: "var(--muted)" }}>
-        {isOwner ? "담당자 추가는 같은 기관명으로 CRO 가입 신청을 하면 여기에 합류 신청으로 보여요." : "기관 정보 수정과 담당자 관리는 대표 담당자가 해요."}
+        {isOwner ? "같은 기관명으로 CRO 가입을 신청하면 합류 신청으로 들어와요." : "기관 정보 수정과 담당자 관리는 대표 담당자가 해요."}
       </div>
       {msg && <p className={`note ${msg.ok ? "note--ok" : "note--err"}`} role="status" style={{ marginBottom: 12 }}>{msg.text}</p>}
     </div>

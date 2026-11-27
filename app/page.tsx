@@ -17,15 +17,14 @@ const FL_CYCLE = [{"tag": "Tox", "t": "반복투여독성 4주", "k": "동물", 
 export default function Home() {
   const prereg = preregActive();
   // 사전예약 기간에는 새 방문자의 첫 행동이 견적 요청이 아니라 사전예약이다 (lib/prereg.ts)
-  const cta = prereg ? <a className="btn solid" href="/early">사전예약하기</a> : <a className="btn solid" href="/request">견적 요청하기</a>;
+  const cta = prereg ? <a className="btn solid" href="/early">사전예약</a> : <a className="btn solid" href="/request">견적 요청</a>;
   return (
     <Site onescreen={false} headerCta={false}>
 {prereg && <EarlyNotice days={daysToPilot()} />}
 <div className="first">
 <div className="hero">
 <div>
-<h1><span className="h1l">비임상 시험 견적,</span><span className="h1l">단추에서 비교하세요.</span></h1>
-<p className="sub">한 번 요청으로 여러 기관의 견적을 받아보세요.</p>
+<h1><span className="h1l">비임상 시험 견적,</span><span className="h1l">여러 기관에서 받아 비교</span></h1>
 <div className="ctas">{cta}<a className="btn ghost" href="/#fields">시험 종류 보기</a></div>
 </div>
 
@@ -39,7 +38,7 @@ export default function Home() {
 <section id="cmp" className="gm gm-cmp" data-gm="cmp" aria-labelledby="cmp-h">
 <div className="gm-cmp-grid">
 <div className="gm-copy">
-<h2 id="cmp-h">같은 시험, 다른 견적<br /><span>무엇이 다른지 비교하세요.</span></h2>
+<h2 id="cmp-h">같은 시험, 다른 견적<br /><span>항목별 비교</span></h2>
 </div>
 <figure className="gm-sheet" aria-label="예시 기관 A와 B의 견적 비교">
 <header><b>반복투여독성 4주 · 설치류</b></header>
@@ -77,7 +76,7 @@ export default function Home() {
 <div className="g-mrow"><span>기관 A</span><span className="g-bt"><i style={{ "--w": "1" }}></i></span><em data-to="1000">1,000</em></div>
 <div className="g-mrow"><span>기관 B</span><span className="g-bt"><i style={{ "--w": ".9" }}></i></span><em data-to="900">900</em></div>
 <div className="g-mrow g-wait"><span>기관 C</span><span className="g-bt"><i style={{ "--w": "0" }}></i></span><em>대기</em></div>
-<small>요청한 견적서가 모이면 비교표가 도착해요. 직접 확인하고 기관을 선정할 수 있어요.</small>
+<small>견적서가 모이면 비교표로 정리돼요.</small>
 </div>
 <span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span><span className="g-cp" aria-hidden="true"><i></i><i></i><i></i></span>
 <span className="g-rp" aria-hidden="true">1,000</span><span className="g-rp" aria-hidden="true">900</span>
@@ -88,7 +87,7 @@ export default function Home() {
 <section className="gm gm-ev" data-gm="ev">
 <div className="gm-ev-grid">
 <div>
-<h2>어떤 시험이 필요할지<br /><span>가이드라인에서 먼저 확인하세요.</span></h2>
+<h2>어떤 시험이 필요한지<br /><span>가이드라인 근거로 찾기</span></h2>
 <div className="ctas" style={{ marginTop: "32px" }}><a className="btn g-ghost" href="/request/new?start=advisor">가이드라인 찾아보기</a></div>
 </div>
 <div className="gm-adv" aria-label="가이드라인 찾아보기 예시">
@@ -125,7 +124,7 @@ export default function Home() {
 </svg>
 </div>
 </div>
-<div className="cro"><p>시험 기관이신가요?</p><a className="btn ghost" href="/for-cro">기관으로 참여하기</a></div>
+<div className="cro"><p>시험 기관이신가요?</p><a className="btn ghost" href="/for-cro">기관 참여</a></div>
 </div>
 </section>
       <HomeMotion />

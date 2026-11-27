@@ -71,7 +71,6 @@ export function SignupCroView() {
     <div className="auth__card auth__card--wide">
       <div>
         <h1 className="auth__title">기관 참여 신청</h1>
-        <p className="auth__sub">분야에 맞는 요청서를 받고, 같은 양식으로 견적을 회신해보세요.</p>
       </div>
 
       <form className="auth__form" onSubmit={submit}>
@@ -110,7 +109,7 @@ export function SignupCroView() {
             <TextInput id="otherCerts" value={f.otherCerts} onChange={set("otherCerts")} placeholder="KOLAS, ISO 17025 등" />
           </Field>
         </div>
-        <Field id="cats" label="수행 가능 시험 분야" required help="다양한 고객의 요청서를 받아보세요.">
+        <Field id="cats" label="수행 가능 시험 분야" required help="고른 분야의 요청서를 받아요.">
           <div className="chipset" role="group" aria-label="수행 가능 시험 분야">
             {CATS.map((c) => (
               <button key={c} type="button" className="chip" aria-pressed={cats.includes(c)} onClick={() => toggle(cats, setCats, c)}>{c}</button>
@@ -129,7 +128,7 @@ export function SignupCroView() {
           <Field id="phone" label="연락처">
             <TextInput id="phone" type="tel" inputMode="tel" value={f.phone} onChange={set("phone")} placeholder="010-0000-0000" autoComplete="tel" />
           </Field>
-          <Field id="email" label="업무용 이메일" required help="시험 기관의 이메일 주소를 사용해주세요.">
+          <Field id="email" label="업무용 이메일" required help="기관 도메인의 이메일을 써 주세요.">
             <TextInput id="email" type="email" inputMode="email" value={f.email} onChange={set("email")} placeholder="name@cro.co.kr" autoComplete="email" />
           </Field>
           <Field id="password" label="비밀번호" required>
@@ -141,7 +140,7 @@ export function SignupCroView() {
 
         <ErrorBox>{error}</ErrorBox>
         <button type="submit" className="btn--next" disabled={!ok || busy}>
-          {busy ? "신청 중…" : "참여 신청하기"}
+          {busy ? "신청 중…" : "참여 신청"}
         </button>
       </form>
 

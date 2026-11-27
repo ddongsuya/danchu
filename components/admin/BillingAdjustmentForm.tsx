@@ -26,7 +26,7 @@ export function BillingAdjustmentForm({ month, orgs, closedMonths }: { month: st
   const [errs, setErrs] = useState<Partial<Record<Field, string>>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  if (orgs.length === 0) return <p className="empty">조정 항목을 넣을 기관이 없습니다. 승인된 기관이 생기면 여기에 나옵니다.</p>;
+  if (orgs.length === 0) return <p className="empty">승인된 기관 없음</p>;
 
   const check = (): Partial<Record<Field, string>> => {
     const e: Partial<Record<Field, string>> = {};

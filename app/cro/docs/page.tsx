@@ -21,7 +21,6 @@ export default async function CroDocs() {
       <div className="ph">
         <div>
           <h1>견적서</h1>
-          <p>시험 목록의 표준가로 채우고, 달라진 설계만 추가 비용으로 계산해요. PDF와 엑셀로 내려받아요.</p>
         </div>
         <div className="ph__actions">
           <Link href="/cro/docs/style" className="b2 bsm">견적서 양식</Link>
@@ -31,7 +30,7 @@ export default async function CroDocs() {
       </div>
       {list.length === 0 ? (
         <EmptyState title="아직 만든 견적서가 없어요" action={<Link href="/cro/docs/new" className="b1 bsm">새 견적서</Link>}>
-          받은 요청의 회신 화면에서 &quot;견적서 만들기&quot;를 누르거나, 단추 밖 의뢰자에게 보낼 견적서를 새로 만들어요.
+          받은 요청의 회신 화면에서도 만들 수 있어요.
         </EmptyState>
       ) : (
         <div className="card tbl-wrap">

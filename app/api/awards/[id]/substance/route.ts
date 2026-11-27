@@ -39,7 +39,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (rq?.user_id) {
     await notifyUsers(
       [rq.user_id],
-      { kind: "선정", title: `${award.cro_name} 시험물질 필요량 ${changed ? "수정" : "안내"} · ${rq.rfq_no}`, body: `${detail}. 요청 화면에서 확인하세요.`, href: `/app/r/${rq.rfq_no}` },
+      { kind: "선정", title: `${award.cro_name} 시험물질 필요량 ${changed ? "수정" : "안내"} · ${rq.rfq_no}`, body: `${detail}. 요청 화면에서 확인해 주세요.`, href: `/app/r/${rq.rfq_no}` },
       rq.email ? { to: [rq.email] } : undefined,
     ).catch((e) => console.error("award substance notify", e));
   }

@@ -47,7 +47,7 @@ export async function quoteQuotaError(org: OrgPlan, total: number, firstSubmit: 
   if (limit == null) return null;
   const used = await quotesThisMonth(org.id, quoteId);
   if (used < limit) return null;
-  return `무료 요금제의 이번 달 5,000만 원 미만 견적 ${limit}건을 모두 보냈어요. 다음 달 1일에 다시 ${limit}건이 되고, Plus·Pro 요금제는 무제한이에요. 요금제는 요금제·결제 화면에서 바꿀 수 있어요.`;
+  return `무료 요금제의 이번 달 5,000만 원 미만 견적 ${limit}건을 모두 보냈어요. 다음 달 1일에 다시 ${limit}건이 돼요. 요금제는 요금제·결제 화면에서 바꿀 수 있어요.`;
 }
 
 /** 담당자를 한 명 더 연결할 수 있는지. 안 되면 오류 문구 */

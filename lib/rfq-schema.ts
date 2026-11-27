@@ -188,7 +188,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "의뢰 개요",
     q: "어디에 제출할 자료인가요?",
-    sub: "해당하는 곳을 모두 선택하세요. 자체 연구용이면 건너뛰어도 돼요.",
+    sub: "해당하는 곳을 모두 골라 주세요. 자체 연구용이면 건너뛰어도 돼요.",
     fields: [
       {
         id: "authority",
@@ -212,7 +212,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "의뢰 개요",
     q: "시험물질명을 입력해 주세요",
-    sub: "기밀이 필요하면 코드명으로 입력하세요.",
+    sub: "기밀이 필요하면 코드명도 돼요.",
     fields: [{ id: "substance", type: "text", required: true, placeholder: "DC-101" }],
   },
   {
@@ -229,7 +229,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "일정·예산",
     q: "예산 범위가 있나요?",
-    sub: "없으면 미정을 선택하세요. 예산은 기관에 전달하지 않아요.",
+    sub: "없으면 미정을 골라 주세요. 예산은 기관에 전달하지 않아요.",
     fields: [
       {
         id: "budget",
@@ -269,7 +269,7 @@ export const WIZ: WizStep[] = [
   {
     eyebrow: "시험 항목",
     q: "필요한 시험 항목을 모두 선택해 주세요",
-    sub: "하나 이상 선택하세요. 선택이 어렵다면 시험 선택 도움받기를 이용하세요.",
+    sub: "하나 이상 골라 주세요.",
     fields: [{ id: "categories", type: "chips", required: true, options: [...CATS] }],
   },
   {
@@ -389,7 +389,7 @@ export const STEP2: Group[] = [
         type: "file",
         label: "파일 첨부 (COA, 시험물질 자료 등)",
         placeholder: "PDF, 이미지, 문서 · 파일당 20MB 이하",
-        help: "알고 있는 자료를 첨부하세요. 파일은 임시 저장되지 않아, 화면을 닫으면 다시 선택해야 해요.",
+        help: "파일은 임시 저장되지 않아, 화면을 닫으면 다시 선택해야 해요.",
       },
     ],
   },
@@ -648,9 +648,9 @@ export const DETAILS: Record<Cat, Field[]> = {
   ],
   "효력시험(약효)": [
     { id: "items", type: "chips", label: "질환 영역", options: [...AREA_NAMES], help: "영역마다 회신 행이 하나씩 생겨요." },
-    { id: "method", type: "text", label: "질환 모델", placeholder: "예: DSS 유도 대장염. 모르면 비워 두세요 (기관 제안)" },
+    { id: "method", type: "text", label: "질환 모델", placeholder: "예: DSS 유도 대장염. 모르면 비워 둬도 돼요 (기관 제안)" },
     { id: "species", type: "chips", label: "동물종", options: [...RODENT, "누드마우스", "개(비글)", "미니피그", "원숭이(영장류)", "세포·조직(체외)", "기관 제안"] },
-    { id: "groups", type: "text", label: "희망 군 수와 군당 마릿수", placeholder: "예: 5군, 군당 8마리. 모르면 비워 두세요", help: "기관 제안에 맡기면 기관마다 설계가 달라져 비교가 어려워질 수 있어요." },
+    { id: "groups", type: "text", label: "희망 군 수와 군당 마릿수", placeholder: "예: 5군, 군당 8마리. 모르면 비워 둬도 돼요", help: "기관 제안에 맡기면 기관마다 설계가 달라져 비교가 어려워질 수 있어요." },
     { id: "positive", type: "radio", label: "양성 대조군", options: ["필요", "불필요", "기관 제안"] },
     { id: "duration", type: "text", label: "투여 기간", placeholder: "예: 2주, 1일 1회" },
     { id: "endpoints", type: "textarea", label: "꼭 필요한 평가 지표", placeholder: "예: 체중, 질병활성지수, 대장 길이, 조직 점수, 사이토카인" },

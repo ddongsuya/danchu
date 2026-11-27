@@ -33,11 +33,11 @@ export const KINDS: Record<Kind, KindInfo> = {
     k: "tox",
     tag: "Tox",
     name: "독성시험",
-    lead: "시험물질을 투여했을 때 나타나는 독성을 확인해요. 알고 있는 조건만 입력하세요.",
+    lead: "시험물질을 투여했을 때 나타나는 독성을 확인해요. 알고 있는 조건만 입력하면 돼요.",
     cats: TOX_CATS,
     paths: [
       { title: "필요한 시험 찾아보기", desc: "개발 상황을 고르면 해당하는 가이드라인 기준을 보여요.", ex: "개발 단계, 자료 제출처, 임상 투여경로와 기간", href: "/request/new?start=advisor" },
-      { title: "시험 직접 고르기", desc: "필요한 시험을 알고 계시면 바로 요청서를 쓰세요.", ex: TOX_CATS.join(" · "), href: "/request/new?start=manual&kind=tox" },
+      { title: "시험 직접 고르기", desc: "필요한 시험을 알 때 바로 요청서를 써요.", ex: TOX_CATS.join(" · "), href: "/request/new?start=manual&kind=tox" },
     ],
     elsewhere: [
       ["질환 모델에서 효과를 보는 시험", "pd"],
@@ -49,7 +49,7 @@ export const KINDS: Record<Kind, KindInfo> = {
     k: "pd",
     tag: "PD",
     name: "효력시험",
-    lead: "질환 모델에서 시험물질이 효과를 내는지 확인해요. 모델을 모르면 영역만 고르세요.",
+    lead: "질환 모델에서 시험물질이 효과를 내는지 확인해요. 모델을 모르면 영역만 골라도 돼요.",
     cats: ["효력시험(약효)"],
     paths: [
       { title: "질환 영역 고르기", desc: "영역과 아는 조건만 적으면 기관이 시험 설계와 견적을 함께 회신해요.", ex: AREA_NAMES.join(" · "), href: "/request/new?start=manual&kind=pd" },
@@ -67,7 +67,7 @@ export const KINDS: Record<Kind, KindInfo> = {
     lead: "투여한 시험물질이 몸 안에서 얼마나, 얼마 동안 머무는지 확인해요.",
     cats: ["PK/TK/ADME·생체시료분석"],
     paths: [
-      { title: "시험 종류 고르기", desc: "동물종, 채혈 시점, 검체, 분석법 중 아는 것만 적으세요.", ex: "PK · TK · ADME · 체외 대사 안정성 · CYP · 혈장단백결합 · 수송체 · 조직분포 · 생체시료 분석법 개발과 검증", href: "/request/new?start=manual&kind=pk" },
+      { title: "시험 종류 고르기", desc: "동물종, 채혈 시점, 검체, 분석법 중 아는 것만 적으면 돼요.", ex: "PK · TK · ADME · 체외 대사 안정성 · CYP · 혈장단백결합 · 수송체 · 조직분포 · 생체시료 분석법 개발과 검증", href: "/request/new?start=manual&kind=pk" },
     ],
     elsewhere: [
       ["독성 확인이 목적인 시험", "tox"],
@@ -82,7 +82,7 @@ export const KINDS: Record<Kind, KindInfo> = {
     lead: "가진 시료나 물질을 맡기고 필요한 분석만 받아요. 투여는 포함하지 않아요.",
     cats: OTHER_CATS,
     paths: [
-      { title: "분석 항목 고르기", desc: "시료 종류와 수, 받고 싶은 분석을 적으세요.", ex: OTHER_AREAS.join(" · "), href: "/request/new?start=manual&kind=other" },
+      { title: "분석 항목 고르기", desc: "시료 종류와 수, 받을 분석을 적어요.", ex: OTHER_AREAS.join(" · "), href: "/request/new?start=manual&kind=other" },
     ],
     elsewhere: [
       ["독성 확인을 위해 투여부터 맡기는 경우", "tox"],
