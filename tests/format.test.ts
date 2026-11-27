@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { won, comma, md, dday } from "@/lib/format";
+import { won, comma, md, mmdd, nextDay, dday } from "@/lib/format";
 import { safeName } from "@/lib/upload";
 import { addBusinessDays } from "@/lib/dates";
 
@@ -22,6 +22,17 @@ describe("md / dday", () => {
   it("YYYY-MM-DD → M월 D일", () => {
     expect(md("2026-10-05")).toBe("10월 5일");
     expect(md(null)).toBe("-");
+  });
+  it("ISO 시각은 서울 날짜로 (원문 그대로 찍지 않는다)", () => {
+    expect(md("2026-12-01T14:59:59+00:00")).toBe("12월 1일");
+    expect(md("2026-12-07T15:00:00Z")).toBe("12월 8일");
+    expect(mmdd("2026-12-01T14:59:59+00:00")).toBe("12-01");
+    expect(mmdd("2026-12-07")).toBe("12-07");
+    expect(mmdd(null)).toBe("");
+  });
+  it("nextDay: 달·해 넘김", () => {
+    expect(nextDay("2026-12-07")).toBe("2026-12-08");
+    expect(nextDay("2026-12-31")).toBe("2027-01-01");
   });
   it("지난 날짜는 '기한 지남'", () => {
     expect(dday("2000-01-01").label).toBe("기한 지남");

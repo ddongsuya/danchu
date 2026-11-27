@@ -299,7 +299,7 @@ export function ChatRequest({
         go(back);
       };
       q = f.type === "text" ? `${lab}${eul(lab)} 적어 주세요` : f.type === "chips" ? `${lab}${eul(lab)} 골라 주세요` : `${lab}${eul(lab)} 어떻게 할까요?`;
-      hint = `지금은 ${show(values[k])}예요.${f.help ? ` ${f.help}` : ""}`;
+      hint = `현재 값: ${show(values[k])}${f.help ? `. ${f.help}` : ""}`;
       if (f.type === "chips") {
         ans = (
           <>

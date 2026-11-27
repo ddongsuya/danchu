@@ -36,10 +36,9 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
   const { data: org } = q.cro_org_id ? await sb.from("cro_orgs").select("glp_certs, aaalac, website, intro").eq("id", q.cro_org_id).maybeSingle() : { data: null };
   const certs = (org?.glp_certs ?? []) as string[];
   const cov = glpCoverage(Array.isArray(rfq.payload.authority) ? (rfq.payload.authority as string[]) : [], certs);
-  // 전체 일정: 같은 요청의 제출 견적 중 가장 빠른 최종보고서 주와 비교한다 (차이만 노랑)
+  // 전체 일정: 같은 요청의 제출 견적과 같은 축으로 그린다 (기관끼리 견주는 표시는 하지 않는다)
   const scheduled = d.quotes.filter((x) => x.status === "submitted" && hasSchedule(x));
   const others = scheduled.map((x) => x.final_weeks as number);
-  const best = others.length > 1 ? Math.min(...others) : null;
   const plan = hasSchedule(q) ? planOfStored(q) : null;
   // 선정 전 자유 입력란의 연락처는 가린다 (lib/contact-guard.ts). 이 기관을 선정하면 그대로 보인다
   const reveal = rfq.selected_quote_id === q.id;
@@ -208,7 +207,7 @@ export default async function QuoteDetail({ params }: { params: Promise<{ no: st
           <p className="fld__help" style={{ margin: 0 }}>기관이 회신에 적은 시험 기간, 앞 단계, 보고서 기간으로 그린 예상 일정이에요. 실제 일정은 계약 때 기관과 정해요.</p>
         </div>
         {plan ? (
-          <ScheduleGantt plan={plan} startDate={q.start_date} bestFinal={best} scale={scaleWeeks(...others, q.final_weeks)} />
+          <ScheduleGantt plan={plan} startDate={q.start_date} scale={scaleWeeks(...others, q.final_weeks)} />
         ) : (
           <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>이 견적에는 순서와 보고서 기간이 없어요.</p>
         )}
