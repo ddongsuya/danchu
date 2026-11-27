@@ -20,6 +20,8 @@ export type ConfirmOptions = {
   action?: () => Promise<void>;
   /** 실행 중 버튼 글자. 예: "선정하는 중" */
   pendingLabel?: string;
+  /** 실패 뒤 버튼 글자. 기본 "다시 {confirmLabel}". 예: "다시 철회" */
+  retryLabel?: string;
 };
 
 type Props = ConfirmOptions & { open: boolean; onResult: (ok: boolean) => void };
@@ -39,7 +41,7 @@ function trackInput() {
  * 닫히면 브라우저가 연 버튼으로 포커스를 돌려준다. 넓은 화면은 가운데 창(0.24초), 휴대폰은 아래 시트(0.28초).
  * 보통은 useConfirm() 으로 쓰고, 직접 상태를 들고 싶을 때만 이 컴포넌트를 쓴다.
  */
-export function ConfirmDialog({ open, title, body, confirmLabel = "확인", cancelLabel = "취소", danger = false, action, pendingLabel, onResult }: Props) {
+export function ConfirmDialog({ open, title, body, confirmLabel = "확인", cancelLabel = "취소", danger = false, action, pendingLabel, retryLabel, onResult }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel = "확인", canc
         <div className="ix-dialog__acts">
           <button type="submit" value="cancel" className="b2" disabled={busy}>{cancelLabel}</button>
           <button type="submit" value="ok" className={danger ? "b1 b1--danger" : "b1"} disabled={busy} aria-busy={busy || undefined}>
-            {busy ? (pendingLabel ?? confirmLabel) : err ? `다시 ${confirmLabel}` : confirmLabel}
+            {busy ? (pendingLabel ?? confirmLabel) : err ? (retryLabel ?? `다시 ${confirmLabel}`) : confirmLabel}
           </button>
         </div>
       </form>
