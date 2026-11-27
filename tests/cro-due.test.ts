@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_REPLY_PDF, daysLeft, doneAt, replyDueLabel, replyPdfError, saveStatus, sortByReplyDue, validUntilError, withRo } from "@/lib/cro-due";
+import { MAX_REPLY_PDF, daysLeft, doneAt, replyDueLabel, replyPdfError, saveStatus, sortByReplyDue, validUntilError, withObj, withRo } from "@/lib/cro-due";
 
 const TODAY = "2027-07-14";
 
@@ -76,5 +76,11 @@ describe("회신 쓰기 도우미", () => {
 describe("withRo", () => {
   it("받침에 맞춰 로/으로", () => {
     expect(["문의", "견적", "협의", "접수", "계약", "서울"].map(withRo)).toEqual(["문의로", "견적으로", "협의로", "접수로", "계약으로", "서울로"]);
+  });
+});
+
+describe("withObj", () => {
+  it("받침에 맞춰 을/를", () => {
+    expect(["영업 담당", "김 책임", "견적 담당자", "Kim"].map(withObj)).toEqual(["영업 담당을", "김 책임을", "견적 담당자를", "Kim를"]);
   });
 });

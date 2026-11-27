@@ -74,3 +74,9 @@ export function withRo(w: string): string {
   const jong = c >= 0 && c < 11172 ? c % 28 : 0;
   return `${w}${jong && jong !== 8 ? "으로" : "로"}`;
 }
+
+/** "영업 담당을" · "김 책임을" · "Kim를": 받침이 있으면 "을" */
+export function withObj(w: string): string {
+  const c = w.charCodeAt(w.length - 1) - 0xac00;
+  return `${w}${c >= 0 && c < 11172 && c % 28 ? "을" : "를"}`;
+}

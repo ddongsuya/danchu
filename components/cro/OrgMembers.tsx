@@ -2,35 +2,57 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ymd } from "@/lib/format";
+import { withObj } from "@/lib/cro-due";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 
 type M = { id: string; name: string | null; email: string; phone: string | null; created_at: string; org_role?: string };
 
 /**
  * 기관 담당자 목록. 대표 담당자(owner)에게만 합류 승인·거절과 내보내기 버튼이 보인다.
- * 내보내기는 두 번 눌러야 실행된다.
+ * 내보내기와 거절은 확인 창에서 처리한다 (창 안에서 처리 중 · 실패).
  */
 export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]; pending: M[]; isOwner: boolean; selfId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState("");
-  const [arm, setArm] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const confirm = useConfirm();
 
-  const act = async (userId: string, action: "approve" | "reject" | "remove") => {
+  const post = async (userId: string, action: "approve" | "reject" | "remove") => {
+    const r = await fetch("/api/cro/org/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action }) }).catch(() => null);
+    const d = (await r?.json().catch(() => ({}))) as { error?: string; message?: string } | undefined;
+    return { ok: !!r?.ok, error: d?.error, message: d?.message };
+  };
+  const approve = async (userId: string) => {
     if (busy) return;
     setBusy(userId);
     setMsg(null);
-    try {
-      const r = await fetch("/api/cro/org/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action }) });
-      const d = (await r.json().catch(() => ({}))) as { error?: string; message?: string };
-      if (!r.ok) throw new Error(d.error || "처리하지 못했어요.");
-      setMsg({ ok: true, text: d.message || "처리했어요." });
-      setArm("");
-      router.refresh();
-    } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : "처리하지 못했어요." });
-    } finally {
-      setBusy("");
-    }
+    const r = await post(userId, "approve");
+    setBusy("");
+    setMsg(r.ok ? { ok: true, text: r.message || "연결했어요." } : { ok: false, text: r.error || "연결하지 못했어요." });
+    if (r.ok) router.refresh();
+  };
+  // 내보내기 · 연결 거절은 되돌리기 어려워 확인 창에서 처리한다 (시안 검토판 c-set-members~out · c-set-members-req~rej)
+  const remove = async (m: M) => {
+    const ok = await confirm({
+      title: `${withObj(m.name || m.email)} 내보낼까요?`,
+      body: `내보내면 ${m.email} 계정은 이 기관의 요청과 견적서를 볼 수 없습니다.`,
+      confirmLabel: "내보내기 확정",
+      pendingLabel: "내보내는 중",
+      danger: true,
+      action: async () => { if (!(await post(m.id, "remove")).ok) throw new Error("구성원을 내보내지 못했어요. 구성원은 그대로예요."); },
+    });
+    if (ok) router.refresh();
+  };
+  const reject = async (m: M) => {
+    const ok = await confirm({
+      title: "연결 요청을 거절할까요?",
+      body: `거절하면 ${m.email}에 거절 결과를 알립니다.`,
+      confirmLabel: "거절",
+      pendingLabel: "거절하는 중",
+      danger: true,
+      action: async () => { if (!(await post(m.id, "reject")).ok) throw new Error("연결 요청을 거절하지 못했어요. 요청은 그대로예요."); },
+    });
+    if (ok) router.refresh();
   };
 
   return (
@@ -45,8 +67,8 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
                 <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""} · 신청 {ymd(m.created_at)}</span>
               </span>
               <span style={{ display: "inline-flex", gap: 6 }}>
-                <button type="button" className="b1 bsm" disabled={!!busy} onClick={() => act(m.id, "approve")}>연결</button>
-                <button type="button" className="b2 bsm" disabled={!!busy} onClick={() => act(m.id, "reject")}>거절</button>
+                <button type="button" className="b2 bsm" disabled={!!busy} onClick={() => reject(m)}>거절</button>
+                <button type="button" className="b1 bsm" disabled={!!busy} onClick={() => approve(m.id)}>{busy === m.id ? "연결하는 중" : "연결"}</button>
               </span>
             </div>
           ))}
@@ -62,15 +84,7 @@ export function OrgMembers({ members, pending, isOwner, selfId }: { members: M[]
             <span style={{ display: "block", fontSize: 12, color: "var(--muted)" }}>{m.email}{m.phone ? ` · ${m.phone}` : ""}</span>
           </span>
           {isOwner && m.id !== selfId && m.org_role !== "owner" ? (
-            arm === m.id ? (
-              <span style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12 }}>
-                <span>내보내면 이 기관의 열린 회신 링크가 새로 발급돼요.</span>
-                <button type="button" className="b2 b2--danger bsm" disabled={!!busy} onClick={() => act(m.id, "remove")}>{busy === m.id ? "…" : "내보내기 확정"}</button>
-                <button type="button" className="b2 bsm" disabled={!!busy} onClick={() => setArm("")}>취소</button>
-              </span>
-            ) : (
-              <button type="button" className="btxt" style={{ fontSize: 12 }} onClick={() => setArm(m.id)}>내보내기</button>
-            )
+            <button type="button" className="btxt" style={{ fontSize: 12 }} onClick={() => remove(m)}>내보내기</button>
           ) : (
             <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{ymd(m.created_at)}</span>
           )}
